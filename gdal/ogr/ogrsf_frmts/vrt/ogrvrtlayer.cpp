@@ -622,7 +622,7 @@ try_again:
         {
             poSrcDS = poReg->OpenShared( pszSrcDSName, bUpdate, NULL );
             /* Is it a VRT datasource ? */
-            if (poSrcDS != NULL && poSrcDS->GetDriver() == poDS->GetDriver())
+            if (poSrcDS != NULL && poSrcDS->GetOGRDriver() == poDS->GetOGRDriver())
             {
                 OGRVRTDataSource* poVRTSrcDS = (OGRVRTDataSource*)poSrcDS;
                 poVRTSrcDS->AddForbiddenNames(poDS->GetName());
@@ -635,7 +635,7 @@ try_again:
         {
             poSrcDS = poReg->Open( pszSrcDSName, bUpdate, NULL );
             /* Is it a VRT datasource ? */
-            if (poSrcDS != NULL && poSrcDS->GetDriver() == poDS->GetDriver())
+            if (poSrcDS != NULL && poSrcDS->GetOGRDriver() == poDS->GetOGRDriver())
             {
                 OGRVRTDataSource* poVRTSrcDS = (OGRVRTDataSource*)poSrcDS;
                 poVRTSrcDS->SetCallLevel(poDS->GetCallLevel() + 1);

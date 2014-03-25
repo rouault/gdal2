@@ -2,7 +2,7 @@
  * $Id$
  *
  * Project:  OpenGIS Simple Features Reference Implementation
- * Purpose:  The generic portions of the OGRDataSource class.
+ * Purpose:  The generic portions of the GDALDataset class.
  * Author:   Frank Warmerdam, warmerdam@pobox.com
  *
  ******************************************************************************
@@ -50,27 +50,7 @@ CPL_CVSID("$Id$");
 OGRDataSource::OGRDataSource()
 
 {
-    m_poStyleTable = NULL;
-    m_nRefCount = 0;
-    m_poDriver = NULL;
-    m_hMutex = NULL;
-}
-
-/************************************************************************/
-/*                           ~OGRDataSource()                           */
-/************************************************************************/
-
-OGRDataSource::~OGRDataSource()
-
-{
-    if ( m_poStyleTable )
-    {
-        delete m_poStyleTable;
-        m_poStyleTable = NULL;
-    }
-
-    if( m_hMutex != NULL )
-        CPLDestroyMutex( m_hMutex );
+    m_poOGRDriver = NULL;
 }
 
 /************************************************************************/
@@ -98,21 +78,12 @@ void OGR_DS_Destroy( OGRDataSourceH hDS )
 /*                              Release()                               */
 /************************************************************************/
 
-OGRErr OGRDataSource::Release()
+OGRErr GDALDataset::Release()
 
 {
     return OGRSFDriverRegistrar::GetRegistrar()->ReleaseDataSource( this );
 }
 
-/************************************************************************/
-/*                             Reference()                              */
-/************************************************************************/
-
-int OGRDataSource::Reference()
-
-{
-    return ++m_nRefCount;
-}
 
 /************************************************************************/
 /*                          OGR_DS_Reference()                          */
@@ -123,17 +94,7 @@ int OGR_DS_Reference( OGRDataSourceH hDataSource )
 {
     VALIDATE_POINTER1( hDataSource, "OGR_DS_Reference", 0 );
 
-    return ((OGRDataSource *) hDataSource)->Reference();
-}
-
-/************************************************************************/
-/*                            Dereference()                             */
-/************************************************************************/
-
-int OGRDataSource::Dereference()
-
-{
-    return --m_nRefCount;
+    return ((GDALDataset *) hDataSource)->Reference();
 }
 
 /************************************************************************/
@@ -145,17 +106,17 @@ int OGR_DS_Dereference( OGRDataSourceH hDataSource )
 {
     VALIDATE_POINTER1( hDataSource, "OGR_DS_Dereference", 0 );
 
-    return ((OGRDataSource *) hDataSource)->Dereference();
+    return ((GDALDataset *) hDataSource)->Dereference();
 }
 
 /************************************************************************/
 /*                            GetRefCount()                             */
 /************************************************************************/
 
-int OGRDataSource::GetRefCount() const
+int GDALDataset::GetRefCount() const
 
 {
-    return m_nRefCount;
+    return nRefCount;
 }
 
 /************************************************************************/
@@ -167,20 +128,20 @@ int OGR_DS_GetRefCount( OGRDataSourceH hDataSource )
 {
     VALIDATE_POINTER1( hDataSource, "OGR_DS_GetRefCount", 0 );
 
-    return ((OGRDataSource *) hDataSource)->GetRefCount();
+    return ((GDALDataset *) hDataSource)->GetRefCount();
 }
 
 /************************************************************************/
 /*                         GetSummaryRefCount()                         */
 /************************************************************************/
 
-int OGRDataSource::GetSummaryRefCount() const
+int GDALDataset::GetSummaryRefCount() const
 
 {
     CPLMutexHolderD( (void **) &m_hMutex );
-    int nSummaryCount = m_nRefCount;
+    int nSummaryCount = nRefCount;
     int iLayer;
-    OGRDataSource *poUseThis = (OGRDataSource *) this;
+    GDALDataset *poUseThis = (GDALDataset *) this;
 
     for( iLayer=0; iLayer < poUseThis->GetLayerCount(); iLayer++ )
         nSummaryCount += poUseThis->GetLayer( iLayer )->GetRefCount();
@@ -197,14 +158,14 @@ int OGR_DS_GetSummaryRefCount( OGRDataSourceH hDataSource )
 {
     VALIDATE_POINTER1( hDataSource, "OGR_DS_GetSummaryRefCount", 0 );
 
-    return ((OGRDataSource *) hDataSource)->GetSummaryRefCount();
+    return ((GDALDataset *) hDataSource)->GetSummaryRefCount();
 }
 
 /************************************************************************/
 /*                            CreateLayer()                             */
 /************************************************************************/
 
-OGRLayer *OGRDataSource::CreateLayer( const char * pszName,
+OGRLayer *GDALDataset::CreateLayer( const char * pszName,
                                       OGRSpatialReference * poSpatialRef,
                                       OGRwkbGeometryType eGType,
                                       char **papszOptions )
@@ -239,7 +200,7 @@ OGRLayerH OGR_DS_CreateLayer( OGRDataSourceH hDS,
         CPLError ( CE_Failure, CPLE_ObjectNull, "Name was NULL in OGR_DS_CreateLayer");
         return 0;
     }
-    return (OGRLayerH) ((OGRDataSource *)hDS)->CreateLayer( 
+    return (OGRLayerH) ((GDALDataset *)hDS)->CreateLayer( 
         pszName, (OGRSpatialReference *) hSpatialRef, eType, papszOptions );
 }
 
@@ -247,7 +208,7 @@ OGRLayerH OGR_DS_CreateLayer( OGRDataSourceH hDS,
 /*                             CopyLayer()                              */
 /************************************************************************/
 
-OGRLayer *OGRDataSource::CopyLayer( OGRLayer *poSrcLayer, 
+OGRLayer *GDALDataset::CopyLayer( OGRLayer *poSrcLayer, 
                                     const char *pszNewName, 
                                     char **papszOptions )
 
@@ -490,7 +451,7 @@ OGRLayerH OGR_DS_CopyLayer( OGRDataSourceH hDS,
     VALIDATE_POINTER1( pszNewName, "OGR_DS_CopyLayer", NULL );
 
     return (OGRLayerH) 
-        ((OGRDataSource *) hDS)->CopyLayer( (OGRLayer *) hSrcLayer, 
+        ((GDALDataset *) hDS)->CopyLayer( (OGRLayer *) hSrcLayer, 
                                             pszNewName, papszOptions );
 }
 
@@ -498,7 +459,7 @@ OGRLayerH OGR_DS_CopyLayer( OGRDataSourceH hDS,
 /*                            DeleteLayer()                             */
 /************************************************************************/
 
-OGRErr OGRDataSource::DeleteLayer( int iLayer )
+OGRErr GDALDataset::DeleteLayer( int iLayer )
 
 {
     (void) iLayer;
@@ -517,14 +478,14 @@ OGRErr OGR_DS_DeleteLayer( OGRDataSourceH hDS, int iLayer )
 {
     VALIDATE_POINTER1( hDS, "OGR_DS_DeleteLayer", OGRERR_INVALID_HANDLE );
 
-    return ((OGRDataSource *) hDS)->DeleteLayer( iLayer );
+    return ((GDALDataset *) hDS)->DeleteLayer( iLayer );
 }
 
 /************************************************************************/
 /*                           GetLayerByName()                           */
 /************************************************************************/
 
-OGRLayer *OGRDataSource::GetLayerByName( const char *pszName )
+OGRLayer *GDALDataset::GetLayerByName( const char *pszName )
 
 {
     CPLMutexHolderD( &m_hMutex );
@@ -564,7 +525,7 @@ OGRLayerH OGR_DS_GetLayerByName( OGRDataSourceH hDS, const char *pszName )
 {
     VALIDATE_POINTER1( hDS, "OGR_DS_GetLayerByName", NULL );
 
-    return (OGRLayerH) ((OGRDataSource *) hDS)->GetLayerByName( pszName );
+    return (OGRLayerH) ((GDALDataset *) hDS)->GetLayerByName( pszName );
 }
 
 /************************************************************************/
@@ -576,7 +537,7 @@ OGRLayerH OGR_DS_GetLayerByName( OGRDataSourceH hDS, const char *pszName )
 /*        CREATE INDEX ON <layername> USING <columnname>                */
 /************************************************************************/
 
-OGRErr OGRDataSource::ProcessSQLCreateIndex( const char *pszSQLCommand )
+OGRErr GDALDataset::ProcessSQLCreateIndex( const char *pszSQLCommand )
 
 {
     char **papszTokens = CSLTokenizeString( pszSQLCommand );
@@ -684,7 +645,7 @@ OGRErr OGRDataSource::ProcessSQLCreateIndex( const char *pszSQLCommand )
 /*          DROP INDEX ON <layername> [USING <columnname>]              */
 /************************************************************************/
 
-OGRErr OGRDataSource::ProcessSQLDropIndex( const char *pszSQLCommand )
+OGRErr GDALDataset::ProcessSQLDropIndex( const char *pszSQLCommand )
 
 {
     char **papszTokens = CSLTokenizeString( pszSQLCommand );
@@ -809,7 +770,7 @@ OGRErr OGRDataSource::ProcessSQLDropIndex( const char *pszSQLCommand )
 /*          DROP TABLE <layername>                                      */
 /************************************************************************/
 
-OGRErr OGRDataSource::ProcessSQLDropTable( const char *pszSQLCommand )
+OGRErr GDALDataset::ProcessSQLDropTable( const char *pszSQLCommand )
 
 {
     char **papszTokens = CSLTokenizeString( pszSQLCommand );
@@ -863,11 +824,11 @@ OGRErr OGRDataSource::ProcessSQLDropTable( const char *pszSQLCommand )
 }
 
 /************************************************************************/
-/*                    OGRDataSourceParseSQLType()                       */
+/*                    GDALDatasetParseSQLType()                       */
 /************************************************************************/
 
 /* All arguments will be altered */
-static OGRFieldType OGRDataSourceParseSQLType(char* pszType, int& nWidth, int &nPrecision)
+static OGRFieldType GDALDatasetParseSQLType(char* pszType, int& nWidth, int &nPrecision)
 {
     char* pszParenthesis = strchr(pszType, '(');
     if (pszParenthesis)
@@ -928,7 +889,7 @@ static OGRFieldType OGRDataSourceParseSQLType(char* pszType, int& nWidth, int &n
 /*          ALTER TABLE <layername> ADD [COLUMN] <columnname> <columntype>*/
 /************************************************************************/
 
-OGRErr OGRDataSource::ProcessSQLAlterTableAddColumn( const char *pszSQLCommand )
+OGRErr GDALDataset::ProcessSQLAlterTableAddColumn( const char *pszSQLCommand )
 
 {
     char **papszTokens = CSLTokenizeString( pszSQLCommand );
@@ -1004,7 +965,7 @@ OGRErr OGRDataSource::ProcessSQLAlterTableAddColumn( const char *pszSQLCommand )
 /* -------------------------------------------------------------------- */
 
     int nWidth = 0, nPrecision = 0;
-    OGRFieldType eType = OGRDataSourceParseSQLType(pszType, nWidth, nPrecision);
+    OGRFieldType eType = GDALDatasetParseSQLType(pszType, nWidth, nPrecision);
     OGRFieldDefn oFieldDefn(pszColumnName, eType);
     oFieldDefn.SetWidth(nWidth);
     oFieldDefn.SetPrecision(nPrecision);
@@ -1023,7 +984,7 @@ OGRErr OGRDataSource::ProcessSQLAlterTableAddColumn( const char *pszSQLCommand )
 /*          ALTER TABLE <layername> DROP [COLUMN] <columnname>          */
 /************************************************************************/
 
-OGRErr OGRDataSource::ProcessSQLAlterTableDropColumn( const char *pszSQLCommand )
+OGRErr GDALDataset::ProcessSQLAlterTableDropColumn( const char *pszSQLCommand )
 
 {
     char **papszTokens = CSLTokenizeString( pszSQLCommand );
@@ -1109,7 +1070,7 @@ OGRErr OGRDataSource::ProcessSQLAlterTableDropColumn( const char *pszSQLCommand 
 /*       ALTER TABLE <layername> RENAME [COLUMN] <oldname> TO <newname> */
 /************************************************************************/
 
-OGRErr OGRDataSource::ProcessSQLAlterTableRenameColumn( const char *pszSQLCommand )
+OGRErr GDALDataset::ProcessSQLAlterTableRenameColumn( const char *pszSQLCommand )
 
 {
     char **papszTokens = CSLTokenizeString( pszSQLCommand );
@@ -1202,7 +1163,7 @@ OGRErr OGRDataSource::ProcessSQLAlterTableRenameColumn( const char *pszSQLComman
 /*   ALTER TABLE <layername> ALTER [COLUMN] <columnname> TYPE <newtype> */
 /************************************************************************/
 
-OGRErr OGRDataSource::ProcessSQLAlterTableAlterColumn( const char *pszSQLCommand )
+OGRErr GDALDataset::ProcessSQLAlterTableAlterColumn( const char *pszSQLCommand )
 
 {
     char **papszTokens = CSLTokenizeString( pszSQLCommand );
@@ -1298,7 +1259,7 @@ OGRErr OGRDataSource::ProcessSQLAlterTableAlterColumn( const char *pszSQLCommand
     OGRFieldDefn oNewFieldDefn(poOldFieldDefn);
 
     int nWidth = 0, nPrecision = 0;
-    OGRFieldType eType = OGRDataSourceParseSQLType(pszType, nWidth, nPrecision);
+    OGRFieldType eType = GDALDatasetParseSQLType(pszType, nWidth, nPrecision);
     oNewFieldDefn.SetType(eType);
     oNewFieldDefn.SetWidth(nWidth);
     oNewFieldDefn.SetPrecision(nPrecision);
@@ -1322,7 +1283,7 @@ OGRErr OGRDataSource::ProcessSQLAlterTableAlterColumn( const char *pszSQLCommand
 /*                             ExecuteSQL()                             */
 /************************************************************************/
 
-OGRLayer * OGRDataSource::ExecuteSQL( const char *pszStatement,
+OGRLayer * GDALDataset::ExecuteSQL( const char *pszStatement,
                                       OGRGeometry *poSpatialFilter,
                                       const char *pszDialect )
 
@@ -1479,7 +1440,7 @@ OGRLayer * OGRDataSource::ExecuteSQL( const char *pszStatement,
 /*                        BuildLayerFromSelectInfo()                    */
 /************************************************************************/
 
-OGRLayer* OGRDataSource::BuildLayerFromSelectInfo(void* psSelectInfoIn,
+OGRLayer* GDALDataset::BuildLayerFromSelectInfo(void* psSelectInfoIn,
                                                   OGRGeometry *poSpatialFilter,
                                                   const char *pszDialect)
 {
@@ -1499,18 +1460,18 @@ OGRLayer* OGRDataSource::BuildLayerFromSelectInfo(void* psSelectInfoIn,
     int  nFieldCount = 0, iTable, iField;
     int  iEDS;
     int  nExtraDSCount = 0;
-    OGRDataSource** papoExtraDS = NULL;
+    GDALDataset** papoExtraDS = NULL;
     OGRSFDriverRegistrar *poReg=OGRSFDriverRegistrar::GetRegistrar();
 
     for( iTable = 0; iTable < psSelectInfo->table_count; iTable++ )
     {
         swq_table_def *psTableDef = psSelectInfo->table_defs + iTable;
         OGRLayer *poSrcLayer;
-        OGRDataSource *poTableDS = this;
+        GDALDataset *poTableDS = this;
 
         if( psTableDef->data_source != NULL )
         {
-            poTableDS = (OGRDataSource *) 
+            poTableDS = (GDALDataset *) 
                 OGROpenShared( psTableDef->data_source, FALSE, NULL );
             if( poTableDS == NULL )
             {
@@ -1525,8 +1486,8 @@ OGRLayer* OGRDataSource::BuildLayerFromSelectInfo(void* psSelectInfoIn,
             }
 
             /* Keep in an array to release at the end of this function */
-            papoExtraDS = (OGRDataSource** )CPLRealloc(papoExtraDS,
-                               sizeof(OGRDataSource*) * (nExtraDSCount + 1));
+            papoExtraDS = (GDALDataset** )CPLRealloc(papoExtraDS,
+                               sizeof(GDALDataset*) * (nExtraDSCount + 1));
             papoExtraDS[nExtraDSCount++] = poTableDS;
         }
 
@@ -1565,12 +1526,12 @@ OGRLayer* OGRDataSource::BuildLayerFromSelectInfo(void* psSelectInfoIn,
     for( iTable = 0; iTable < psSelectInfo->table_count; iTable++ )
     {
         swq_table_def *psTableDef = psSelectInfo->table_defs + iTable;
-        OGRDataSource *poTableDS = this;
+        GDALDataset *poTableDS = this;
         OGRLayer *poSrcLayer;
         
         if( psTableDef->data_source != NULL )
         {
-            poTableDS = (OGRDataSource *) 
+            poTableDS = (GDALDataset *) 
                 OGROpenShared( psTableDef->data_source, FALSE, NULL );
             CPLAssert( poTableDS != NULL );
             poTableDS->Dereference();
@@ -1658,9 +1619,8 @@ OGRLayer* OGRDataSource::BuildLayerFromSelectInfo(void* psSelectInfoIn,
 /* -------------------------------------------------------------------- */
     if( psSelectInfo->where_expr != NULL )
     {
-        if (m_poDriver && (
-                EQUAL(m_poDriver->GetName(), "PostgreSQL") ||
-                EQUAL(m_poDriver->GetName(), "FileGDB" )) )
+        if (EQUAL(GetDriverName(), "PostgreSQL") ||
+                EQUAL(GetDriverName(), "FileGDB" ) )
             pszWHERE = psSelectInfo->where_expr->Unparse( &sFieldList, '"' );
         else
             pszWHERE = psSelectInfo->where_expr->Unparse( &sFieldList, '\'' );
@@ -1710,7 +1670,7 @@ OGRLayerH OGR_DS_ExecuteSQL( OGRDataSourceH hDS,
     VALIDATE_POINTER1( hDS, "OGR_DS_ExecuteSQL", NULL );
 
     return (OGRLayerH) 
-        ((OGRDataSource *)hDS)->ExecuteSQL( pszStatement,
+        ((GDALDataset *)hDS)->ExecuteSQL( pszStatement,
                                             (OGRGeometry *) hSpatialFilter,
                                             pszDialect );
 }
@@ -1719,7 +1679,7 @@ OGRLayerH OGR_DS_ExecuteSQL( OGRDataSourceH hDS,
 /*                          ReleaseResultSet()                          */
 /************************************************************************/
 
-void OGRDataSource::ReleaseResultSet( OGRLayer * poResultsSet )
+void GDALDataset::ReleaseResultSet( OGRLayer * poResultsSet )
 
 {
     delete poResultsSet;
@@ -1734,7 +1694,7 @@ void OGR_DS_ReleaseResultSet( OGRDataSourceH hDS, OGRLayerH hLayer )
 {
     VALIDATE_POINTER0( hDS, "OGR_DS_ReleaseResultSet" );
 
-    ((OGRDataSource *) hDS)->ReleaseResultSet( (OGRLayer *) hLayer );
+    ((GDALDataset *) hDS)->ReleaseResultSet( (OGRLayer *) hLayer );
 }
 
 /************************************************************************/
@@ -1747,7 +1707,7 @@ int OGR_DS_TestCapability( OGRDataSourceH hDS, const char *pszCap )
     VALIDATE_POINTER1( hDS, "OGR_DS_TestCapability", 0 );
     VALIDATE_POINTER1( pszCap, "OGR_DS_TestCapability", 0 );
 
-    return ((OGRDataSource *) hDS)->TestCapability( pszCap );
+    return ((GDALDataset *) hDS)->TestCapability( pszCap );
 }
 
 /************************************************************************/
@@ -1759,7 +1719,7 @@ int OGR_DS_GetLayerCount( OGRDataSourceH hDS )
 {
     VALIDATE_POINTER1( hDS, "OGR_DS_GetLayerCount", 0 );
 
-    return ((OGRDataSource *)hDS)->GetLayerCount();
+    return ((GDALDataset *)hDS)->GetLayerCount();
 }
 
 /************************************************************************/
@@ -1771,7 +1731,7 @@ OGRLayerH OGR_DS_GetLayer( OGRDataSourceH hDS, int iLayer )
 {
     VALIDATE_POINTER1( hDS, "OGR_DS_GetLayer", NULL );
 
-    return (OGRLayerH) ((OGRDataSource*)hDS)->GetLayer( iLayer );
+    return (OGRLayerH) ((GDALDataset*)hDS)->GetLayer( iLayer );
 }
 
 /************************************************************************/
@@ -1790,7 +1750,7 @@ const char *OGR_DS_GetName( OGRDataSourceH hDS )
 /*                             SyncToDisk()                             */
 /************************************************************************/
 
-OGRErr OGRDataSource::SyncToDisk()
+OGRErr GDALDataset::SyncToDisk()
 
 {
     CPLMutexHolderD( &m_hMutex );
@@ -1821,17 +1781,17 @@ OGRErr OGR_DS_SyncToDisk( OGRDataSourceH hDS )
 {
     VALIDATE_POINTER1( hDS, "OGR_DS_SyncToDisk", OGRERR_INVALID_HANDLE );
 
-    return ((OGRDataSource *) hDS)->SyncToDisk();
+    return ((GDALDataset *) hDS)->SyncToDisk();
 }
 
 /************************************************************************/
-/*                             GetDriver()                              */
+/*                             GetOGRDriver()                              */
 /************************************************************************/
 
-OGRSFDriver *OGRDataSource::GetDriver() const
+OGRSFDriver *OGRDataSource::GetOGRDriver() const
 
 {
-    return m_poDriver;
+    return m_poOGRDriver;
 }
 
 /************************************************************************/
@@ -1843,24 +1803,26 @@ OGRSFDriverH OGR_DS_GetDriver( OGRDataSourceH hDS )
 {
     VALIDATE_POINTER1( hDS, "OGR_DS_GetDriver", NULL );
 
-    return (OGRSFDriverH) ((OGRDataSource *) hDS)->GetDriver();
+    return (OGRSFDriverH) ((OGRDataSource *) hDS)->GetOGRDriver();
 }
 
 /************************************************************************/
-/*                             SetDriver()                              */
+/*                             SetOGRDriver()                              */
 /************************************************************************/
 
-void OGRDataSource::SetDriver( OGRSFDriver *poDriver ) 
+void OGRDataSource::SetOGRDriver( OGRSFDriver *poDriver ) 
 
 {
-    m_poDriver = poDriver;
+    m_poOGRDriver = poDriver;
+    if( GetName() != NULL )
+        SetDescription(GetName());
 }
 
 /************************************************************************/
 /*                            GetStyleTable()                           */
 /************************************************************************/
 
-OGRStyleTable *OGRDataSource::GetStyleTable()
+OGRStyleTable *GDALDataset::GetStyleTable()
 {
     return m_poStyleTable;
 }
@@ -1869,7 +1831,7 @@ OGRStyleTable *OGRDataSource::GetStyleTable()
 /*                         SetStyleTableDirectly()                      */
 /************************************************************************/
 
-void OGRDataSource::SetStyleTableDirectly( OGRStyleTable *poStyleTable )
+void GDALDataset::SetStyleTableDirectly( OGRStyleTable *poStyleTable )
 {
     if ( m_poStyleTable )
         delete m_poStyleTable;
@@ -1880,7 +1842,7 @@ void OGRDataSource::SetStyleTableDirectly( OGRStyleTable *poStyleTable )
 /*                            SetStyleTable()                           */
 /************************************************************************/
 
-void OGRDataSource::SetStyleTable(OGRStyleTable *poStyleTable)
+void GDALDataset::SetStyleTable(OGRStyleTable *poStyleTable)
 {
     if ( m_poStyleTable )
         delete m_poStyleTable;
@@ -1897,7 +1859,7 @@ OGRStyleTableH OGR_DS_GetStyleTable( OGRDataSourceH hDS )
 {
     VALIDATE_POINTER1( hDS, "OGR_DS_GetStyleTable", NULL );
     
-    return (OGRStyleTableH) ((OGRDataSource *) hDS)->GetStyleTable( );
+    return (OGRStyleTableH) ((GDALDataset *) hDS)->GetStyleTable( );
 }
 
 /************************************************************************/
@@ -1910,7 +1872,7 @@ void OGR_DS_SetStyleTableDirectly( OGRDataSourceH hDS,
 {
     VALIDATE_POINTER0( hDS, "OGR_DS_SetStyleTableDirectly" );
     
-    ((OGRDataSource *) hDS)->SetStyleTableDirectly( (OGRStyleTable *) hStyleTable);
+    ((GDALDataset *) hDS)->SetStyleTableDirectly( (OGRStyleTable *) hStyleTable);
 }
 
 /************************************************************************/
@@ -1923,16 +1885,24 @@ void OGR_DS_SetStyleTable( OGRDataSourceH hDS, OGRStyleTableH hStyleTable )
     VALIDATE_POINTER0( hDS, "OGR_DS_SetStyleTable" );
     VALIDATE_POINTER0( hStyleTable, "OGR_DS_SetStyleTable" );
     
-    ((OGRDataSource *) hDS)->SetStyleTable( (OGRStyleTable *) hStyleTable);
+    ((GDALDataset *) hDS)->SetStyleTable( (OGRStyleTable *) hStyleTable);
 }
 
 /************************************************************************/
 /*                         IsGenericSQLDialect()                        */
 /************************************************************************/
 
-int OGRDataSource::IsGenericSQLDialect(const char* pszDialect)
+int GDALDataset::IsGenericSQLDialect(const char* pszDialect)
 {
     return ( pszDialect != NULL && (EQUAL(pszDialect,"OGRSQL") ||
                                     EQUAL(pszDialect,"SQLITE")) );
 
+}
+
+
+const char* OGRDataSource::GetDriverName()
+{
+    if( m_poOGRDriver )
+        return m_poOGRDriver->GetName();
+    return "";
 }

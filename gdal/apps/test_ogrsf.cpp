@@ -533,10 +533,10 @@ const char* GetLayerNameForSQL( OGRDataSource* poDS, const char* pszLayerName )
     if (ch == 0)
         return pszLayerName;
 
-    if (EQUAL(poDS->GetDriver()->GetName(), "MYSQL"))
+    if (EQUAL(poDS->GetDriverName(), "MYSQL"))
         return CPLSPrintf("`%s`", pszLayerName);
 
-    if (EQUAL(poDS->GetDriver()->GetName(), "PostgreSQL") &&
+    if (EQUAL(poDS->GetDriverName(), "PostgreSQL") &&
                 strchr(pszLayerName, '.'))
     {
         const char* pszRet;
@@ -549,7 +549,7 @@ const char* GetLayerNameForSQL( OGRDataSource* poDS, const char* pszLayerName )
         return pszRet;
     }
 
-    if (EQUAL(poDS->GetDriver()->GetName(), "SQLAnywhere"))
+    if (EQUAL(poDS->GetDriverName(), "SQLAnywhere"))
         return pszLayerName;
 
     return CPLSPrintf("\"%s\"", pszLayerName);
@@ -1469,7 +1469,7 @@ static int TestAttributeFilter( OGRDataSource* poDS, OGRLayer *poLayer )
 /*      Construct inclusive filter.                                     */
 /* -------------------------------------------------------------------- */
 
-    if (EQUAL(poDS->GetDriver()->GetName(), "PostgreSQL") &&
+    if (EQUAL(poDS->GetDriverName(), "PostgreSQL") &&
         (strchr(pszFieldName, '_') || strchr(pszFieldName, ' ')))
     {
         osAttributeFilter = "\"";
@@ -1527,7 +1527,7 @@ static int TestAttributeFilter( OGRDataSource* poDS, OGRLayer *poLayer )
 /* -------------------------------------------------------------------- */
 /*      Construct exclusive filter.                                     */
 /* -------------------------------------------------------------------- */
-    if (EQUAL(poDS->GetDriver()->GetName(), "PostgreSQL") &&
+    if (EQUAL(poDS->GetDriverName(), "PostgreSQL") &&
         (strchr(pszFieldName, '_') || strchr(pszFieldName, ' ')))
     {
         osAttributeFilter = "\"";

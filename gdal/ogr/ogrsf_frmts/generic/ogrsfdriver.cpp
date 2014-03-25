@@ -76,8 +76,8 @@ OGRDataSourceH OGR_Dr_CreateDataSource( OGRSFDriverH hDriver,
     /* This fix is explained in Ticket #1223 */
     if( NULL != poDS )
     {
-        poDS->SetDriver( poDriver );
-        CPLAssert( NULL != poDS->GetDriver() );
+        poDS->SetOGRDriver( poDriver );
+        CPLAssert( NULL != poDS->GetOGRDriver() );
     }
     else
     {
@@ -139,8 +139,8 @@ OGRDataSourceH OGR_Dr_Open( OGRSFDriverH hDriver, const char *pszName,
 
     OGRDataSource *poDS = ((OGRSFDriver *)hDriver)->Open( pszName, bUpdate );
 
-    if( poDS != NULL && poDS->GetDriver() == NULL )
-        poDS->SetDriver( (OGRSFDriver *)hDriver );
+    if( poDS != NULL && poDS->GetOGRDriver() == NULL )
+        poDS->SetOGRDriver( (OGRSFDriver *)hDriver );
 
     return (OGRDataSourceH) poDS;
 }
@@ -199,8 +199,8 @@ OGRDataSource *OGRSFDriver::CopyDataSource( OGRDataSource *poSrcDS,
     /* It is also done in OGR_Dr_CopyDataSource() C method, in case */
     /* another C++ implementation forgets to do it. Currently (Nov 2011), */
     /* this implementation is the only one in the OGR source tree */
-    if( poODS != NULL && poODS->GetDriver() == NULL )
-        poODS->SetDriver( this );
+    if( poODS != NULL && poODS->GetOGRDriver() == NULL )
+        poODS->SetOGRDriver( this );
 
     return poODS;
 }
@@ -226,8 +226,8 @@ OGRDataSourceH OGR_Dr_CopyDataSource( OGRSFDriverH hDriver,
     /* Make sure that the driver is attached to the created datasource */
     /* if not already done by the implementation of the CopyDataSource() */
     /* method */
-    if( poDS != NULL && poDS->GetDriver() == NULL )
-        poDS->SetDriver( (OGRSFDriver *)hDriver );
+    if( poDS != NULL && poDS->GetOGRDriver() == NULL )
+        poDS->SetOGRDriver( (OGRSFDriver *)hDriver );
 
     return (OGRDataSourceH)poDS;
 }

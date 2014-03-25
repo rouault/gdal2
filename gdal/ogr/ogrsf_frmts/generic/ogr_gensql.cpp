@@ -84,7 +84,7 @@ int OGRGenSQLResultsLayerHasSpecialField(swq_expr_node* expr,
 /*                       OGRGenSQLResultsLayer()                        */
 /************************************************************************/
 
-OGRGenSQLResultsLayer::OGRGenSQLResultsLayer( OGRDataSource *poSrcDS,
+OGRGenSQLResultsLayer::OGRGenSQLResultsLayer( GDALDataset *poSrcDS,
                                               void *pSelectInfo, 
                                               OGRGeometry *poSpatFilter,
                                               const char *pszWHERE,
@@ -116,7 +116,7 @@ OGRGenSQLResultsLayer::OGRGenSQLResultsLayer( OGRDataSource *poSrcDS,
     for( iTable = 0; iTable < psSelectInfo->table_count; iTable++ )
     {
         swq_table_def *psTableDef = psSelectInfo->table_defs + iTable;
-        OGRDataSource *poTableDS = poSrcDS;
+        GDALDataset *poTableDS = poSrcDS;
 
         if( psTableDef->data_source != NULL )
         {
@@ -134,7 +134,7 @@ OGRGenSQLResultsLayer::OGRGenSQLResultsLayer( OGRDataSource *poSrcDS,
                 return;
             }
 
-            papoExtraDS = (OGRDataSource **)
+            papoExtraDS = (GDALDataset **)
                 CPLRealloc( papoExtraDS, sizeof(void*) * ++nExtraDSCount );
 
             papoExtraDS[nExtraDSCount-1] = poTableDS;

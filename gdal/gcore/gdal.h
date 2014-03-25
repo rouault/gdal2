@@ -384,6 +384,24 @@ GDALRegenerateOverviews( GDALRasterBandH hSrcBand,
                          const char *pszResampling, 
                          GDALProgressFunc pfnProgress, void *pProgressData );
 
+#include "ogr_api.h"
+
+int    CPL_DLL GDALDatasetGetLayerCount( GDALDatasetH );
+OGRLayerH CPL_DLL GDALDatasetGetLayer( GDALDatasetH, int );
+OGRLayerH CPL_DLL GDALDatasetGetLayerByName( GDALDatasetH, const char * );
+OGRErr    CPL_DLL GDALDatasetDeleteLayer( GDALDatasetH, int );
+OGRLayerH CPL_DLL GDALDatasetCreateLayer( GDALDatasetH, const char *, 
+                                      OGRSpatialReferenceH, OGRwkbGeometryType,
+                                      char ** );
+int    CPL_DLL GDALDatasetTestCapability( GDALDatasetH, const char * );
+OGRLayerH CPL_DLL GDALDatasetExecuteSQL( GDALDatasetH, const char *,
+                                     OGRGeometryH, const char * );
+void   CPL_DLL GDALDatasetReleaseResultSet( GDALDatasetH, OGRLayerH );
+OGRStyleTableH CPL_DLL GDALDatasetGetStyleTable( GDALDatasetH );
+void   CPL_DLL GDALDatasetSetStyleTableDirectly( GDALDatasetH, OGRStyleTableH );
+void   CPL_DLL GDALDatasetSetStyleTable( GDALDatasetH, OGRStyleTableH );
+
+
 /* ==================================================================== */
 /*      GDALRasterBand ... one band/channel in a dataset.               */
 /* ==================================================================== */

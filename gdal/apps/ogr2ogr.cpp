@@ -1679,8 +1679,7 @@ int main( int nArgc, char ** papszArgv )
 /* -------------------------------------------------------------------- */
 /*      For OSM file.                                                   */
 /* -------------------------------------------------------------------- */
-    int         bSrcIsOSM = (poDS->GetDriver() != NULL &&
-                             strcmp(poDS->GetDriver()->GetName(), "OSM") == 0);
+    int         bSrcIsOSM = (strcmp(poDS->GetDriverName(), "OSM") == 0);
     vsi_l_offset nSrcFileSize = 0;
     if( bSrcIsOSM && strcmp(poDS->GetName(), "/vsistdin/") != 0)
     {

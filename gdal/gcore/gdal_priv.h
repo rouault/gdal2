@@ -58,6 +58,7 @@ class GDALAsyncReader;
 #include "cpl_string.h"
 #include "cpl_minixml.h"
 #include <vector>
+#include "ogr_core.h"
 
 #define GMO_VALID                0x0001
 #define GMO_IGNORE_UNIMPLEMENTED 0x0002
@@ -249,6 +250,11 @@ GDALDatasetH GDALOpenInternal( const char * pszFilename, GDALAccess eAccess,
 GDALDatasetH GDALOpenInternal( GDALOpenInfo& oOpenInfo,
                                const char* const * papszAllowedDrivers);
 
+class OGRLayer;
+class OGRGeometry;
+class OGRSpatialReference;
+class OGRStyleTable;
+
 //! A set of associated raster bands, usually from one file.
 
 class CPL_DLL GDALDataset : public GDALMajorObject
@@ -269,7 +275,7 @@ class CPL_DLL GDALDataset : public GDALMajorObject
   protected:
     GDALDriver  *poDriver;
     GDALAccess  eAccess;
-    
+
     // Stored raster information.
     int         nRasterXSize;
     int         nRasterYSize;
@@ -332,7 +338,9 @@ class CPL_DLL GDALDataset : public GDALMajorObject
     virtual void *GetInternalHandle( const char * );
     virtual GDALDriver *GetDriver(void);
     virtual char      **GetFileList(void);
-
+    
+    virtual     const char* GetDriverName();
+    
     virtual int    GetGCPCount();
     virtual const char *GetGCPProjection();
     virtual const GDAL_GCP *GetGCPs();
@@ -373,6 +381,62 @@ class CPL_DLL GDALDataset : public GDALMajorObject
                            int, int *, GDALProgressFunc, void * );
 
     void ReportError(CPLErr eErrClass, int err_no, const char *fmt, ...)  CPL_PRINT_FUNC_FORMAT (4, 5);
+    
+    
+private:
+    void        *m_hMutex;
+
+    OGRLayer*       BuildLayerFromSelectInfo(void* psSelectInfo,
+                                             OGRGeometry *poSpatialFilter,
+                                             const char *pszDialect);
+
+  public:
+
+    virtual int         GetLayerCount() { return 0; }
+    virtual OGRLayer    *GetLayer(int) { return NULL; }
+    virtual OGRLayer    *GetLayerByName(const char *);
+    virtual OGRErr      DeleteLayer(int);
+
+    virtual int         TestCapability( const char * ) { return FALSE; }
+
+    virtual OGRLayer   *CreateLayer( const char *pszName, 
+                                     OGRSpatialReference *poSpatialRef = NULL,
+                                     OGRwkbGeometryType eGType = wkbUnknown,
+                                     char ** papszOptions = NULL );
+    virtual OGRLayer   *CopyLayer( OGRLayer *poSrcLayer, 
+                                   const char *pszNewName, 
+                                   char **papszOptions = NULL );
+
+    virtual OGRStyleTable *GetStyleTable();
+    virtual void        SetStyleTableDirectly( OGRStyleTable *poStyleTable );
+                            
+    virtual void        SetStyleTable(OGRStyleTable *poStyleTable);
+
+    virtual OGRLayer *  ExecuteSQL( const char *pszStatement,
+                                    OGRGeometry *poSpatialFilter,
+                                    const char *pszDialect );
+    virtual void        ReleaseResultSet( OGRLayer * poResultsSet );
+
+    virtual OGRErr      SyncToDisk();
+
+    int                 GetRefCount() const;
+    int                 GetSummaryRefCount() const;
+    OGRErr              Release();
+
+    
+    static int          IsGenericSQLDialect(const char* pszDialect);
+
+  protected:
+
+    OGRErr              ProcessSQLCreateIndex( const char * );
+    OGRErr              ProcessSQLDropIndex( const char * );
+    OGRErr              ProcessSQLDropTable( const char * );
+    OGRErr              ProcessSQLAlterTableAddColumn( const char * );
+    OGRErr              ProcessSQLAlterTableDropColumn( const char * );
+    OGRErr              ProcessSQLAlterTableAlterColumn( const char * );
+    OGRErr              ProcessSQLAlterTableRenameColumn( const char * );
+
+    OGRStyleTable      *m_poStyleTable;
 };
 
 /* ******************************************************************** */

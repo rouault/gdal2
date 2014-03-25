@@ -32,6 +32,7 @@
 #include "cpl_string.h"
 #include "cpl_hash_set.h"
 #include "cpl_multiproc.h"
+#include "ogr_featurestyle.h"
 #include <map>
 
 CPL_CVSID("$Id$");
@@ -212,6 +213,9 @@ GDALDataset::GDALDataset()
 /* -------------------------------------------------------------------- */
     bForceCachedIO =  CSLTestBoolean( 
         CPLGetConfigOption( "GDAL_FORCE_CACHING", "NO") );
+    
+    m_poStyleTable = NULL;
+    m_hMutex = NULL;
 }
 
 
@@ -309,6 +313,15 @@ GDALDataset::~GDALDataset()
     }
 
     CPLFree( papoBands );
+
+    if ( m_poStyleTable )
+    {
+        delete m_poStyleTable;
+        m_poStyleTable = NULL;
+    }
+
+    if( m_hMutex != NULL )
+        CPLDestroyMutex( m_hMutex );
 }
 
 /************************************************************************/
@@ -2837,4 +2850,164 @@ void GDALDataset::ReportError(CPLErr eErrClass, int err_no, const char *fmt, ...
         CPLErrorV( eErrClass, err_no, fmt, args );
     }
     va_end(args);
+}
+
+const char* GDALDataset::GetDriverName()
+{
+    if( poDriver )
+        return poDriver->GetDescription();
+    return "";
+}
+
+
+
+/************************************************************************/
+/*                     GDALDatasetReleaseResultSet()                    */
+/************************************************************************/
+
+void GDALDatasetReleaseResultSet( GDALDatasetH hDS, OGRLayerH hLayer )
+
+{
+    VALIDATE_POINTER0( hDS, "GDALDatasetReleaseResultSet" );
+
+    ((GDALDataset *) hDS)->ReleaseResultSet( (OGRLayer *) hLayer );
+}
+
+/************************************************************************/
+/*                     GDALDatasetTestCapability()                      */
+/************************************************************************/
+
+int GDALDatasetTestCapability( GDALDatasetH hDS, const char *pszCap )
+
+{
+    VALIDATE_POINTER1( hDS, "GDALDatasetTestCapability", 0 );
+    VALIDATE_POINTER1( pszCap, "GDALDatasetTestCapability", 0 );
+
+    return ((GDALDataset *) hDS)->TestCapability( pszCap );
+}
+
+/************************************************************************/
+/*                       GDALDatasetGetLayerCount()                     */
+/************************************************************************/
+
+int GDALDatasetGetLayerCount( GDALDatasetH hDS )
+
+{
+    VALIDATE_POINTER1( hDS, "GDALDatasetH", 0 );
+
+    return ((GDALDataset *)hDS)->GetLayerCount();
+}
+
+/************************************************************************/
+/*                        GDALDatasetGetLayer()                         */
+/************************************************************************/
+
+OGRLayerH GDALDatasetGetLayer( GDALDatasetH hDS, int iLayer )
+
+{
+    VALIDATE_POINTER1( hDS, "GDALDatasetGetLayer", NULL );
+
+    return (OGRLayerH) ((GDALDataset*)hDS)->GetLayer( iLayer );
+}
+
+/************************************************************************/
+/*                     GDALDatasetGetLayerByName()                      */
+/************************************************************************/
+
+OGRLayerH GDALDatasetGetLayerByName( GDALDatasetH hDS, const char *pszName )
+
+{
+    VALIDATE_POINTER1( hDS, "GDALDatasetGetLayerByName", NULL );
+
+    return (OGRLayerH) ((GDALDataset *) hDS)->GetLayerByName( pszName );
+}
+
+/************************************************************************/
+/*                        GDALDatasetDeleteLayer()                      */
+/************************************************************************/
+
+OGRErr GDALDatasetDeleteLayer( GDALDatasetH hDS, int iLayer )
+
+{
+    VALIDATE_POINTER1( hDS, "GDALDatasetH", OGRERR_INVALID_HANDLE );
+
+    return ((GDALDataset *) hDS)->DeleteLayer( iLayer );
+}
+
+/************************************************************************/
+/*                         GDALDatasetCreateLayer()                     */
+/************************************************************************/
+
+OGRLayerH GDALDatasetCreateLayer( GDALDatasetH hDS, 
+                              const char * pszName,
+                              OGRSpatialReferenceH hSpatialRef,
+                              OGRwkbGeometryType eType,
+                              char ** papszOptions )
+
+{
+    VALIDATE_POINTER1( hDS, "GDALDatasetCreateLayer", NULL );
+
+    if (pszName == NULL)
+    {
+        CPLError ( CE_Failure, CPLE_ObjectNull, "Name was NULL in GDALDatasetCreateLayer");
+        return 0;
+    }
+    return (OGRLayerH) ((GDALDataset *)hDS)->CreateLayer( 
+        pszName, (OGRSpatialReference *) hSpatialRef, eType, papszOptions );
+}
+
+/************************************************************************/
+/*                        GDALDatasetExecuteSQL()                       */
+/************************************************************************/
+
+OGRLayerH GDALDatasetExecuteSQL( GDALDatasetH hDS, 
+                             const char *pszStatement,
+                             OGRGeometryH hSpatialFilter,
+                             const char *pszDialect )
+
+{
+    VALIDATE_POINTER1( hDS, "GDALDatasetExecuteSQL", NULL );
+
+    return (OGRLayerH) 
+        ((GDALDataset *)hDS)->ExecuteSQL( pszStatement,
+                                            (OGRGeometry *) hSpatialFilter,
+                                            pszDialect );
+}
+
+/************************************************************************/
+/*                      GDALDatasetGetStyleTable()                      */
+/************************************************************************/
+
+OGRStyleTableH GDALDatasetGetStyleTable( GDALDatasetH hDS )
+
+{
+    VALIDATE_POINTER1( hDS, "OGR_DS_GetStyleTable", NULL );
+    
+    return (OGRStyleTableH) ((GDALDataset *) hDS)->GetStyleTable( );
+}
+
+/************************************************************************/
+/*                    GDALDatasetSetStyleTableDirectly()                */
+/************************************************************************/
+
+void GDALDatasetSetStyleTableDirectly( GDALDatasetH hDS,
+                                   OGRStyleTableH hStyleTable )
+
+{
+    VALIDATE_POINTER0( hDS, "OGR_DS_SetStyleTableDirectly" );
+    
+    ((GDALDataset *) hDS)->SetStyleTableDirectly( (OGRStyleTable *) hStyleTable);
+}
+
+/************************************************************************/
+/*                     GDALDatasetSetStyleTable()                       */
+/************************************************************************/
+
+void GDALDatasetSetStyleTable( GDALDatasetH hDS, OGRStyleTableH hStyleTable )
+
+{
+    VALIDATE_POINTER0( hDS, "OGR_DS_SetStyleTable" );
+    VALIDATE_POINTER0( hStyleTable, "OGR_DS_SetStyleTable" );
+    
+    ((GDALDataset *) hDS)->SetStyleTable( (OGRStyleTable *) hStyleTable);
 }

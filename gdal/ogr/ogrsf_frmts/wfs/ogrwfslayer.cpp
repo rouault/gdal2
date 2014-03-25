@@ -1176,7 +1176,7 @@ OGRFeature *OGRWFSLayer::GetNextFeature()
         /* apparently this is not correct : http://jira.codehaus.org/browse/GEOS-3657 */
         if (poGeom != NULL &&
             bAxisOrderAlreadyInverted &&
-            strcmp(poBaseDS->GetDriver()->GetName(), "GML") != 0)
+            strcmp(poBaseDS->GetOGRDriver()->GetName(), "GML") != 0)
         {
             poGeom->swapXY();
         }

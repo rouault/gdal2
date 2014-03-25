@@ -230,11 +230,11 @@ retry:
                 *ppoDriver = poDriver;
 
             poDS->Reference();
-            if( poDS->GetDriver() == NULL )
-                poDS->m_poDriver = poDriver;
+            if( poDS->GetOGRDriver() == NULL )
+                poDS->m_poOGRDriver = poDriver;
 
             CPLDebug( "OGR", "OGROpen(%s/%p) succeeded as %s.", 
-                      pszName, poDS, poDS->GetDriver()->GetName() );
+                      pszName, poDS, poDS->GetOGRDriver()->GetName() );
             
             return poDS;
         }
@@ -415,7 +415,7 @@ OGRDataSourceH OGROpenShared( const char *pszName, int bUpdate,
 /*                         ReleaseDataSource()                          */
 /************************************************************************/
 
-OGRErr OGRSFDriverRegistrar::ReleaseDataSource( OGRDataSource * poDS )
+OGRErr OGRSFDriverRegistrar::ReleaseDataSource( GDALDataset * poDS )
 
 {
     {
@@ -434,29 +434,29 @@ OGRErr OGRSFDriverRegistrar::ReleaseDataSource( OGRDataSource * poDS )
             CPLDebug( "OGR", 
                       "ReleaseDataSource(%s/%p) on unshared datasource!\n"
                       "Deleting directly.", 
-                      poDS->GetName(), poDS );
+                      poDS->GetDescription(), poDS );
             delete poDS;
             return OGRERR_FAILURE;
         }
 
-        if( poDS->GetRefCount() > 0 )
+        if( poDS->GetRefCount() > 1 )
             poDS->Dereference();
 
-        if( poDS->GetRefCount() > 0 )
+        if( poDS->GetRefCount() > 1 )
         {
             CPLDebug( "OGR", 
                       "ReleaseDataSource(%s/%p) ... just dereferencing.",
-                      poDS->GetName(), poDS );
+                      poDS->GetDescription(), poDS );
             return OGRERR_NONE;
         }
 
-        if( poDS->GetSummaryRefCount() > 0 )
+        if( poDS->GetSummaryRefCount() > 1 )
         {
             CPLDebug( "OGR", 
                       "OGRSFDriverRegistrar::ReleaseDataSource(%s)\n"
                       "Datasource reference count is now zero, but some layers\n"
                       "are still referenced ... not closing datasource.",
-                      poDS->GetName() );
+                     poDS->GetDescription() );
             return OGRERR_FAILURE;
         }
 
@@ -466,7 +466,7 @@ OGRErr OGRSFDriverRegistrar::ReleaseDataSource( OGRDataSource * poDS )
 /* -------------------------------------------------------------------- */
         CPLDebug( "OGR", 
                   "ReleaseDataSource(%s/%p) dereferenced and now destroying.",
-                  poDS->GetName(), poDS );
+                  poDS->GetDescription(), poDS );
 
         CPLFree( papszOpenDSRawName[iDS] );
         memmove( papszOpenDSRawName + iDS, papszOpenDSRawName + iDS + 1, 
