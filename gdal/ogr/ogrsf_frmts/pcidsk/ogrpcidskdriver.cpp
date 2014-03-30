@@ -50,7 +50,7 @@ OGRPCIDSKDriver::~OGRPCIDSKDriver()
 const char *OGRPCIDSKDriver::GetName()
 
 {
-    return "PCIDSK";
+    return "OGR_PCIDSK";
 }
 
 /************************************************************************/

@@ -58,6 +58,7 @@ class GDALAsyncReader;
 #include "cpl_string.h"
 #include "cpl_minixml.h"
 #include <vector>
+#include <map>
 #include "ogr_core.h"
 
 #define GMO_VALID                0x0001
@@ -246,9 +247,11 @@ class CPL_DLL GDALOpenInfo
 
 /* Internal method for now. Might be subject to later revisions */
 GDALDatasetH GDALOpenInternal( const char * pszFilename, GDALAccess eAccess,
-                               const char* const * papszAllowedDrivers);
+                               const char* const * papszAllowedDrivers );
 GDALDatasetH GDALOpenInternal( GDALOpenInfo& oOpenInfo,
-                               const char* const * papszAllowedDrivers);
+                               const char* const * papszAllowedDrivers,
+                               int bVerboseError = TRUE,
+                               int bOGRDriverOnly = FALSE );
 
 class OGRLayer;
 class OGRGeometry;
@@ -263,9 +266,11 @@ class CPL_DLL GDALDataset : public GDALMajorObject
     friend GDALDatasetH CPL_STDCALL GDALOpenShared( const char *, GDALAccess);
 
     /* Internal method for now. Might be subject to later revisions */
-    friend GDALDatasetH GDALOpenInternal( const char *, GDALAccess, const char* const * papszAllowedDrivers);
+    friend GDALDatasetH GDALOpenInternal( const char *, GDALAccess, const char* const * papszAllowedDrivers );
     friend GDALDatasetH GDALOpenInternal( GDALOpenInfo& oOpenInfo,
-                                          const char* const * papszAllowedDrivers);
+                                          const char* const * papszAllowedDrivers,
+                                          int bVerboseError,
+                                          int bOGRDriverOnly );
 
     friend class GDALDriver;
     friend class GDALDefaultOverviews;
@@ -783,7 +788,8 @@ class CPL_DLL GDALDriver : public GDALMajorObject
                                      int, char **,
                                      GDALProgressFunc pfnProgress, 
                                      void * pProgressData ) CPL_WARN_UNUSED_RESULT;
-    
+
+    virtual int         TestCapability( const char * );
 /* -------------------------------------------------------------------- */
 /*      The following are semiprivate, not intended to be accessed      */
 /*      by anyone but the formats instantiating and populating the      */
@@ -813,6 +819,12 @@ class CPL_DLL GDALDriver : public GDALMajorObject
                                       const char * pszOldName );
     CPLErr              (*pfnCopyFiles)( const char * pszNewName,
                                          const char * pszOldName );
+
+    /* For legacy OGR drivers */
+    GDALDataset         *(*pfnOpenWithDriverArg)( GDALDriver*, GDALOpenInfo * );
+    GDALDataset         *(*pfnCreateVectorOnly)( GDALDriver*,
+                                                 const char * pszName,
+                                                 char ** papszOptions );
 
 /* -------------------------------------------------------------------- */
 /*      Helper methods.                                                 */
@@ -847,8 +859,7 @@ class CPL_DLL GDALDriverManager : public GDALMajorObject
 {
     int         nDrivers;
     GDALDriver  **papoDrivers;
-
-    char        *pszHome;
+    std::map<CPLString, GDALDriver*> oMapNameToDrivers;
     
  public:
                 GDALDriverManager();
@@ -859,14 +870,10 @@ class CPL_DLL GDALDriverManager : public GDALMajorObject
     GDALDriver  *GetDriverByName( const char * );
 
     int         RegisterDriver( GDALDriver * );
-    void        MoveDriver( GDALDriver *, int );
     void        DeregisterDriver( GDALDriver * );
 
     void        AutoLoadDrivers();
     void        AutoSkipDrivers();
-
-    const char *GetHome();
-    void        SetHome( const char * );
 };
 
 CPL_C_START

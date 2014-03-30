@@ -58,7 +58,7 @@ int OGRSDTSDriver::TestCapability( const char * )
 const char *OGRSDTSDriver::GetName()
 
 {
-    return "SDTS";
+    return "OGR_SDTS";
 }
 
 /************************************************************************/

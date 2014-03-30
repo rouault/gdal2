@@ -250,7 +250,7 @@ protected:
  * OGRSFDriverRegistrar.
  */
 
-class CPL_DLL OGRSFDriver : public GDALMajorObject
+class CPL_DLL OGRSFDriver : public GDALDriver
 {
   public:
     virtual     ~OGRSFDriver();
@@ -258,8 +258,6 @@ class CPL_DLL OGRSFDriver : public GDALMajorObject
     virtual const char  *GetName() = 0;
 
     virtual OGRDataSource *Open( const char *pszName, int bUpdate=FALSE ) = 0;
-
-    virtual int         TestCapability( const char * ) = 0;
 
     virtual OGRDataSource *CreateDataSource( const char *pszName,
                                              char ** = NULL );
@@ -285,20 +283,17 @@ class CPL_DLL OGRSFDriver : public GDALMajorObject
 
 class CPL_DLL OGRSFDriverRegistrar
 {
-    int         nDrivers;
-    OGRSFDriver **papoDrivers;
 
                 OGRSFDriverRegistrar();
-
-    int         nOpenDSCount;
-    char        **papszOpenDSRawName;
-    OGRDataSource **papoOpenDS;
-    OGRSFDriver **papoOpenDSDriver;
-    GIntBig     *panOpenDSPID;
-
-  public:
-
                 ~OGRSFDriverRegistrar();
+
+    static GDALDataset* OpenWithDriverArg(GDALDriver* poDriver,
+                                                 GDALOpenInfo* poOpenInfo);
+    static GDALDataset* CreateVectorOnly( GDALDriver* poDriver,
+                                          const char * pszName,
+                                          char ** papszOptions );
+    
+  public:
 
     static OGRSFDriverRegistrar *GetRegistrar();
     static OGRDataSource *Open( const char *pszName, int bUpdate=FALSE,
@@ -315,10 +310,8 @@ class CPL_DLL OGRSFDriverRegistrar
     OGRSFDriver *GetDriver( int iDriver );
     OGRSFDriver *GetDriverByName( const char * );
 
-    int         GetOpenDSCount() { return nOpenDSCount; } 
+    int         GetOpenDSCount();
     OGRDataSource *GetOpenDS( int );
-
-    void        AutoLoadDrivers();
 };
 
 /* -------------------------------------------------------------------- */
@@ -326,6 +319,7 @@ class CPL_DLL OGRSFDriverRegistrar
 /* -------------------------------------------------------------------- */
 CPL_C_START
 void CPL_DLL OGRRegisterAll();
+void OGRRegisterAllInternal();
 
 void CPL_DLL RegisterOGRFileGDB();
 void CPL_DLL RegisterOGRShape();

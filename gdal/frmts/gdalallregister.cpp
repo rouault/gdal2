@@ -30,6 +30,7 @@
 
 #include "gdal_priv.h"
 #include "gdal_frmts.h"
+#include "ogrsf_frmts.h"
 
 CPL_CVSID("$Id$");
 
@@ -531,6 +532,9 @@ void CPL_STDCALL GDALAllRegister()
 #ifdef FRMT_iris
     GDALRegister_IRIS();
 #endif
+    
+    OGRRegisterAllInternal();
+    
 /* -------------------------------------------------------------------- */
 /*      Deregister any drivers explicitly marked as supressed by the    */
 /*      GDAL_SKIP environment variable.                                 */

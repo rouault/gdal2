@@ -36,6 +36,20 @@
 
 CPL_CVSID("$Id$");
 
+
+/************************************************************************/
+/*                        RasterliteOpenSQLiteDB()                      */
+/************************************************************************/
+
+OGRDataSourceH RasterliteOpenSQLiteDB(const char* pszFilename,
+                                      GDALAccess eAccess)
+{
+    const char* apszAllowedDrivers[] = { "SQLITE", NULL };
+    return (OGRDataSourceH)GDALOpenInternal(pszFilename,
+                                            eAccess,
+                                            (char**)apszAllowedDrivers);
+}
+
 /************************************************************************/
 /*                            RasterliteBand()                          */
 /************************************************************************/
@@ -978,7 +992,7 @@ GDALDataset* RasterliteDataset::Open(GDALOpenInfo* poOpenInfo)
 /*      Open underlying OGR DB                                          */
 /* -------------------------------------------------------------------- */
 
-    OGRDataSourceH hDS = OGROpen(osFileName.c_str(), (poOpenInfo->eAccess == GA_Update) ? TRUE : FALSE, NULL);
+    OGRDataSourceH hDS = RasterliteOpenSQLiteDB(osFileName.c_str(), poOpenInfo->eAccess);
     CPLDebug("RASTERLITE", "SQLite DB Open");
     
     RasterliteDataset* poDS = NULL;

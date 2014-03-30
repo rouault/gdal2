@@ -239,6 +239,7 @@ def pcidsk_8():
 
 ###############################################################################
 # Test that we cannot open a vector only pcidsk
+# FIXME: test disabled because of unification
 
 def pcidsk_9():
 
@@ -439,7 +440,7 @@ gdaltest_list = [
     pcidsk_6,
     pcidsk_7,
     pcidsk_8,
-    pcidsk_9,
+    #pcidsk_9,
     pcidsk_10,
     pcidsk_11,
     pcidsk_12,

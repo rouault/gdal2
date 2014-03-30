@@ -52,7 +52,7 @@ OGRPDFDriver::~OGRPDFDriver()
 const char *OGRPDFDriver::GetName()
 
 {
-    return "PDF";
+    return "OGR_PDF";
 }
 
 /************************************************************************/

@@ -38,7 +38,11 @@ CPL_CVSID("$Id$");
 
 void OGRRegisterAll()
 {
-    OGRSFDriverRegistrar::GetRegistrar()->AutoLoadDrivers();
+    GDALAllRegister();
+}
+
+void OGRRegisterAllInternal()
+{
 
 #ifdef SHAPE_ENABLED
     RegisterOGRShape();

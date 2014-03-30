@@ -49,7 +49,7 @@ OGRGmtDriver::~OGRGmtDriver()
 const char *OGRGmtDriver::GetName()
 
 {
-    return "GMT";
+    return "OGR_GMT";
 }
 
 /************************************************************************/

@@ -101,7 +101,6 @@ GDALDriverManager::GDALDriverManager()
 {
     nDrivers = 0;
     papoDrivers = NULL;
-    pszHome = CPLStrdup("");
 
     CPLAssert( poDM == NULL );
 
@@ -214,7 +213,6 @@ GDALDriverManager::~GDALDriverManager()
 /*      Cleanup local memory.                                           */
 /* -------------------------------------------------------------------- */
     VSIFree( papoDrivers );
-    VSIFree( pszHome );
 
 /* -------------------------------------------------------------------- */
 /*      Cleanup any Proxy related memory.                               */
@@ -430,6 +428,8 @@ int GDALDriverManager::RegisterDriver( GDALDriver * poDriver )
     if( poDriver->pfnCreateCopy != NULL )
         poDriver->SetMetadataItem( GDAL_DCAP_CREATECOPY, "YES" );
 
+    oMapNameToDrivers[CPLString(poDriver->GetDescription()).toupper()] = poDriver;
+    
     int iResult = nDrivers - 1;
 
     return iResult;
@@ -483,6 +483,7 @@ void GDALDriverManager::DeregisterDriver( GDALDriver * poDriver )
     if( i == nDrivers )
         return;
 
+    oMapNameToDrivers.erase(CPLString(poDriver->GetDescription()).toupper());
     while( i < nDrivers-1 )
     {
         papoDrivers[i] = papoDrivers[i+1];
@@ -527,17 +528,9 @@ void CPL_STDCALL GDALDeregisterDriver( GDALDriverH hDriver )
 GDALDriver * GDALDriverManager::GetDriverByName( const char * pszName )
 
 {
-    int         i;
-
     CPLMutexHolderD( &hDMMutex );
 
-    for( i = 0; i < nDrivers; i++ )
-    {
-        if( EQUAL(papoDrivers[i]->GetDescription(), pszName) )
-            return papoDrivers[i];
-    }
-
-    return NULL;
+    return oMapNameToDrivers[CPLString(pszName).toupper()];
 }
 
 /************************************************************************/
@@ -559,29 +552,6 @@ GDALDriverH CPL_STDCALL GDALGetDriverByName( const char * pszName )
 }
 
 /************************************************************************/
-/*                              GetHome()                               */
-/************************************************************************/
-
-const char *GDALDriverManager::GetHome()
-
-{
-    return pszHome;
-}
-
-/************************************************************************/
-/*                              SetHome()                               */
-/************************************************************************/
-
-void GDALDriverManager::SetHome( const char * pszNewHome )
-
-{
-    CPLMutexHolderD( &hDMMutex );
-
-    CPLFree( pszHome );
-    pszHome = CPLStrdup(pszNewHome);
-}
-
-/************************************************************************/
 /*                          AutoSkipDrivers()                           */
 /************************************************************************/
 
@@ -600,10 +570,14 @@ void GDALDriverManager::SetHome( const char * pszNewHome )
 void GDALDriverManager::AutoSkipDrivers()
 
 {
-    if( CPLGetConfigOption( "GDAL_SKIP", NULL ) == NULL )
+    if( CPLGetConfigOption( "GDAL_SKIP", NULL ) == NULL &&
+        CPLGetConfigOption( "OGR_SKIP", NULL ) == NULL )
         return;
 
-    char **papszList = CSLTokenizeString( CPLGetConfigOption("GDAL_SKIP","") );
+    CPLString osDriversToSkip( CPLGetConfigOption( "GDAL_SKIP", "" ) );
+    osDriversToSkip += " ";
+    osDriversToSkip += CPLGetConfigOption( "OGR_SKIP", "" );
+    char **papszList = CSLTokenizeString( osDriversToSkip );
 
     for( int i = 0; i < CSLCount(papszList); i++ )
     {
@@ -714,19 +688,6 @@ void GDALDriverManager::AutoLoadDrivers()
                                      num2str(GDAL_VERSION_MINOR) "/PlugIns" );
    #endif
 
-
-        if( strlen(GetHome()) > 0 )
-        {
-            papszSearchPath = CSLAddString( papszSearchPath, 
-                                  CPLFormFilename( GetHome(),
-    #ifdef MACOSX_FRAMEWORK 
-                                     "/Library/Application Support/GDAL/"
-                                     num2str(GDAL_VERSION_MAJOR) "."  
-                                     num2str(GDAL_VERSION_MINOR) "/PlugIns", NULL ) );
-    #else
-                                                    "lib/gdalplugins", NULL ) );
-    #endif                                           
-        }
     }
 
 /* -------------------------------------------------------------------- */
@@ -750,15 +711,16 @@ void GDALDriverManager::AutoLoadDrivers()
             osABISpecificDir = papszSearchPath[iDir];
 
         papszFiles = CPLReadDir( osABISpecificDir );
+        int nFileCount = CSLCount(papszFiles);
 
-        for( int iFile = 0; iFile < CSLCount(papszFiles); iFile++ )
+        for( int iFile = 0; iFile < nFileCount; iFile++ )
         {
             char   *pszFuncName;
             const char *pszFilename;
             const char *pszExtension = CPLGetExtension( papszFiles[iFile] );
             void   *pRegister;
 
-            if( !EQUALN(papszFiles[iFile],"gdal_",5) )
+            if( !EQUALN(papszFiles[iFile],"gdal_",5) && !EQUALN(papszFiles[iFile],"ogr_",4) )
                 continue;
 
             if( !EQUAL(pszExtension,"dll") 

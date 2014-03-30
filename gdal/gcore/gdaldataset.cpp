@@ -2274,14 +2274,16 @@ GDALOpen( const char * pszFilename, GDALAccess eAccess )
 /* The drivers listed in papszAllowedDrivers can be in any order */
 /* Only the order of registration will be taken into account */
 GDALDatasetH GDALOpenInternal( const char * pszFilename, GDALAccess eAccess,
-                               const char* const * papszAllowedDrivers)
+                               const char* const * papszAllowedDrivers )
 {
     GDALOpenInfo oOpenInfo( pszFilename, eAccess );
     return GDALOpenInternal(oOpenInfo, papszAllowedDrivers);
 }
 
 GDALDatasetH GDALOpenInternal( GDALOpenInfo& oOpenInfo,
-                               const char* const * papszAllowedDrivers)
+                               const char* const * papszAllowedDrivers,
+                               int bVerboseError,
+                               int bOGRDriverOnly )
 {
 
     VALIDATE_POINTER1( oOpenInfo.pszFilename, "GDALOpen", NULL );
@@ -2324,11 +2326,17 @@ GDALDatasetH GDALOpenInternal( GDALOpenInfo& oOpenInfo,
                 CSLFindString((char**)papszAllowedDrivers, GDALGetDriverShortName(poDriver)) == -1)
                 continue;
         }
-
-        if ( poDriver->pfnOpen == NULL )
+        
+        if( bOGRDriverOnly && poDriver->GetMetadataItem("OGR_DRIVER") == NULL )
             continue;
 
-        poDS = poDriver->pfnOpen( &oOpenInfo );
+        if ( poDriver->pfnOpen != NULL )
+            poDS = poDriver->pfnOpen( &oOpenInfo );
+        else if( poDriver->pfnOpenWithDriverArg != NULL )
+            poDS = poDriver->pfnOpenWithDriverArg( poDriver, &oOpenInfo );
+        else
+            continue;
+
         if( poDS != NULL )
         {
             if( strlen(poDS->GetDescription()) == 0 )
@@ -2363,15 +2371,18 @@ GDALDatasetH GDALOpenInternal( GDALOpenInfo& oOpenInfo,
         }
     }
 
-    if( oOpenInfo.bStatOK )
-        CPLError( CE_Failure, CPLE_OpenFailed,
-                  "`%s' not recognised as a supported file format.\n",
-                  oOpenInfo.pszFilename );
-    else
-        CPLError( CE_Failure, CPLE_OpenFailed,
-                  "`%s' does not exist in the file system,\n"
-                  "and is not recognised as a supported dataset name.\n",
-                  oOpenInfo.pszFilename );
+    if( bVerboseError )
+    {
+        if( oOpenInfo.bStatOK )
+            CPLError( CE_Failure, CPLE_OpenFailed,
+                    "`%s' not recognised as a supported file format.\n",
+                    oOpenInfo.pszFilename );
+        else
+            CPLError( CE_Failure, CPLE_OpenFailed,
+                    "`%s' does not exist in the file system,\n"
+                    "and is not recognised as a supported dataset name.\n",
+                    oOpenInfo.pszFilename );
+    }
 
     int* pnRecCount = (int*)CPLGetTLS( CTLS_GDALDATASET_REC_PROTECT_MAP );
     if( pnRecCount )

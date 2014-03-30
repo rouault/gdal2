@@ -50,7 +50,7 @@ OGRPDSDriver::~OGRPDSDriver()
 const char *OGRPDSDriver::GetName()
 
 {
-    return "PDS";
+    return "OGR_PDS";
 }
 
 /************************************************************************/

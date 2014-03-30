@@ -52,6 +52,8 @@ GDALDriver::GDALDriver()
     pfnIdentify = NULL;
     pfnRename = NULL;
     pfnCopyFiles = NULL;
+    pfnOpenWithDriverArg = NULL;
+    pfnCreateVectorOnly = NULL;
 }
 
 /************************************************************************/
@@ -131,7 +133,7 @@ GDALDataset * GDALDriver::Create( const char * pszFilename,
 /* -------------------------------------------------------------------- */
 /*      Does this format support creation.                              */
 /* -------------------------------------------------------------------- */
-    if( pfnCreate == NULL )
+    if( pfnCreate == NULL && pfnCreateVectorOnly == NULL )
     {
         CPLError( CE_Failure, CPLE_NotSupported,
                   "GDALDriver::Create() ... no create method implemented"
@@ -217,8 +219,15 @@ GDALDataset * GDALDriver::Create( const char * pszFilename,
               GDALGetDataTypeName( eType ), 
               papszOptions );
     
-    poDS = pfnCreate( pszFilename, nXSize, nYSize, nBands, eType,
-                      papszOptions );
+    if( pfnCreate != NULL )
+    {
+        poDS = pfnCreate( pszFilename, nXSize, nYSize, nBands, eType,
+                          papszOptions );
+    }
+    else
+    {
+        poDS = pfnCreateVectorOnly( this, pszFilename, papszOptions );
+    }
 
     if( poDS != NULL )
     {
@@ -1544,7 +1553,24 @@ GDALIdentifyDriver( const char * pszFilename,
             if( CPLGetLastErrorNo() != 0 )
                 return NULL;
         }
+        else if( poDriver->pfnOpenWithDriverArg != NULL )
+        {
+            poDS = poDriver->pfnOpenWithDriverArg( poDriver, &oOpenInfo );
+            if( poDS != NULL )
+            {
+                delete poDS;
+                return (GDALDriverH) poDriver;
+            }
+
+            if( CPLGetLastErrorNo() != 0 )
+                return NULL;
+        }
     }
 
     return NULL;
+}
+
+int GDALDriver::TestCapability( const char * )
+{
+    return FALSE;
 }

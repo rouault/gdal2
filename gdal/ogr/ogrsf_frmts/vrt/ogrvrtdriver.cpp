@@ -49,7 +49,7 @@ OGRVRTDriver::~OGRVRTDriver()
 const char *OGRVRTDriver::GetName()
 
 {
-    return "VRT";
+    return "OGR_VRT";
 }
 
 /************************************************************************/

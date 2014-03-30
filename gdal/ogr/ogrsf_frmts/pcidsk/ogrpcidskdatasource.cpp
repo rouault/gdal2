@@ -100,7 +100,9 @@ OGRLayer *OGRPCIDSKDataSource::GetLayer( int iLayer )
 int OGRPCIDSKDataSource::Open( const char * pszFilename, int bUpdateIn )
 
 {
-    if( !EQUAL(CPLGetExtension(pszFilename),"pix") )
+    VSIStatBufL sStat;
+    if( !EQUAL(CPLGetExtension(pszFilename),"pix") ||
+        VSIStatL(pszFilename, &sStat) != 0 )
         return FALSE;
 
     osName = pszFilename;
