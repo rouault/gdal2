@@ -1564,11 +1564,13 @@ JP2KAKDataset::DirectRasterIO( GDALRWFlag eRWFlag,
                     sample_offsets[i] = i * nBandSpace / 2;
                     sample_gaps[i] = nPixelSpace / 2;
                     row_gaps[i] = nLineSpace / 2;
+                    /* Introduced in r25136 with an unrelated commit message.
+                    Reverted per ticket #5328
                     if( precisions[i] == 12 )
                     {
                       CPLDebug( "JP2KAK", "16bit extend 12 bit data." );
                       precisions[i] = 16;
-                    }
+                    }*/
                 }
                 
             }
@@ -2553,7 +2555,9 @@ JP2KAKCreateCopy( const char * pszFilename, GDALDataset *poSrcDS,
             oJP2MD.SetGeoTransform( adfGeoTransform );
         }
 
-        
+        const char* pszAreaOrPoint = poSrcDS->GetMetadataItem(GDALMD_AREA_OR_POINT);
+        oJP2MD.bPixelIsPoint = pszAreaOrPoint != NULL && EQUAL(pszAreaOrPoint, GDALMD_AOP_POINT);
+
         if( CSLFetchBoolean( papszOptions, "GMLJP2", TRUE ) )
             JP2KAKWriteBox( &jp2_out, oJP2MD.CreateGMLJP2(nXSize,nYSize) );
         if( CSLFetchBoolean( papszOptions, "GeoJP2", TRUE ) )

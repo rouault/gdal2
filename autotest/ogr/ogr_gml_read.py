@@ -2837,6 +2837,129 @@ def ogr_gml_61():
     return 'success'
 
 ###############################################################################
+# Test GML_ATTRIBUTES_TO_OGR_FIELDS option
+
+def ogr_gml_62():
+
+    if not gdaltest.have_gml_reader:
+        return 'skip'
+
+    try:
+        os.unlink('tmp/gmlattributes.gfs')
+    except:
+        pass
+
+    shutil.copy('data/gmlattributes.gml', 'tmp/gmlattributes.gml')
+
+    # Default behaviour
+    ds = ogr.Open('tmp/gmlattributes.gml')
+    lyr = ds.GetLayer(0)
+    if lyr.GetLayerDefn().GetFieldCount() != 1:
+        gdaltest.post_reason('fail')
+        return 'fail'
+    ds = None
+
+    # Test GML_ATTRIBUTES_TO_OGR_FIELDS=YES
+    try:
+        os.unlink('tmp/gmlattributes.gfs')
+    except:
+        pass
+    gdal.SetConfigOption('GML_ATTRIBUTES_TO_OGR_FIELDS', 'YES')
+    ds = ogr.Open('tmp/gmlattributes.gml')
+    gdal.SetConfigOption('GML_ATTRIBUTES_TO_OGR_FIELDS', None)
+    lyr = ds.GetLayer(0)
+    if lyr.GetLayerDefn().GetFieldCount() != 4:
+        gdaltest.post_reason('fail')
+        return 'fail'
+    feat = lyr.GetNextFeature()
+    if feat.GetField('element_attr1') != '1' or \
+       feat.GetField('element2_attr1') != 'a' or \
+       feat.GetField('element2') != 'foo' or \
+       feat.IsFieldSet('element3_attr1') :
+        gdaltest.post_reason('fail')
+        feat.DumpReadable()
+        return 'fail'
+    feat = lyr.GetNextFeature()
+    if feat.IsFieldSet('element_attr1') or \
+       feat.IsFieldSet('element2_attr1') or \
+       feat.IsFieldSet('element2') or \
+       feat.GetField('element3_attr1') != 1:
+        gdaltest.post_reason('fail')
+        feat.DumpReadable()
+        return 'fail'
+    feat = lyr.GetNextFeature()
+    if feat.GetField('element_attr1') != 'a' or \
+       feat.IsFieldSet('element2_attr1') or \
+       feat.IsFieldSet('element2') or \
+       feat.IsFieldSet('element3_attr1') :
+        gdaltest.post_reason('fail')
+        feat.DumpReadable()
+        return 'fail'
+    feat = None
+    ds = None
+
+    # Retry now that the .gfs exists
+    ds = ogr.Open('tmp/gmlattributes.gml')
+    lyr = ds.GetLayer(0)
+    feat = lyr.GetNextFeature()
+    if feat.GetField('element_attr1') != '1' or \
+       feat.GetField('element2_attr1') != 'a' or \
+       feat.GetField('element2') != 'foo' or \
+       feat.IsFieldSet('element3_attr1') :
+        gdaltest.post_reason('fail')
+        feat.DumpReadable()
+        return 'fail'
+    feat = None
+    ds = None
+
+    return 'success'
+
+###############################################################################
+# Test reading RUIAN VFR files
+
+def ogr_gml_63():
+    
+    if not gdaltest.have_gml_reader:
+        return 'skip'
+
+    ### test ST file type
+    ds = ogr.Open('data/ruian_st_v1.xml.gz')
+
+    # check number of layers
+    nlayers = ds.GetLayerCount()
+    if nlayers != 14: 
+        return 'fail'
+
+    # check name of first layer
+    lyr = ds.GetLayer(0)
+    if lyr.GetName() != 'Staty':
+        return 'fail'
+    
+    # check geometry column name
+    if lyr.GetGeometryColumn() != 'DefinicniBod':
+        return 'fail'
+    
+    ds = None
+
+    ### test OB file type
+    ds = ogr.Open('data/ruian_ob_v1.xml.gz')
+    
+    # check number of layers
+    nlayers = ds.GetLayerCount()
+    if nlayers != 8: 
+        return 'fail'
+
+    # check number of features
+    nfeatures = 0
+    for i in range(nlayers):
+        lyr = ds.GetLayer(i)
+        nfeatures += lyr.GetFeatureCount()
+    if nfeatures != 7:
+        return 'fail'
+        
+    return 'success'
+
+###############################################################################
 #  Cleanup
 
 def ogr_gml_cleanup():
@@ -2952,6 +3075,11 @@ def ogr_gml_clean_files():
         os.remove( 'tmp/ogr_gml_51.xsd' )
     except:
         pass
+    try:
+        os.remove( 'tmp/gmlattributes.gml' )
+        os.remove( 'tmp/gmlattributes.gfs' )
+    except:
+        pass
     files = os.listdir('data')
     for filename in files:
         if len(filename) > 13 and filename[-13:] == '.resolved.gml':
@@ -3024,6 +3152,8 @@ gdaltest_list = [
     ogr_gml_59,
     ogr_gml_60,
     ogr_gml_61,
+    ogr_gml_62,
+    ogr_gml_63,
     ogr_gml_cleanup ]
 
 if __name__ == '__main__':

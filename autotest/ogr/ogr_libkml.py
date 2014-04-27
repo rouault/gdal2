@@ -820,9 +820,11 @@ def ogr_libkml_gxtrack():
     lyr = ds.GetLayer(0)
 
     feat = lyr.GetNextFeature()
-    if feat.GetGeometryRef().ExportToWkt() != 'LINESTRING (2 49,3 50)':
-        print(feat.GetGeometryRef().ExportToWkt())
-        gdaltest.post_reason('Unexpected geometry.')
+    if feat.GetField('begin') != '2013/05/28 12:00:00' or \
+       feat.GetField('end') != '2013/05/28 13:00:00' or \
+       feat.GetGeometryRef().ExportToWkt() != 'LINESTRING (2 49,3 50)':
+        feat.DumpReadable()
+        gdaltest.post_reason('failure')
         return 'fail'
     ds = None
 
@@ -1288,7 +1290,7 @@ def ogr_libkml_write_model():
         return 'fail'
 
     # This can only appear if HTTP ressource is available
-    if data.find('<targetHref>cube.gif</targetHref>') == -1 or \
+    if data.find('<targetHref>http://makc.googlecode.com/svn/trunk/flash/sandy_flar2/cube.gif</targetHref>') == -1 or \
        data.find('<sourceHref>cube.gif</sourceHref>') == -1:
 
         if gdaltest.gdalurlopen('http://makc.googlecode.com/svn/trunk/flash/sandy_flar2/cube.dae') is not None:
@@ -1573,6 +1575,8 @@ def ogr_libkml_write_update():
         lyr = ds.CreateLayer('layer_to_edit')
         feat = ogr.Feature(lyr.GetLayerDefn())
         lyr.CreateFeature(feat)
+        feat.SetFID(10)
+        lyr.CreateFeature(feat)
         feat.SetFID(2)
         lyr.SetFeature(feat)
         lyr.DeleteFeature(3)
@@ -1594,7 +1598,8 @@ def ogr_libkml_write_update():
         if data.find('<NetworkLinkControl>') == -1 or \
         data.find('<Update>') == -1 or \
         data.find('<targetHref>http://foo</targetHref>') == -1 or \
-        data.find('<Placemark id="layer_to_edit.1"/>') == -1 or \
+        data.find('<Placemark/>') == -1 or \
+        data.find('<Placemark id="layer_to_edit.10"/>') == -1 or \
         data.find('<Create>') == -1 or \
         data.find('<Document targetId="layer_to_edit">') == -1 or \
         data.find('<Change>') == -1 or \

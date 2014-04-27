@@ -279,6 +279,11 @@ GDALDriverManager::~GDALDriverManager()
     CPLCleanupErrorMutex();
 
 /* -------------------------------------------------------------------- */
+/*      Cleanup CPLsetlocale mutex                                      */
+/* -------------------------------------------------------------------- */
+    CPLCleanupSetlocaleMutex();
+
+/* -------------------------------------------------------------------- */
 /*      Cleanup the master CPL mutex, which governs the creation        */
 /*      of all other mutexes.                                           */ 
 /* -------------------------------------------------------------------- */

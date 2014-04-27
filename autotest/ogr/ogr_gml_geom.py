@@ -942,6 +942,8 @@ def gml_out_precision():
 def gml_invalid_geoms():
 
     gml_expected_wkt_list = [
+        ('<?xml version="1.0" encoding="UTF-8"?>', None),
+        ('<!-- bla -->', None),
         ('<foo/>', None),
         ('<gml:Point><gml:pos>31 29 16</gml:pos><gml:pos>31 29 16</gml:pos></gml:Point>', None),
         ('<gml:Point><gml:coordinates/></gml:Point>', 'POINT EMPTY'), # This is valid GML actually
@@ -978,7 +980,7 @@ def gml_invalid_geoms():
         ('<gml:Box><gml:pos>31 29 16</gml:pos></gml:Box>', None),
         ('<gml:MultiPolygon/>', 'MULTIPOLYGON EMPTY'), # valid GML3, but invalid GML2. Be tolerant
         ('<gml:MultiPolygon><foo/></gml:MultiPolygon>', 'MULTIPOLYGON EMPTY'), # illegal GML, but we are tolerant
-        ('<gml:MultiPolygon><gml:polygonMember/></gml:MultiPolygon>', None),
+        ('<gml:MultiPolygon><gml:polygonMember/></gml:MultiPolygon>', 'MULTIPOLYGON EMPTY'), # valid in GML3 (accepted by PostGIS too)
         ('<gml:MultiPolygon><gml:polygonMember><foo/></gml:polygonMember></gml:MultiPolygon>', None),
         ('<gml:MultiPolygon><gml:polygonMember><gml:Point><gml:pos>31 29 16</gml:pos></gml:Point></gml:polygonMember></gml:MultiPolygon>', None),
         ('<gml:MultiSurface><gml:surfaceMembers/></gml:MultiSurface>', 'MULTIPOLYGON EMPTY'), # valid GML
@@ -986,7 +988,7 @@ def gml_invalid_geoms():
         ('<gml:MultiSurface><gml:surfaceMembers><gml:Polygon/></gml:surfaceMembers></gml:MultiSurface>', 'MULTIPOLYGON EMPTY'), # valid GML3
         ('<gml:MultiPoint/>', 'MULTIPOINT EMPTY'),
         ('<gml:MultiPoint><foo/></gml:MultiPoint>', 'MULTIPOINT EMPTY'),
-        ('<gml:MultiPoint><gml:pointMember/></gml:MultiPoint>', None),
+        ('<gml:MultiPoint><gml:pointMember/></gml:MultiPoint>', 'MULTIPOINT EMPTY'), # valid in GML3 (accepted by PostGIS too)
         ('<gml:MultiPoint><gml:pointMember><gml:LineString><gml:posList>0 1 2 3</gml:posList></gml:LineString></gml:pointMember></gml:MultiPoint>', None),
         ('<gml:MultiPoint><gml:pointMembers></gml:pointMembers></gml:MultiPoint>', 'MULTIPOINT EMPTY'),
         ('<gml:MultiPoint><gml:pointMembers><foo/></gml:pointMembers></gml:MultiPoint>', 'MULTIPOINT EMPTY'),
@@ -997,7 +999,7 @@ def gml_invalid_geoms():
         ('<gml:MultiLineString><gml:lineStringMember><gml:Point><gml:pos>31 29 16</gml:pos></gml:Point></gml:lineStringMember></gml:MultiLineString>', None),
         ('<gml:MultiCurve/>', 'MULTILINESTRING EMPTY'),
         ('<gml:MultiCurve><foo/></gml:MultiCurve>', 'MULTILINESTRING EMPTY'),
-        ('<gml:MultiCurve><gml:curveMember/></gml:MultiCurve>', None),
+        ('<gml:MultiCurve><gml:curveMember/></gml:MultiCurve>', 'MULTILINESTRING EMPTY'), # valid in GML3 (accepted by PostGIS too)
         ('<gml:MultiCurve><gml:curveMember><foo/></gml:curveMember></gml:MultiCurve>', None),
         ('<gml:MultiCurve><gml:curveMember><gml:Curve/></gml:curveMember></gml:MultiCurve>', None),
         ('<gml:MultiCurve><gml:curveMember><gml:Curve><foo/></gml:Curve></gml:curveMember></gml:MultiCurve>', None),
@@ -1019,7 +1021,7 @@ def gml_invalid_geoms():
         ('<gml:segments><gml:LineStringSegment><gml:Point><gml:pos>31 29 16</gml:pos></gml:Point></gml:LineStringSegment></gml:segments>', 'LINESTRING EMPTY'),
         ('<gml:MultiGeometry/>', 'GEOMETRYCOLLECTION EMPTY'),
         ('<gml:MultiGeometry><foo/></gml:MultiGeometry>', 'GEOMETRYCOLLECTION EMPTY'),
-        ('<gml:MultiGeometry><gml:geometryMember/></gml:MultiGeometry>', None),
+        ('<gml:MultiGeometry><gml:geometryMember/></gml:MultiGeometry>', 'GEOMETRYCOLLECTION EMPTY'), # valid in GML3 (accepted by PostGIS too)
         ('<gml:MultiGeometry><gml:geometryMember><foo/></gml:geometryMember></gml:MultiGeometry>', None),
         ('<gml:Surface/>', 'POLYGON EMPTY'), # valid GML3
         ('<gml:Surface><foo/></gml:Surface>', 'POLYGON EMPTY'), # invalid GML3, but we are tolerant
@@ -1044,6 +1046,15 @@ def gml_invalid_geoms():
         ('<gml:Envelope/>',None),
         ('<gml:Envelope><gml:lowerCorner/><gml:upperCorner/></gml:Envelope>',None),
         ('<gml:Envelope><gml:lowerCorner>1</gml:lowerCorner><gml:upperCorner>3 4</gml:upperCorner/></gml:Envelope>',None),
+        ('<gml:Point><gml:coordinates cs="bla">1bla2</gml:coordinates></gml:Point>',None),
+        ('<gml:Point><gml:coordinates cs="">1bla2</gml:coordinates></gml:Point>',None),
+        ('<gml:Point><gml:coordinates cs="0">1bla2</gml:coordinates></gml:Point>',None),
+        ('<gml:Point><gml:coordinates ts="bla">1,2</gml:coordinates></gml:Point>',None),
+        ('<gml:Point><gml:coordinates ts="">1,2</gml:coordinates></gml:Point>',None),
+        ('<gml:Point><gml:coordinates ts="0">1,2</gml:coordinates></gml:Point>',None),
+        ('<gml:Point><gml:coordinates decimal="bla">1,2</gml:coordinates></gml:Point>',None),
+        ('<gml:Point><gml:coordinates decimal="">1,2</gml:coordinates></gml:Point>',None),
+        ('<gml:Point><gml:coordinates decimal="0">1,2</gml:coordinates></gml:Point>',None),
     ]
 
     for (gml, expected_wkt) in gml_expected_wkt_list:
@@ -1398,6 +1409,84 @@ def gml_MultiSurfaceOfSurfaceOfPolygonPatchWithInteriorRing():
     return 'success'
 
 ###############################################################################
+# Test ts, cs and decimal attributes of gml:coordinates
+
+def gml_Coordinates_ts_cs_decimal():
+
+    gml_expected_wkt_list = [
+        ('<gml:Point><gml:coordinates>1,2</gml:coordinates></gml:Point>', 'POINT (1 2)'), # default values
+        ('<gml:Point><gml:coordinates cs="," ts=" " decimal=".">1,2</gml:coordinates></gml:Point>', 'POINT (1 2)'), # default values
+        ('<gml:Point><gml:coordinates cs="," ts=" " decimal=".">1,2,3</gml:coordinates></gml:Point>', 'POINT (1 2 3)'), # default values
+        ('<gml:Point><gml:coordinates cs="," ts=" " decimal=".">  1,2  </gml:coordinates></gml:Point>', 'POINT (1 2)'), # we accept that...
+        ('<gml:Point><gml:coordinates>1 2</gml:coordinates></gml:Point>', 'POINT (1 2)'), # this is completely out of specification ! but we accept that too !
+        ('<gml:Point><gml:coordinates cs=";">1;2</gml:coordinates></gml:Point>', 'POINT (1 2)'),
+        ('<gml:Point><gml:coordinates decimal="," cs=";">1,2;3,4</gml:coordinates></gml:Point>', 'POINT (1.2 3.4)'), 
+        ('<gml:Point><gml:coordinates decimal="," cs=";">1,2;3,4;5,6</gml:coordinates></gml:Point>', 'POINT (1.2 3.4 5.6)'), 
+        ('<gml:LineString><gml:coordinates>1,2 3,4</gml:coordinates></gml:LineString>', 'LINESTRING (1 2,3 4)'), # default values
+        ('<gml:LineString><gml:coordinates cs="," ts=" " decimal=".">1,2 3,4</gml:coordinates></gml:LineString>', 'LINESTRING (1 2,3 4)'), # default values
+        ('<gml:LineString><gml:coordinates cs="," ts=" " decimal=".">1,2,2.5 3,4</gml:coordinates></gml:LineString>', 'LINESTRING (1 2 2.5,3 4 0)'), # default values
+        ('<gml:LineString><gml:coordinates ts="-">1,2-3,4</gml:coordinates></gml:LineString>', 'LINESTRING (1 2,3 4)'),
+        ('<gml:LineString><gml:coordinates cs=" " ts=",">1 2,3 4</gml:coordinates></gml:LineString>', 'LINESTRING (1 2,3 4)'),
+        ('<gml:LineString><gml:coordinates cs=" " ts=",">1 2 2.5,3 4</gml:coordinates></gml:LineString>', 'LINESTRING (1 2 2.5,3 4 0)'),
+    ]
+
+    for (gml, expected_wkt) in gml_expected_wkt_list:
+        geom = ogr.CreateGeometryFromGML(gml)
+        wkt = geom.ExportToWkt()
+        if expected_wkt is None:
+            gdaltest.post_reason('did not get expected result for %s. Got %s instead of None' % (gml, wkt))
+            return 'fail'
+        else:
+            if wkt != expected_wkt:
+                gdaltest.post_reason('did not get expected result for %s. Got %s instead of %s' % (gml, wkt, expected_wkt))
+                return 'fail'
+
+    return 'success'
+
+###############################################################################
+# Test gml with XML header and comments
+
+def gml_with_xml_header_and_comments():
+
+    gml_expected_wkt_list = [
+        ('<?xml version="1.0" encoding="UTF-8"?><!-- comment --><gml:Point> <!-- comment --> <gml:coordinates>1,2</gml:coordinates></gml:Point>', 'POINT (1 2)'),
+        ("""<gml:MultiSurface><!-- comment -->
+               <gml:surfaceMember><!-- comment -->
+                 <gml:Surface><!-- comment -->
+                    <gml:patches><!-- comment -->
+                      <gml:PolygonPatch><!-- comment -->
+                        <gml:exterior><!-- comment -->
+                          <gml:LinearRing><!-- comment -->
+                            <gml:posList>0 0 0 1 1 1 1 0 0 0</gml:posList>
+                          </gml:LinearRing>
+                        </gml:exterior>
+                        <!-- comment -->
+                        <gml:interior><!-- comment -->
+                          <gml:LinearRing><!-- comment -->
+                            <gml:posList>0.25 0.25 0.25 0.75 0.75 0.75 0.75 0.25 0.25 0.25</gml:posList>
+                          </gml:LinearRing>
+                        </gml:interior>
+                      </gml:PolygonPatch>
+                    </gml:patches>
+                  </gml:Surface>
+                </gml:surfaceMember>
+              </gml:MultiSurface>""", 'MULTIPOLYGON (((0 0,0 1,1 1,1 0,0 0),(0.25 0.25,0.25 0.75,0.75 0.75,0.75 0.25,0.25 0.25)))'),
+    ]
+
+    for (gml, expected_wkt) in gml_expected_wkt_list:
+        geom = ogr.CreateGeometryFromGML(gml)
+        wkt = geom.ExportToWkt()
+        if expected_wkt is None:
+            gdaltest.post_reason('did not get expected result for %s. Got %s instead of None' % (gml, wkt))
+            return 'fail'
+        else:
+            if wkt != expected_wkt:
+                gdaltest.post_reason('did not get expected result for %s. Got %s instead of %s' % (gml, wkt, expected_wkt))
+                return 'fail'
+
+    return 'success'
+
+###############################################################################
 # When imported build a list of units based on the files available.
 
 #print 'hit enter'
@@ -1455,6 +1544,8 @@ gdaltest_list.append( gml_SimpleMultiPoint )
 gdaltest_list.append( gml_CompositeCurveInRing )
 gdaltest_list.append( gml_CompositeSurface_in_surfaceMembers )
 gdaltest_list.append( gml_MultiSurfaceOfSurfaceOfPolygonPatchWithInteriorRing )
+gdaltest_list.append( gml_Coordinates_ts_cs_decimal )
+gdaltest_list.append( gml_with_xml_header_and_comments )
 
 if __name__ == '__main__':
 

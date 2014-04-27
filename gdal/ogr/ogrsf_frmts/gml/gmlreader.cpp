@@ -181,6 +181,10 @@ GMLReader::GMLReader(int bUseExpatParserPreferably,
     m_bFaceHoleNegative = CSLTestBoolean(CPLGetConfigOption("GML_FACE_HOLE_NEGATIVE", "NO"));
 
     m_bSetWidthFlag = TRUE;
+
+    m_bReportAllAttributes = CSLTestBoolean(
+                    CPLGetConfigOption("GML_ATTRIBUTES_TO_OGR_FIELDS", "NO"));
+
 }
 
 /************************************************************************/
@@ -1080,6 +1084,10 @@ void GMLReader::SetFeaturePropertyDirectly( const char *pszElement,
                     osFieldName = pszElement;
             }
 
+            size_t nPos = osFieldName.find("@");
+            if( nPos != std::string::npos )
+                osFieldName[nPos] = '_';
+
             // Does this conflict with an existing property name?
             while( poClass->GetProperty(osFieldName) != NULL )
             {
@@ -1343,7 +1351,7 @@ int GMLReader::PrescanForSchema( int bGetExtents, int bAnalyzeSRSPerFeature )
         if( papsGeometry != NULL && papsGeometry[0] != NULL )
         {
             if( poClass->GetGeometryPropertyCount() == 0 )
-                poClass->AddGeometryProperty( new GMLGeometryPropertyDefn( "", wkbUnknown ) );
+                poClass->AddGeometryProperty( new GMLGeometryPropertyDefn( "", "", wkbUnknown ) );
         }
 
 #ifdef SUPPORT_GEOMETRY

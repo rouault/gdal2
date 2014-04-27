@@ -92,13 +92,10 @@ int OGRILI2DataSource::Open( const char * pszNewName, int bTestOpen )
     FILE        *fp;
     char        szHeader[1000];
 
-    char *modelFilename = NULL;
     char **filenames = CSLTokenizeString2( pszNewName, ",", 0 );
+    const char *pszModelFilename = (CSLCount(filenames)>1) ? filenames[1] : NULL;
 
     pszName = CPLStrdup( filenames[0] );
-
-    if( CSLCount(filenames) > 1 )
-        modelFilename = CPLStrdup( filenames[1] );
 
 /* -------------------------------------------------------------------- */
 /*      Open the source file.                                           */
@@ -154,8 +151,8 @@ int OGRILI2DataSource::Open( const char * pszNewName, int bTestOpen )
         return FALSE;
     }
 
-    if (modelFilename)
-        poReader->ReadModel( poImdReader, modelFilename );
+    if (pszModelFilename)
+        poReader->ReadModel( poImdReader, pszModelFilename );
 
     if( getenv( "ARC_DEGREES" ) != NULL ) {
       //No better way to pass arguments to the reader (it could even be an -lco arg)
@@ -188,7 +185,7 @@ int OGRILI2DataSource::Create( const char *pszFilename,
 {
     char **filenames = CSLTokenizeString2( pszFilename, ",", 0 );
     pszName = CPLStrdup(filenames[0]);
-    const char  *pszModelFilename = (CSLCount(filenames)>1) ? filenames[1] : NULL;
+    const char *pszModelFilename = (CSLCount(filenames)>1) ? filenames[1] : NULL;
 
     if( pszModelFilename == NULL )
     {
@@ -225,6 +222,7 @@ int OGRILI2DataSource::Create( const char *pszFilename,
         CPLError( CE_Failure, CPLE_OpenFailed,
                   "Failed to create XTF file %s.",
                   pszName );
+        CSLDestroy(filenames);
         return FALSE;
     }
 
@@ -252,6 +250,7 @@ int OGRILI2DataSource::Create( const char *pszFilename,
     const char* basketName = poImdReader->mainBasketName.c_str();
     VSIFPrintfL(fpOutput, "<%s BID=\"%s\">\n", basketName, basketName);
 
+    CSLDestroy( filenames );
     return TRUE;
 }
 

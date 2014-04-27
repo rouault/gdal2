@@ -211,7 +211,7 @@ CPLErr MBTilesBand::IReadBlock( int nBlockXOff, int nBlockYOff, void * pImage)
             {
                 int iBand;
                 void* pSrcImage = NULL;
-                GByte abyTranslation[256][3];
+                GByte abyTranslation[256][4];
 
                 bGotTile = TRUE;
 
@@ -248,12 +248,14 @@ CPLErr MBTilesBand::IReadBlock( int nBlockXOff, int nBlockYOff, void * pImage)
                         abyTranslation[i][0] = (GByte) psEntry->c1;
                         abyTranslation[i][1] = (GByte) psEntry->c2;
                         abyTranslation[i][2] = (GByte) psEntry->c3;
+                        abyTranslation[i][3] = (GByte) psEntry->c4;
                     }
                     for(; i < 256; i++)
                     {
                         abyTranslation[i][0] = 0;
                         abyTranslation[i][1] = 0;
                         abyTranslation[i][2] = 0;
+                        abyTranslation[i][3] = 0;
                     }
 
                     for(i = 0; i < nBlockXSize * nBlockYSize; i++)
@@ -295,11 +297,7 @@ CPLErr MBTilesBand::IReadBlock( int nBlockXOff, int nBlockYOff, void * pImage)
                     else if (nTileBands == 1 && (poGDS->nBands == 3 || poGDS->nBands == 4))
                     {
                         int i;
-                        if (iOtherBand == 4)
-                        {
-                            memset(pabySrcBlock, 255, nBlockXSize * nBlockYSize);
-                        }
-                        else if (pSrcImage)
+                        if (pSrcImage)
                         {
                             for(i = 0; i < nBlockXSize * nBlockYSize; i++)
                             {
@@ -1396,7 +1394,7 @@ static int MBTilesCurlReadCbk(VSILFILE* fp,
     const GByte abyPNGSig[] = { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, /* PNG signature */
                                 0x00, 0x00, 0x00, 0x0D, /* IHDR length */
                                 0x49, 0x48, 0x44, 0x52  /* IHDR chunk */ };
-
+ 
     /* JPEG SOF0 (Start Of Frame 0) marker */
     const GByte abyJPEG1CompSig[] = { 0xFF, 0xC0, /* marker */
                                       0x00, 0x0B, /* data length = 8 + 1 * 3 */
@@ -1447,7 +1445,12 @@ static int MBTilesCurlReadCbk(VSILFILE* fp,
                 else if (nColorType == 2)
                     *pnBands = 3; /* RGB */
                 else if (nColorType == 3)
-                    *pnBands = 3; /* palette -> RGB */
+                {
+                    /* This might also be a color table with transparency */
+                    /* but we cannot tell ! */
+                    *pnBands = -1;
+                    return TRUE;
+                }
                 else if (nColorType == 4)
                     *pnBands = 2; /* Gray + alpha */
                 else if (nColorType == 6)
@@ -1642,10 +1645,17 @@ int MBTilesGetBandCount(OGRDataSourceH &hDS, int nMinLevel, int nMaxLevel,
         return -1;
     }
 
-    if (nBands == 1 &&
-        GDALGetRasterColorTable(GDALGetRasterBand(hDSTile, 1)) != NULL)
+    GDALColorTableH hCT = GDALGetRasterColorTable(GDALGetRasterBand(hDSTile, 1));
+    if (nBands == 1 && hCT != NULL)
     {
         nBands = 3;
+        if( GDALGetColorEntryCount(hCT) > 0 )
+        {
+            /* Typical of paletted PNG with transparency */
+            const GDALColorEntry* psEntry = GDALGetColorEntry( hCT, 0 );
+            if( psEntry->c4 == 0 )
+                nBands = 4;
+        }
     }
 
     GDALClose(hDSTile);

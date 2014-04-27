@@ -262,11 +262,47 @@ static int ParseGMLCoordinates( const CPLXMLNode *psGeomNode, OGRGeometry *poGeo
 
 /* -------------------------------------------------------------------- */
 /*      Handle <coordinates> case.                                      */
+/*      Note that we don't do a strict validation, so we accept and     */
+/*      sometimes generate output whereas we should just reject it.     */
 /* -------------------------------------------------------------------- */
     if( psCoordinates != NULL )
     {
         const char *pszCoordString = GetElementText( psCoordinates );
+
+        const char *pszDecimal = CPLGetXMLValue( (CPLXMLNode*) psCoordinates, "decimal", NULL);
+        char chDecimal = '.';
+        if( pszDecimal != NULL )
+        {
+            if( strlen(pszDecimal) != 1 || (pszDecimal[0] >= '0' && pszDecimal[0] <= '9') )
+            {
+                CPLError( CE_Failure, CPLE_AppDefined, "Wrong value for decimal attribute");
+                return FALSE;
+            }
+            chDecimal = pszDecimal[0];
+        }
+
+        const char *pszCS = CPLGetXMLValue( (CPLXMLNode*) psCoordinates, "cs", NULL);
         char chCS = ',';
+        if( pszCS != NULL )
+        {
+            if( strlen(pszCS) != 1 || (pszCS[0] >= '0' && pszCS[0] <= '9') )
+            {
+                CPLError( CE_Failure, CPLE_AppDefined, "Wrong value for cs attribute");
+                return FALSE;
+            }
+            chCS = pszCS[0];
+        }
+        const char *pszTS = CPLGetXMLValue( (CPLXMLNode*) psCoordinates, "ts", NULL);
+        char chTS = ' ';
+        if( pszTS != NULL )
+        {
+            if( strlen(pszTS) != 1 || (pszTS[0] >= '0' && pszTS[0] <= '9') )
+            {
+                CPLError( CE_Failure, CPLE_AppDefined, "Wrong value for tes attribute");
+                return FALSE;
+            }
+            chTS = pszTS[0];
+        }
 
         if( pszCoordString == NULL )
         {
@@ -280,9 +316,12 @@ static int ParseGMLCoordinates( const CPLXMLNode *psGeomNode, OGRGeometry *poGeo
             int nDimension = 2;
 
             // parse out 2 or 3 tuple. 
-            dfX = OGRFastAtof( pszCoordString );
+            if( chDecimal == '.' )
+                dfX = OGRFastAtof( pszCoordString );
+            else
+                dfX = CPLAtofDelim( pszCoordString, chDecimal) ;
             while( *pszCoordString != '\0'
-                   && *pszCoordString != ','
+                   && *pszCoordString != chCS
                    && !isspace((unsigned char)*pszCoordString) )
                 pszCoordString++;
 
@@ -292,7 +331,7 @@ static int ParseGMLCoordinates( const CPLXMLNode *psGeomNode, OGRGeometry *poGeo
                         "Corrupt <coordinates> value." );
                 return FALSE;
             }
-            else if( chCS == ',' && isspace((unsigned char)*pszCoordString) )
+            else if( chCS == ',' && pszCS == NULL && isspace((unsigned char)*pszCoordString) )
             {
                 /* In theory, the coordinates inside a coordinate tuple should be */
                 /* separated by a comma. However it has been found in the wild */
@@ -300,27 +339,36 @@ static int ParseGMLCoordinates( const CPLXMLNode *psGeomNode, OGRGeometry *poGeo
                 /* See https://52north.org/twiki/bin/view/Processing/WPS-IDWExtension-ObservationCollectionExample */
                 /* or http://agisdemo.faa.gov/aixmServices/getAllFeaturesByLocatorId?locatorId=DFW */
                 chCS = ' ';
+                chTS = ',';
             }
 
             pszCoordString++;
-            dfY = OGRFastAtof( pszCoordString );
+            if( chDecimal == '.' )
+                dfY = OGRFastAtof( pszCoordString );
+            else
+                dfY = CPLAtofDelim( pszCoordString, chDecimal) ;
             while( *pszCoordString != '\0' 
-                   && *pszCoordString != ','
+                   && *pszCoordString != chCS
+                   && *pszCoordString != chTS
                    && !isspace((unsigned char)*pszCoordString) )
                 pszCoordString++;
 
             if( *pszCoordString == chCS )
             {
                 pszCoordString++;
-                dfZ = OGRFastAtof( pszCoordString );
+                if( chDecimal == '.' )
+                    dfZ = OGRFastAtof( pszCoordString );
+                else
+                    dfZ = CPLAtofDelim( pszCoordString, chDecimal) ;
                 nDimension = 3;
                 while( *pszCoordString != '\0' 
-                       && *pszCoordString != ','
+                       && *pszCoordString != chCS
+                       && *pszCoordString != chTS
                        && !isspace((unsigned char)*pszCoordString) )
                 pszCoordString++;
             }
 
-            if ( chCS == ' ' && *pszCoordString == ',' )
+            if( *pszCoordString == chTS )
             {
                 pszCoordString++;
             }
@@ -626,6 +674,13 @@ OGRGeometry *GML2OGRGeometry_XMLNode( const CPLXMLNode *psNode,
                                       int bFaceHoleNegative ) 
 
 {
+    if( psNode != NULL && strcmp(psNode->pszValue, "?xml") == 0 )
+        psNode = psNode->psNext;
+    while( psNode != NULL && psNode->eType == CXT_Comment )
+        psNode = psNode->psNext;
+    if( psNode == NULL )
+        return NULL;
+
     const char *pszBaseGeometry = BareGMLElement( psNode->pszValue );
     if (bGetSecondaryGeometryOption < 0)
         bGetSecondaryGeometryOption = CSLTestBoolean(CPLGetConfigOption("GML_GET_SECONDARY_GEOM", "NO"));
@@ -1155,13 +1210,6 @@ OGRGeometry *GML2OGRGeometry_XMLNode( const CPLXMLNode *psNode,
                         poMPoly->addGeometryDirectly( poPolygon );
                     }
                 }
-                else
-                {
-                    CPLError( CE_Failure, CPLE_AppDefined, "Invalid %s",
-                                    BareGMLElement(psChild->pszValue));
-                    delete poMPoly;
-                    return NULL;
-                }
             }
             else if (psChild->eType == CXT_Element
                 && EQUAL(BareGMLElement(psChild->pszValue),"surfaceMembers") )
@@ -1255,23 +1303,23 @@ OGRGeometry *GML2OGRGeometry_XMLNode( const CPLXMLNode *psNode,
                 OGRPoint *poPoint;
 
                 if (psPointChild != NULL)
+                {
                     poPoint = (OGRPoint *) 
                         GML2OGRGeometry_XMLNode( psPointChild, bGetSecondaryGeometryOption,
                                                  nRecLevel + 1);
-                else
-                    poPoint = NULL;
-                if( poPoint == NULL 
-                    || wkbFlatten(poPoint->getGeometryType()) != wkbPoint )
-                {
-                    CPLError( CE_Failure, CPLE_AppDefined, 
-                              "MultiPoint: Got %.500s geometry as pointMember instead of POINT",
-                              poPoint ? poPoint->getGeometryName() : "NULL" );
-                    delete poPoint;
-                    delete poMP;
-                    return NULL;
-                }
+                    if( poPoint == NULL 
+                        || wkbFlatten(poPoint->getGeometryType()) != wkbPoint )
+                    {
+                        CPLError( CE_Failure, CPLE_AppDefined, 
+                                "MultiPoint: Got %.500s geometry as pointMember instead of POINT",
+                                poPoint ? poPoint->getGeometryName() : "NULL" );
+                        delete poPoint;
+                        delete poMP;
+                        return NULL;
+                    }
 
-                poMP->addGeometryDirectly( poPoint );
+                    poMP->addGeometryDirectly( poPoint );
+                }
             }
             else if (psChild->eType == CXT_Element
                 && EQUAL(BareGMLElement(psChild->pszValue),"pointMembers") )
@@ -1384,25 +1432,31 @@ OGRGeometry *GML2OGRGeometry_XMLNode( const CPLXMLNode *psNode,
                     psCurve = FindBareXMLChild( psChild, "LineString" );
                 if( psCurve == NULL )
                 {
-                    CPLError( CE_Failure, CPLE_AppDefined, 
-                              "Failed to get curve element in curveMember" );
-                    delete poMLS;
-                    return NULL;
+                    if( GetChildElement(psChild) != NULL )
+                    {
+                        CPLError( CE_Failure, CPLE_AppDefined, 
+                                "Failed to get curve element in curveMember" );
+                        delete poMLS;
+                        return NULL;
+                    }
                 }
-                poGeom = GML2OGRGeometry_XMLNode( psCurve, bGetSecondaryGeometryOption,
-                                                  nRecLevel + 1);
-                if( poGeom == NULL ||
-                    ( wkbFlatten(poGeom->getGeometryType()) != wkbLineString ) )
+                else
                 {
-                    CPLError( CE_Failure, CPLE_AppDefined, 
-                              "MultiCurve: Got %.500s geometry as Member instead of LINESTRING.",
-                              poGeom ? poGeom->getGeometryName() : "NULL" );
-                    if( poGeom != NULL ) delete poGeom;
-                    delete poMLS;
-                    return NULL;
-                }
+                    poGeom = GML2OGRGeometry_XMLNode( psCurve, bGetSecondaryGeometryOption,
+                                                    nRecLevel + 1);
+                    if( poGeom == NULL ||
+                        ( wkbFlatten(poGeom->getGeometryType()) != wkbLineString ) )
+                    {
+                        CPLError( CE_Failure, CPLE_AppDefined, 
+                                "MultiCurve: Got %.500s geometry as Member instead of LINESTRING.",
+                                poGeom ? poGeom->getGeometryName() : "NULL" );
+                        if( poGeom != NULL ) delete poGeom;
+                        delete poMLS;
+                        return NULL;
+                    }
 
-                poMLS->addGeometryDirectly( (OGRLineString *)poGeom );
+                    poMLS->addGeometryDirectly( (OGRLineString *)poGeom );
+                }
             }
             else if (psChild->eType == CXT_Element
                 && EQUAL(BareGMLElement(psChild->pszValue),"curveMembers") )
@@ -1510,10 +1564,10 @@ OGRGeometry *GML2OGRGeometry_XMLNode( const CPLXMLNode *psNode,
                     delete poLS;
                     return NULL;
                 }
-                if( poGeom != NULL )
+                OGRLineString *poAddLS = (OGRLineString *)poGeom;
+                if( poAddLS != NULL && poAddLS->getNumPoints() >= 2 )
                 {
-                    OGRLineString *poAddLS = (OGRLineString *)poGeom;
-                    if( poLS->getNumPoints() > 0 && poAddLS->getNumPoints() > 0
+                    if( poLS->getNumPoints() > 0
                         && fabs(poLS->getX(poLS->getNumPoints()-1)
                                 - poAddLS->getX(0)) < 1e-14
                         && fabs(poLS->getY(poLS->getNumPoints()-1)
@@ -1530,8 +1584,8 @@ OGRGeometry *GML2OGRGeometry_XMLNode( const CPLXMLNode *psNode,
                         // Add the whole new line string
                         poLS->addSubLineString( poAddLS );
                     }
-                    delete poGeom;
                 }
+                delete poGeom;
             }
         }
 
@@ -1562,20 +1616,20 @@ OGRGeometry *GML2OGRGeometry_XMLNode( const CPLXMLNode *psNode,
                 OGRGeometry *poGeom;
 
                 if (psGeometryChild != NULL)
+                {
                     poGeom = GML2OGRGeometry_XMLNode( psGeometryChild, bGetSecondaryGeometryOption,
                                                       nRecLevel + 1 );
-                else
-                    poGeom = NULL;
-                if( poGeom == NULL )
-                {
-                    CPLError( CE_Failure, CPLE_AppDefined, 
-                              "GeometryCollection: Failed to get geometry in geometryMember" );
-                    delete poGeom;
-                    delete poGC;
-                    return NULL;
-                }
+                    if( poGeom == NULL )
+                    {
+                        CPLError( CE_Failure, CPLE_AppDefined, 
+                                "GeometryCollection: Failed to get geometry in geometryMember" );
+                        delete poGeom;
+                        delete poGC;
+                        return NULL;
+                    }
 
-                poGC->addGeometryDirectly( poGeom );
+                    poGC->addGeometryDirectly( poGeom );
+                }
             }
         }
 
@@ -2090,7 +2144,11 @@ OGRGeometry *GML2OGRGeometry_XMLNode( const CPLXMLNode *psNode,
                 {
                   poLS = (OGRLineString *)poEdgeGeom;
                   poAddLS = (OGRLineString *)poFaceGeom;
-                  if( poLS->getNumPoints() > 0 && poAddLS->getNumPoints() > 0
+                  if( poAddLS->getNumPoints() < 2 )
+                  {
+                      /* skip it */
+                  }
+                  else if( poLS->getNumPoints() > 0
                       && fabs(poLS->getX(poLS->getNumPoints()-1)
                               - poAddLS->getX(0)) < 1e-14
                       && fabs(poLS->getY(poLS->getNumPoints()-1)
@@ -2111,7 +2169,11 @@ OGRGeometry *GML2OGRGeometry_XMLNode( const CPLXMLNode *psNode,
                 }
                 poLS = (OGRLineString *)poFaceGeom;
                 poAddLS = (OGRLineString *)poEdgeGeom;
-                if( poLS->getNumPoints() > 0 && poAddLS->getNumPoints() > 0
+                if( poAddLS->getNumPoints() < 2 )
+                {
+                    /* skip it */
+                }
+                else if( poLS->getNumPoints() > 0
                     && fabs(poLS->getX(poLS->getNumPoints()-1)
                             - poAddLS->getX(0)) < 1e-14
                     && fabs(poLS->getY(poLS->getNumPoints()-1)

@@ -228,6 +228,8 @@ protected:
 
     virtual char **GetFileList(void);
 
+    virtual void FlushCache(void);
+
     static int          Identify( GDALOpenInfo * );
     static GDALDataset *Open( GDALOpenInfo * );
 };
@@ -1200,12 +1202,18 @@ void JPGDatasetCommon::InitInternalOverviews()
         int i;
         int nInternalOverviews = 0;
 
-        for(i = 2; i >= 0; i--)
+        /* For the needs of the implicit JPEG-in-TIFF overview mechanism */
+        if( CSLTestBoolean(CPLGetConfigOption("JPEG_FORCE_INTERNAL_OVERVIEWS", "NO")) )
+            nInternalOverviews = 3;
+        else
         {
-            if( nRasterXSize >= (256 << i) || nRasterYSize >= (256 << i) )
+            for(i = 2; i >= 0; i--)
             {
-                nInternalOverviews = i + 1;
-                break;
+                if( nRasterXSize >= (256 << i) || nRasterYSize >= (256 << i) )
+                {
+                    nInternalOverviews = i + 1;
+                    break;
+                }
             }
         }
 
@@ -1254,6 +1262,25 @@ CPLErr JPGDatasetCommon::IBuildOverviews( const char *pszResampling,
     return eErr;
 }
 
+/************************************************************************/
+/*                           FlushCache()                               */
+/************************************************************************/
+
+void JPGDatasetCommon::FlushCache()
+
+{
+    GDALPamDataset::FlushCache();
+
+    if (bHasDoneJpegStartDecompress)
+    {
+        Restart();
+    }
+
+    /* For the needs of the implicit JPEG-in-TIFF overview mechanism */
+    for(int i = 0; i < nInternalOverviewsCurrent; i++)
+        papoInternalOverviews[i]->FlushCache();
+}
+
 #endif // !defined(JPGDataset)
 
 /************************************************************************/
@@ -1273,7 +1300,7 @@ JPGDataset::JPGDataset()
 JPGDataset::~JPGDataset()
 
 {
-    FlushCache();
+    GDALPamDataset::FlushCache();
 
     if (bHasDoneJpegStartDecompress)
     {
@@ -1545,6 +1572,7 @@ void JPGDataset::Restart()
 
 {
     J_COLOR_SPACE colorSpace = sDInfo.out_color_space;
+    J_COLOR_SPACE jpegColorSpace = sDInfo.jpeg_color_space;
 
     jpeg_abort_decompress( &sDInfo );
     jpeg_destroy_decompress( &sDInfo );
@@ -1566,8 +1594,32 @@ void JPGDataset::Restart()
     sDInfo.out_color_space = colorSpace;
     nLoadedScanline = -1;
     SetScaleNumAndDenom();
-    jpeg_start_decompress( &sDInfo );
-    bHasDoneJpegStartDecompress = TRUE;
+
+    /* The following errors could happen when "recycling" an existing dataset */
+    /* particularly when triggered by the implicit overviews of JPEG-in-TIFF */
+    /* with a corrupted TIFF file */
+    if( nRasterXSize != (int)(sDInfo.image_width + nScaleFactor - 1) / nScaleFactor ||
+        nRasterYSize != (int)(sDInfo.image_height + nScaleFactor - 1) / nScaleFactor )
+    {
+        CPLError(CE_Failure, CPLE_AppDefined,
+                 "Unexpected image dimension (%d x %d), where as (%d x %d) was expected",
+                 (int)(sDInfo.image_width + nScaleFactor - 1) / nScaleFactor,
+                 (int)(sDInfo.image_height + nScaleFactor - 1) / nScaleFactor,
+                 nRasterXSize, nRasterYSize);
+        bHasDoneJpegStartDecompress = FALSE;
+    }
+    else if( jpegColorSpace != sDInfo.jpeg_color_space )
+    {
+        CPLError(CE_Failure, CPLE_AppDefined,
+                 "Unexpected jpeg color space : %d",
+                 sDInfo.jpeg_color_space);
+        bHasDoneJpegStartDecompress = FALSE;
+    }
+    else
+    {
+        jpeg_start_decompress( &sDInfo );
+        bHasDoneJpegStartDecompress = TRUE;
+    }
 }
 
 #if !defined(JPGDataset)

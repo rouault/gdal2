@@ -35,6 +35,7 @@
 #include "ogrgeojsonreader.h"
 #include "cpl_http.h"
 
+#include <map>
 #include <vector>
 
 #include <json.h>
@@ -49,20 +50,35 @@ class OGRGMELayer : public OGRLayer
     OGRGMEDataSource* poDS;
 
     OGRFeatureDefn*    poFeatureDefn;
-    OGRSpatialReference *poSRS;
+    OGRSpatialReference* poSRS;
 
     int                iGeometryField;
+    int                iGxIdField;
 
     CPLString          osTableName;
     CPLString          osTableId;
+    std::map<int, CPLString> omnosIdToGMEKey;
+    std::map<int, OGRFeature *> omnpoUpdatedFeatures;
+    std::map<int, OGRFeature *> omnpoInsertedFeatures;
+    std::vector<long> oListOfDeletedFeatures;
     CPLString          osGeomColumnName;
 
-    CPLString          osWHERE;
-    CPLString          osQuery;
+    CPLString          osWhere;
+    CPLString          osSelect;
+    CPLString          osIntersects;
 
     json_object*       current_feature_page;
     json_object*       current_features_array;
     int                index_in_page;
+
+    bool               bDirty;
+    bool               bCreateTablePending;
+    bool               bInTransaction;
+    unsigned int       iBatchPatchSize;
+    OGRwkbGeometryType eGTypeForCreation;
+    CPLString          osProjectId;
+    CPLString          osDraftACL;
+    CPLString          osPublishedACL;
 
     void               GetPageOfFeatures();
 
@@ -72,12 +88,21 @@ class OGRGMELayer : public OGRLayer
 
     OGRFeature        *GetNextRawFeature();
     void               GetPageOfFEatures();
+    OGRErr             BatchPatch();
+    OGRErr             BatchInsert();
+    OGRErr             BatchDelete();
+    OGRErr             BatchRequest(const char *osMethod, std::map<int, OGRFeature *> &omnpoFeatures);
+    unsigned int       GetBatchPatchSize();
+    bool               CreateTableIfNotCreated();
+    static OGRPolygon  *WindPolygonCCW( OGRPolygon *poPolygon );
 
   public:
     OGRGMELayer(OGRGMEDataSource* poDS, const char* pszTableId);
+    OGRGMELayer(OGRGMEDataSource* poDS, const char* pszTableName, char ** papszOptions);
     ~OGRGMELayer();
 
-    virtual void                ResetReading();
+    virtual void       ResetReading();
+    void               SetBatchPatchSize(unsigned int iSize);
 
     virtual OGRFeatureDefn *    GetLayerDefn();
 
@@ -88,6 +113,25 @@ class OGRGMELayer : public OGRLayer
     virtual const char *GetGeometryColumn() { return osGeomColumnName; }
 
     virtual int         TestCapability( const char * );
+
+    virtual void        SetSpatialFilter( OGRGeometry * );
+
+    virtual OGRErr      SetAttributeFilter( const char * pszWhere );
+
+    virtual OGRErr      SetIgnoredFields(const char ** papszFields );
+
+    virtual OGRErr      SyncToDisk();
+
+    virtual OGRErr      SetFeature( OGRFeature *poFeature );
+    virtual OGRErr      CreateFeature( OGRFeature *poFeature );
+    virtual OGRErr      DeleteFeature(long int);
+    virtual OGRErr      CreateField( OGRFieldDefn *poField, int bApproxOK = TRUE );
+
+    virtual OGRErr      StartTransaction();
+    virtual OGRErr      CommitTransaction();
+    virtual OGRErr      RollbackTransaction();
+
+    void                SetGeometryType(OGRwkbGeometryType eGType);
 };
 
 /************************************************************************/
@@ -108,9 +152,11 @@ class OGRGMEDataSource : public OGRDataSource
     CPLString           osAuth;
     CPLString           osAccessToken;
     CPLString           osRefreshToken;
+    CPLString           osTraceToken;
     CPLString           osAPIKey;
     CPLString           osSelect;
     CPLString           osWhere;
+    CPLString           osProjectId;
 
     void                DeleteLayer( const char *pszLayerName );
 
@@ -129,18 +175,22 @@ class OGRGMEDataSource : public OGRDataSource
     virtual int         GetLayerCount() { return nLayers; }
     virtual OGRLayer*   GetLayer( int );
 
+    virtual OGRLayer   *CreateLayer( const char *pszName,
+                                     OGRSpatialReference *poSpatialRef = NULL,
+                                     OGRwkbGeometryType eGType = wkbUnknown,
+                                     char ** papszOptions = NULL );
+
     virtual int         TestCapability( const char * );
 
     CPLHTTPResult*      MakeRequest(const char *pszRequest,
                                     const char *pszMoreOptions = NULL);
+    CPLHTTPResult*      PostRequest(const char *pszRequest,
+                                    const char *pszBody);
     const CPLString&    GetAccessToken() const { return osAccessToken;}
     const char*         GetAPIURL() const;
     int                 IsReadWrite() const { return bReadWrite; }
     void                AddHTTPOptions(CPLStringList &oOptions);
-    json_object*        Parse( const char* pszText );
-    const char*         GetJSONString(json_object *parent, 
-                                      const char *field_name,
-                                      const char *default_value = NULL);
+    void                AddHTTPPostOptions(CPLStringList &oOptions);
 
 };
 

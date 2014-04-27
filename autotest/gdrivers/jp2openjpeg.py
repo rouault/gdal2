@@ -509,6 +509,78 @@ def jp2openjpeg_15():
     return 'success'
 
 ###############################################################################
+# Test reading PixelIsPoint file (#5437)
+
+def jp2openjpeg_16():
+
+    if gdaltest.jp2openjpeg_drv is None:
+        return 'skip'
+
+    ds = gdal.Open( 'data/byte_point.jp2' )
+    gt = ds.GetGeoTransform()
+    if ds.GetMetadataItem('AREA_OR_POINT') != 'Point':
+        gdaltest.post_reason( 'did not get AREA_OR_POINT = Point' )
+        return 'fail'
+    ds = None
+
+    gt_expected = (440690.0, 60.0, 0.0, 3751350.0, 0.0, -60.0)
+
+    if gt != gt_expected:
+        print(gt)
+        gdaltest.post_reason( 'did not get expected geotransform' )
+        return 'fail'
+
+    gdal.SetConfigOption( 'GTIFF_POINT_GEO_IGNORE', 'TRUE' )
+
+    ds = gdal.Open( 'data/byte_point.jp2' )
+    gt = ds.GetGeoTransform()
+    ds = None
+
+    gdal.SetConfigOption( 'GTIFF_POINT_GEO_IGNORE', None )
+
+    gt_expected = (440720.0, 60.0, 0.0, 3751320.0, 0.0, -60.0)
+
+    if gt != gt_expected:
+        print(gt)
+        gdaltest.post_reason( 'did not get expected geotransform with GTIFF_POINT_GEO_IGNORE TRUE' )
+        return 'fail'
+
+    return 'success'
+ 
+###############################################################################
+# Test writing PixelIsPoint file (#5437)
+
+def jp2openjpeg_17():
+
+    if gdaltest.jp2openjpeg_drv is None:
+        return 'skip'
+
+    src_ds = gdal.Open( 'data/byte_point.jp2' )
+    ds = gdaltest.jp2openjpeg_drv.CreateCopy( '/vsimem/jp2openjpeg_17.jp2', src_ds, options = [ 'RESOLUTIONS=1' ])
+    ds = None
+    src_ds = None
+
+    gdal.Unlink( '/vsimem/jp2openjpeg_17.jp2.aux.xml' )
+    
+    ds = gdal.Open( '/vsimem/jp2openjpeg_17.jp2' )
+    gt = ds.GetGeoTransform()
+    if ds.GetMetadataItem('AREA_OR_POINT') != 'Point':
+        gdaltest.post_reason( 'did not get AREA_OR_POINT = Point' )
+        return 'fail'
+    ds = None
+
+    gt_expected = (440690.0, 60.0, 0.0, 3751350.0, 0.0, -60.0)
+
+    if gt != gt_expected:
+        print(gt)
+        gdaltest.post_reason( 'did not get expected geotransform' )
+        return 'fail'
+
+    gdal.Unlink( '/vsimem/jp2openjpeg_17.jp2' )
+
+    return 'success'
+
+###############################################################################
 def jp2openjpeg_online_1():
 
     if gdaltest.jp2openjpeg_drv is None:
@@ -636,13 +708,13 @@ def jp2openjpeg_online_5():
 
     ds = gdal.Open('tmp/cache/file9.jp2')
     cs1 = ds.GetRasterBand(1).Checksum()
-    cs2 = ds.GetRasterBand(2).Checksum()
-    cs3 = ds.GetRasterBand(3).Checksum()
-    if cs1 != 48954 or cs2 != 4939 or cs3 != 17734:
-        print(cs1, cs2, cs3)
+    if cs1 != 47664:
         gdaltest.post_reason('Did not get expected checksums')
+        print(cs1)
         return 'fail'
-        
+    if ds.GetRasterBand(1).GetColorTable() is None:
+        gdaltest.post_reason('Did not get expected color table')
+        return 'fail'
     ds = None
 
     return 'success'
@@ -695,11 +767,13 @@ gdaltest_list = [
     jp2openjpeg_13,
     jp2openjpeg_14,
     jp2openjpeg_15,
+    jp2openjpeg_16,
+    jp2openjpeg_17,
     jp2openjpeg_online_1,
     jp2openjpeg_online_2,
     jp2openjpeg_online_3,
     jp2openjpeg_online_4,
-    #jp2openjpeg_online_5,
+    jp2openjpeg_online_5,
     jp2openjpeg_online_6,
     jp2openjpeg_cleanup ]
 

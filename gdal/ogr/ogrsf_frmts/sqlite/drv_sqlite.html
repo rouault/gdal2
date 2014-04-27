@@ -39,7 +39,7 @@ at the expense of data safety w.r.t system/OS crashes. So use it carefully in
 production environments and read the SQLite
 <a href="http://www.sqlite.org/pragma.html#pragma_synchronous">related documentation</a>.</p>
 
-<p>Starting with OGR 2.0, any SQLite <a href="http://www.sqlite.org/pragma.html">pragma</a> can be
+<p>Starting with OGR 1.11, any SQLite <a href="http://www.sqlite.org/pragma.html">pragma</a> can be
 specified with the OGR_SQLITE_PRAGMA configuration option. The syntax is
 OGR_SQLITE_PRAGMA = "pragma_name=pragma_value[,pragma_name2=pragma_value2]*".</p>
 
@@ -293,6 +293,25 @@ may sometimes help a lot in order to get better performance.<p>
 Setting the <b>OGR_SQLITE_SYNCHRONOUS</b> configuration option to <i>OFF</i> might also
 increase performance when creating SQLite databases (altough at the expense of integrity in case of
 interruption/crash ).<p>
+
+If many source files will be collected into the same Spatialite table, it
+can be much faster to initialize the table without a spatial index by using
+-lco SPATIAL_INDEX=NO and to create spatial index with a separate command
+after all the data are appended. Spatial index can be created with ogrinfo
+command
+<pre>
+ogr2ogr -f SQLite -dsco SPATIALITE=YES db.sqlite first.shp -nln the_table -lco SPATIAL_INDEX=NO
+ogr2ogr -append db.sqlite second.shp -nln the_table
+...
+ogr2ogr -append db.sqlite last.shp -nln the_table
+ogrinfo db.sqlite -sql "SELECT CreateSpatialIndex('the_table','GEOMETRY')"
+</pre>
+<p>
+
+If a database has gone through editing operations, it might be usefull to run a
+<a href="https://sqlite.org/lang_vacuum.html">VACUUM</a> query to compact and optimize it.
+<pre>ogrinfo db.sqlite -sql "VACUUM"</pre>
+<p>
 
 <h2>Credits</h2>
 <ul>

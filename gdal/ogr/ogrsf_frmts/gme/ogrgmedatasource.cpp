@@ -29,6 +29,7 @@
  ****************************************************************************/
 
 #include "ogr_gme.h"
+#include "ogrgmejson.h"
 #include "cpl_multiproc.h"
 
 CPL_CVSID("$Id$");
@@ -84,12 +85,12 @@ OGRGMEDataSource::~OGRGMEDataSource()
 int OGRGMEDataSource::TestCapability( const char * pszCap )
 
 {
-    //if( bReadWrite && EQUAL(pszCap,ODsCCreateLayer) )
-    //    return TRUE;
+    if( EQUAL(pszCap,ODsCCreateLayer) )
+        return TRUE;
     //else if( bReadWrite && EQUAL(pszCap,ODsCDeleteLayer) )
     //    return TRUE;
     //else
-        return FALSE;
+    return FALSE;
 }
 
 /************************************************************************/
@@ -151,37 +152,55 @@ int OGRGMEDataSource::Open( const char * pszFilename, int bUpdateIn)
 
     CPLString osTables = OGRGMEGetOptionValue(pszFilename, "tables");
 
+    osProjectId = OGRGMEGetOptionValue(pszFilename, "projectId");
+
     osSelect = OGRGMEGetOptionValue(pszFilename, "select");
     osWhere = OGRGMEGetOptionValue(pszFilename, "where");
+
+    CPLString osBatchPatchSize;
+    osBatchPatchSize = OGRGMEGetOptionValue(pszFilename, "batchpatchsize");
+    if (osBatchPatchSize.size() == 0) {
+        osBatchPatchSize = CPLGetConfigOption("GME_BATCH_PATCH_SIZE","50");
+    }
+    int iBatchPatchSize = atoi( osBatchPatchSize.c_str() );
 
     bUseHTTPS = TRUE;
 
     osAccessToken = OGRGMEGetOptionValue(pszFilename, "access");
     if (osAccessToken.size() == 0)
         osAccessToken = CPLGetConfigOption("GME_ACCESS_TOKEN","");
-    if (osAccessToken.size() == 0 && osRefreshToken.size() > 0) 
+    if (osAccessToken.size() == 0 && osRefreshToken.size() > 0)
     {
         osAccessToken.Seize(GOA2GetAccessToken(osRefreshToken,
-                                               GME_TABLE_SCOPE_RO)); // TODO
-        if (osAccessToken.size() == 0)
+                                               GME_TABLE_SCOPE)); // TODO
+        if (osAccessToken.size() == 0) {
+            CPLDebug( "GME", "Cannot get access token");
             return FALSE;
+        }
     }
 
     if (osAccessToken.size() == 0 && osAuth.size() > 0)
     {
-        osRefreshToken.Seize(GOA2GetRefreshToken(osAuth, GME_TABLE_SCOPE_RO)); // TODO
+        osRefreshToken.Seize(GOA2GetRefreshToken(osAuth, GME_TABLE_SCOPE)); // TODO
         if (osRefreshToken.size() == 0)
+            CPLDebug( "GME", "Cannot get refresh token");
             return FALSE;
     }
 
-    if (osAccessToken.size() == 0)
+    if ((osAccessToken.size() ==0) && (osTables.size() == 0))
     {
-        if (osTables.size() == 0)
-        {
-            CPLError(CE_Failure, CPLE_AppDefined,
-                    "Unauthenticated access requires explicit tables= parameter");
-            return FALSE;
-        }
+        CPLError(CE_Failure, CPLE_AppDefined,
+                 "Unauthenticated access requires explicit tables= parameter");
+        return FALSE;
+    }
+
+    osTraceToken = OGRGMEGetOptionValue(pszFilename, "trace");
+    if (osTraceToken.size() == 0) {
+        CPLDebug("GME", "Looking for GME_TRACE_TOKEN");
+        osTraceToken = CPLGetConfigOption("GME_TRACE_TOKEN", "");
+    }
+    if (osTraceToken.size() != 0) {
+      CPLDebug("GME", "Found trace token %s", osTraceToken.c_str());
     }
 
     if (osTables.size() != 0)
@@ -190,18 +209,71 @@ int OGRGMEDataSource::Open( const char * pszFilename, int bUpdateIn)
         for(int i=0;papszTables && papszTables[i];i++)
         {
             papoLayers = (OGRLayer**) CPLRealloc(papoLayers, (nLayers + 1) * sizeof(OGRLayer*));
-	    OGRGMELayer *poGMELayer = new OGRGMELayer(this, papszTables[i]);
-	    if (poGMELayer->GetLayerDefn()) {
+            OGRGMELayer *poGMELayer = new OGRGMELayer(this, papszTables[i]);
+            poGMELayer->SetBatchPatchSize(iBatchPatchSize);
+            if (poGMELayer->GetLayerDefn()) {
                 papoLayers[nLayers ++] = poGMELayer;
+            }
+            else {
+                delete poGMELayer;
             }
         }
         CSLDestroy(papszTables);
-	if ( nLayers == 0 )
-	    return FALSE;
+        if ( nLayers == 0 ) {
+            CPLError(CE_Failure, CPLE_AppDefined,
+                     "Could not find any tables.");
+            return FALSE;
+        }
+        CPLDebug("GME", "Found %d layers", nLayers);
         return TRUE;
     }
-
+    else if (osProjectId.size() != 0) {
+        CPLDebug("GME", "We have a projectId: %s. Use CreateLayer to create tables.",
+                 osProjectId.c_str());
+        return TRUE;
+    }
+    CPLDebug("GME", "No table no project, giving up!");
     return FALSE;
+}
+
+/************************************************************************/
+/*                           CreateLayer()                              */
+/************************************************************************/
+
+OGRLayer   *OGRGMEDataSource::CreateLayer( const char *pszName,
+                                           OGRSpatialReference *poSpatialRef,
+                                           OGRwkbGeometryType eGType,
+                                           char ** papszOptions )
+{
+    if (!bReadWrite)
+    {
+        CPLError(CE_Failure, CPLE_AppDefined, "Operation not available in read-only mode");
+        return NULL;
+    }
+
+    if (osAccessToken.size() == 0)
+    {
+        CPLError(CE_Failure, CPLE_AppDefined, "Operation not available in unauthenticated mode");
+        return NULL;
+    }
+
+    if ((CSLFetchNameValue( papszOptions, "projectId" ) == NULL) && (osProjectId.size() != 0)) {
+        papszOptions = CSLAddNameValue( papszOptions, "projectId", osProjectId.c_str() );
+    }
+
+    osTraceToken = OGRGMEGetOptionValue(pszName, "trace");
+    if (osTraceToken.size() == 0) {
+      osTraceToken = CPLGetConfigOption("GME_TRACE_TOKEN", "");
+    }
+    if (osTraceToken.size() != 0) {
+      CPLDebug("GME", "Found trace token %s", osTraceToken.c_str());
+    }
+
+    OGRGMELayer* poLayer = new OGRGMELayer(this, pszName, papszOptions);
+    poLayer->SetGeometryType(eGType);
+    papoLayers = (OGRLayer**) CPLRealloc(papoLayers, (nLayers + 1) * sizeof(OGRLayer*));
+    papoLayers[nLayers ++] = poLayer;
+    return poLayer;
 }
 
 /************************************************************************/
@@ -229,7 +301,7 @@ void OGRGMEDataSource::AddHTTPOptions(CPLStringList &oOptions)
 
     if (strlen(osAccessToken) > 0)
         oOptions.AddString(
-            CPLSPrintf("HEADERS=Authorization: Bearer %s", 
+            CPLSPrintf("HEADERS=Authorization: Bearer %s",
                        osAccessToken.c_str()));
 
     oOptions.AddString(CPLSPrintf("PERSISTENT=GME:%p", this));
@@ -242,9 +314,6 @@ void OGRGMEDataSource::AddHTTPOptions(CPLStringList &oOptions)
 CPLHTTPResult * OGRGMEDataSource::MakeRequest(const char *pszRequest,
                                               const char *pszMoreOptions)
 {
-    int bUsePost = 
-        CSLTestBoolean(
-            CPLGetConfigOption("GME_USE_POST", "FALSE"));
 /* -------------------------------------------------------------------- */
 /*      Provide the API Key - used to rate limit access (see            */
 /*      GME_APIKEY config)                                              */
@@ -254,17 +323,6 @@ CPLHTTPResult * OGRGMEDataSource::MakeRequest(const char *pszRequest,
     osQueryFields += "key=";
     osQueryFields += osAPIKey;
 
-    if (!osSelect.empty()) {
-        CPLDebug( "GME", "found select=%s", osSelect.c_str());
-        osQueryFields += "&select=";
-        osQueryFields += osSelect;
-    }
-    if (!osWhere.empty()) {
-        CPLDebug( "GME", "found where=%s", osWhere.c_str());
-        osQueryFields += "&where=";
-        osQueryFields += osWhere;
-    }
-
     if (pszMoreOptions)
         osQueryFields += pszMoreOptions;
 
@@ -272,11 +330,7 @@ CPLHTTPResult * OGRGMEDataSource::MakeRequest(const char *pszRequest,
 /*      Collect the header options.                                     */
 /* -------------------------------------------------------------------- */
     CPLStringList oOptions;
-    if (bUsePost) {
-        CPLString osPostFields = "POSTFIELDS=";
-        osPostFields += osQueryFields;
-        oOptions.AddString(osPostFields);
-    }
+    oOptions.AddString("CUSTOMREQUEST=GET");
     AddHTTPOptions(oOptions);
 
 /* -------------------------------------------------------------------- */
@@ -286,17 +340,22 @@ CPLHTTPResult * OGRGMEDataSource::MakeRequest(const char *pszRequest,
     osURL += "/";
     osURL += pszRequest;
 
-    if (!bUsePost) {
-        if (osURL.find("?") == std::string::npos) {
-            osURL += "?";
-        } else {
-            osURL += "?";
-        }
-        osURL += osQueryFields;
+    if (osURL.find("?") == std::string::npos) {
+        osURL += "?";
+    } else {
+        osURL += "?";
+    }
+    osURL += osQueryFields;
+
+    // Trace the request if we have a tracing token
+    if (osTraceToken.size() != 0) {
+      CPLDebug("GME", "Using trace token %s", osTraceToken.c_str());
+      osURL += "&trace=";
+      osURL += osTraceToken;
     }
 
-    CPLDebug( "GME", "Sleep for 0.1s to try and avoid qps limiting errors.");
-    CPLSleep( 0.1 );
+    CPLDebug( "GME", "Sleep for 1s to try and avoid qps limiting errors.");
+    CPLSleep( 1.0 );
 
     CPLHTTPResult * psResult = CPLHTTPFetch(osURL, oOptions);
 
@@ -307,17 +366,178 @@ CPLHTTPResult * OGRGMEDataSource::MakeRequest(const char *pszRequest,
     if (psResult && psResult->pszContentType &&
         strncmp(psResult->pszContentType, "text/html", 9) == 0)
     {
-        CPLDebug( "GME", "MakeRequest HTML Response:%s", psResult->pabyData );
-        CPLError(CE_Failure, CPLE_AppDefined, 
+        CPLDebug( "GME", "MakeRequest HTML Response: %s", psResult->pabyData );
+        CPLError(CE_Failure, CPLE_AppDefined,
+                 "HTML error page returned by server");
+        if (nRetries < 5) {
+            CPLDebug("GME", "Sleeping 30s and retrying");
+            nRetries ++;
+            CPLSleep( 30.0 );
+            psResult = MakeRequest(pszRequest, pszMoreOptions);
+            if (psResult)
+                CPLDebug( "GME", "Got a result after %d retries", nRetries );
+            else
+                CPLDebug( "GME", "Didn't get a result after %d retries", nRetries );
+            nRetries--;
+        } else {
+            CPLDebug("GME", "I've waited too long on GME. Giving up!");
+            CPLHTTPDestroyResult(psResult);
+            psResult = NULL;
+        }
+        return psResult;
+    }
+    if (psResult && psResult->pszErrBuf != NULL)
+    {
+        CPLDebug( "GME", "MakeRequest Error Message: %s", psResult->pszErrBuf );
+        CPLDebug( "GME", "error doc:\n%s\n", psResult->pabyData ? (const char*)psResult->pabyData : "null");
+        json_object *error_response = OGRGMEParseJSON((const char *) psResult->pabyData);
+        CPLHTTPDestroyResult(psResult);
+        psResult = NULL;
+        if( error_response != NULL )
+        {
+            json_object *error_doc = json_object_object_get(error_response, "error");
+            json_object *errors_doc = json_object_object_get(error_doc, "errors");
+            array_list *errors_array = json_object_get_array(errors_doc);
+            int nErrors = array_list_length(errors_array);
+            for (int i = 0; i < nErrors; i++) {
+                json_object *error_obj = (json_object *)array_list_get_idx(errors_array, i);
+                const char* reason = OGRGMEGetJSONString(error_obj, "reason", "");
+                const char* domain = OGRGMEGetJSONString(error_obj, "domain", "");
+                const char* message = OGRGMEGetJSONString(error_obj, "message", "");
+                const char* locationType = OGRGMEGetJSONString(error_obj, "locationType", "");
+                const char* location = OGRGMEGetJSONString(error_obj, "location", "");
+                if ((nRetries < 10) && EQUAL(reason, "rateLimitExceeded")) {
+                    // Sleep nRetries * 1.0s and retry
+                    nRetries ++;
+                    CPLDebug( "GME", "Got a %s (%d) times.", reason, nRetries );
+                    CPLDebug( "GME", "Sleep for %2.2f to try and avoid qps limiting errors.", 1.0 * nRetries );
+                    CPLSleep( 1.0 * nRetries );
+                    psResult = MakeRequest(pszRequest, pszMoreOptions);
+                    if (psResult)
+                        CPLDebug( "GME", "Got a result after %d retries", nRetries );
+                    else
+                        CPLDebug( "GME", "Didn't get a result after %d retries", nRetries );
+                    nRetries = 0;
+                }
+                else if (EQUAL(reason, "authError")) {
+                        CPLDebug( "GME", "Failed to GET %s: %s", pszRequest, message );
+                        CPLError( CE_Failure, CPLE_OpenFailed, "GME: %s", message);
+                }
+                else if (EQUAL(reason, "backendError")) {
+                        CPLDebug( "GME", "Backend error retrying: GET %s: %s", pszRequest, message );
+                        psResult = MakeRequest(pszRequest, pszMoreOptions);
+                }
+                else {
+                    int code = 444;
+                    json_object *code_child = json_object_object_get(error_doc, "code");
+                    if (code_child != NULL )
+                        code = json_object_get_int(code_child);
+
+                    CPLDebug( "GME", "MakeRequest Error for %s: %s:%d", pszRequest, reason, code);
+                    CPLError( CE_Failure, CPLE_AppDefined, "GME: %s %s %s: %s - %s",
+                            domain, reason, locationType, location, message );
+                }
+            }
+            json_object_put(error_response);
+        }
+        return psResult;
+    }
+    else if (psResult && psResult->nStatus != 0)
+    {
+        CPLDebug( "GME", "MakeRequest Error Status:%d", psResult->nStatus );
+    }
+    return psResult;
+}
+
+/************************************************************************/
+/*                        AddHTTPPostOptions()                          */
+/************************************************************************/
+
+void OGRGMEDataSource::AddHTTPPostOptions(CPLStringList &oOptions)
+{
+    bMustCleanPersistant = TRUE;
+
+    if (strlen(osAccessToken) > 0)
+        oOptions.AddString(
+            CPLSPrintf("HEADERS=Content-type: application/json\n"
+                       "Authorization: Bearer %s",
+                       osAccessToken.c_str()));
+
+    oOptions.AddString(CPLSPrintf("PERSISTENT=GME:%p", this));
+}
+
+/************************************************************************/
+/*                            PostRequest()                             */
+/************************************************************************/
+
+CPLHTTPResult * OGRGMEDataSource::PostRequest(const char *pszRequest,
+                                              const char *pszBody)
+{
+/* -------------------------------------------------------------------- */
+/*      Provide the API Key - used to rate limit access (see            */
+/*      GME_APIKEY config)                                              */
+/* -------------------------------------------------------------------- */
+    CPLString osQueryFields;
+
+    osQueryFields += "key=";
+    osQueryFields += osAPIKey;
+
+/* -------------------------------------------------------------------- */
+/*      Collect the header options.                                     */
+/* -------------------------------------------------------------------- */
+    CPLStringList oOptions;
+    oOptions.AddString("CUSTOMREQUEST=POST");
+    CPLString osPostFields = "POSTFIELDS=";
+    osPostFields += pszBody;
+    oOptions.AddString(osPostFields);
+
+    AddHTTPPostOptions(oOptions);
+
+/* -------------------------------------------------------------------- */
+/*      Build URL                                                       */
+/* -------------------------------------------------------------------- */
+    CPLString osURL = GetAPIURL();
+    osURL += "/";
+    osURL += pszRequest;
+
+    if (osURL.find("?") == std::string::npos) {
+        osURL += "?";
+    } else {
+        osURL += "?";
+    }
+    osURL += osQueryFields;
+
+    // Trace the request if we have a tracing token
+    if (osTraceToken.size() != 0) {
+      CPLDebug("GME", "Using trace token %s", osTraceToken.c_str());
+      osURL += "&trace=";
+      osURL += osTraceToken;
+    }
+
+    CPLDebug( "GME", "Sleep for 1s to try and avoid qps limiting errors.");
+    CPLSleep( 1.0 );
+
+    CPLDebug( "GME", "Posting to %s.", osURL.c_str());
+    CPLHTTPResult * psResult = CPLHTTPFetch(osURL, oOptions);
+
+/* -------------------------------------------------------------------- */
+/*      Check for some error conditions and report.  HTML Messages      */
+/*      are transformed info failure.                                   */
+/* -------------------------------------------------------------------- */
+    if (psResult && psResult->pszContentType &&
+        strncmp(psResult->pszContentType, "text/html", 9) == 0)
+    {
+        CPLDebug( "GME", "PostRequest HTML Response:%s", psResult->pabyData );
+        CPLError(CE_Failure, CPLE_AppDefined,
                  "HTML error page returned by server");
         CPLHTTPDestroyResult(psResult);
         psResult = NULL;
     }
-    if (psResult && psResult->pszErrBuf != NULL) 
+    if (psResult && psResult->pszErrBuf != NULL)
     {
-        CPLDebug( "GME", "MakeRequest Error Message: %s", psResult->pszErrBuf );
+        CPLDebug( "GME", "PostRequest Error Message: %s", psResult->pszErrBuf );
         CPLDebug( "GME", "error doc:\n%s\n", psResult->pabyData);
-        json_object *error_response = Parse((const char *) psResult->pabyData);
+        json_object *error_response = OGRGMEParseJSON((const char *) psResult->pabyData);
         CPLHTTPDestroyResult(psResult);
         psResult = NULL;
         json_object *error_doc = json_object_object_get(error_response, "error");
@@ -326,18 +546,18 @@ CPLHTTPResult * OGRGMEDataSource::MakeRequest(const char *pszRequest,
         int nErrors = array_list_length(errors_array);
         for (int i = 0; i < nErrors; i++) {
             json_object *error_obj = (json_object *)array_list_get_idx(errors_array, i);
-            const char* reason = GetJSONString(error_obj, "reason");
-            const char* domain = GetJSONString(error_obj, "domain");
-            const char* message = GetJSONString(error_obj, "message");
-            const char* locationType = GetJSONString(error_obj, "locationType");
-            const char* location = GetJSONString(error_obj, "location");
+            const char* reason = OGRGMEGetJSONString(error_obj, "reason", "");
+            const char* domain = OGRGMEGetJSONString(error_obj, "domain", "");
+            const char* message = OGRGMEGetJSONString(error_obj, "message", "");
+            const char* locationType = OGRGMEGetJSONString(error_obj, "locationType", "");
+            const char* location = OGRGMEGetJSONString(error_obj, "location", "");
             if ((nRetries < 10) && EQUAL(reason, "rateLimitExceeded")) {
-                // Sleep nRetries * 0.9s and retry
+                // Sleep nRetries * 1.0s and retry
                 nRetries ++;
                 CPLDebug( "GME", "Got a %s (%d) times.", reason, nRetries );
-                CPLDebug( "GME", "Sleep for %2.2f to try and avoid qps limiting errors.", 0.9 * nRetries );
-                CPLSleep( 0.9 * nRetries );
-                psResult = MakeRequest(pszRequest, pszMoreOptions);
+                CPLDebug( "GME", "Sleep for %2.2f to try and avoid qps limiting errors.", 1.0 * nRetries );
+                CPLSleep( 1.0 * nRetries );
+                psResult = PostRequest(pszRequest, pszBody);
                 if (psResult)
                     CPLDebug( "GME", "Got a result after %d retries", nRetries );
                 else
@@ -350,8 +570,7 @@ CPLHTTPResult * OGRGMEDataSource::MakeRequest(const char *pszRequest,
 	    }
 	    else if (EQUAL(reason, "backendError")) {
                 CPLDebug( "GME", "Backend error retrying: GET %s: %s", pszRequest, message );
-                CPLSleep( 0.9 );
-                psResult = MakeRequest(pszRequest, pszMoreOptions);
+                psResult = PostRequest(pszRequest, pszBody);
 	    }
             else {
                 int code = 444;
@@ -359,67 +578,23 @@ CPLHTTPResult * OGRGMEDataSource::MakeRequest(const char *pszRequest,
                 if (code_child != NULL )
                     code = json_object_get_int(code_child);
 
-                CPLDebug( "GME", "MakeRequest Error for %s: %s:%d", pszRequest, reason, code);
-                CPLError( CE_Failure, CPLE_AppDefined, "GME: %s (%s) in %s/%s: %s",
-                          reason, domain, locationType, location, message );
+                CPLError( CE_Failure, CPLE_AppDefined, "GME: %s %s %s: %s - %s",
+                          domain, reason, locationType, location, message );
+                if ((code == 400) && (EQUAL(reason, "invalid")) && (EQUAL(location, "id"))) {
+                  CPLDebug("GME", "Got the notorious 400 - invalid id, retrying in 10s");
+                  CPLSleep( 10.0 );
+                  psResult = PostRequest(pszRequest, pszBody);
+                }
+                else {
+                    CPLDebug( "GME", "PostRequest Error for %s: %s:%d", pszRequest, reason, code);
+                }
             }
         }
         return psResult;
     }
-    else if (psResult && psResult->nStatus != 0) 
+    else if (psResult && psResult->nStatus != 0)
     {
-        CPLDebug( "GME", "MakeRequest Error Status:%d", psResult->nStatus );
+        CPLDebug( "GME", "PostRequest Error Status:%d", psResult->nStatus );
     }
     return psResult;
-}
-
-/************************************************************************/
-/*                           Parse()                                    */
-/************************************************************************/
-
-json_object *OGRGMEDataSource::Parse( const char* pszText )
-{
-    if( NULL != pszText )
-    {
-        json_tokener* jstok = NULL;
-        json_object* jsobj = NULL;
-
-        jstok = json_tokener_new();
-        jsobj = json_tokener_parse_ex(jstok, pszText, -1);
-        if( jstok->err != json_tokener_success)
-        {
-            CPLError( CE_Failure, CPLE_AppDefined,
-                      "ESRIJSON parsing error: %s (at offset %d)",
-                          json_tokener_errors[jstok->err], jstok->char_offset);
-            
-            json_tokener_free(jstok);
-            return NULL;
-        }
-        json_tokener_free(jstok);
-
-        /* JSON tree is shared for while lifetime of the reader object
-         * and will be released in the destructor.
-         */
-        return jsobj;
-    }
-
-    return NULL;
-}
-
-/************************************************************************/
-/*                           GetJSONString()                            */
-/*                                                                      */
-/*      Fetch a string field from a json_object (only an immediate      */
-/*      child).                                                         */
-/************************************************************************/
-
-const char *OGRGMEDataSource::GetJSONString(json_object *parent,
-                                            const char *field,
-                                            const char *default_value)
-{
-    json_object *child = json_object_object_get(parent, field);
-    if (child == NULL )
-        return default_value;
-
-    return json_object_get_string(child);
 }

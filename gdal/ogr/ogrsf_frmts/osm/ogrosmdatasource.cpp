@@ -679,6 +679,12 @@ int OGROSMDataSource::FlushCurrentSectorCompressedCase()
 
         return TRUE;
     }
+    else
+    {
+        CPLError(CE_Failure, CPLE_AppDefined,
+                 "Cannot write in temporary node file %s : %s",
+                 osNodesFilename.c_str(), VSIStrerror(errno));
+    }
 
     return FALSE;
 }
@@ -694,6 +700,12 @@ int OGROSMDataSource::FlushCurrentSectorNonCompressedCase()
         memset(pabySector, 0, SECTOR_SIZE);
         nNodesFileSize += SECTOR_SIZE;
         return TRUE;
+    }
+    else
+    {
+        CPLError(CE_Failure, CPLE_AppDefined,
+                 "Cannot write in temporary node file %s : %s",
+                 osNodesFilename.c_str(), VSIStrerror(errno));
     }
 
     return FALSE;
@@ -835,7 +847,9 @@ void OGROSMDataSource::NotifyNodes(unsigned int nNodes, OSMNode* pasNodes)
                 poFeature, pasNodes[i].nID, FALSE, pasNodes[i].nTags, pasTags, &pasNodes[i].sInfo );
 
             int bFilteredOut = FALSE;
-            if( !papoLayers[IDX_LYR_POINTS]->AddFeature(poFeature, FALSE, &bFilteredOut) )
+            if( !papoLayers[IDX_LYR_POINTS]->AddFeature(poFeature, FALSE,
+                                                        &bFilteredOut,
+                                                        !bFeatureAdded) )
             {
                 bStopParsing = TRUE;
                 break;
@@ -1733,7 +1747,8 @@ void OGROSMDataSource::ProcessWaysBatch()
         int bFilteredOut = FALSE;
         if( !papoLayers[IDX_LYR_LINES]->AddFeature(psWayFeaturePairs->poFeature,
                                                    psWayFeaturePairs->bAttrFilterAlreadyEvaluated,
-                                                   &bFilteredOut) )
+                                                   &bFilteredOut,
+                                                   !bFeatureAdded) )
             bStopParsing = TRUE;
         else if (!bFilteredOut)
             bFeatureAdded = TRUE;
@@ -2492,7 +2507,8 @@ void OGROSMDataSource::NotifyRelation (OSMRelation* psRelation)
         int bFilteredOut = FALSE;
         if( !papoLayers[iCurLayer]->AddFeature( poFeature,
                                                 bAttrFilterAlreadyEvaluated,
-                                                &bFilteredOut ) )
+                                                &bFilteredOut,
+                                                !bFeatureAdded ) )
             bStopParsing = TRUE;
         else if (!bFilteredOut)
             bFeatureAdded = TRUE;
@@ -2584,7 +2600,8 @@ void OGROSMDataSource::ProcessPolygonsStandalone()
             int bFilteredOut = FALSE;
             if( !papoLayers[IDX_LYR_MULTIPOLYGONS]->AddFeature( poFeature,
                                                     FALSE,
-                                                    &bFilteredOut ) )
+                                                    &bFilteredOut,
+                                                    !bFeatureAdded ) )
             {
                 bStopParsing = TRUE;
                 break;

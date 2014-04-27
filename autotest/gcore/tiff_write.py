@@ -2514,47 +2514,51 @@ def tiff_write_74():
         sys.stdout.write('(12bit jpeg not available) ... ')
         return 'skip'
 
-    drv = gdal.GetDriverByName('GTiff')
-    dst_ds = drv.CreateCopy( 'tmp/test_74.tif', ds,
-                             options = ['COMPRESS=JPEG', 'NBITS=12',
-                                        'JPEG_QUALITY=95',
-                                        'PHOTOMETRIC=YCBCR'] )
+    for photometric in ('YCBCR', 'RGB') :
 
-    ds = None
-    dst_ds = None
+        drv = gdal.GetDriverByName('GTiff')
+        dst_ds = drv.CreateCopy( 'tmp/test_74.tif', ds,
+                                options = ['COMPRESS=JPEG', 'NBITS=12',
+                                            'JPEG_QUALITY=95',
+                                            'PHOTOMETRIC=' + photometric] )
+        dst_ds = None
 
-    dst_ds = gdal.Open( 'tmp/test_74.tif' )
-    stats = dst_ds.GetRasterBand(1).GetStatistics( 0, 1 )
+        dst_ds = gdal.Open( 'tmp/test_74.tif' )
+        stats = dst_ds.GetRasterBand(1).GetStatistics( 0, 1 )
 
-    if stats[2] < 2150 or stats[2] > 2180:
-        gdaltest.post_reason( 'did not get expected mean for band1.')
-        print(stats)
-        return 'fail'
+        if stats[2] < 2150 or stats[2] > 2180:
+            gdaltest.post_reason( 'did not get expected mean for band1.')
+            print(stats)
+            print(photometric)
+            return 'fail'
 
-    try:
-        compression = dst_ds.GetMetadataItem('COMPRESSION','IMAGE_STRUCTURE')
-    except:
-        md = dst_ds.GetMetadata('IMAGE_STRUCTURE')
-        compression = md['COMPRESSION']
+        try:
+            compression = dst_ds.GetMetadataItem('COMPRESSION','IMAGE_STRUCTURE')
+        except:
+            md = dst_ds.GetMetadata('IMAGE_STRUCTURE')
+            compression = md['COMPRESSION']
 
-    if compression != 'YCbCr JPEG':
-        gdaltest.post_reason( 'did not get expected COMPRESSION value' )
-        print(('COMPRESSION="%s"' % compression))
-        return 'fail'
+        if (photometric == 'YCBCR' and compression != 'YCbCr JPEG') or \
+           (photometric == 'RGB' and compression != 'JPEG'):
+            gdaltest.post_reason( 'did not get expected COMPRESSION value' )
+            print(('COMPRESSION="%s"' % compression))
+            print(photometric)
+            return 'fail'
 
-    try:
-        nbits = dst_ds.GetRasterBand(3).GetMetadataItem('NBITS','IMAGE_STRUCTURE')
-    except:
-        md = dst_ds.GetRasterBand(3).GetMetadata('IMAGE_STRUCTURE')
-        nbits = md['NBITS']
+        try:
+            nbits = dst_ds.GetRasterBand(3).GetMetadataItem('NBITS','IMAGE_STRUCTURE')
+        except:
+            md = dst_ds.GetRasterBand(3).GetMetadata('IMAGE_STRUCTURE')
+            nbits = md['NBITS']
 
-    if nbits != '12':
-        gdaltest.post_reason( 'did not get expected NBITS value' )
-        return 'fail'
+        if nbits != '12':
+            gdaltest.post_reason( 'did not get expected NBITS value' )
+            print(photometric)
+            return 'fail'
 
-    dst_ds = None
+        dst_ds = None
 
-    gdaltest.tiff_drv.Delete( 'tmp/test_74.tif' )
+        gdaltest.tiff_drv.Delete( 'tmp/test_74.tif' )
 
     return 'success'
 
@@ -4239,6 +4243,12 @@ def tiff_write_110():
 def tiff_write_111():
     return tiff_write_106(filename = '../gdrivers/data/albania.jpg' , options = ['COMPRESS=JPEG', 'BLOCKYSIZE=260'])
 
+def tiff_write_111_bis():
+    return tiff_write_106(filename = '../gdrivers/data/albania.jpg' , options = ['COMPRESS=JPEG', 'BLOCKYSIZE=260', 'INTERLEAVE=PIXEL'])
+
+def tiff_write_111_ter():
+    return tiff_write_106(filename = '../gdrivers/data/albania.jpg' , options = ['COMPRESS=JPEG', 'BLOCKYSIZE=260', 'INTERLEAVE=BAND'], check_cs = False)
+
 # Tiled organization of YCbCr does *NOT* give exact pixels w.r.t. original image
 def tiff_write_112():
     return tiff_write_106(filename = '../gdrivers/data/albania.jpg' , options = ['COMPRESS=JPEG', 'TILED=YES'], check_cs = False)
@@ -4651,6 +4661,263 @@ def tiff_write_123():
     return 'success'
 
 ###############################################################################
+# Test error cases with palette creation
+
+def tiff_write_124():
+
+    ds = gdaltest.tiff_drv.Create('/vsimem/tiff_write_124.tif', 1,1,3,gdal.GDT_Byte)
+
+    gdal.PushErrorHandler('CPLQuietErrorHandler')
+    # Test "SetColorTable() can only be called on band 1"
+    ret = ds.GetRasterBand(2).SetColorTable(gdal.ColorTable())
+    gdal.PopErrorHandler()
+    if ret == 0:
+        return 'fail'
+
+    gdal.PushErrorHandler('CPLQuietErrorHandler')
+    # Test "SetColorTable() not supported for multi-sample TIFF files"
+    ret = ds.GetRasterBand(1).SetColorTable(gdal.ColorTable())
+    gdal.PopErrorHandler()
+    if ret == 0:
+        return 'fail'
+
+    ds = None
+
+    ds = gdaltest.tiff_drv.Create('/vsimem/tiff_write_124.tif', 1,1,1, gdal.GDT_UInt32)
+    gdal.PushErrorHandler('CPLQuietErrorHandler')
+    # Test "SetColorTable() only supported for Byte or UInt16 bands in TIFF format."
+    ret = ds.GetRasterBand(1).SetColorTable(gdal.ColorTable())
+    gdal.PopErrorHandler()
+    if ret == 0:
+        return 'fail'
+    ds = None
+
+    gdal.PushErrorHandler('CPLQuietErrorHandler')
+    # Test "SetColorTable() only supported for Byte or UInt16 bands in TIFF format."
+    ds = gdaltest.tiff_drv.Create('/vsimem/tiff_write_124.tif', 1,1,1, gdal.GDT_UInt32, options = ['PHOTOMETRIC=PALETTE'])
+    gdal.PopErrorHandler()
+    ds = None
+
+    gdaltest.tiff_drv.Delete('/vsimem/tiff_write_124.tif')
+
+    return 'success'
+
+###############################################################################
+# Test out-of-memory conditions with SplitBand and SplitBitmapBand
+
+def tiff_write_125():
+
+    ds = gdaltest.tiff_drv.Create('/vsimem/tiff_write_125.tif', 2147000000, 5000, 65535, options = ['SPARSE_OK=YES', 'BLOCKYSIZE=5000', 'COMPRESS=LZW', 'BIGTIFF=NO'])
+    ds = None
+
+    ds = gdal.Open('/vsimem/tiff_write_125.tif')
+    # Will not open on 32-bit due to overflow
+    if ds is not None:
+        gdal.PushErrorHandler('CPLQuietErrorHandler')
+        ds.GetRasterBand(1).ReadBlock(0,0)
+        gdal.PopErrorHandler()
+
+
+    ds = gdal.GetDriverByName('GTiff').Create('/vsimem/tiff_write_125.tif', 2147000000, 5000, 1, options = ['NBITS=1', 'SPARSE_OK=YES', 'BLOCKYSIZE=5000', 'COMPRESS=LZW', 'BIGTIFF=NO'])
+    ds = None
+
+    ds = gdal.Open('/vsimem/tiff_write_125.tif')
+    # Will not open on 32-bit due to overflow
+    if ds is not None:
+        gdal.PushErrorHandler('CPLQuietErrorHandler')
+        ds.GetRasterBand(1).ReadBlock(0,0)
+        gdal.PopErrorHandler()
+
+    gdaltest.tiff_drv.Delete('/vsimem/tiff_write_125.tif')
+
+    return 'success'
+
+###############################################################################
+# Test implicit JPEG-in-TIFF overviews
+
+def tiff_write_126():
+
+    md = gdaltest.tiff_drv.GetMetadata()
+    if md['DMD_CREATIONOPTIONLIST'].find('JPEG') == -1:
+        return 'skip'
+
+    src_ds = gdal.Open('../gdrivers/data/small_world_400pct.vrt')
+
+    options_list = [ (['COMPRESS=JPEG', 'PHOTOMETRIC=YCBCR'], [48788], [61397], [29605], [10904]),
+                     (['COMPRESS=JPEG', 'PHOTOMETRIC=YCBCR', 'TILED=YES'], [48788], [61397], [29605], [10904]),
+                     (['COMPRESS=JPEG', 'PHOTOMETRIC=YCBCR', 'BLOCKYSIZE=800'], [48788], [61397], [29605], [10904]),
+                     (['COMPRESS=JPEG', 'PHOTOMETRIC=YCBCR', 'BLOCKYSIZE=64'], [48788], [61397], [29605], [10904]),
+                     (['COMPRESS=JPEG'], [49887], [59311], [30829], [11664]),
+                     (['COMPRESS=JPEG', 'INTERLEAVE=BAND'], [49887], [59311], [30829], [11664]),
+                     (['COMPRESS=JPEG', 'INTERLEAVE=BAND', 'TILED=YES'], [49887], [59311], [30829], [11664]),
+                     (['COMPRESS=JPEG', 'INTERLEAVE=BAND', 'BLOCKYSIZE=800'], [49887], [59311], [30829], [11664]),
+                     (['COMPRESS=JPEG', 'INTERLEAVE=BAND', 'BLOCKYSIZE=32'], [49887], [59311], [30829], [11664]),
+                   ]
+
+    for (options, cs1, cs2, cs3, cs4) in options_list:
+        ds = gdaltest.tiff_drv.CreateCopy('/vsimem/tiff_write_126.tif', src_ds, options = options)
+        ds = None
+
+        ds = gdal.Open('/vsimem/tiff_write_126.tif')
+        # Officially we have 0 public overviews...
+        if ds.GetRasterBand(1).GetOverviewCount() != 0:
+            print(options)
+            print(ds.GetRasterBand(1).GetOverviewCount())
+            gdaltest.post_reason('fail')
+            return 'fail'
+        # But they do exist...
+        cs = ds.GetRasterBand(1).GetOverview(0).Checksum()
+        if not(cs in cs1):
+            print(options)
+            print(cs)
+            gdaltest.post_reason('fail')
+            return 'fail'
+        cs = ds.GetRasterBand(2).GetOverview(0).Checksum()
+        if not(cs in cs2):
+            print(options)
+            print(cs)
+            gdaltest.post_reason('fail')
+            return 'fail'
+        cs = ds.GetRasterBand(1).GetOverview(1).Checksum()
+        if not(cs in cs3):
+            print(options)
+            print(cs)
+            gdaltest.post_reason('fail')
+            return 'fail'
+        cs = ds.GetRasterBand(1).GetOverview(2).Checksum()
+        if not(cs in cs4):
+            print(options)
+            print(cs)
+            gdaltest.post_reason('fail')
+            return 'fail'
+        if ds.GetRasterBand(1).GetOverview(-1) is not None:
+            print(options)
+            gdaltest.post_reason('fail')
+            return 'fail'
+        if ds.GetRasterBand(1).GetOverview(3) is not None:
+            print(options)
+            gdaltest.post_reason('fail')
+            return 'fail'
+        ovr_1_data = ds.GetRasterBand(1).GetOverview(1).GetDataset().ReadRaster(0,0,400,200)
+        subsampled_data = ds.ReadRaster(0,0,1600,800,400,200)
+        if ovr_1_data != subsampled_data:
+            print(options)
+            gdaltest.post_reason('fail')
+            return 'fail'
+        ds = None
+
+        gdaltest.tiff_drv.Delete('/vsimem/tiff_write_126.tif')
+
+    src_ds = gdal.Open('../gdrivers/data/small_world_400pct_1band.vrt')
+
+    options_list = [ (['COMPRESS=JPEG'], [49887], [30829], [11664]),
+                     (['COMPRESS=JPEG', 'TILED=YES'], [49887],  [30829], [11664]),
+                     (['COMPRESS=JPEG', 'BLOCKYSIZE=800'], [49887], [30829], [11664]),
+                     (['COMPRESS=JPEG', 'BLOCKYSIZE=32'], [49887], [30829], [11664]),
+                   ]
+
+    for (options, cs1, cs3, cs4) in options_list:
+        ds = gdaltest.tiff_drv.CreateCopy('/vsimem/tiff_write_126.tif', src_ds, options = options)
+        ds = None
+
+        ds = gdal.Open('/vsimem/tiff_write_126.tif')
+        # Officially we have 0 public overviews...
+        if ds.GetRasterBand(1).GetOverviewCount() != 0:
+            print(options)
+            print(ds.GetRasterBand(1).GetOverviewCount())
+            gdaltest.post_reason('fail')
+            return 'fail'
+        # But they do exist...
+        cs = ds.GetRasterBand(1).GetOverview(0).Checksum()
+        if not(cs in cs1):
+            print(options)
+            print(cs)
+            gdaltest.post_reason('fail')
+            return 'fail'
+        cs = ds.GetRasterBand(1).GetOverview(1).Checksum()
+        if not(cs in cs3):
+            print(options)
+            print(cs)
+            gdaltest.post_reason('fail')
+            return 'fail'
+        cs = ds.GetRasterBand(1).GetOverview(2).Checksum()
+        if not(cs in cs4):
+            print(options)
+            print(cs)
+            gdaltest.post_reason('fail')
+            return 'fail'
+        ovr_1_data = ds.GetRasterBand(1).GetOverview(1).GetDataset().ReadRaster(0,0,400,200)
+        subsampled_data = ds.ReadRaster(0,0,1600,800,400,200)
+        if ovr_1_data != subsampled_data:
+            print(options)
+            gdaltest.post_reason('fail')
+            return 'fail'
+        ds = None
+
+        gdaltest.tiff_drv.Delete('/vsimem/tiff_write_126.tif')
+
+    # Test single-strip, opened as split band
+    src_ds = gdaltest.tiff_drv.Create('/vsimem/tiff_write_126_src.tif', 8, 2001)
+    src_ds.GetRasterBand(1).Fill(255)
+    ds = gdaltest.tiff_drv.CreateCopy('/vsimem/tiff_write_126.tif', src_ds, options = ['COMPRESS=JPEG', 'BLOCKYSIZE=2001'])
+    src_ds = None
+    gdaltest.tiff_drv.Delete('/vsimem/tiff_write_126_src.tif')
+    ds = None
+
+    ds = gdal.Open('/vsimem/tiff_write_126.tif')
+    if ds.GetRasterBand(1).GetBlockSize() != [8,1]:
+        print(ds.GetRasterBand(1).GetBlockSize())
+        gdaltest.post_reason('fail')
+        return 'fail'
+    ovr_ds = ds.GetRasterBand(1).GetOverview(1).GetDataset()
+    ovr_1_data = ovr_ds.ReadRaster(0,0,ovr_ds.RasterXSize,ovr_ds.RasterYSize,1,1)
+    subsampled_data = ds.ReadRaster(0,0,ds.RasterXSize,ds.RasterYSize,1,1)
+    if ovr_1_data != subsampled_data:
+        gdaltest.post_reason('fail')
+        return 'fail'
+    ds = None
+
+    gdaltest.tiff_drv.Delete('/vsimem/tiff_write_126.tif')
+
+    # Test with completely sparse file
+    ds = gdaltest.tiff_drv.Create('/vsimem/tiff_write_126.tif', 1024, 1024, options = ['COMPRESS=JPEG', 'SPARSE_OK=YES'])
+    ds = None
+
+    ds = gdal.Open('/vsimem/tiff_write_126.tif')
+    # We don't even have JPEGTABLES !
+    if ds.GetRasterBand(1).GetOverview(0) is not None:
+        gdaltest.post_reason('fail')
+        return 'fail'
+    if ds.GetRasterBand(1).GetMetadataItem('JPEGTABLES', 'TIFF') is not None:
+        gdaltest.post_reason('fail')
+        return 'fail'
+    if ds.GetRasterBand(1).GetMetadataItem('BLOCK_OFFSET_0_0', 'TIFF') is not None:
+        gdaltest.post_reason('fail')
+        return 'fail'
+    if ds.GetRasterBand(1).GetMetadataItem('BLOCK_SIZE_0_0', 'TIFF') is not None:
+        gdaltest.post_reason('fail')
+        return 'fail'
+    ds = None
+    gdaltest.tiff_drv.Delete('/vsimem/tiff_write_126.tif')
+
+    # Test with partially sparse file
+    ds = gdaltest.tiff_drv.Create('/vsimem/tiff_write_126.tif', 1024, 1024, 3, options = ['COMPRESS=JPEG', 'SPARSE_OK=YES', 'INTERLEAVE=BAND'])
+    # Fill band 3, but let blocks of band 1 unwritten.
+    ds.GetRasterBand(3).Fill(0)
+    ds = None
+
+    ds = gdal.Open('/vsimem/tiff_write_126.tif')
+    cs = ds.GetRasterBand(1).GetOverview(0).Checksum()
+    if cs != 0:
+        print(cs)
+        gdaltest.post_reason('fail')
+        return 'fail'
+    ds = None
+    gdaltest.tiff_drv.Delete('/vsimem/tiff_write_126.tif')
+
+    return 'success'
+
+###############################################################################
 # Ask to run again tests with GDAL_API_PROXY=YES
 
 def tiff_write_api_proxy():
@@ -4790,6 +5057,8 @@ gdaltest_list = [
     tiff_write_109,
     tiff_write_110,
     tiff_write_111,
+    tiff_write_111_bis,
+    tiff_write_111_ter,
     tiff_write_112,
     tiff_write_113,
     tiff_write_114,
@@ -4802,6 +5071,9 @@ gdaltest_list = [
     tiff_write_121,
     tiff_write_122,
     tiff_write_123,
+    tiff_write_124,
+    tiff_write_125,
+    tiff_write_126,
     #tiff_write_api_proxy,
     tiff_write_cleanup ]
 

@@ -7,7 +7,7 @@
 # Howard Butler hobu.inc@gmail.com
 
 
-gdal_version = '1.10.0'
+gdal_version = '1.11.0'
 
 import sys
 import os
@@ -200,6 +200,11 @@ class gdal_ext(build_ext):
 
 extra_link_args = []
 extra_compile_args = []
+
+if sys.platform == 'darwin' and [int(x) for x in os.uname()[2].split('.')] >= [11, 0, 0]:
+    # since MacOS X 10.9, clang no longer accepts -mno-fused-madd
+    #extra_compile_args.append('-Qunused-arguments')
+    os.environ['ARCHFLAGS'] = '-Wno-error=unused-command-line-argument-hard-error-in-future'
 
 gdal_module = Extension('osgeo._gdal',
                         sources=['extensions/gdal_wrap.cpp'],

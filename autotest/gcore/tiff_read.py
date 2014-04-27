@@ -1171,6 +1171,95 @@ def tiff_read_huge4GB():
 
     return 'success'
 
+###############################################################################
+# Test reading a (small) BigTIFF. Tests GTiffCacheOffsetOrCount8()
+
+def tiff_read_bigtiff():
+
+    md = gdal.GetDriverByName('GTiff').GetMetadata()
+    if md['DMD_CREATIONOPTIONLIST'].find('BigTIFF') == -1:
+        return 'skip'
+
+    ds = gdal.Open('data/byte_bigtiff_strip5lines.tif')
+    cs = ds.GetRasterBand(1).Checksum()
+    ds = None
+
+    if cs != 4672:
+        return 'fail'
+
+    return 'success'
+
+###############################################################################
+# Test reading in TIFF metadata domain
+
+def tiff_read_tiff_metadata():
+
+    md = gdal.GetDriverByName('GTiff').GetMetadata()
+    if md['DMD_CREATIONOPTIONLIST'].find('JPEG') == -1:
+        return 'skip'
+
+    ds = gdal.Open('data/stefan_full_rgba_jpeg_contig.tif')
+    if ds.GetRasterBand(1).GetMetadataItem('BLOCK_OFFSET_0_0', 'TIFF') != '254':
+        gdaltest.post_reason('fail')
+        return 'fail'
+    if ds.GetRasterBand(1).GetMetadataItem('BLOCK_SIZE_0_0', 'TIFF') != '770':
+        gdaltest.post_reason('fail')
+        return 'fail'
+    if ds.GetRasterBand(1).GetMetadataItem('JPEGTABLES', 'TIFF').find('FFD8') != 0:
+        gdaltest.post_reason('fail')
+        return 'fail'
+    if ds.GetRasterBand(1).GetMetadataItem('BLOCK_OFFSET_100_0', 'TIFF') is not None:
+        gdaltest.post_reason('fail')
+        return 'fail'
+    if ds.GetRasterBand(1).GetMetadataItem('BLOCK_OFFSET_0_100', 'TIFF') is not None:
+        gdaltest.post_reason('fail')
+        return 'fail'
+    if ds.GetRasterBand(1).GetMetadataItem('BLOCK_SIZE_100_0', 'TIFF') is not None:
+        gdaltest.post_reason('fail')
+        return 'fail'
+    if ds.GetRasterBand(1).GetMetadataItem('BLOCK_SIZE_0_100', 'TIFF') is not None:
+        gdaltest.post_reason('fail')
+        return 'fail'
+
+    ds = gdal.Open('data/stefan_full_rgba_jpeg_separate.tif')
+    if ds.GetRasterBand(4).GetMetadataItem('BLOCK_OFFSET_0_2', 'TIFF') != '11071':
+        gdaltest.post_reason('fail')
+        return 'fail'
+    if ds.GetRasterBand(4).GetMetadataItem('BLOCK_SIZE_0_2', 'TIFF') != '188':
+        gdaltest.post_reason('fail')
+        return 'fail'
+
+    return 'success'
+
+###############################################################################
+# Test reading a JPEG-in-TIFF with tiles of irregular size (corrupted image)
+
+def tiff_read_irregular_tile_size_jpeg_in_tiff():
+
+    md = gdal.GetDriverByName('GTiff').GetMetadata()
+    if md['DMD_CREATIONOPTIONLIST'].find('JPEG') == -1:
+        return 'skip'
+
+    ds = gdal.Open('data/irregular_tile_size_jpeg_in_tiff.tif')
+    gdal.ErrorReset()
+    gdal.PushErrorHandler('CPLQuietErrorHandler')
+    ds.GetRasterBand(1).Checksum()
+    gdal.PopErrorHandler()
+    if gdal.GetLastErrorType() == 0:
+        gdaltest.post_reason('fail')
+        return 'fail'
+
+    gdal.ErrorReset()
+    gdal.PushErrorHandler('CPLQuietErrorHandler')
+    ds.GetRasterBand(1).GetOverview(0).Checksum()
+    gdal.PopErrorHandler()
+    if gdal.GetLastErrorType() == 0:
+        gdaltest.post_reason('fail')
+        return 'fail'
+    gdal.ErrorReset()
+
+    return 'success'
+
 ###############################################################################################
 
 for item in init_list:
@@ -1222,6 +1311,9 @@ gdaltest_list.append( (tiff_jpeg_rgba_band_interleaved) )
 gdaltest_list.append( (tiff_read_online_1) )
 gdaltest_list.append( (tiff_read_online_2) )
 gdaltest_list.append( (tiff_read_huge4GB) )
+gdaltest_list.append( (tiff_read_bigtiff) )
+gdaltest_list.append( (tiff_read_tiff_metadata) )
+gdaltest_list.append( (tiff_read_irregular_tile_size_jpeg_in_tiff) )
 
 if __name__ == '__main__':
 
