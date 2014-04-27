@@ -2390,10 +2390,17 @@ GDALDatasetH GDALOpenInternal( GDALOpenInfo& oOpenInfo,
  
 GDALDatasetH CPL_STDCALL 
 GDALOpenShared( const char *pszFilename, GDALAccess eAccess )
-
 {
     VALIDATE_POINTER1( pszFilename, "GDALOpenShared", NULL );
+    GDALOpenInfo oOpenInfo( pszFilename, eAccess );
+    return GDALOpenSharedInternal(oOpenInfo, NULL);
+}
 
+GDALDatasetH GDALOpenSharedInternal( GDALOpenInfo& oOpenInfo,
+                               const char* const * papszAllowedDrivers,
+                               int bVerboseError,
+                               int bOGRDriverOnly )
+{
 /* -------------------------------------------------------------------- */
 /*      First scan the existing list to see if it could already         */
 /*      contain the requested dataset.                                  */
@@ -2408,10 +2415,10 @@ GDALOpenShared( const char *pszFilename, GDALAccess eAccess )
             SharedDatasetCtxt sStruct;
 
             sStruct.nPID = nThisPID;
-            sStruct.pszDescription = (char*) pszFilename;
-            sStruct.eAccess = eAccess;
+            sStruct.pszDescription = (char*) oOpenInfo.pszFilename;
+            sStruct.eAccess = oOpenInfo.eAccess;
             psStruct = (SharedDatasetCtxt*) CPLHashSetLookup(phSharedDatasetSet, &sStruct);
-            if (psStruct == NULL && eAccess == GA_ReadOnly)
+            if (psStruct == NULL && oOpenInfo.eAccess == GA_ReadOnly)
             {
                 sStruct.eAccess = GA_Update;
                 psStruct = (SharedDatasetCtxt*) CPLHashSetLookup(phSharedDatasetSet, &sStruct);
@@ -2429,15 +2436,16 @@ GDALOpenShared( const char *pszFilename, GDALAccess eAccess )
 /* -------------------------------------------------------------------- */
     GDALDataset *poDataset;
 
-    poDataset = (GDALDataset *) GDALOpen( pszFilename, eAccess );
+    poDataset = (GDALDataset *) GDALOpenInternal( oOpenInfo, papszAllowedDrivers,
+                                                  bVerboseError, bOGRDriverOnly );
     if( poDataset != NULL )
     {
-        if (strcmp(pszFilename, poDataset->GetDescription()) != 0)
+        if (strcmp(oOpenInfo.pszFilename, poDataset->GetDescription()) != 0)
         {
             CPLError(CE_Warning, CPLE_NotSupported,
                      "A dataset opened by GDALOpenShared should have the same filename (%s) "
                      "and description (%s)",
-                     pszFilename, poDataset->GetDescription());
+                     oOpenInfo.pszFilename, poDataset->GetDescription());
         }
         else
         {

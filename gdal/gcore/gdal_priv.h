@@ -252,7 +252,10 @@ GDALDatasetH GDALOpenInternal( GDALOpenInfo& oOpenInfo,
                                const char* const * papszAllowedDrivers,
                                int bVerboseError = TRUE,
                                int bOGRDriverOnly = FALSE );
-
+GDALDatasetH GDALOpenSharedInternal( GDALOpenInfo& oOpenInfo,
+                               const char* const * papszAllowedDrivers,
+                               int bVerboseError = TRUE,
+                               int bOGRDriverOnly = FALSE );
 class OGRLayer;
 class OGRGeometry;
 class OGRSpatialReference;
@@ -271,6 +274,10 @@ class CPL_DLL GDALDataset : public GDALMajorObject
                                           const char* const * papszAllowedDrivers,
                                           int bVerboseError,
                                           int bOGRDriverOnly );
+    friend GDALDatasetH GDALOpenSharedInternal( GDALOpenInfo& oOpenInfo,
+                                                const char* const * papszAllowedDrivers,
+                                                int bVerboseError,
+                                                int bOGRDriverOnly);
 
     friend class GDALDriver;
     friend class GDALDefaultOverviews;

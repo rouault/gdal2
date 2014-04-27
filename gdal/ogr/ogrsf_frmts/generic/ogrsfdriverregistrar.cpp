@@ -131,7 +131,8 @@ OGRSFDriverRegistrar::OpenShared( const char * pszName, int bUpdate,
                                   OGRSFDriver ** ppoDriver )
 
 {
-    GDALDataset* poDS = (GDALDataset*) GDALOpenShared(pszName, (bUpdate) ? GA_Update : GA_ReadOnly);
+    GDALOpenInfo oOpenInfo( pszName, (bUpdate) ? GA_Update : GA_ReadOnly );
+    GDALDataset* poDS = (GDALDataset*) GDALOpenSharedInternal(oOpenInfo, NULL, FALSE, TRUE );
     if( poDS == NULL || poDS->GetDriver() == NULL ||
         poDS->GetDriver()->GetMetadataItem("OGR_DRIVER") == NULL )
     {
