@@ -229,7 +229,10 @@ GDALDataset * GDALDriver::Create( const char * pszFilename,
     }
     else
     {
-        poDS = pfnCreateVectorOnly( this, pszFilename, papszOptions );
+        if( nBands > 0 )
+            poDS = NULL;
+        else
+            poDS = pfnCreateVectorOnly( this, pszFilename, papszOptions );
     }
 
     if( poDS != NULL )
