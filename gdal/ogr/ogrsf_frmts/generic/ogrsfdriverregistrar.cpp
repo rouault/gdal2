@@ -230,8 +230,16 @@ void OGRSFDriverRegistrar::RegisterDriver( OGRSFDriver * poDriver )
         poDriver->SetDescription( poDriver->GetName() );
         poDriver->SetMetadataItem("OGR_DRIVER", "YES");
 
+        if( poDriver->GetMetadataItem(GDAL_DMD_LONGNAME) == NULL )
+            poDriver->SetMetadataItem(GDAL_DMD_LONGNAME, poDriver->GetName() );
+
         poDriver->pfnOpenWithDriverArg = OpenWithDriverArg;
-        poDriver->pfnCreateVectorOnly = CreateVectorOnly;
+
+        if( poDriver->TestCapability(ODrCCreateDataSource) )
+        {
+            poDriver->SetMetadataItem( GDAL_DCAP_CREATE, "YES" );
+            poDriver->pfnCreateVectorOnly = CreateVectorOnly;
+        }
         poDriver->pfnDeleteDataSource = DeleteDataSource;
 
         poDriver->SetMetadataItem( GDAL_DCAP_VECTOR, "YES" );
