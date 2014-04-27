@@ -2349,19 +2349,20 @@ CPLErr GTIFWktFromMemBuf( int nSize, unsigned char *pabyBuffer,
     VSILFILE *fp = VSIFileFromMemBuffer( szFilename, pabyBuffer, nSize, FALSE );
     if( fp == NULL )
         return CE_Failure;
-    VSIFCloseL( fp );
 
 /* -------------------------------------------------------------------- */
 /*      Initialize access to the memory geotiff structure.              */
 /* -------------------------------------------------------------------- */
     TIFF        *hTIFF;
-    hTIFF = VSI_TIFFOpen( szFilename, "rc" );
+
+    hTIFF = VSI_TIFFOpen( szFilename, "rc", fp );
 
     if( hTIFF == NULL )
     {
         CPLError( CE_Failure, CPLE_AppDefined,
                   "TIFF/GeoTIFF structure is corrupt." );
         VSIUnlink( szFilename );
+        VSIFCloseL( fp );
         return CE_Failure;
     }
     
@@ -2462,6 +2463,7 @@ CPLErr GTIFWktFromMemBuf( int nSize, unsigned char *pabyBuffer,
 /*      Cleanup.                                                        */
 /* -------------------------------------------------------------------- */
     XTIFFClose( hTIFF );
+    VSIFCloseL( fp );
 
     VSIUnlink( szFilename );
 
@@ -2495,12 +2497,17 @@ CPLErr GTIFMemBufFromWkt( const char *pszWKT, const double *padfGeoTransform,
 /* -------------------------------------------------------------------- */
 /*      Initialize access to the memory geotiff structure.              */
 /* -------------------------------------------------------------------- */
-    hTIFF = VSI_TIFFOpen( szFilename, "w" );
+    VSILFILE* fpL = VSIFOpenL( szFilename, "w" );
+    if( fpL == NULL )
+        return CE_Failure;
+
+    hTIFF = VSI_TIFFOpen( szFilename, "w", fpL );
 
     if( hTIFF == NULL )
     {
         CPLError( CE_Failure, CPLE_AppDefined,
                   "TIFF/GeoTIFF structure is corrupt." );
+        VSIFCloseL(fpL);
         return CE_Failure;
     }
 
@@ -2606,6 +2613,7 @@ CPLErr GTIFMemBufFromWkt( const char *pszWKT, const double *padfGeoTransform,
     TIFFWriteDirectory( hTIFF );
 
     XTIFFClose( hTIFF );
+    VSIFCloseL(fpL);
 
 /* -------------------------------------------------------------------- */
 /*      Read back from the memory buffer.  It would be preferrable      */

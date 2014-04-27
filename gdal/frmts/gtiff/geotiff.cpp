@@ -239,6 +239,7 @@ class GTiffDataset : public GDALPamDataset
     friend void    GTIFFSetJpegQuality(GDALDatasetH hGTIFFDS, int nJpegQuality);
     
     TIFF	*hTIFF;
+    VSILFILE *fpL;
     GTiffDataset **ppoActiveDSRef;
     GTiffDataset *poActiveDS; /* only used in actual base */
 
@@ -460,7 +461,8 @@ class GTiffDataset : public GDALPamDataset
                               int nXSize, int nYSize, int nBands,
                               GDALDataType eType,
                               double dfExtraSpaceForOverviews,
-                              char **papszParmList );
+                              char **papszParmList,
+                              VSILFILE** pfpL);
 
     CPLErr   WriteEncodedTileOrStrip(uint32 tile_or_strip, void* data, int bPreserveDataBuffer);
 
@@ -3442,6 +3444,7 @@ GTiffDataset::GTiffDataset()
     pabyBlockBuf = NULL;
     bWriteErrorInFlushBlockBuf = FALSE;
     hTIFF = NULL;
+    fpL = NULL;
     bNeedsRewrite = FALSE;
     bMetadataChanged = FALSE;
     bColorProfileMetadataChanged = FALSE;
@@ -3629,6 +3632,11 @@ int GTiffDataset::Finalize()
     {
         XTIFFClose( hTIFF );
         hTIFF = NULL;
+        if( fpL != NULL )
+        {
+            VSIFCloseL( fpL );
+            fpL = NULL;
+        }
     }
 
     if( nGCPCount > 0 )
@@ -6138,7 +6146,7 @@ int GTiffDataset::Identify( GDALOpenInfo * poOpenInfo )
 /*	First we check to see if the file has the expected header	*/
 /*	bytes.								*/    
 /* -------------------------------------------------------------------- */
-    if( poOpenInfo->nHeaderBytes < 2 )
+    if( poOpenInfo->fpL == NULL || poOpenInfo->nHeaderBytes < 2 )
         return FALSE;
 
     if( (poOpenInfo->pabyHeader[0] != 'I' || poOpenInfo->pabyHeader[1] != 'I')
@@ -6203,14 +6211,22 @@ GDALDataset *GTiffDataset::Open( GDALOpenInfo * poOpenInfo )
 /* -------------------------------------------------------------------- */
 
     /* Disable strip chop for now */
-    hTIFF = VSI_TIFFOpen( pszFilename, ( poOpenInfo->eAccess == GA_ReadOnly ) ? "rc" : "r+c" );
+    if( poOpenInfo->fpL == NULL )
+    {
+        poOpenInfo->fpL = VSIFOpenL( pszFilename, ( poOpenInfo->eAccess == GA_ReadOnly ) ? "rb" : "r+b" );
+        if( poOpenInfo->fpL == NULL )
+            return NULL;
+    }
+    hTIFF = VSI_TIFFOpen( pszFilename, ( poOpenInfo->eAccess == GA_ReadOnly ) ? "rc" : "r+c",
+                          poOpenInfo->fpL );
 #if SIZEOF_VOIDP == 4
     if( hTIFF == NULL )
     {
         /* Case of one-strip file where the strip size is > 2GB (#5403) */
         if( bGlobalStripIntegerOverflow )
         {
-            hTIFF = VSI_TIFFOpen( pszFilename, ( poOpenInfo->eAccess == GA_ReadOnly ) ? "r" : "r+" );
+            hTIFF = VSI_TIFFOpen( pszFilename, ( poOpenInfo->eAccess == GA_ReadOnly ) ? "r" : "r+",
+                                  poOpenInfo->fpL );
             bGlobalStripIntegerOverflow = FALSE;
             if( hTIFF == NULL )
             {
@@ -6293,7 +6309,8 @@ GDALDataset *GTiffDataset::Open( GDALOpenInfo * poOpenInfo )
         {
             CPLDebug("GTiff", "Reopen with strip chop enabled");
             XTIFFClose(hTIFF);
-            hTIFF = VSI_TIFFOpen( pszFilename, ( poOpenInfo->eAccess == GA_ReadOnly ) ? "r" : "r+" );
+            hTIFF = VSI_TIFFOpen( pszFilename, ( poOpenInfo->eAccess == GA_ReadOnly ) ? "r" : "r+",
+                                  poOpenInfo->fpL );
             if( hTIFF == NULL )
                 return( NULL );
         }
@@ -6308,6 +6325,8 @@ GDALDataset *GTiffDataset::Open( GDALOpenInfo * poOpenInfo )
     poDS->SetDescription( pszFilename );
     poDS->osFilename = pszFilename;
     poDS->poActiveDS = poDS;
+    poDS->fpL = poOpenInfo->fpL;
+    poOpenInfo->fpL = NULL;
 
     if( poDS->OpenOffset( hTIFF, &(poDS->poActiveDS),
                           TIFFCurrentDirOffset(hTIFF), TRUE,
@@ -6689,9 +6708,15 @@ GDALDataset *GTiffDataset::OpenDir( GDALOpenInfo * poOpenInfo )
     if (!GTiffOneTimeInit())
         return NULL;
 
-    hTIFF = VSI_TIFFOpen( pszFilename, "r" );
+    VSILFILE* fpL = VSIFOpenL(pszFilename, "r");
+    if( fpL == NULL )
+        return NULL;
+    hTIFF = VSI_TIFFOpen( pszFilename, "r", fpL );
     if( hTIFF == NULL )
+    {
+        VSIFCloseL(fpL);
         return( NULL );
+    }
 
 /* -------------------------------------------------------------------- */
 /*      If a directory was requested by index, advance to it now.       */
@@ -6705,6 +6730,7 @@ GDALDataset *GTiffDataset::OpenDir( GDALOpenInfo * poOpenInfo )
                 XTIFFClose( hTIFF );
                 CPLError( CE_Failure, CPLE_OpenFailed, 
                           "Requested directory %lu not found.", (long unsigned int)nOffset );
+                VSIFCloseL(fpL);
                 return NULL;
             }
             nOffset--;
@@ -6722,6 +6748,7 @@ GDALDataset *GTiffDataset::OpenDir( GDALOpenInfo * poOpenInfo )
     poDS->SetDescription( poOpenInfo->pszFilename );
     poDS->osFilename = poOpenInfo->pszFilename;
     poDS->poActiveDS = poDS;
+    poDS->fpL = fpL;
 
     if( !EQUAL(pszFilename,poOpenInfo->pszFilename) 
         && !EQUALN(poOpenInfo->pszFilename,"GTIFF_RAW:",10) )
@@ -8153,7 +8180,8 @@ TIFF *GTiffDataset::CreateLL( const char * pszFilename,
                               int nXSize, int nYSize, int nBands,
                               GDALDataType eType,
                               double dfExtraSpaceForOverviews,
-                              char **papszParmList )
+                              char **papszParmList,
+                              VSILFILE** pfpL )
 
 {
     TIFF		*hTIFF;
@@ -8357,7 +8385,11 @@ TIFF *GTiffDataset::CreateLL( const char * pszFilename,
         strcat(szOpeningFlag, "b");
     else if (eEndianness == ENDIANNESS_LITTLE)
         strcat(szOpeningFlag, "l");
-    hTIFF = VSI_TIFFOpen( pszFilename, szOpeningFlag );
+
+    VSILFILE* fpL = VSIFOpenL( pszFilename, "w+b" );
+    if( fpL == NULL )
+        return NULL;
+    hTIFF = VSI_TIFFOpen( pszFilename, szOpeningFlag, fpL );
     if( hTIFF == NULL )
     {
         if( CPLGetLastErrorNo() == 0 )
@@ -8365,6 +8397,7 @@ TIFF *GTiffDataset::CreateLL( const char * pszFilename,
                       "Attempt to create new tiff file `%s'\n"
                       "failed in XTIFFOpen().\n",
                       pszFilename );
+        VSIFCloseL(fpL);
         return NULL;
     }
 
@@ -8490,6 +8523,7 @@ TIFF *GTiffDataset::CreateLL( const char * pszFilename,
                 CPLError(CE_Failure, CPLE_NotSupported,
                          "Currently, PHOTOMETRIC=YCBCR requires COMPRESS=JPEG");
                 XTIFFClose(hTIFF);
+                VSIFCloseL(fpL);
                 return NULL;
             }
 
@@ -8498,6 +8532,7 @@ TIFF *GTiffDataset::CreateLL( const char * pszFilename,
                 CPLError(CE_Failure, CPLE_NotSupported,
                          "PHOTOMETRIC=YCBCR requires INTERLEAVE=PIXEL");
                 XTIFFClose(hTIFF);
+                VSIFCloseL(fpL);
                 return NULL;
             }
 
@@ -8509,6 +8544,7 @@ TIFF *GTiffDataset::CreateLL( const char * pszFilename,
                 CPLError(CE_Failure, CPLE_NotSupported,
                          "PHOTOMETRIC=YCBCR requires a source raster with only 3 bands (RGB)");
                 XTIFFClose(hTIFF);
+                VSIFCloseL(fpL);
                 return NULL;
             }
 
@@ -8627,6 +8663,7 @@ TIFF *GTiffDataset::CreateLL( const char * pszFilename,
             !TIFFSetField( hTIFF, TIFFTAG_TILELENGTH, nBlockYSize ))
         {
             XTIFFClose(hTIFF);
+            VSIFCloseL(fpL);
             return NULL;
         }
     }
@@ -8700,6 +8737,8 @@ TIFF *GTiffDataset::CreateLL( const char * pszFilename,
         CPLFree( panTBlue );
     }
 
+    *pfpL = fpL;
+
     return( hTIFF );
 }
 
@@ -8717,12 +8756,13 @@ GDALDataset *GTiffDataset::Create( const char * pszFilename,
 {
     GTiffDataset *	poDS;
     TIFF		*hTIFF;
+    VSILFILE* fpL = NULL;
 
 /* -------------------------------------------------------------------- */
 /*      Create the underlying TIFF file.                                */
 /* -------------------------------------------------------------------- */
     hTIFF = CreateLL( pszFilename, nXSize, nYSize, nBands, 
-                      eType, 0, papszParmList );
+                      eType, 0, papszParmList, &fpL );
 
     if( hTIFF == NULL )
         return NULL;
@@ -8732,6 +8772,7 @@ GDALDataset *GTiffDataset::Create( const char * pszFilename,
 /* -------------------------------------------------------------------- */
     poDS = new GTiffDataset();
     poDS->hTIFF = hTIFF;
+    poDS->fpL = fpL;
     poDS->poActiveDS = poDS;
     poDS->ppoActiveDSRef = &(poDS->poActiveDS);
 
@@ -9119,8 +9160,9 @@ GTiffDataset::CreateCopy( const char * pszFilename, GDALDataset *poSrcDS,
 /* -------------------------------------------------------------------- */
 /*      Create the file.                                                */
 /* -------------------------------------------------------------------- */
+    VSILFILE* fpL = NULL;
     hTIFF = CreateLL( pszFilename, nXSize, nYSize, nBands,
-                      eType, dfExtraSpaceForOverviews, papszCreateOptions );
+                      eType, dfExtraSpaceForOverviews, papszCreateOptions, &fpL );
 
     CSLDestroy( papszCreateOptions );
 
@@ -9521,6 +9563,8 @@ GTiffDataset::CreateCopy( const char * pszFilename, GDALDataset *poSrcDS,
     TIFFFlush( hTIFF );
     XTIFFClose( hTIFF );
     hTIFF = NULL;
+    VSIFCloseL(fpL);
+    fpL = NULL;
 
     if( eErr != CE_None )
     {
