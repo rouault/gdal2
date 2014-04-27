@@ -167,11 +167,6 @@ typedef void *GDALRasterBandH;
 /** Opaque type used for the C bindings of the C++ GDALDriver class */
 typedef void *GDALDriverH;
 
-#ifndef DOXYGEN_SKIP
-/* Deprecated / unused */
-typedef void *GDALProjDefH;
-#endif
-
 /** Opaque type used for the C bindings of the C++ GDALColorTable class */
 typedef void *GDALColorTableH;
 
@@ -184,17 +179,6 @@ typedef void *GDALAsyncReaderH;
 /* ==================================================================== */
 /*      Registration/driver related.                                    */
 /* ==================================================================== */
-
-#ifndef DOXYGEN_SKIP
-/* Deprecated / unused */
-typedef struct {
-    char      *pszOptionName;
-    char      *pszValueType;   /* "boolean", "int", "float", "string", 
-                                  "string-select" */
-    char      *pszDescription;
-    char      **papszOptions;
-} GDALOptionDefinition;
-#endif
 
 #define GDAL_DMD_LONGNAME "DMD_LONGNAME"
 #define GDAL_DMD_HELPTOPIC "DMD_HELPTOPIC"
