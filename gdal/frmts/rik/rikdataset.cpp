@@ -1166,6 +1166,7 @@ void GDALRegister_RIK()
         poDriver = new GDALDriver();
 
         poDriver->SetDescription( "RIK" );
+        poDriver->SetMetadataItem( GDAL_DCAP_RASTER, "YES" );
         poDriver->SetMetadataItem( GDAL_DMD_LONGNAME,
                                    "Swedish Grid RIK (.rik)" );
         poDriver->SetMetadataItem( GDAL_DMD_HELPTOPIC,

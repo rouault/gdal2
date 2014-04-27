@@ -824,6 +824,7 @@ void GDALRegister_WEBP()
         poDriver = new GDALDriver();
 
         poDriver->SetDescription( "WEBP" );
+        poDriver->SetMetadataItem( GDAL_DCAP_RASTER, "YES" );
         poDriver->SetMetadataItem( GDAL_DMD_LONGNAME,
                                    "WEBP" );
         poDriver->SetMetadataItem( GDAL_DMD_HELPTOPIC,

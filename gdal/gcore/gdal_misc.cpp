@@ -2480,29 +2480,39 @@ GDALGeneralCmdLineProcessor( int nArgc, char ***ppapszArgv, int nOptions )
             for( iDr = 0; iDr < GDALGetDriverCount(); iDr++ )
             {
                 GDALDriverH hDriver = GDALGetDriver(iDr);
-                const char *pszRWFlag, *pszVirtualIO, *pszSubdatasets;
-                
-                if( GDALGetMetadataItem( hDriver, GDAL_DCAP_CREATE, NULL ) )
+                const char *pszRWFlag, *pszVirtualIO, *pszSubdatasets, *pszKind;
+                char** papszMD = GDALGetMetadata( hDriver, NULL );
+
+                if( CSLFetchBoolean( papszMD, GDAL_DCAP_CREATE, FALSE ) )
                     pszRWFlag = "rw+";
-                else if( GDALGetMetadataItem( hDriver, GDAL_DCAP_CREATECOPY, 
-                                              NULL ) )
+                else if( CSLFetchBoolean( papszMD, GDAL_DCAP_CREATECOPY, FALSE ) )
                     pszRWFlag = "rw";
                 else
                     pszRWFlag = "ro";
                 
-                if( GDALGetMetadataItem( hDriver, GDAL_DCAP_VIRTUALIO, NULL) )
+                if( CSLFetchBoolean( papszMD, GDAL_DCAP_VIRTUALIO, FALSE ) )
                     pszVirtualIO = "v";
                 else
                     pszVirtualIO = "";
 
-                pszSubdatasets = GDALGetMetadataItem( hDriver, GDAL_DMD_SUBDATASETS, NULL );
-                if( pszSubdatasets && CSLTestBoolean( pszSubdatasets ) )
+                if( CSLFetchBoolean( papszMD, GDAL_DMD_SUBDATASETS, FALSE ) )
                     pszSubdatasets = "s";
                 else
                     pszSubdatasets = "";
 
-                printf( "  %s (%s%s%s): %s\n",
+                if( CSLFetchBoolean( papszMD, GDAL_DCAP_RASTER, FALSE ) &&
+                    CSLFetchBoolean( papszMD, GDAL_DCAP_VECTOR, FALSE ))
+                    pszKind = "raster,vector";
+                else if( CSLFetchBoolean( papszMD, GDAL_DCAP_RASTER, FALSE ) )
+                    pszKind = "raster";
+                else if( CSLFetchBoolean( papszMD, GDAL_DCAP_VECTOR, FALSE ) )
+                    pszKind = "vector";
+                else
+                    pszKind = "unknown kind";
+
+                printf( "  %s -%s- (%s%s%s): %s\n",
                         GDALGetDriverShortName( hDriver ),
+                        pszKind,
                         pszRWFlag, pszVirtualIO, pszSubdatasets,
                         GDALGetDriverLongName( hDriver ) );
             }
@@ -2544,6 +2554,10 @@ GDALGeneralCmdLineProcessor( int nArgc, char ***ppapszArgv, int nOptions )
             printf( "  Long Name: %s\n", GDALGetDriverLongName( hDriver ) );
 
             papszMD = GDALGetMetadata( hDriver, NULL );
+            if( CSLFetchBoolean( papszMD, GDAL_DCAP_RASTER, FALSE ) )
+                printf( "  Supports: Raster\n" );
+            if( CSLFetchBoolean( papszMD, GDAL_DCAP_VECTOR, FALSE ) )
+                printf( "  Supports: Vector\n" );
 
             if( CSLFetchNameValue( papszMD, GDAL_DMD_EXTENSION ) )
                 printf( "  Extension: %s\n", 

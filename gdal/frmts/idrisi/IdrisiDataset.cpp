@@ -3343,6 +3343,7 @@ void GDALRegister_IDRISI()
         poDriver = new GDALDriver();
 
         poDriver->SetDescription( "RST" );
+        poDriver->SetMetadataItem( GDAL_DCAP_RASTER, "YES" );
         poDriver->SetMetadataItem( GDAL_DMD_LONGNAME, rstVERSION );
         poDriver->SetMetadataItem( GDAL_DMD_HELPTOPIC, "frmt_Idrisi.html" );
         poDriver->SetMetadataItem( GDAL_DMD_EXTENSION, extRST );

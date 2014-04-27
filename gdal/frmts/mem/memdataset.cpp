@@ -1002,6 +1002,7 @@ void GDALRegister_MEM()
         poDriver = new GDALDriver();
         
         poDriver->SetDescription( "MEM" );
+        poDriver->SetMetadataItem( GDAL_DCAP_RASTER, "YES" );
         poDriver->SetMetadataItem( GDAL_DMD_LONGNAME, 
                                    "In Memory Raster" );
         poDriver->SetMetadataItem( GDAL_DMD_CREATIONDATATYPES, 

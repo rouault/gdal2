@@ -1902,6 +1902,7 @@ void GDALRegister_MBTiles()
         poDriver = new GDALDriver();
 
         poDriver->SetDescription( "MBTiles" );
+        poDriver->SetMetadataItem( GDAL_DCAP_RASTER, "YES" );
         poDriver->SetMetadataItem( GDAL_DMD_LONGNAME,
                                    "MBTiles" );
         poDriver->SetMetadataItem( GDAL_DMD_HELPTOPIC,

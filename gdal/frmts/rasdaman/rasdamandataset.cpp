@@ -714,6 +714,7 @@ extern void GDALRegister_RASDAMAN()
     poDriver = new GDALDriver();
 
     poDriver->SetDescription( "RASDAMAN" );
+        poDriver->SetMetadataItem( GDAL_DCAP_RASTER, "YES" );
     poDriver->SetMetadataItem( GDAL_DMD_LONGNAME,
                                "RASDAMAN" );
     poDriver->SetMetadataItem( GDAL_DMD_HELPTOPIC,

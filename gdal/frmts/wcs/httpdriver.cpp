@@ -193,6 +193,7 @@ void GDALRegister_HTTP()
         poDriver = new GDALDriver();
         
         poDriver->SetDescription( "HTTP" );
+        poDriver->SetMetadataItem( GDAL_DCAP_RASTER, "YES" );
         poDriver->SetMetadataItem( GDAL_DMD_LONGNAME, 
                                    "HTTP Fetching Wrapper" );
         

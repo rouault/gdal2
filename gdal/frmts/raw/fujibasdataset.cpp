@@ -239,6 +239,7 @@ void GDALRegister_FujiBAS()
         poDriver = new GDALDriver();
         
         poDriver->SetDescription( "FujiBAS" );
+        poDriver->SetMetadataItem( GDAL_DCAP_RASTER, "YES" );
         poDriver->SetMetadataItem( GDAL_DMD_LONGNAME, 
                                    "Fuji BAS Scanner Image" );
         poDriver->SetMetadataItem( GDAL_DMD_HELPTOPIC, 

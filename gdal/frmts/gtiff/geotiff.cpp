@@ -11025,6 +11025,7 @@ void GDALRegister_GTiff()
 /*      Set the driver details.                                         */
 /* -------------------------------------------------------------------- */
         poDriver->SetDescription( "GTiff" );
+        poDriver->SetMetadataItem( GDAL_DCAP_RASTER, "YES" );
         poDriver->SetMetadataItem( GDAL_DMD_LONGNAME, "GeoTIFF" );
         poDriver->SetMetadataItem( GDAL_DMD_HELPTOPIC, "frmt_gtiff.html" );
         poDriver->SetMetadataItem( GDAL_DMD_MIMETYPE, "image/tiff" );

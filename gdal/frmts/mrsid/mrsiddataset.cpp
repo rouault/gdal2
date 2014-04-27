@@ -3558,6 +3558,7 @@ void GDALRegister_MrSID()
         poDriver = new GDALDriver();
 
         poDriver->SetDescription( "MrSID" );
+        poDriver->SetMetadataItem( GDAL_DCAP_RASTER, "YES" );
         poDriver->SetMetadataItem( GDAL_DMD_LONGNAME,
                         "Multi-resolution Seamless Image Database (MrSID)" );
         poDriver->SetMetadataItem( GDAL_DMD_HELPTOPIC, "frmt_mrsid.html" );
@@ -3601,6 +3602,7 @@ void GDALRegister_MrSID()
         poDriver = new GDALDriver();
 
         poDriver->SetDescription( "JP2MrSID" );
+        poDriver->SetMetadataItem( GDAL_DCAP_RASTER, "YES" );
         poDriver->SetMetadataItem( GDAL_DMD_LONGNAME,
                         "MrSID JPEG2000" );
         poDriver->SetMetadataItem( GDAL_DMD_HELPTOPIC, "frmt_jp2mrsid.html" );

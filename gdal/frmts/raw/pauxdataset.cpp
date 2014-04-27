@@ -1112,6 +1112,7 @@ void GDALRegister_PAux()
         poDriver = new GDALDriver();
         
         poDriver->SetDescription( "PAux" );
+        poDriver->SetMetadataItem( GDAL_DCAP_RASTER, "YES" );
         poDriver->SetMetadataItem( GDAL_DMD_LONGNAME, 
                                    "PCI .aux Labelled" );
         poDriver->SetMetadataItem( GDAL_DMD_HELPTOPIC, 

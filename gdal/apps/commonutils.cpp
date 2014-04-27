@@ -109,5 +109,10 @@ void EarlySetConfigOptions( int argc, char ** argv )
 
             i += 2;
         }
+        else if( EQUAL(argv[i],"--debug") && i + 1 < argc )
+        {
+            CPLSetConfigOption( "CPL_DEBUG", argv[i+1] );
+            i += 1;
+        }
     }
 }

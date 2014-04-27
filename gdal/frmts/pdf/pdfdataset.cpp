@@ -5206,6 +5206,7 @@ void GDALRegister_PDF()
         poDriver = new GDALDriver();
 
         poDriver->SetDescription( "PDF" );
+        poDriver->SetMetadataItem( GDAL_DCAP_RASTER, "YES" );
         poDriver->SetMetadataItem( GDAL_DMD_LONGNAME,
                                    "Geospatial PDF" );
         poDriver->SetMetadataItem( GDAL_DMD_HELPTOPIC,

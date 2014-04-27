@@ -1363,6 +1363,7 @@ void GDALRegister_Rasterlite()
         poDriver = new GDALDriver();
         
         poDriver->SetDescription( "Rasterlite" );
+        poDriver->SetMetadataItem( GDAL_DCAP_RASTER, "YES" );
         poDriver->SetMetadataItem( GDAL_DMD_LONGNAME, 
                                    "Rasterlite" );
         poDriver->SetMetadataItem( GDAL_DMD_HELPTOPIC, 

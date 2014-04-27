@@ -2018,6 +2018,7 @@ void GDALRegister_EHdr()
         poDriver = new GDALDriver();
         
         poDriver->SetDescription( "EHdr" );
+        poDriver->SetMetadataItem( GDAL_DCAP_RASTER, "YES" );
         poDriver->SetMetadataItem( GDAL_DMD_LONGNAME, 
                                    "ESRI .hdr Labelled" );
         poDriver->SetMetadataItem( GDAL_DMD_HELPTOPIC, 

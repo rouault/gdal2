@@ -428,6 +428,18 @@ int GDALDriverManager::RegisterDriver( GDALDriver * poDriver )
     if( poDriver->pfnCreateCopy != NULL )
         poDriver->SetMetadataItem( GDAL_DCAP_CREATECOPY, "YES" );
 
+    /* Backward compability for GDAL raster out-of-tree drivers: */
+    /* if a driver hasn't explicitely set a vector capability, assume it is */
+    /* a raster driver (legacy OGR drivers will have DCAP_VECTOR set before */
+    /* calling RegisterDriver() ) */
+    if( poDriver->GetMetadataItem( GDAL_DCAP_RASTER ) == NULL &&
+        poDriver->GetMetadataItem( GDAL_DCAP_VECTOR ) == NULL )
+    {
+        CPLDebug("GDAL", "Assuming DCAP_RASTER for driver %s. Please fix it.",
+                 poDriver->GetDescription() );
+        poDriver->SetMetadataItem( GDAL_DCAP_RASTER, "YES" );
+    }
+
     oMapNameToDrivers[CPLString(poDriver->GetDescription()).toupper()] = poDriver;
     
     int iResult = nDrivers - 1;

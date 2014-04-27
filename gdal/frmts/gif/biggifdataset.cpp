@@ -538,6 +538,7 @@ void GDALRegister_BIGGIF()
         poDriver = new GDALDriver();
         
         poDriver->SetDescription( "BIGGIF" );
+        poDriver->SetMetadataItem( GDAL_DCAP_RASTER, "YES" );
         poDriver->SetMetadataItem( GDAL_DMD_LONGNAME, 
                                    "Graphics Interchange Format (.gif)" );
         poDriver->SetMetadataItem( GDAL_DMD_HELPTOPIC, 

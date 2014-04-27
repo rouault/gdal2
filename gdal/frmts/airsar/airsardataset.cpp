@@ -659,6 +659,7 @@ void GDALRegister_AirSAR()
         poDriver = new GDALDriver();
         
         poDriver->SetDescription( "AirSAR" );
+        poDriver->SetMetadataItem( GDAL_DCAP_RASTER, "YES" );
         poDriver->SetMetadataItem( GDAL_DMD_LONGNAME, 
                                    "AirSAR Polarimetric Image" );
         poDriver->SetMetadataItem( GDAL_DMD_HELPTOPIC, "frmt_airsar.html" );

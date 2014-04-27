@@ -2704,6 +2704,7 @@ void GDALRegister_JP2KAK()
         poDriver = new GDALDriver();
         
         poDriver->SetDescription( "JP2KAK" );
+        poDriver->SetMetadataItem( GDAL_DCAP_RASTER, "YES" );
         poDriver->SetMetadataItem( GDAL_DMD_LONGNAME, 
                                    "JPEG-2000 (based on Kakadu " 
                                    KDU_CORE_VERSION ")" );

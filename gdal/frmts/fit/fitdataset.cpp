@@ -1356,6 +1356,7 @@ void GDALRegister_FIT()
         poDriver = new GDALDriver();
         
         poDriver->SetDescription( "FIT" );
+        poDriver->SetMetadataItem( GDAL_DCAP_RASTER, "YES" );
         poDriver->SetMetadataItem( GDAL_DMD_LONGNAME, 
                                    "FIT Image" );
         poDriver->SetMetadataItem( GDAL_DMD_HELPTOPIC, 

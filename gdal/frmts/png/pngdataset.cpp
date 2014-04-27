@@ -1836,6 +1836,7 @@ void GDALRegister_PNG()
         poDriver = new GDALDriver();
         
         poDriver->SetDescription( "PNG" );
+        poDriver->SetMetadataItem( GDAL_DCAP_RASTER, "YES" );
         poDriver->SetMetadataItem( GDAL_DMD_LONGNAME, 
                                    "Portable Network Graphics" );
         poDriver->SetMetadataItem( GDAL_DMD_HELPTOPIC, 

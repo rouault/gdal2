@@ -886,6 +886,7 @@ void GDALRegister_GenBin()
         poDriver = new GDALDriver();
         
         poDriver->SetDescription( "GenBin" );
+        poDriver->SetMetadataItem( GDAL_DCAP_RASTER, "YES" );
         poDriver->SetMetadataItem( GDAL_DMD_LONGNAME, 
                                    "Generic Binary (.hdr Labelled)" );
         poDriver->SetMetadataItem( GDAL_DMD_HELPTOPIC, 

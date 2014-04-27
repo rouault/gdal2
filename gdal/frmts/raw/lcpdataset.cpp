@@ -1704,6 +1704,7 @@ void GDALRegister_LCP()
         poDriver = new GDALDriver();
 
         poDriver->SetDescription( "LCP" );
+        poDriver->SetMetadataItem( GDAL_DCAP_RASTER, "YES" );
         poDriver->SetMetadataItem( GDAL_DMD_LONGNAME, 
                                    "FARSITE v.4 Landscape File (.lcp)" );
         poDriver->SetMetadataItem( GDAL_DMD_EXTENSION, "lcp" );

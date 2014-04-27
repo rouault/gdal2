@@ -1133,6 +1133,7 @@ void GDALRegister_DIMAP()
         poDriver = new GDALDriver();
         
         poDriver->SetDescription( "DIMAP" );
+        poDriver->SetMetadataItem( GDAL_DCAP_RASTER, "YES" );
         poDriver->SetMetadataItem( GDAL_DMD_LONGNAME, 
                                    "SPOT DIMAP" );
         poDriver->SetMetadataItem( GDAL_DMD_HELPTOPIC, 

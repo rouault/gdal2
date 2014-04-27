@@ -1084,6 +1084,7 @@ void GDALRegister_SAGA()
         poDriver = new GDALDriver();
         
         poDriver->SetDescription( "SAGA" );
+        poDriver->SetMetadataItem( GDAL_DCAP_RASTER, "YES" );
         poDriver->SetMetadataItem( GDAL_DMD_LONGNAME, 
                                    "SAGA GIS Binary Grid (.sdat)" );
         poDriver->SetMetadataItem( GDAL_DMD_HELPTOPIC, 

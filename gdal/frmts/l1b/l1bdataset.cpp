@@ -3320,6 +3320,7 @@ void GDALRegister_L1B()
         poDriver = new GDALDriver();
         
         poDriver->SetDescription( "L1B" );
+        poDriver->SetMetadataItem( GDAL_DCAP_RASTER, "YES" );
         poDriver->SetMetadataItem( GDAL_DMD_LONGNAME, 
                                    "NOAA Polar Orbiter Level 1b Data Set" );
         poDriver->SetMetadataItem( GDAL_DMD_HELPTOPIC, 

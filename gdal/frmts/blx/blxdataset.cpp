@@ -437,6 +437,7 @@ void GDALRegister_BLX()
         poDriver = new GDALDriver();
         
         poDriver->SetDescription( "BLX" );
+        poDriver->SetMetadataItem( GDAL_DCAP_RASTER, "YES" );
         poDriver->SetMetadataItem( GDAL_DMD_LONGNAME, 
                                    "Magellan topo (.blx)" );
         poDriver->SetMetadataItem( GDAL_DMD_HELPTOPIC, 

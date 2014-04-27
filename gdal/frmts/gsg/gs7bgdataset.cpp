@@ -1352,6 +1352,7 @@ void GDALRegister_GS7BG()
         poDriver = new GDALDriver();
 
         poDriver->SetDescription( "GS7BG" );
+        poDriver->SetMetadataItem( GDAL_DCAP_RASTER, "YES" );
         poDriver->SetMetadataItem( GDAL_DMD_LONGNAME,
                                    "Golden Software 7 Binary Grid (.grd)" );
         poDriver->SetMetadataItem( GDAL_DMD_HELPTOPIC,

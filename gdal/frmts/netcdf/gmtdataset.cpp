@@ -606,6 +606,7 @@ void GDALRegister_GMT()
         poDriver = new GDALDriver();
         
         poDriver->SetDescription( "GMT" );
+        poDriver->SetMetadataItem( GDAL_DCAP_RASTER, "YES" );
         poDriver->SetMetadataItem( GDAL_DMD_LONGNAME, 
                                    "GMT NetCDF Grid Format" );
         poDriver->SetMetadataItem( GDAL_DMD_HELPTOPIC, 

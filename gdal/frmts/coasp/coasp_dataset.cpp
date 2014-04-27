@@ -539,6 +539,7 @@ void GDALRegister_COASP(void)
 	if ( GDALGetDriverByName( "COASP" ) == NULL ) {
 		poDriver = new GDALDriver();
 		poDriver->SetDescription( "COASP" );
+        poDriver->SetMetadataItem( GDAL_DCAP_RASTER, "YES" );
 		poDriver->SetMetadataItem( GDAL_DMD_LONGNAME,
 			"DRDC COASP SAR Processor Raster" );
 		poDriver->SetMetadataItem( GDAL_DMD_EXTENSION,

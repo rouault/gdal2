@@ -2940,6 +2940,7 @@ void GDALRegister_JPEG()
         poDriver = new GDALDriver();
         
         poDriver->SetDescription( "JPEG" );
+        poDriver->SetMetadataItem( GDAL_DCAP_RASTER, "YES" );
         poDriver->SetMetadataItem( GDAL_DMD_LONGNAME, 
                                    "JPEG JFIF" );
         poDriver->SetMetadataItem( GDAL_DMD_HELPTOPIC, 

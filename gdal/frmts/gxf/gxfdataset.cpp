@@ -391,6 +391,7 @@ void GDALRegister_GXF()
         poDriver = new GDALDriver();
         
         poDriver->SetDescription( "GXF" );
+        poDriver->SetMetadataItem( GDAL_DCAP_RASTER, "YES" );
         poDriver->SetMetadataItem( GDAL_DMD_LONGNAME, 
                                    "GeoSoft Grid Exchange Format" );
         poDriver->SetMetadataItem( GDAL_DMD_HELPTOPIC, 

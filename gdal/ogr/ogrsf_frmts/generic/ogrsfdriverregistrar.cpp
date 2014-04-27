@@ -267,6 +267,7 @@ void OGRSFDriverRegistrar::RegisterDriver( OGRSFDriver * poDriver )
 
         poDriver->pfnOpenWithDriverArg = OpenWithDriverArg;
         poDriver->pfnCreateVectorOnly = CreateVectorOnly;
+        poDriver->SetMetadataItem( GDAL_DCAP_VECTOR, "YES" );
 
         GetGDALDriverManager()->RegisterDriver( poDriver );
     }

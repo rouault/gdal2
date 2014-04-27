@@ -1599,6 +1599,7 @@ void GDALRegister_Leveller()
         poDriver = new GDALDriver();
         
         poDriver->SetDescription( "Leveller" );
+        poDriver->SetMetadataItem( GDAL_DCAP_RASTER, "YES" );
         poDriver->SetMetadataItem( GDAL_DMD_EXTENSION, 
                                    "ter" );
         poDriver->SetMetadataItem( GDAL_DMD_LONGNAME, 

@@ -203,16 +203,17 @@ GDALDataset *COSARDataset::Open( GDALOpenInfo * pOpenInfo ) {
 
 /* register the driver with GDAL */
 void GDALRegister_COSAR() {
-	GDALDriver *pDriver;
+	GDALDriver *poDriver;
 	if (GDALGetDriverByName("cosar") == NULL) {
-		pDriver = new GDALDriver();
-		pDriver->SetDescription("COSAR");
-		pDriver->SetMetadataItem( GDAL_DMD_LONGNAME,
+		poDriver = new GDALDriver();
+		poDriver->SetDescription("COSAR");
+        poDriver->SetMetadataItem( GDAL_DCAP_RASTER, "YES" );
+		poDriver->SetMetadataItem( GDAL_DMD_LONGNAME,
 			"COSAR Annotated Binary Matrix (TerraSAR-X)");
-		pDriver->SetMetadataItem( GDAL_DMD_HELPTOPIC,
+		poDriver->SetMetadataItem( GDAL_DMD_HELPTOPIC,
 			"frmt_cosar.html");
-		pDriver->pfnOpen = COSARDataset::Open;
-		GetGDALDriverManager()->RegisterDriver(pDriver);
+		poDriver->pfnOpen = COSARDataset::Open;
+		GetGDALDriverManager()->RegisterDriver(poDriver);
 	}
 }
 

@@ -1615,6 +1615,7 @@ void GDALRegister_MFF()
         poDriver = new GDALDriver();
         
         poDriver->SetDescription( "MFF" );
+        poDriver->SetMetadataItem( GDAL_DCAP_RASTER, "YES" );
         poDriver->SetMetadataItem( GDAL_DMD_LONGNAME, 
                                    "Vexcel MFF Raster" );
         poDriver->SetMetadataItem( GDAL_DMD_HELPTOPIC, 

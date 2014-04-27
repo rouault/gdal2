@@ -1111,6 +1111,7 @@ void GDALRegister_IDA()
         poDriver = new GDALDriver();
         
         poDriver->SetDescription( "IDA" );
+        poDriver->SetMetadataItem( GDAL_DCAP_RASTER, "YES" );
         poDriver->SetMetadataItem( GDAL_DMD_LONGNAME, 
                                    "Image Data and Analysis" );
         poDriver->SetMetadataItem( GDAL_DMD_HELPTOPIC, 

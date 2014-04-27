@@ -800,6 +800,7 @@ void GDALRegister_TSX() {
         poDriver = new GDALDriver();
 
         poDriver->SetDescription( "TSX" );
+        poDriver->SetMetadataItem( GDAL_DCAP_RASTER, "YES" );
         poDriver->SetMetadataItem( GDAL_DMD_LONGNAME,
                                    "TerraSAR-X Product" );
 /*        poDriver->SetMetadataItem( GDAL_DMD_HELPTOPIC, "frmt_tsx.html" ); */

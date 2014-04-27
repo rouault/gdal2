@@ -513,6 +513,7 @@ void GDALRegister_TIL()
         poDriver = new GDALDriver();
         
         poDriver->SetDescription( "TIL" );
+        poDriver->SetMetadataItem( GDAL_DCAP_RASTER, "YES" );
         poDriver->SetMetadataItem( GDAL_DMD_LONGNAME, 
                                    "EarthWatch .TIL" );
         poDriver->SetMetadataItem( GDAL_DMD_HELPTOPIC, 

@@ -3136,6 +3136,7 @@ void GDALRegister_ECW()
         poDriver = new GDALDriver();
         
         poDriver->SetDescription( "ECW" );
+        poDriver->SetMetadataItem( GDAL_DCAP_RASTER, "YES" );
 
         CPLString osLongName = "ERDAS Compressed Wavelets (SDK ";
 
@@ -3235,6 +3236,7 @@ void GDALRegister_JP2ECW()
         poDriver = new GDALDriver();
         
         poDriver->SetDescription( "JP2ECW" );
+        poDriver->SetMetadataItem( GDAL_DCAP_RASTER, "YES" );
 
         CPLString osLongName = "ERDAS JPEG2000 (SDK ";
 

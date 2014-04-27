@@ -1288,6 +1288,7 @@ void GDALRegister_AAIGrid()
         poDriver = new GDALDriver();
         
         poDriver->SetDescription( "AAIGrid" );
+        poDriver->SetMetadataItem( GDAL_DCAP_RASTER, "YES" );
         poDriver->SetMetadataItem( GDAL_DMD_LONGNAME, 
                                    "Arc/Info ASCII Grid" );
         poDriver->SetMetadataItem( GDAL_DMD_HELPTOPIC, 
@@ -1326,6 +1327,7 @@ void GDALRegister_GRASSASCIIGrid()
         poDriver = new GDALDriver();
 
         poDriver->SetDescription( "GRASSASCIIGrid" );
+        poDriver->SetMetadataItem( GDAL_DCAP_RASTER, "YES" );
         poDriver->SetMetadataItem( GDAL_DMD_LONGNAME,
                                    "GRASS ASCII Grid" );
         poDriver->SetMetadataItem( GDAL_DMD_HELPTOPIC,

@@ -5699,6 +5699,7 @@ void GDALRegister_NITF()
         poDriver = new GDALDriver();
         
         poDriver->SetDescription( "NITF" );
+        poDriver->SetMetadataItem( GDAL_DCAP_RASTER, "YES" );
         poDriver->SetMetadataItem( GDAL_DMD_LONGNAME, 
                                    "National Imagery Transmission Format" );
         

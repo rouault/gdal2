@@ -1232,6 +1232,7 @@ void GDALRegister_HDF4()
         poDriver = new GDALDriver();
         
         poDriver->SetDescription( "HDF4" );
+        poDriver->SetMetadataItem( GDAL_DCAP_RASTER, "YES" );
         poDriver->SetMetadataItem( GDAL_DMD_LONGNAME, 
                                    "Hierarchical Data Format Release 4" );
         poDriver->SetMetadataItem( GDAL_DMD_HELPTOPIC, 

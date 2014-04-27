@@ -592,6 +592,7 @@ void GDALRegister_CTG()
         poDriver = new GDALDriver();
 
         poDriver->SetDescription( "CTG" );
+        poDriver->SetMetadataItem( GDAL_DCAP_RASTER, "YES" );
         poDriver->SetMetadataItem( GDAL_DMD_LONGNAME,
                                    "USGS LULC Composite Theme Grid" );
         poDriver->SetMetadataItem( GDAL_DMD_HELPTOPIC,

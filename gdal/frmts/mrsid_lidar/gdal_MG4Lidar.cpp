@@ -924,6 +924,7 @@ void GDALRegister_MG4Lidar()
       poDriver = new GDALDriver();
 
       poDriver->SetDescription( "MG4Lidar" );
+        poDriver->SetMetadataItem( GDAL_DCAP_RASTER, "YES" );
       poDriver->SetMetadataItem( GDAL_DMD_LONGNAME, 
          "MrSID Generation 4 / Lidar (.sid)" );
       // To do:  update this help file in gdal.org

@@ -2699,6 +2699,7 @@ void GDALRegister_ENVI()
         poDriver = new GDALDriver();
         
         poDriver->SetDescription( "ENVI" );
+        poDriver->SetMetadataItem( GDAL_DCAP_RASTER, "YES" );
         poDriver->SetMetadataItem( GDAL_DMD_LONGNAME, 
                                    "ENVI .hdr Labelled" );
         poDriver->SetMetadataItem( GDAL_DMD_HELPTOPIC, 
