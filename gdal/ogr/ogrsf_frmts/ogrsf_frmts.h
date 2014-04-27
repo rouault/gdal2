@@ -225,16 +225,6 @@ public:
     virtual const char  *GetName() = 0;
 
     static void         DestroyDataSource( OGRDataSource * );
-
-    OGRSFDriver        *GetOGRDriver() const;
-    void                SetOGRDriver( OGRSFDriver *poDriver );
-    virtual     const char* GetDriverName();
-
-protected:
-    friend class OGRSFDriverRegistrar;
-
-    OGRSFDriver        *m_poOGRDriver;
-
 };
 
 /************************************************************************/
@@ -262,10 +252,6 @@ class CPL_DLL OGRSFDriver : public GDALDriver
     virtual OGRDataSource *CreateDataSource( const char *pszName,
                                              char ** = NULL );
     virtual OGRErr      DeleteDataSource( const char *pszName );
-
-    virtual OGRDataSource *CopyDataSource( OGRDataSource *poSrcDS, 
-                                           const char *pszNewName, 
-                                           char **papszOptions = NULL );
 };
 
 
@@ -292,23 +278,18 @@ class CPL_DLL OGRSFDriverRegistrar
     static GDALDataset* CreateVectorOnly( GDALDriver* poDriver,
                                           const char * pszName,
                                           char ** papszOptions );
-    
+    static CPLErr       DeleteDataSource( GDALDriver* poDriver,
+                                          const char * pszName );
+
   public:
 
     static OGRSFDriverRegistrar *GetRegistrar();
-    static OGRDataSource *Open( const char *pszName, int bUpdate=FALSE,
-                                OGRSFDriver ** ppoDriver = NULL );
-
-    OGRDataSource *OpenShared( const char *pszName, int bUpdate=FALSE,
-                               OGRSFDriver ** ppoDriver = NULL );
-    OGRErr      ReleaseDataSource( GDALDataset * );
 
     void        RegisterDriver( OGRSFDriver * poDriver );
-    void        DeregisterDriver( OGRSFDriver * poDriver );
 
     int         GetDriverCount( void );
-    OGRSFDriver *GetDriver( int iDriver );
-    OGRSFDriver *GetDriverByName( const char * );
+    GDALDriver *GetDriver( int iDriver );
+    GDALDriver *GetDriverByName( const char * );
 
     int         GetOpenDSCount();
     OGRDataSource *GetOpenDS( int );

@@ -183,8 +183,8 @@ OGRDataSource *OGRVRTDriver::Open( const char * pszFilename,
 /* -------------------------------------------------------------------- */
 /*      Create a virtual datasource configured based on this XML input. */
 /* -------------------------------------------------------------------- */
-    poDS = new OGRVRTDataSource();
-    poDS->SetOGRDriver(this);
+    poDS = new OGRVRTDataSource(this);
+
     /* psTree is owned by poDS */
     if( !poDS->Initialize( psTree, pszFilename, bUpdate ) )
     {

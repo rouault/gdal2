@@ -67,24 +67,9 @@ OGRDataSourceH OGR_Dr_CreateDataSource( OGRSFDriverH hDriver,
 {
     VALIDATE_POINTER1( hDriver, "OGR_Dr_CreateDataSource", NULL );
 
-    OGRSFDriver* poDriver = (OGRSFDriver *) hDriver;
-    CPLAssert( NULL != poDriver );
+    GDALDriver* poDriver = (GDALDriver*)hDriver;
 
-    OGRDataSource* poDS = NULL;
-    poDS = poDriver->CreateDataSource( pszName, papszOptions );
-
-    /* This fix is explained in Ticket #1223 */
-    if( NULL != poDS )
-    {
-        poDS->SetOGRDriver( poDriver );
-        CPLAssert( NULL != poDS->GetOGRDriver() );
-    }
-    else
-    {
-        CPLDebug( "OGR", "CreateDataSource operation failed. NULL pointer returned." );
-    }
-
-    return (OGRDataSourceH) poDS;
+    return (OGRDataSourceH) poDriver->Create( pszName, 0, 0, 0, GDT_Unknown, papszOptions );
 }
 
 /************************************************************************/
@@ -112,7 +97,7 @@ OGRErr OGR_Dr_DeleteDataSource( OGRSFDriverH hDriver,
     VALIDATE_POINTER1( hDriver, "OGR_Dr_DeleteDataSource",
                        OGRERR_INVALID_HANDLE );
 
-    return ((OGRSFDriver *) hDriver)->DeleteDataSource( pszDataSource );
+    return ((GDALDriver *) hDriver)->Delete( pszDataSource );
 }
 
 /************************************************************************/
@@ -124,7 +109,7 @@ const char *OGR_Dr_GetName( OGRSFDriverH hDriver )
 {
     VALIDATE_POINTER1( hDriver, "OGR_Dr_GetName", NULL );
 
-    return ((OGRSFDriver *) hDriver)->GetName();
+    return ((GDALDriver*)hDriver)->GetDescription();
 }
 
 /************************************************************************/
@@ -137,12 +122,10 @@ OGRDataSourceH OGR_Dr_Open( OGRSFDriverH hDriver, const char *pszName,
 {
     VALIDATE_POINTER1( hDriver, "OGR_Dr_Open", NULL );
 
-    OGRDataSource *poDS = ((OGRSFDriver *)hDriver)->Open( pszName, bUpdate );
-
-    if( poDS != NULL && poDS->GetOGRDriver() == NULL )
-        poDS->SetOGRDriver( (OGRSFDriver *)hDriver );
-
-    return (OGRDataSourceH) poDS;
+    GDALOpenInfo oOpenInfo(pszName, (bUpdate) ? GA_Update : GA_ReadOnly);
+    const char* const apszDrivers[] = { ((GDALDriver*)hDriver)->GetDescription(),
+                                   NULL };
+    return (OGRDataSourceH)GDALOpenInternal(oOpenInfo, apszDrivers, FALSE, TRUE);
 }
 
 /************************************************************************/
@@ -155,29 +138,36 @@ int OGR_Dr_TestCapability( OGRSFDriverH hDriver, const char *pszCap )
     VALIDATE_POINTER1( hDriver, "OGR_Dr_TestCapability", 0 );
     VALIDATE_POINTER1( pszCap, "OGR_Dr_TestCapability", 0 );
 
-    return ((OGRSFDriver *) hDriver)->TestCapability( pszCap );
+    return ((GDALDriver *) hDriver)->TestCapability( pszCap );
 }
 
 /************************************************************************/
-/*                           CopyDataSource()                           */
+/*                       OGR_Dr_CopyDataSource()                        */
 /************************************************************************/
 
-OGRDataSource *OGRSFDriver::CopyDataSource( OGRDataSource *poSrcDS, 
-                                            const char *pszNewName,
-                                            char **papszOptions )
-
+OGRDataSourceH OGR_Dr_CopyDataSource( OGRSFDriverH hDriver, 
+                                      OGRDataSourceH hSrcDS, 
+                                      const char *pszNewName,
+                                      char **papszOptions )
+                                      
 {
-    if( !TestCapability( ODrCCreateDataSource ) )
+    VALIDATE_POINTER1( hDriver, "OGR_Dr_CopyDataSource", NULL );
+    VALIDATE_POINTER1( hSrcDS, "OGR_Dr_CopyDataSource", NULL );
+    VALIDATE_POINTER1( pszNewName, "OGR_Dr_CopyDataSource", NULL );
+
+    GDALDriver* poDriver = (GDALDriver*)hDriver;
+    if( !poDriver->TestCapability( ODrCCreateDataSource ) )
     {
         CPLError( CE_Failure, CPLE_NotSupported, 
                   "%s driver does not support data source creation.",
-                  GetName() );
+                  poDriver->GetDescription() );
         return NULL;
     }
 
-    OGRDataSource *poODS;
+    GDALDataset *poSrcDS = (GDALDataset*) hSrcDS;
+    GDALDataset *poODS;
 
-    poODS = CreateDataSource( pszNewName, papszOptions );
+    poODS = poDriver->Create( pszNewName, 0, 0, 0, GDT_Unknown, papszOptions );
     if( poODS == NULL )
         return NULL;
 
@@ -195,40 +185,6 @@ OGRDataSource *OGRSFDriver::CopyDataSource( OGRDataSource *poSrcDS,
                           papszOptions );
     }
 
-    /* Make sure that the driver is attached to the created datasource */
-    /* It is also done in OGR_Dr_CopyDataSource() C method, in case */
-    /* another C++ implementation forgets to do it. Currently (Nov 2011), */
-    /* this implementation is the only one in the OGR source tree */
-    if( poODS != NULL && poODS->GetOGRDriver() == NULL )
-        poODS->SetOGRDriver( this );
-
-    return poODS;
-}
-
-/************************************************************************/
-/*                       OGR_Dr_CopyDataSource()                        */
-/************************************************************************/
-
-OGRDataSourceH OGR_Dr_CopyDataSource( OGRSFDriverH hDriver, 
-                                      OGRDataSourceH hSrcDS, 
-                                      const char *pszNewName,
-                                      char **papszOptions )
-                                      
-{
-    VALIDATE_POINTER1( hDriver, "OGR_Dr_CopyDataSource", NULL );
-    VALIDATE_POINTER1( hSrcDS, "OGR_Dr_CopyDataSource", NULL );
-    VALIDATE_POINTER1( pszNewName, "OGR_Dr_CopyDataSource", NULL );
-
-    OGRDataSource* poDS =
-        ((OGRSFDriver *) hDriver)->CopyDataSource( 
-            (OGRDataSource *) hSrcDS, pszNewName, papszOptions );
-
-    /* Make sure that the driver is attached to the created datasource */
-    /* if not already done by the implementation of the CopyDataSource() */
-    /* method */
-    if( poDS != NULL && poDS->GetOGRDriver() == NULL )
-        poDS->SetOGRDriver( (OGRSFDriver *)hDriver );
-
-    return (OGRDataSourceH)poDS;
+    return (OGRDataSourceH)poODS;
 }
 

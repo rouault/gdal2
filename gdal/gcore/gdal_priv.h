@@ -832,6 +832,8 @@ class CPL_DLL GDALDriver : public GDALMajorObject
     GDALDataset         *(*pfnCreateVectorOnly)( GDALDriver*,
                                                  const char * pszName,
                                                  char ** papszOptions );
+    CPLErr              (*pfnDeleteDataSource)( GDALDriver*,
+                                                 const char * pszName );
 
 /* -------------------------------------------------------------------- */
 /*      Helper methods.                                                 */

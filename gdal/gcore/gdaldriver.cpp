@@ -54,6 +54,7 @@ GDALDriver::GDALDriver()
     pfnCopyFiles = NULL;
     pfnOpenWithDriverArg = NULL;
     pfnCreateVectorOnly = NULL;
+    pfnDeleteDataSource = NULL;
 }
 
 /************************************************************************/
@@ -153,7 +154,9 @@ GDALDataset * GDALDriver::Create( const char * pszFilename,
         return NULL;
     }
 
-    if( nXSize < 1 || nYSize < 1 )
+    if( GetMetadataItem(GDAL_DCAP_RASTER) != NULL &&
+        GetMetadataItem(GDAL_DCAP_VECTOR) == NULL &&
+        (nXSize < 1 || nYSize < 1) )
     {
         CPLError( CE_Failure, CPLE_AppDefined,
                   "Attempt to create %dx%d dataset is illegal,"
@@ -812,6 +815,8 @@ CPLErr GDALDriver::Delete( const char * pszFilename )
 {
     if( pfnDelete != NULL )
         return pfnDelete( pszFilename );
+    else if( pfnDeleteDataSource != NULL )
+        return pfnDeleteDataSource( this, pszFilename );
 
 /* -------------------------------------------------------------------- */
 /*      Collect file list.                                              */

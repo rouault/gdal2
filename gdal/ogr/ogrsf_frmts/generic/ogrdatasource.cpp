@@ -50,7 +50,6 @@ CPL_CVSID("$Id$");
 OGRDataSource::OGRDataSource()
 
 {
-    m_poOGRDriver = NULL;
 }
 
 /************************************************************************/
@@ -81,7 +80,8 @@ void OGR_DS_Destroy( OGRDataSourceH hDS )
 OGRErr GDALDataset::Release()
 
 {
-    return OGRSFDriverRegistrar::GetRegistrar()->ReleaseDataSource( this );
+    GDALClose( (GDALDatasetH) this );
+    return OGRERR_NONE;
 }
 
 
@@ -1461,7 +1461,6 @@ OGRLayer* GDALDataset::BuildLayerFromSelectInfo(void* psSelectInfoIn,
     int  iEDS;
     int  nExtraDSCount = 0;
     GDALDataset** papoExtraDS = NULL;
-    OGRSFDriverRegistrar *poReg=OGRSFDriverRegistrar::GetRegistrar();
 
     for( iTable = 0; iTable < psSelectInfo->table_count; iTable++ )
     {
@@ -1651,7 +1650,7 @@ end:
     /* has taken a reference on them, which it will release in its */
     /* destructor */
     for(iEDS = 0; iEDS < nExtraDSCount; iEDS++)
-        poReg->ReleaseDataSource( papoExtraDS[iEDS] );
+        GDALClose( (GDALDatasetH)papoExtraDS[iEDS] );
     CPLFree(papoExtraDS);
 
     return poResults;
@@ -1785,16 +1784,6 @@ OGRErr OGR_DS_SyncToDisk( OGRDataSourceH hDS )
 }
 
 /************************************************************************/
-/*                             GetOGRDriver()                              */
-/************************************************************************/
-
-OGRSFDriver *OGRDataSource::GetOGRDriver() const
-
-{
-    return m_poOGRDriver;
-}
-
-/************************************************************************/
 /*                          OGR_DS_GetDriver()                          */
 /************************************************************************/
 
@@ -1803,19 +1792,7 @@ OGRSFDriverH OGR_DS_GetDriver( OGRDataSourceH hDS )
 {
     VALIDATE_POINTER1( hDS, "OGR_DS_GetDriver", NULL );
 
-    return (OGRSFDriverH) ((OGRDataSource *) hDS)->GetOGRDriver();
-}
-
-/************************************************************************/
-/*                             SetOGRDriver()                              */
-/************************************************************************/
-
-void OGRDataSource::SetOGRDriver( OGRSFDriver *poDriver ) 
-
-{
-    m_poOGRDriver = poDriver;
-    if( GetName() != NULL )
-        SetDescription(GetName());
+    return (OGRSFDriverH) ((OGRDataSource *) hDS)->GetDriver();
 }
 
 /************************************************************************/
@@ -1897,12 +1874,4 @@ int GDALDataset::IsGenericSQLDialect(const char* pszDialect)
     return ( pszDialect != NULL && (EQUAL(pszDialect,"OGRSQL") ||
                                     EQUAL(pszDialect,"SQLITE")) );
 
-}
-
-
-const char* OGRDataSource::GetDriverName()
-{
-    if( m_poOGRDriver )
-        return m_poOGRDriver->GetName();
-    return "";
 }

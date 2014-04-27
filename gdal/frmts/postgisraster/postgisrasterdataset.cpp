@@ -3518,7 +3518,7 @@ PostGISRasterDataset::Delete(const char* pszFilename)
     poConn = GetConnection(pszFilename, &pszConnectionString, 
         &pszSchema, &pszTable, &pszColumn, &pszWhere,
         &nMode, &bBrowseDatabase);
-    if (poConn == NULL) {
+    if (poConn == NULL || pszSchema == NULL || pszTable == NULL) {
         CPLFree(pszConnectionString);
         CPLFree(pszSchema);
         CPLFree(pszTable);

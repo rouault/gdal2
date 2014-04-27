@@ -243,7 +243,7 @@ class OGRWFSDataSource : public OGRDataSource
     OGRLayer           *poLayerMetadataLayer;
 
     CPLString           osGetCapabilities;
-    OGRDataSource      *poLayerGetCapabilitiesDS;
+    GDALDataset        *poLayerGetCapabilitiesDS;
     OGRLayer           *poLayerGetCapabilitiesLayer;
 
     int                 bKeepLayerNamePrefix;

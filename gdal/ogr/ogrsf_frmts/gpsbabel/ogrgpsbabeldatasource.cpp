@@ -63,7 +63,7 @@ OGRGPSBabelDataSource::~OGRGPSBabelDataSource()
     CPLFree(pszFilename);
     
     if (poGPXDS)
-        OGRDataSource::DestroyDataSource(poGPXDS);
+        GDALClose( (GDALDatasetH) poGPXDS );
     
     if (osTmpFileName.size() > 0)
         VSIUnlink(osTmpFileName.c_str());
@@ -336,7 +336,7 @@ int OGRGPSBabelDataSource::Open( const char * pszDatasourceName, int bUpdateIn)
 
     if (bRet)
     {
-        poGPXDS = OGRSFDriverRegistrar::Open(osTmpFileName.c_str());
+        poGPXDS = (GDALDataset*) GDALOpen(osTmpFileName.c_str(), GA_ReadOnly);
         if (poGPXDS)
         {
             OGRLayer* poLayer;

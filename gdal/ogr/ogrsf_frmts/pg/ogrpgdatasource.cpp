@@ -2260,11 +2260,11 @@ OGRFeature *OGRPGNoResetResultLayer::GetNextFeature()
 class OGRPGMemLayerWrapper : public OGRLayer
 {
   private:
-      OGRDataSource  *poMemDS;
+      GDALDataset  *poMemDS;
       OGRLayer       *poMemLayer;
 
   public:
-                        OGRPGMemLayerWrapper( OGRDataSource  *poMemDSIn )
+                        OGRPGMemLayerWrapper( GDALDataset  *poMemDSIn )
                         {
                             poMemDS = poMemDSIn;
                             poMemLayer = poMemDS->GetLayer(0);
@@ -2340,12 +2340,12 @@ OGRLayer * OGRPGDataSource::ExecuteSQL( const char *pszSQLCommand,
                 CPLDebug( "PG", "Command Results Tuples = %d", PQntuples(hResult) );
                 FlushSoftTransaction();
 
-                OGRSFDriver* poMemDriver = OGRSFDriverRegistrar::GetRegistrar()->
+                GDALDriver* poMemDriver = OGRSFDriverRegistrar::GetRegistrar()->
                                 GetDriverByName("Memory");
                 if (poMemDriver)
                 {
                     OGRPGLayer* poResultLayer = new OGRPGNoResetResultLayer( this, hResult );
-                    OGRDataSource* poMemDS = poMemDriver->CreateDataSource("");
+                    GDALDataset* poMemDS = poMemDriver->Create("", 0, 0, 0, GDT_Unknown, NULL);
                     poMemDS->CopyLayer(poResultLayer, "sql_statement");
                     OGRPGMemLayerWrapper* poResLayer = new OGRPGMemLayerWrapper(poMemDS);
                     delete poResultLayer;

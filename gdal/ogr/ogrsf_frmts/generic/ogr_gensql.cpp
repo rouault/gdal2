@@ -120,10 +120,7 @@ OGRGenSQLResultsLayer::OGRGenSQLResultsLayer( GDALDataset *poSrcDS,
 
         if( psTableDef->data_source != NULL )
         {
-            OGRSFDriverRegistrar *poReg=OGRSFDriverRegistrar::GetRegistrar();
-
-            poTableDS = 
-                poReg->OpenShared( psTableDef->data_source, FALSE, NULL );
+            poTableDS = (GDALDataset*) GDALOpenShared( psTableDef->data_source, GA_ReadOnly );
             if( poTableDS == NULL )
             {
                 if( strlen(CPLGetLastErrorMsg()) == 0 )
@@ -483,10 +480,8 @@ OGRGenSQLResultsLayer::~OGRGenSQLResultsLayer()
 /* -------------------------------------------------------------------- */
 /*      Release any additional datasources being used in joins.         */
 /* -------------------------------------------------------------------- */
-    OGRSFDriverRegistrar *poReg=OGRSFDriverRegistrar::GetRegistrar();
-
     for( int iEDS = 0; iEDS < nExtraDSCount; iEDS++ )
-        poReg->ReleaseDataSource( papoExtraDS[iEDS] );
+        GDALClose( (GDALDatasetH)papoExtraDS[iEDS] );
 
     CPLFree( papoExtraDS );
     CPLFree( pszWHERE );

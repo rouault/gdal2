@@ -54,9 +54,9 @@ typedef struct
 static void Usage();
 static void ThreadFunction( void* user_data );
 static void ThreadFunctionInternal( ThreadContext* psContext );
-static int TestOGRLayer( OGRDataSource * poDS, OGRLayer * poLayer, int bIsSQLLayer );
+static int TestOGRLayer( GDALDataset * poDS, OGRLayer * poLayer, int bIsSQLLayer );
 static int TestInterleavedReading( const char* pszDataSource, char** papszLayers );
-static int TestDSErrorConditions( OGRDataSource * poDS );
+static int TestDSErrorConditions( GDALDataset * poDS );
 
 /************************************************************************/
 /*                                main()                                */
@@ -192,19 +192,21 @@ static void ThreadFunctionInternal( ThreadContext* psContext )
 /* -------------------------------------------------------------------- */
 /*      Open data source.                                               */
 /* -------------------------------------------------------------------- */
-    OGRDataSource       *poDS;
-    OGRSFDriver         *poDriver;
+    GDALDataset        *poDS;
+    GDALDriver         *poDriver;
 
-    poDS = OGRSFDriverRegistrar::Open( pszDataSource, !bReadOnly, &poDriver );
+    poDS = (GDALDataset*) OGROpen( pszDataSource, !bReadOnly, NULL );
     if( poDS == NULL && !bReadOnly )
     {
-        poDS = OGRSFDriverRegistrar::Open( pszDataSource, FALSE, &poDriver );
+        poDS = (GDALDataset*) OGROpen( pszDataSource, FALSE, NULL );
         if( poDS != NULL && bVerbose )
         {
             printf( "Had to open data source read-only.\n" );
             bReadOnly = TRUE;
         }
     }
+    if( poDS != NULL )
+        poDriver = poDS->GetDriver();
 
 /* -------------------------------------------------------------------- */
 /*      Report failure                                                  */
@@ -219,7 +221,7 @@ static void ThreadFunctionInternal( ThreadContext* psContext )
 
         for( int iDriver = 0; iDriver < poR->GetDriverCount(); iDriver++ )
         {
-            printf( "  -> %s\n", poR->GetDriver(iDriver)->GetName() );
+            printf( "  -> %s\n", poR->GetDriver(iDriver)->GetDescription() );
         }
 
         psContext->bRet = FALSE;
@@ -231,13 +233,13 @@ static void ThreadFunctionInternal( ThreadContext* psContext )
 /* -------------------------------------------------------------------- */
     if( bVerbose )
         printf( "INFO: Open of `%s' using driver `%s' successful.\n",
-                pszDataSource, poDriver->GetName() );
+                pszDataSource, poDriver->GetDescription() );
 
-    if( bVerbose && !EQUAL(pszDataSource,poDS->GetName()) )
+    if( bVerbose && !EQUAL(pszDataSource,poDS->GetDescription()) )
     {
         printf( "INFO: Internal data source name `%s'\n"
                 "      different from user name `%s'.\n",
-                poDS->GetName(), pszDataSource );
+                poDS->GetDescription(), pszDataSource );
     }
     
 /* -------------------------------------------------------------------- */
@@ -248,7 +250,7 @@ static void ThreadFunctionInternal( ThreadContext* psContext )
         OGRLayer  *poResultSet = poDS->ExecuteSQL(pszSQLStatement, NULL, pszDialect);
         if (poResultSet == NULL)
         {
-            OGRDataSource::DestroyDataSource(poDS);
+            GDALClose( (GDALDatasetH)poDS );
             psContext->bRet = FALSE;
             return;
         }
@@ -277,7 +279,7 @@ static void ThreadFunctionInternal( ThreadContext* psContext )
             {
                 printf( "FAILURE: Couldn't fetch advertised layer %d!\n",
                         iLayer );
-                OGRDataSource::DestroyDataSource(poDS);
+                GDALClose( (GDALDatasetH)poDS );
                 psContext->bRet = FALSE;
                 return;
             }
@@ -294,7 +296,7 @@ static void ThreadFunctionInternal( ThreadContext* psContext )
 
         if (poDS->GetLayerCount() >= 2)
         {
-            OGRDataSource::DestroyDataSource(poDS);
+            GDALClose( (GDALDatasetH)poDS );
             poDS = NULL;
             bRet &= TestInterleavedReading( pszDataSource, NULL );
         }
@@ -313,7 +315,7 @@ static void ThreadFunctionInternal( ThreadContext* psContext )
             {
                 printf( "FAILURE: Couldn't fetch requested layer %s!\n",
                         *papszLayerIter );
-                OGRDataSource::DestroyDataSource(poDS);
+                GDALClose( (GDALDatasetH)poDS );
                 psContext->bRet = FALSE;
                 return;
             }
@@ -332,7 +334,7 @@ static void ThreadFunctionInternal( ThreadContext* psContext )
 
         if (CSLCount(papszLayers) >= 2)
         {
-            OGRDataSource::DestroyDataSource(poDS);
+            GDALClose( (GDALDatasetH)poDS );
             poDS = NULL;
             bRet &= TestInterleavedReading( pszDataSource, papszLayers );
         }
@@ -341,7 +343,8 @@ static void ThreadFunctionInternal( ThreadContext* psContext )
 /* -------------------------------------------------------------------- */
 /*      Close down.                                                     */
 /* -------------------------------------------------------------------- */
-    OGRDataSource::DestroyDataSource(poDS);
+    if( poDS != NULL )
+        GDALClose( (GDALDatasetH)poDS );
 
     psContext->bRet = bRet;
 }
@@ -515,7 +518,7 @@ bye:
 /*                          GetLayerNameForSQL()                        */
 /************************************************************************/
 
-const char* GetLayerNameForSQL( OGRDataSource* poDS, const char* pszLayerName )
+const char* GetLayerNameForSQL( GDALDataset* poDS, const char* pszLayerName )
 {
     int i;
     char ch;
@@ -562,7 +565,7 @@ const char* GetLayerNameForSQL( OGRDataSource* poDS, const char* pszLayerName )
 /*      features returned during sequential reading.                    */
 /************************************************************************/
 
-static int TestOGRLayerFeatureCount( OGRDataSource* poDS, OGRLayer *poLayer, int bIsSQLLayer )
+static int TestOGRLayerFeatureCount( GDALDataset* poDS, OGRLayer *poLayer, int bIsSQLLayer )
 
 {
     int bRet = TRUE;
@@ -1412,7 +1415,7 @@ static int TestSpatialFilter( OGRLayer *poLayer )
 /*      filter that doesn't include this feature, and test again.       */
 /************************************************************************/
 
-static int TestAttributeFilter( OGRDataSource* poDS, OGRLayer *poLayer )
+static int TestAttributeFilter( GDALDataset* poDS, OGRLayer *poLayer )
 
 {
     int bRet = TRUE;
@@ -2262,7 +2265,7 @@ static int TestOGRLayerIgnoreFields( OGRLayer* poLayer )
 /*                            TestLayerSQL()                            */
 /************************************************************************/
 
-static int TestLayerSQL( OGRDataSource* poDS, OGRLayer * poLayer )
+static int TestLayerSQL( GDALDataset* poDS, OGRLayer * poLayer )
 
 {
     int bRet = TRUE;
@@ -2408,7 +2411,7 @@ static int TestLayerSQL( OGRDataSource* poDS, OGRLayer * poLayer )
 /*                            TestOGRLayer()                            */
 /************************************************************************/
 
-static int TestOGRLayer( OGRDataSource* poDS, OGRLayer * poLayer, int bIsSQLLayer )
+static int TestOGRLayer( GDALDataset* poDS, OGRLayer * poLayer, int bIsSQLLayer )
 
 {
     int bRet = TRUE;
@@ -2523,8 +2526,8 @@ static int TestOGRLayer( OGRDataSource* poDS, OGRLayer * poLayer, int bIsSQLLaye
 static int TestInterleavedReading( const char* pszDataSource, char** papszLayers )
 {
     int bRet = TRUE;
-    OGRDataSource* poDS = NULL;
-    OGRDataSource* poDS2 = NULL;
+    GDALDataset* poDS = NULL;
+    GDALDataset* poDS2 = NULL;
     OGRLayer* poLayer1 = NULL;
     OGRLayer* poLayer2 = NULL;
     OGRFeature* poFeature11_Ref = NULL;
@@ -2537,7 +2540,7 @@ static int TestInterleavedReading( const char* pszDataSource, char** papszLayers
     OGRFeature* poFeature22 = NULL;
 
     /* Check that we have 2 layers with at least 2 features */
-    poDS = OGRSFDriverRegistrar::Open( pszDataSource, FALSE, NULL );
+    poDS = (GDALDataset*) OGROpen( pszDataSource, FALSE, NULL );
     if (poDS == NULL)
     {
         if( bVerbose )
@@ -2560,9 +2563,9 @@ static int TestInterleavedReading( const char* pszDataSource, char** papszLayers
     }
 
     /* Test normal reading */
-    OGRDataSource::DestroyDataSource(poDS);
-    poDS = OGRSFDriverRegistrar::Open( pszDataSource, FALSE, NULL );
-    poDS2 = OGRSFDriverRegistrar::Open( pszDataSource, FALSE, NULL );
+    GDALClose( (GDALDatasetH)poDS );
+    poDS = (GDALDataset*) OGROpen( pszDataSource, FALSE, NULL );
+    poDS2 = (GDALDataset*) OGROpen( pszDataSource, FALSE, NULL );
     if (poDS == NULL || poDS2 == NULL)
     {
         if( bVerbose )
@@ -2648,8 +2651,10 @@ bye:
     OGRFeature::DestroyFeature(poFeature21);
     OGRFeature::DestroyFeature(poFeature12);
     OGRFeature::DestroyFeature(poFeature22);
-    OGRDataSource::DestroyDataSource(poDS);
-    OGRDataSource::DestroyDataSource(poDS2);
+    if( poDS != NULL)
+        GDALClose( (GDALDatasetH)poDS );
+    if( poDS2 != NULL )
+        GDALClose( (GDALDatasetH)poDS2 );
     return bRet;
 }
 
@@ -2657,7 +2662,7 @@ bye:
 /*                          TestDSErrorConditions()                     */
 /************************************************************************/
 
-static int TestDSErrorConditions( OGRDataSource * poDS )
+static int TestDSErrorConditions( GDALDataset * poDS )
 {
     int bRet = TRUE;
     OGRLayer* poLyr;

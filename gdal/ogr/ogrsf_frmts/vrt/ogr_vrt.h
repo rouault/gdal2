@@ -99,7 +99,7 @@ class OGRVRTLayer : public OGRLayer
 
     OGRFeatureDefn      *poFeatureDefn;
 
-    OGRDataSource       *poSrcDS;
+    GDALDataset         *poSrcDS;
     OGRLayer            *poSrcLayer;
     OGRFeatureDefn      *poSrcFeatureDefn;
     int                 bNeedReset;
@@ -225,7 +225,7 @@ class OGRVRTDataSource : public OGRDataSource
     int                 bRecursionDetected;
 
   public:
-                        OGRVRTDataSource();
+                        OGRVRTDataSource(GDALDriver* poDriver);
                         ~OGRVRTDataSource();
 
     OGRLayer*           InstanciateLayer(CPLXMLNode *psLTree,

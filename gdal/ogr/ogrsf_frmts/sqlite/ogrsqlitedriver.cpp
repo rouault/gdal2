@@ -97,7 +97,7 @@ OGRDataSource *OGRSQLiteDriver::Open( const char * pszFilename,
         }
 
         char* pszShapeFilename = CPLStrdup(pszFilename + strlen( "VirtualShape:" ));
-        OGRDataSource* poShapeDS = OGRSFDriverRegistrar::Open(pszShapeFilename);
+        GDALDataset* poShapeDS = (GDALDataset*) GDALOpen(pszShapeFilename, GA_ReadOnly);
         if (poShapeDS == NULL)
         {
             CPLFree(pszShapeFilename);

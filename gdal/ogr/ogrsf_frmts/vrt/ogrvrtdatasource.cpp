@@ -93,7 +93,7 @@ OGRwkbGeometryType OGRVRTGetGeometryType(const char* pszGType, int* pbError)
 /*                          OGRVRTDataSource()                          */
 /************************************************************************/
 
-OGRVRTDataSource::OGRVRTDataSource()
+OGRVRTDataSource::OGRVRTDataSource(GDALDriver* poDriver)
 
 {
     pszName = NULL;
@@ -104,6 +104,7 @@ OGRVRTDataSource::OGRVRTDataSource()
     poLayerPool = NULL;
     poParentDS = NULL;
     bRecursionDetected = FALSE;
+    this->poDriver = poDriver;
 }
 
 /************************************************************************/

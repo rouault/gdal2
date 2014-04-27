@@ -2283,7 +2283,7 @@ GDALDatasetH GDALOpenInternal( GDALOpenInfo& oOpenInfo,
                 continue;
         }
         
-        if( bOGRDriverOnly && poDriver->GetMetadataItem("OGR_DRIVER") == NULL )
+        if( bOGRDriverOnly && poDriver->GetMetadataItem(GDAL_DCAP_VECTOR) == NULL )
             continue;
 
         if ( poDriver->pfnOpen != NULL )
@@ -2828,14 +2828,16 @@ void GDALDataset::ReportError(CPLErr eErrClass, int err_no, const char *fmt, ...
     va_end(args);
 }
 
+/************************************************************************/
+/*                            GetDriverName()                           */
+/************************************************************************/
+
 const char* GDALDataset::GetDriverName()
 {
     if( poDriver )
         return poDriver->GetDescription();
     return "";
 }
-
-
 
 /************************************************************************/
 /*                     GDALDatasetReleaseResultSet()                    */

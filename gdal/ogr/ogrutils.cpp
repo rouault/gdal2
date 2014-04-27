@@ -709,14 +709,14 @@ int OGRGeneralCmdLineProcessor( int nArgc, char ***ppapszArgv, int nOptions )
         
             for( iDr = 0; iDr < poR->GetDriverCount(); iDr++ )
             {
-                OGRSFDriver *poDriver = poR->GetDriver(iDr);
+                GDALDriver *poDriver = poR->GetDriver(iDr);
 
                 if( poDriver->TestCapability( ODrCCreateDataSource ) )
                     printf( "  -> \"%s\" (read/write)\n", 
-                            poDriver->GetName() );
+                            poDriver->GetDescription() );
                 else
                     printf( "  -> \"%s\" (readonly)\n", 
-                            poDriver->GetName() );
+                            poDriver->GetDescription() );
             }
 
             CSLDestroy( papszReturn );

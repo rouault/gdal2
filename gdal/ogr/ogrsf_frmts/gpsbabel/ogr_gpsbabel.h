@@ -45,7 +45,7 @@ class OGRGPSBabelDataSource : public OGRDataSource
     char               *pszGPSBabelDriverName;
     char               *pszFilename;
     CPLString           osTmpFileName;
-    OGRDataSource      *poGPXDS;
+    GDALDataset        *poGPXDS;
 
   public:
                         OGRGPSBabelDataSource();
@@ -74,7 +74,7 @@ class OGRGPSBabelWriteDataSource : public OGRDataSource
     char               *pszGPSBabelDriverName;
     char               *pszFilename;
     CPLString           osTmpFileName;
-    OGRDataSource      *poGPXDS;
+    GDALDataset        *poGPXDS;
 
     int                 Convert();
 
