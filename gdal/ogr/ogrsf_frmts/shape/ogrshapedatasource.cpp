@@ -100,13 +100,16 @@ OGRShapeDataSource::~OGRShapeDataSource()
 /*                                Open()                                */
 /************************************************************************/
 
-int OGRShapeDataSource::Open( const char * pszNewName, int bUpdate,
+int OGRShapeDataSource::Open( GDALOpenInfo* poOpenInfo,
                               int bTestOpen, int bForceSingleFileDataSource )
 
 {
     VSIStatBufL  stat;
     
     CPLAssert( nLayers == 0 );
+    
+    const char * pszNewName = poOpenInfo->pszFilename;
+    int bUpdate = poOpenInfo->eAccess == GA_Update;
     
     pszName = CPLStrdup( pszNewName );
 

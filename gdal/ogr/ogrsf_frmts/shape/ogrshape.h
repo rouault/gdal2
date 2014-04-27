@@ -207,7 +207,7 @@ class OGRShapeDataSource : public OGRDataSource
 
     OGRLayerPool       *GetPool() { return poPool; }
 
-    int                 Open( const char *, int bUpdate, int bTestOpen,
+    int                 Open( GDALOpenInfo* poOpenInfo, int bTestOpen,
                               int bForceSingleFileDataSource = FALSE );
     int                 OpenFile( const char *, int bUpdate, int bTestOpen );
 
@@ -240,18 +240,18 @@ class OGRShapeDataSource : public OGRDataSource
 /*                            OGRShapeDriver                            */
 /************************************************************************/
 
-class OGRShapeDriver : public OGRSFDriver
+class OGRShapeDriver : public GDALDriver
 {
   public:
                 ~OGRShapeDriver();
-                
-    const char *GetName();
-    OGRDataSource *Open( const char *, int );
 
-    virtual OGRDataSource *CreateDataSource( const char *pszName,
-                                             char ** = NULL );
-    OGRErr              DeleteDataSource( const char *pszDataSource );
-    
+    /* static int         Identify( GDALOpenInfo* poOpenInfo ); */
+    static GDALDataset *Open( GDALOpenInfo* poOpenInfo );
+    static GDALDataset *Create( const char * pszName,
+                                        int nBands, int nXSize, int nYSize, GDALDataType eDT,
+                                        char **papszOptions );
+    static CPLErr       Delete( const char *pszDataSource );
+
     int                 TestCapability( const char * );
 };
 

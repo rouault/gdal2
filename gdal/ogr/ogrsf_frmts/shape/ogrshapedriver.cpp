@@ -43,28 +43,17 @@ OGRShapeDriver::~OGRShapeDriver()
 }
 
 /************************************************************************/
-/*                              GetName()                               */
-/************************************************************************/
-
-const char *OGRShapeDriver::GetName()
-
-{
-    return "ESRI Shapefile";
-}
-
-/************************************************************************/
 /*                                Open()                                */
 /************************************************************************/
 
-OGRDataSource *OGRShapeDriver::Open( const char * pszFilename,
-                                     int bUpdate )
+GDALDataset *OGRShapeDriver::Open( GDALOpenInfo* poOpenInfo )
 
 {
     OGRShapeDataSource  *poDS;
 
     poDS = new OGRShapeDataSource();
 
-    if( !poDS->Open( pszFilename, bUpdate, TRUE ) )
+    if( !poDS->Open( poOpenInfo, TRUE ) )
     {
         delete poDS;
         return NULL;
@@ -74,11 +63,12 @@ OGRDataSource *OGRShapeDriver::Open( const char * pszFilename,
 }
 
 /************************************************************************/
-/*                          CreateDataSource()                          */
+/*                               Create()                               */
 /************************************************************************/
 
-OGRDataSource *OGRShapeDriver::CreateDataSource( const char * pszName,
-                                                 char **papszOptions )
+GDALDataset *OGRShapeDriver::Create( const char * pszName,
+                                        int nBands, int nXSize, int nYSize, GDALDataType eDT,
+                                        char **papszOptions )
 
 {
     VSIStatBuf  stat;
@@ -132,7 +122,8 @@ OGRDataSource *OGRShapeDriver::CreateDataSource( const char * pszName,
 
     poDS = new OGRShapeDataSource();
     
-    if( !poDS->Open( pszName, TRUE, FALSE, bSingleNewFile ) )
+    GDALOpenInfo oOpenInfo( pszName, GA_Update );
+    if( !poDS->Open( &oOpenInfo, FALSE, bSingleNewFile ) )
     {
         delete poDS;
         return NULL;
@@ -142,10 +133,10 @@ OGRDataSource *OGRShapeDriver::CreateDataSource( const char * pszName,
 }
 
 /************************************************************************/
-/*                          DeleteDataSource()                          */
+/*                           Delete()                                   */
 /************************************************************************/
 
-OGRErr OGRShapeDriver::DeleteDataSource( const char *pszDataSource )
+CPLErr OGRShapeDriver::Delete( const char *pszDataSource )
 
 {
     int iExt;
@@ -160,7 +151,7 @@ OGRErr OGRShapeDriver::DeleteDataSource( const char *pszDataSource )
                   "%s does not appear to be a file or directory.",
                   pszDataSource );
 
-        return OGRERR_FAILURE;
+        return CE_Failure;
     }
 
     if( VSI_ISREG(sStatBuf.st_mode) 
@@ -199,7 +190,7 @@ OGRErr OGRShapeDriver::DeleteDataSource( const char *pszDataSource )
         VSIRmdir( pszDataSource );
     }
 
-    return OGRERR_NONE;
+    return CE_None;
 }
 
 
@@ -225,6 +216,27 @@ int OGRShapeDriver::TestCapability( const char * pszCap )
 void RegisterOGRShape()
 
 {
-    OGRSFDriverRegistrar::GetRegistrar()->RegisterDriver( new OGRShapeDriver );
+    GDALDriver  *poDriver;
+
+    if( GDALGetDriverByName( "ESRI Shapefile" ) == NULL )
+    {
+        poDriver = new OGRShapeDriver();
+
+        poDriver->SetDescription( "ESRI Shapefile" );
+        poDriver->SetMetadataItem( GDAL_DCAP_VECTOR, "YES" );
+        poDriver->SetMetadataItem( GDAL_DMD_LONGNAME,
+                                   "ESRI Shapefile" );
+        poDriver->SetMetadataItem( GDAL_DMD_HELPTOPIC,
+                                   "drv_shape.html" );
+
+        poDriver->SetMetadataItem( GDAL_DCAP_VIRTUALIO, "YES" );
+
+        poDriver->pfnOpen = OGRShapeDriver::Open;
+        /* poDriver->pfnIdentify = OGRShapeDriver::Identify; */
+        poDriver->pfnCreate = OGRShapeDriver::Create;
+        poDriver->pfnDelete = OGRShapeDriver::Delete;
+
+        GetGDALDriverManager()->RegisterDriver( poDriver );
+    }
 }
 
