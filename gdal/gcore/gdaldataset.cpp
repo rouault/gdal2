@@ -61,25 +61,17 @@ typedef struct
     GDALDataset *poDS;
 } SharedDatasetCtxt;
 
-typedef struct
-{
-    GDALDataset *poDS;
-    /* In the case of a shared dataset, memorize the PID of the thread */
-    /* that marked the dataset as shared, so that we can remove it from */
-    /* the phSharedDatasetSet in the destructor of the dataset, even */
-    /* if GDALClose is called from a different thread */
-    /* Ideally, this should be stored in the GDALDataset object itself */
-    /* but this is inconvenient to change the object size at that time */
-    GIntBig      nPIDCreatorForShared; 
-} DatasetCtxt;
-
 /* Set of datasets opened as shared datasets (with GDALOpenShared) */
 /* The values in the set are of type SharedDatasetCtxt */
 static CPLHashSet* phSharedDatasetSet = NULL; 
 
 /* Set of all datasets created in the constructor of GDALDataset */
-/* The values in the set are of type DatasetCtxt */
-static CPLHashSet* phAllDatasetSet = NULL;
+/* In the case of a shared dataset, memorize the PID of the thread */
+/* that marked the dataset as shared, so that we can remove it from */
+/* the phSharedDatasetSet in the destructor of the dataset, even */
+/* if GDALClose is called from a different thread */
+static std::map<GDALDataset*, GIntBig>* poAllDatasetMap = NULL;
+
 static void *hDLMutex = NULL;
 
 /* Static array of all datasets. Used by GDALGetOpenDatasets */
@@ -105,25 +97,6 @@ static void GDALSharedDatasetFreeFunc(void* elt)
 {
     SharedDatasetCtxt* psStruct = (SharedDatasetCtxt*) elt;
     CPLFree(psStruct->pszDescription);
-    CPLFree(psStruct);
-}
-
-static unsigned long GDALDatasetHashFunc(const void* elt)
-{
-    DatasetCtxt* psStruct = (DatasetCtxt*) elt;
-    return (unsigned long)(GUIntBig) psStruct->poDS;
-}
-
-static int GDALDatasetEqualFunc(const void* elt1, const void* elt2)
-{
-    DatasetCtxt* psStruct1 = (DatasetCtxt*) elt1;
-    DatasetCtxt* psStruct2 = (DatasetCtxt*) elt2;
-    return psStruct1->poDS == psStruct2->poDS ;
-}
-
-static void GDALDatasetFreeFunc(void* elt)
-{
-    DatasetCtxt* psStruct = (DatasetCtxt*) elt;
     CPLFree(psStruct);
 }
 
@@ -200,12 +173,9 @@ GDALDataset::GDALDataset()
     {
         CPLMutexHolderD( &hDLMutex );
 
-        if (phAllDatasetSet == NULL)
-            phAllDatasetSet = CPLHashSetNew(GDALDatasetHashFunc, GDALDatasetEqualFunc, GDALDatasetFreeFunc);
-        DatasetCtxt* ctxt = (DatasetCtxt*)CPLMalloc(sizeof(DatasetCtxt));
-        ctxt->poDS = this;
-        ctxt->nPIDCreatorForShared = -1;
-        CPLHashSetInsert(phAllDatasetSet, ctxt);
+        if (poAllDatasetMap == NULL)
+            poAllDatasetMap = new std::map<GDALDataset*, GIntBig>;
+        (*poAllDatasetMap)[this] = -1;
     }
 
 /* -------------------------------------------------------------------- */
@@ -262,13 +232,12 @@ GDALDataset::~GDALDataset()
 /* -------------------------------------------------------------------- */
     {
         CPLMutexHolderD( &hDLMutex );
-        if( phAllDatasetSet )
+        if( poAllDatasetMap )
         {
-            DatasetCtxt sStruct;
-            sStruct.poDS = this;
-            DatasetCtxt* psStruct = (DatasetCtxt*) CPLHashSetLookup(phAllDatasetSet, &sStruct);
-            GIntBig nPIDCreatorForShared = psStruct->nPIDCreatorForShared;
-            CPLHashSetRemove(phAllDatasetSet, psStruct);
+            std::map<GDALDataset*, GIntBig>::iterator oIter = poAllDatasetMap->find(this);
+            CPLAssert(oIter != poAllDatasetMap->end());
+            GIntBig nPIDCreatorForShared = oIter->second;
+            poAllDatasetMap->erase(oIter);
 
             if (bShared && phSharedDatasetSet != NULL)
             {
@@ -288,10 +257,10 @@ GDALDataset::~GDALDataset()
                 }
             }
 
-            if (CPLHashSetSize(phAllDatasetSet) == 0)
+            if (poAllDatasetMap->size() == 0)
             {
-                CPLHashSetDestroy(phAllDatasetSet);
-                phAllDatasetSet = NULL;
+                delete poAllDatasetMap;
+                poAllDatasetMap = NULL;
                 if (phSharedDatasetSet)
                 {
                     CPLHashSetDestroy(phSharedDatasetSet);
@@ -1150,10 +1119,7 @@ void GDALDataset::MarkAsShared()
     {
         CPLHashSetInsert(phSharedDatasetSet, psStruct);
 
-        DatasetCtxt sStruct;
-        sStruct.poDS = this;
-        DatasetCtxt* psStruct = (DatasetCtxt*) CPLHashSetLookup(phAllDatasetSet, &sStruct);
-        psStruct->nPIDCreatorForShared = nPID;
+        (*poAllDatasetMap)[this] = nPID;
     }
 }
 
@@ -1817,18 +1783,6 @@ GDALDatasetRasterIO( GDALDatasetH hDS, GDALRWFlag eRWFlag,
 /*                          GetOpenDatasets()                           */
 /************************************************************************/
 
-static int GDALGetOpenDatasetsForeach(void* elt, void* user_data)
-{
-    int* pnIndex = (int*) user_data;
-    DatasetCtxt* psStruct = (DatasetCtxt*) elt;
-
-    ppDatasets[*pnIndex] = psStruct->poDS;
-
-    (*pnIndex) ++;
-
-    return TRUE;
-}
-
 /**
  * \brief Fetch all open GDAL dataset handles.
  *
@@ -1848,12 +1802,14 @@ GDALDataset **GDALDataset::GetOpenDatasets( int *pnCount )
 {
     CPLMutexHolderD( &hDLMutex );
 
-    if (phAllDatasetSet != NULL)
+    if (poAllDatasetMap != NULL)
     {
-        int nIndex = 0;
-        *pnCount = CPLHashSetSize(phAllDatasetSet);
+        int i = 0;
+        *pnCount = poAllDatasetMap->size();
         ppDatasets = (GDALDataset**) CPLRealloc(ppDatasets, (*pnCount) * sizeof(GDALDataset*));
-        CPLHashSetForeach(phAllDatasetSet, GDALGetOpenDatasetsForeach, &nIndex);
+        std::map<GDALDataset*, GIntBig>::iterator oIter = poAllDatasetMap->begin();
+        for(; oIter != poAllDatasetMap->end(); ++oIter, i++ )
+            ppDatasets[i] = oIter->first;
         return ppDatasets;
     }
     else
@@ -1891,7 +1847,7 @@ void CPL_STDCALL GDALGetOpenDatasets( GDALDatasetH **ppahDSList, int *pnCount )
 /* the datasets of the parent at the child termination */
 void GDALNullifyOpenDatasetsList()
 {
-    phAllDatasetSet = NULL;
+    poAllDatasetMap = NULL;
     phSharedDatasetSet = NULL;
     ppDatasets = NULL;
     hDLMutex = NULL;
@@ -2567,12 +2523,9 @@ static int GDALDumpOpenSharedDatasetsForeach(void* elt, void* user_data)
 }
 
 
-static int GDALDumpOpenDatasetsForeach(void* elt, void* user_data)
+static int GDALDumpOpenDatasetsForeach(GDALDataset* poDS, FILE *fp)
 {
-    DatasetCtxt* psStruct = (DatasetCtxt*) elt;
-    FILE *fp = (FILE*) user_data;
     const char *pszDriverName;
-    GDALDataset *poDS = psStruct->poDS;
 
     /* Don't list shared datasets. They have already been listed by */
     /* GDALDumpOpenSharedDatasetsForeach */
@@ -2615,15 +2568,19 @@ int CPL_STDCALL GDALDumpOpenDatasets( FILE *fp )
 
     CPLMutexHolderD( &hDLMutex );
 
-    if (phAllDatasetSet != NULL)
+    if (poAllDatasetMap != NULL)
     {
         VSIFPrintf( fp, "Open GDAL Datasets:\n" );
-        CPLHashSetForeach(phAllDatasetSet, GDALDumpOpenDatasetsForeach, fp);
+        std::map<GDALDataset*, GIntBig>::iterator oIter = poAllDatasetMap->begin();
+        for(; oIter != poAllDatasetMap->end(); ++oIter )
+        {
+            GDALDumpOpenDatasetsForeach(oIter->first, fp);
+        }
         if (phSharedDatasetSet != NULL)
         {
             CPLHashSetForeach(phSharedDatasetSet, GDALDumpOpenSharedDatasetsForeach, fp);
         }
-        return CPLHashSetSize(phAllDatasetSet);
+        return (int)poAllDatasetMap->size();
     }
     else
     {
