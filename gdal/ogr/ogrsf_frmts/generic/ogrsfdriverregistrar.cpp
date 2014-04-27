@@ -199,7 +199,7 @@ GDALDataset* OGRSFDriverRegistrar::CreateVectorOnly( GDALDriver* poDriver,
 {
     OGRDataSource* poDS = (OGRDataSource*)
         ((OGRSFDriver*)poDriver)->CreateDataSource(pszName, papszOptions);
-    if( poDS != NULL )
+    if( poDS != NULL && poDS->GetName() != NULL )
         poDS->SetDescription( poDS->GetName() );
     return poDS;
 }
