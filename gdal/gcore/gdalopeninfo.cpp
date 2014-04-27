@@ -100,7 +100,7 @@ retry:
         {
             pabyHeader = (GByte *) CPLCalloc(1025,1);
 
-            fpL = VSIFOpenL( pszFilename, "rb" );
+            fpL = VSIFOpenL( pszFilename, (eAccess == GA_Update) ? "r+b" : "rb" );
             if( fpL != NULL )
             {
                 nHeaderBytes = (int) VSIFReadL( pabyHeader, 1, 1024, fpL );
