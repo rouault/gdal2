@@ -49,7 +49,7 @@ OGROGDIDriver::~OGROGDIDriver()
 const char *OGROGDIDriver::GetName()
 
 {
-    return "OGDI";
+    return "OGR_OGDI";
 }
 
 /************************************************************************/
