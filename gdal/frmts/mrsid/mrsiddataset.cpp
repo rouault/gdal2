@@ -1446,10 +1446,10 @@ static GDALDataset* JP2Open( GDALOpenInfo *poOpenInfo )
 
 GDALDataset *MrSIDDataset::Open( GDALOpenInfo * poOpenInfo, int bIsJP2 )
 {
-    if(poOpenInfo->fp)
+    if(poOpenInfo->fpL)
     {
-        VSIFClose( poOpenInfo->fp );
-        poOpenInfo->fp = NULL;
+        VSIFCloseL( poOpenInfo->fpL );
+        poOpenInfo->fpL = NULL;
     }
 
 /* -------------------------------------------------------------------- */

@@ -120,7 +120,7 @@ GDALDataset* GeoRasterDataset::Open( GDALOpenInfo* poOpenInfo )
     //  It shouldn't have an open file pointer
     //  -------------------------------------------------------------------
 
-    if( poOpenInfo->fp != NULL )
+    if( poOpenInfo->fpL != NULL )
     {
         return NULL;
     }

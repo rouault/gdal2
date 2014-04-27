@@ -249,7 +249,7 @@ class COASPRasterBand;
 class COASPDataset : public GDALDataset
 {
 	friend class COASPRasterBand;
-	FILE *fpHdr; /* File pointer for the header file */
+	VSILFILE *fpHdr; /* File pointer for the header file */
 	VSILFILE *fpBinHH; /* File pointer for the binary matrix */
 	VSILFILE *fpBinHV;
 	VSILFILE *fpBinVH;
@@ -349,7 +349,7 @@ const GDAL_GCP *COASPDataset::GetGCPs()
 
 int COASPDataset::Identify( GDALOpenInfo *poOpenInfo ) 
 {
-	if(poOpenInfo->fp == NULL || poOpenInfo->nHeaderBytes < 256)
+	if(poOpenInfo->fpL == NULL || poOpenInfo->nHeaderBytes < 256)
 		return 0;
 
 	/* With a COASP .hdr file, the first line or so is:
@@ -388,8 +388,8 @@ GDALDataset *COASPDataset::Open( GDALOpenInfo *poOpenInfo )
 		return NULL;
 
 	/* Steal the file pointer for the header */
-	poDS->fpHdr = poOpenInfo->fp;
-	poOpenInfo->fp = NULL;
+	poDS->fpHdr = poOpenInfo->fpL;
+	poOpenInfo->fpL = NULL;
 	
 	/* Set the binary matrix file pointers to NULL, for now */
 	poDS->fpBinHH = NULL;

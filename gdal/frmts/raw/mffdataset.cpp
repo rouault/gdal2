@@ -692,7 +692,7 @@ GDALDataset *MFFDataset::Open( GDALOpenInfo * poOpenInfo )
 /* -------------------------------------------------------------------- */
 /*      We assume the user is pointing to the header file.              */
 /* -------------------------------------------------------------------- */
-    if( poOpenInfo->nHeaderBytes < 17 || poOpenInfo->fp == NULL )
+    if( poOpenInfo->nHeaderBytes < 17 || poOpenInfo->fpL == NULL )
         return NULL;
 
     if( !EQUAL(CPLGetExtension(poOpenInfo->pszFilename),"hdr") )

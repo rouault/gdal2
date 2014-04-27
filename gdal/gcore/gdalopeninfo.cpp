@@ -77,7 +77,7 @@ GDALOpenInfo::GDALOpenInfo( const char * pszFilenameIn, GDALAccess eAccessIn,
     bIsDirectory = FALSE;
     bStatOK = FALSE;
     eAccess = eAccessIn;
-    fp = NULL;
+    fpL = NULL;
 
 #ifdef HAVE_READLINK
     int  bHasRetried = FALSE;
@@ -100,35 +100,11 @@ retry:
         {
             pabyHeader = (GByte *) CPLCalloc(1025,1);
 
-            fp = VSIFOpen( pszFilename, "rb" );
-
-            if( fp != NULL )
+            fpL = VSIFOpenL( pszFilename, "rb" );
+            if( fpL != NULL )
             {
-                nHeaderBytes = (int) VSIFRead( pabyHeader, 1, 1024, fp );
-
-                VSIRewind( fp );
-            }
-            /* XXX: ENOENT is used to catch the case of virtual filesystem
-             * when we do not have a real file with such a name. Under some
-             * circumstances EINVAL reported instead of ENOENT in Windows
-             * (for filenames containing colon, e.g. "smth://name"). 
-             * See also: #2437 */
-            else if( errno == 27 /* "File to large" */ 
-                     || errno == ENOENT || errno == EINVAL
-#ifdef EOVERFLOW
-                     || errno == EOVERFLOW
-#else
-                     || errno == 75 /* Linux EOVERFLOW */
-                     || errno == 79 /* Solaris EOVERFLOW */ 
-#endif
-                     )
-            {
-                VSILFILE* fpL = VSIFOpenL( pszFilename, "rb" );
-                if( fpL != NULL )
-                {
-                    nHeaderBytes = (int) VSIFReadL( pabyHeader, 1, 1024, fpL );
-                    VSIFCloseL( fpL );
-                }
+                nHeaderBytes = (int) VSIFReadL( pabyHeader, 1, 1024, fpL );
+                VSIRewindL( fpL );
             }
         }
         else if( VSI_ISDIR( sStat.st_mode ) )
@@ -204,8 +180,8 @@ GDALOpenInfo::~GDALOpenInfo()
     VSIFree( pabyHeader );
     CPLFree( pszFilename );
 
-    if( fp != NULL )
-        VSIFClose( fp );
+    if( fpL != NULL )
+        VSIFCloseL( fpL );
     CSLDestroy( papszSiblingFiles );
 }
 

@@ -2602,8 +2602,11 @@ GDALDataset *HDF4ImageDataset::Open( GDALOpenInfo * poOpenInfo )
     HDF4ImageDataset    *poDS;
 
     poDS = new HDF4ImageDataset( );
-    poDS->fp = poOpenInfo->fp;
-    poOpenInfo->fp = NULL;
+    if( poOpenInfo->fpL != NULL )
+    {
+        VSIFCloseL(poOpenInfo->fpL);
+        poOpenInfo->fpL = NULL;
+    }
     
     CPLMutexHolderD(&hHDF4Mutex);
 

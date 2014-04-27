@@ -711,7 +711,7 @@ GDALDataset *MEMDataset::Open( GDALOpenInfo * poOpenInfo )
 /*      description strings?                                            */
 /* -------------------------------------------------------------------- */
     if( !EQUALN(poOpenInfo->pszFilename,"MEM:::",6) 
-        || poOpenInfo->fp != NULL )
+        || poOpenInfo->fpL != NULL )
         return NULL;
 
     papszOptions = CSLTokenizeStringComplex(poOpenInfo->pszFilename+6, ",",
@@ -975,7 +975,7 @@ GDALDataset *MEMDataset::Create( const char * pszFilename,
 static int MEMDatasetIdentify( GDALOpenInfo * poOpenInfo )
 {
     return (strncmp(poOpenInfo->pszFilename, "MEM:::", 6) == 0 &&
-            poOpenInfo->fp == NULL);
+            poOpenInfo->fpL == NULL);
 }
 
 /************************************************************************/

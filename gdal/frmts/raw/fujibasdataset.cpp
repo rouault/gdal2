@@ -90,7 +90,7 @@ GDALDataset *FujiBASDataset::Open( GDALOpenInfo * poOpenInfo )
 /*      We assume the user is pointing to the header (.pcb) file.       */
 /*      Does this appear to be a pcb file?                              */
 /* -------------------------------------------------------------------- */
-    if( poOpenInfo->nHeaderBytes < 80 || poOpenInfo->fp == NULL )
+    if( poOpenInfo->nHeaderBytes < 80 || poOpenInfo->fpL == NULL )
         return NULL;
 
     if( !EQUALN((const char *)poOpenInfo->pabyHeader,"[Raw data]",10)

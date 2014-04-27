@@ -234,7 +234,7 @@ class CPL_DLL GDALOpenInfo
     int         bStatOK;
     int         bIsDirectory;
 
-    FILE        *fp;
+    VSILFILE   *fpL;
 
     int         nHeaderBytes;
     GByte       *pabyHeader;

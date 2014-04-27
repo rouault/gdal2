@@ -212,7 +212,7 @@ GDALDataset *GMTDataset::Open( GDALOpenInfo * poOpenInfo )
 /* -------------------------------------------------------------------- */
 /*      Does this file have the GMT magic number?                    */
 /* -------------------------------------------------------------------- */
-    if( poOpenInfo->fp == NULL || poOpenInfo->nHeaderBytes < 50 )
+    if( poOpenInfo->fpL == NULL || poOpenInfo->nHeaderBytes < 50 )
         return NULL;
 
     if( poOpenInfo->pabyHeader[0] != 'C' 

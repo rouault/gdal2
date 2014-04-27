@@ -2809,7 +2809,7 @@ GetConnection(const char * pszFilename, char ** ppszConnectionString,
 int PostGISRasterDataset::Identify(GDALOpenInfo* poOpenInfo)
 {
     if (poOpenInfo->pszFilename == NULL ||
-        poOpenInfo->fp != NULL ||
+        poOpenInfo->fpL != NULL ||
         !EQUALN(poOpenInfo->pszFilename, "PG:", 3))
     {
         return FALSE;

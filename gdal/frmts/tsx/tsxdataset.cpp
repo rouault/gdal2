@@ -256,7 +256,7 @@ TSXDataset::~TSXDataset() {
 
 int TSXDataset::Identify( GDALOpenInfo *poOpenInfo )
 {
-    if (poOpenInfo->fp == NULL || poOpenInfo->nHeaderBytes < 260)
+    if (poOpenInfo->fpL == NULL || poOpenInfo->nHeaderBytes < 260)
     {
         if( poOpenInfo->bIsDirectory )
         {

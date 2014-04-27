@@ -65,7 +65,6 @@ void *hHDF4Mutex = NULL;
 HDF4Dataset::HDF4Dataset()
 
 {
-    fp = NULL;
     hSD = 0;
     hGR = 0;
     nImages = 0;
@@ -93,8 +92,6 @@ HDF4Dataset::~HDF4Dataset()
 	CSLDestroy( papszSubDatasets );
     if ( papszGlobalMetadata )
 	CSLDestroy( papszGlobalMetadata );
-    if( fp != NULL )
-        VSIFClose( fp );
 }
 
 /************************************************************************/
@@ -706,8 +703,11 @@ GDALDataset *HDF4Dataset::Open( GDALOpenInfo * poOpenInfo )
     poDS = new HDF4Dataset();
     CPLAcquireMutex(hHDF4Mutex, 1000.0);
 
-    poDS->fp = poOpenInfo->fp;
-    poOpenInfo->fp = NULL;
+    if( poOpenInfo->fpL != NULL )
+    {
+        VSIFCloseL(poOpenInfo->fpL);
+        poOpenInfo->fpL = NULL;
+    }
     
 /* -------------------------------------------------------------------- */
 /*          Open HDF SDS Interface.                                     */

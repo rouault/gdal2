@@ -245,7 +245,7 @@ GDALDataset *GXFDataset::Open( GDALOpenInfo * poOpenInfo )
 /*      least one "\n#keyword" type signature in the first chunk of     */
 /*      the file.                                                       */
 /* -------------------------------------------------------------------- */
-    if( poOpenInfo->fp == NULL || poOpenInfo->nHeaderBytes < 50 )
+    if( poOpenInfo->nHeaderBytes < 50 )
         return NULL;
 
     bFoundKeyword = FALSE;

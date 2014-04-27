@@ -567,7 +567,7 @@ GDALDataset *RasdamanDataset::Open( GDALOpenInfo * poOpenInfo )
 
   // fast checks if current module should handle the request
   // check 1: the request is not on a existing file in the file system
-  if (poOpenInfo->fp != NULL) {
+  if (poOpenInfo->fpL != NULL) {
     return NULL;
   }
   // check 2: the request contains --collection
