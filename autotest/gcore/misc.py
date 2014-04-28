@@ -214,7 +214,7 @@ def misc_5():
     for i in range(gdal.GetDriverCount()):
         drv = gdal.GetDriver(i)
         md = drv.GetMetadata()
-        if 'DCAP_CREATE' in md:
+        if 'DCAP_CREATE' in md and 'DCAP_RASTER' in md:
             datatype = gdal.GDT_Byte
             for nBands in range(6):
                 if misc_5_internal(drv, datatype, nBands) < 0:

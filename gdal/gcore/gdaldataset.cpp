@@ -2207,6 +2207,7 @@ CPLErr CPL_STDCALL GDALCreateDatasetMaskBand( GDALDatasetH hDS, int nFlags )
  * process through the \ref gdal_api_proxy mechanism.
  *
  * \sa GDALOpenShared()
+ * \sa GDALOpenEx()
  *
  * @param pszFilename the name of the file to access.  In the case of
  * exotic drivers this may not refer to a physical file, but instead contain
@@ -2224,25 +2225,128 @@ GDALDatasetH CPL_STDCALL
 GDALOpen( const char * pszFilename, GDALAccess eAccess )
 
 {
-    return GDALOpenInternal(pszFilename, eAccess, NULL);
+    return GDALOpenExInternal( pszFilename,
+                       GDAL_OF_RASTER |
+                       (eAccess == GA_Update ? GDAL_OF_UPDATE : 0) |
+                       GDAL_OF_VERBOSE_ERROR,
+                       NULL, NULL, NULL );
 }
 
-/* The drivers listed in papszAllowedDrivers can be in any order */
-/* Only the order of registration will be taken into account */
-GDALDatasetH GDALOpenInternal( const char * pszFilename, GDALAccess eAccess,
-                               const char* const * papszAllowedDrivers )
+
+/************************************************************************/
+/*                             GDALOpenEx()                             */
+/************************************************************************/
+
+/**
+ * \brief Open a raster or vector file as a GDALDataset.
+ *
+ * This function will try to open the passed file, or virtual dataset
+ * name by invoking the Open method of each registered GDALDriver in turn. 
+ * The first successful open will result in a returned dataset.  If all
+ * drivers fail then NULL is returned and an error is issued.
+ *
+ * Several recommendations :
+ * <ul>
+ * <li>If you open a dataset object with GDAL_OF_UPDATE access, it is not recommended
+ * to open a new dataset on the same underlying file.</li>
+ * <li>The returned dataset should only be accessed by one thread at a time. If you
+ * want to use it from different threads, you must add all necessary code (mutexes, etc.)
+ * to avoid concurrent use of the object. (Some drivers, such as GeoTIFF, maintain internal
+ * state variables that are updated each time a new block is read, thus preventing concurrent
+ * use.) </li>
+ * </ul>
+ *
+ * For drivers supporting the VSI virtual file API, it is possible to open
+ * a file in a .zip archive (see VSIInstallZipFileHandler()), in a .tar/.tar.gz/.tgz archive
+ * (see VSIInstallTarFileHandler()) or on a HTTP / FTP server (see VSIInstallCurlFileHandler())
+ *
+ * In some situations (dealing with unverified data), the datasets can be opened in another
+ * process through the \ref gdal_api_proxy mechanism.
+ *
+ * @param pszFilename the name of the file to access.  In the case of
+ * exotic drivers this may not refer to a physical file, but instead contain
+ * information for the driver on how to access a dataset.  It should be in UTF-8
+ * encoding.
+ *
+ * @param nOpenFlags a combination of GDAL_OF_ flags that may be combined through
+ * logical or operator.
+ * <ul>
+ * <li>Driver kind: GDAL_OF_RASTER for raster drivers, GDAL_OF_VECTOR for vector drivers.
+ *     If none of the value is specified, both kinds are implied.</li>
+ * <li>Access mode: GDAL_OF_READONLY (exclusive)or GDAL_OF_UPDATE.</li>
+ * <li>Shared mode: GDAL_OF_SHARED. If set, it allows the sharing of
+ *  GDALDataset handles for a dataset with other callers that have set GDAL_OF_SHARED.
+ * In particular, GDALOpenEx() will first consult its list of currently
+ * open and shared GDALDataset's, and if the GetDescription() name for one
+ * exactly matches the pszFilename passed to GDALOpenEx() it will be
+ * referenced and returned, if GDALOpenEx() is called from the same thread.</li>
+ * <li>Verbose error: GDAL_OF_VERBOSE_ERROR. If set, a failed attempt to open the
+ * file will lead to an error message to be reported.</li>
+ * </ul>
+ *
+ * @param papszAllowedDrivers NULL to consider all candidate drivers, or a NULL
+ * terminated list of strings with the driver short names that must be considered.
+ *
+ * @param papszOpenOptions NULL, or a NULL terminated list of strings with open
+ * options passed to candidate drivers.
+ *
+ * @return A GDALDatasetH handle or NULL on failure.  For C++ applications
+ * this handle can be cast to a GDALDataset *. 
+ *
+ * @since GDAL 2.0
+ */
+
+GDALDatasetH CPL_STDCALL GDALOpenEx( const char* pszFilename,
+                         unsigned int nOpenFlags,
+                         const char* const* papszAllowedDrivers,
+                         const char* const* papszOpenOptions )
 {
-    GDALOpenInfo oOpenInfo( pszFilename, eAccess );
-    return GDALOpenInternal(oOpenInfo, papszAllowedDrivers);
+    return GDALOpenExInternal( pszFilename, nOpenFlags, papszAllowedDrivers,
+                              papszOpenOptions, NULL );
 }
 
-GDALDatasetH GDALOpenInternal( GDALOpenInfo& oOpenInfo,
-                               const char* const * papszAllowedDrivers,
-                               int bVerboseError,
-                               int bOGRDriverOnly )
+GDALDatasetH GDALOpenExInternal( const char* pszFilename,
+                                 unsigned int nOpenFlags,
+                                 const char* const* papszAllowedDrivers,
+                                 const char* const* papszOpenOptions,
+                                 char** papszSiblingFiles )
 {
+    VALIDATE_POINTER1( pszFilename, "GDALOpen", NULL );
 
-    VALIDATE_POINTER1( oOpenInfo.pszFilename, "GDALOpen", NULL );
+/* -------------------------------------------------------------------- */
+/*      In case of shared dataset, first scan the existing list to see  */
+/*      if it could already contain the requested dataset.              */
+/* -------------------------------------------------------------------- */
+    if( nOpenFlags & GDAL_OF_SHARED )
+    {
+        CPLMutexHolderD( &hDLMutex );
+
+        if (phSharedDatasetSet != NULL)
+        {
+            GIntBig nThisPID = GDALGetResponsiblePIDForCurrentThread();
+            SharedDatasetCtxt* psStruct;
+            SharedDatasetCtxt sStruct;
+
+            sStruct.nPID = nThisPID;
+            sStruct.pszDescription = (char*) pszFilename;
+            sStruct.eAccess = (nOpenFlags & GDAL_OF_UPDATE) ? GA_Update : GA_ReadOnly;
+            psStruct = (SharedDatasetCtxt*) CPLHashSetLookup(phSharedDatasetSet, &sStruct);
+            if (psStruct == NULL && (nOpenFlags & GDAL_OF_UPDATE) == 0)
+            {
+                sStruct.eAccess = GA_Update;
+                psStruct = (SharedDatasetCtxt*) CPLHashSetLookup(phSharedDatasetSet, &sStruct);
+            }
+            if (psStruct)
+            {
+                psStruct->poDS->Reference();
+                return psStruct->poDS;
+            }
+        }
+    }
+
+    /* If no driver kind is specified, assume all are to be probed */
+    if( (nOpenFlags & GDAL_OF_KIND_MASK) == 0 )
+        nOpenFlags |= GDAL_OF_KIND_MASK;
 
     {
         int* pnRecCount = (int*)CPLGetTLS( CTLS_GDALDATASET_REC_PROTECT_MAP );
@@ -2268,6 +2372,13 @@ GDALDatasetH GDALOpenInternal( GDALOpenInfo& oOpenInfo,
     CPLErrorReset();
     CPLAssert( NULL != poDM );
 
+    /* Build GDALOpenInfo just now to avoid useless file stat'ing if a */
+    /* shared dataset was asked before */
+    GDALOpenInfo oOpenInfo(pszFilename,
+                           (nOpenFlags & GDAL_OF_UPDATE) ? GA_Update : GA_ReadOnly,
+                           papszSiblingFiles);
+    oOpenInfo.papszOpenOptions = (char**) papszOpenOptions;
+
     for( iDriver = -1; iDriver < poDM->GetDriverCount(); iDriver++ )
     {
         GDALDriver      *poDriver;
@@ -2282,21 +2393,33 @@ GDALDatasetH GDALOpenInternal( GDALOpenInfo& oOpenInfo,
                 CSLFindString((char**)papszAllowedDrivers, GDALGetDriverShortName(poDriver)) == -1)
                 continue;
         }
-        
-        if( bOGRDriverOnly && poDriver->GetMetadataItem(GDAL_DCAP_VECTOR) == NULL )
+
+        if( (nOpenFlags & GDAL_OF_RASTER) != 0 &&
+            (nOpenFlags & GDAL_OF_VECTOR) == 0 &&
+            poDriver->GetMetadataItem(GDAL_DCAP_RASTER) == NULL )
+            continue;
+        if( (nOpenFlags & GDAL_OF_VECTOR) != 0 &&
+            (nOpenFlags & GDAL_OF_RASTER) == 0 &&
+            poDriver->GetMetadataItem(GDAL_DCAP_VECTOR) == NULL )
             continue;
 
         if ( poDriver->pfnOpen != NULL )
+        {
+            GDALValidateOpenOptions( poDriver, papszOpenOptions );
             poDS = poDriver->pfnOpen( &oOpenInfo );
+        }
         else if( poDriver->pfnOpenWithDriverArg != NULL )
+        {
+            GDALValidateOpenOptions( poDriver, papszOpenOptions );
             poDS = poDriver->pfnOpenWithDriverArg( poDriver, &oOpenInfo );
+        }
         else
             continue;
 
         if( poDS != NULL )
         {
             if( strlen(poDS->GetDescription()) == 0 )
-                poDS->SetDescription( oOpenInfo.pszFilename );
+                poDS->SetDescription( pszFilename );
 
             if( poDS->poDriver == NULL )
                 poDS->poDriver = poDriver;
@@ -2304,15 +2427,30 @@ GDALDatasetH GDALOpenInternal( GDALOpenInfo& oOpenInfo,
 
             if( CPLGetPID() != GDALGetResponsiblePIDForCurrentThread() )
                 CPLDebug( "GDAL", "GDALOpen(%s, this=%p) succeeds as %s (pid=%d, responsiblePID=%d).",
-                          oOpenInfo.pszFilename, poDS, poDriver->GetDescription(),
+                          pszFilename, poDS, poDriver->GetDescription(),
                           (int)CPLGetPID(), (int)GDALGetResponsiblePIDForCurrentThread() );
             else
                 CPLDebug( "GDAL", "GDALOpen(%s, this=%p) succeeds as %s.",
-                          oOpenInfo.pszFilename, poDS, poDriver->GetDescription() );
+                          pszFilename, poDS, poDriver->GetDescription() );
 
             int* pnRecCount = (int*)CPLGetTLS( CTLS_GDALDATASET_REC_PROTECT_MAP );
             if( pnRecCount )
                 (*pnRecCount) --;
+
+            if( nOpenFlags & GDAL_OF_SHARED )
+            {
+                if (strcmp(pszFilename, poDS->GetDescription()) != 0)
+                {
+                    CPLError(CE_Warning, CPLE_NotSupported,
+                            "A dataset opened by GDALOpenShared should have the same filename (%s) "
+                            "and description (%s)",
+                            pszFilename, poDS->GetDescription());
+                }
+                else
+                {
+                    poDS->MarkAsShared();
+                }
+            }
 
             return (GDALDatasetH) poDS;
         }
@@ -2327,17 +2465,17 @@ GDALDatasetH GDALOpenInternal( GDALOpenInfo& oOpenInfo,
         }
     }
 
-    if( bVerboseError )
+    if( nOpenFlags & GDAL_OF_VERBOSE_ERROR )
     {
         if( oOpenInfo.bStatOK )
             CPLError( CE_Failure, CPLE_OpenFailed,
                     "`%s' not recognised as a supported file format.\n",
-                    oOpenInfo.pszFilename );
+                    pszFilename );
         else
             CPLError( CE_Failure, CPLE_OpenFailed,
                     "`%s' does not exist in the file system,\n"
                     "and is not recognised as a supported dataset name.\n",
-                    oOpenInfo.pszFilename );
+                    pszFilename );
     }
 
     int* pnRecCount = (int*)CPLGetTLS( CTLS_GDALDATASET_REC_PROTECT_MAP );
@@ -2375,6 +2513,7 @@ GDALDatasetH GDALOpenInternal( GDALOpenInfo& oOpenInfo,
  * process through the \ref gdal_api_proxy mechanism.
  *
  * \sa GDALOpen()
+ * \sa GDALOpenEx()
  *
  * @param pszFilename the name of the file to access.  In the case of
  * exotic drivers this may not refer to a physical file, but instead contain
@@ -2392,68 +2531,12 @@ GDALDatasetH CPL_STDCALL
 GDALOpenShared( const char *pszFilename, GDALAccess eAccess )
 {
     VALIDATE_POINTER1( pszFilename, "GDALOpenShared", NULL );
-    GDALOpenInfo oOpenInfo( pszFilename, eAccess );
-    return GDALOpenSharedInternal(oOpenInfo, NULL);
-}
-
-GDALDatasetH GDALOpenSharedInternal( GDALOpenInfo& oOpenInfo,
-                               const char* const * papszAllowedDrivers,
-                               int bVerboseError,
-                               int bOGRDriverOnly )
-{
-/* -------------------------------------------------------------------- */
-/*      First scan the existing list to see if it could already         */
-/*      contain the requested dataset.                                  */
-/* -------------------------------------------------------------------- */
-    {
-        CPLMutexHolderD( &hDLMutex );
-
-        if (phSharedDatasetSet != NULL)
-        {
-            GIntBig nThisPID = GDALGetResponsiblePIDForCurrentThread();
-            SharedDatasetCtxt* psStruct;
-            SharedDatasetCtxt sStruct;
-
-            sStruct.nPID = nThisPID;
-            sStruct.pszDescription = (char*) oOpenInfo.pszFilename;
-            sStruct.eAccess = oOpenInfo.eAccess;
-            psStruct = (SharedDatasetCtxt*) CPLHashSetLookup(phSharedDatasetSet, &sStruct);
-            if (psStruct == NULL && oOpenInfo.eAccess == GA_ReadOnly)
-            {
-                sStruct.eAccess = GA_Update;
-                psStruct = (SharedDatasetCtxt*) CPLHashSetLookup(phSharedDatasetSet, &sStruct);
-            }
-            if (psStruct)
-            {
-                psStruct->poDS->Reference();
-                return psStruct->poDS;
-            }
-        }
-    }
-
-/* -------------------------------------------------------------------- */
-/*      Try opening the the requested dataset.                          */
-/* -------------------------------------------------------------------- */
-    GDALDataset *poDataset;
-
-    poDataset = (GDALDataset *) GDALOpenInternal( oOpenInfo, papszAllowedDrivers,
-                                                  bVerboseError, bOGRDriverOnly );
-    if( poDataset != NULL )
-    {
-        if (strcmp(oOpenInfo.pszFilename, poDataset->GetDescription()) != 0)
-        {
-            CPLError(CE_Warning, CPLE_NotSupported,
-                     "A dataset opened by GDALOpenShared should have the same filename (%s) "
-                     "and description (%s)",
-                     oOpenInfo.pszFilename, poDataset->GetDescription());
-        }
-        else
-        {
-            poDataset->MarkAsShared();
-        }
-    }
-    
-    return (GDALDatasetH) poDataset;
+    return GDALOpenEx( pszFilename,
+                       GDAL_OF_RASTER |
+                       (eAccess == GA_Update ? GDAL_OF_UPDATE : 0) |
+                       GDAL_OF_SHARED |
+                       GDAL_OF_VERBOSE_ERROR,
+                       NULL, NULL );
 }
 
 /************************************************************************/

@@ -122,10 +122,12 @@ OGRDataSourceH OGR_Dr_Open( OGRSFDriverH hDriver, const char *pszName,
 {
     VALIDATE_POINTER1( hDriver, "OGR_Dr_Open", NULL );
 
-    GDALOpenInfo oOpenInfo(pszName, (bUpdate) ? GA_Update : GA_ReadOnly);
     const char* const apszDrivers[] = { ((GDALDriver*)hDriver)->GetDescription(),
                                    NULL };
-    return (OGRDataSourceH)GDALOpenInternal(oOpenInfo, apszDrivers, FALSE, TRUE);
+    return (OGRDataSourceH)GDALOpenEx(pszName,
+                                      GDAL_OF_VECTOR |
+                                      ((bUpdate) ? GDAL_OF_UPDATE: 0),
+                                      apszDrivers, NULL);
 }
 
 /************************************************************************/

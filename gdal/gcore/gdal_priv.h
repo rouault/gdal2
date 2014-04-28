@@ -228,6 +228,7 @@ class CPL_DLL GDALOpenInfo
 
     char        *pszFilename;
     char        **papszSiblingFiles;
+    char**      papszOpenOptions;
 
     GDALAccess  eAccess;
 
@@ -245,39 +246,27 @@ class CPL_DLL GDALOpenInfo
 /*                             GDALDataset                              */
 /* ******************************************************************** */
 
-/* Internal method for now. Might be subject to later revisions */
-GDALDatasetH GDALOpenInternal( const char * pszFilename, GDALAccess eAccess,
-                               const char* const * papszAllowedDrivers );
-GDALDatasetH GDALOpenInternal( GDALOpenInfo& oOpenInfo,
-                               const char* const * papszAllowedDrivers,
-                               int bVerboseError = TRUE,
-                               int bOGRDriverOnly = FALSE );
-GDALDatasetH GDALOpenSharedInternal( GDALOpenInfo& oOpenInfo,
-                               const char* const * papszAllowedDrivers,
-                               int bVerboseError = TRUE,
-                               int bOGRDriverOnly = FALSE );
 class OGRLayer;
 class OGRGeometry;
 class OGRSpatialReference;
 class OGRStyleTable;
 
+/* Do not use outside of GDAL code base */
+GDALDatasetH GDALOpenExInternal( const char* pszFilename,
+                                 unsigned int nOpenFlags,
+                                 const char* const* papszAllowedDrivers,
+                                 const char* const* papszOpenOptions,
+                                 char** papszSiblingFiles );
+
 //! A set of associated raster bands, usually from one file.
 
 class CPL_DLL GDALDataset : public GDALMajorObject
 {
-    friend GDALDatasetH CPL_STDCALL GDALOpen( const char *, GDALAccess);
-    friend GDALDatasetH CPL_STDCALL GDALOpenShared( const char *, GDALAccess);
-
-    /* Internal method for now. Might be subject to later revisions */
-    friend GDALDatasetH GDALOpenInternal( const char *, GDALAccess, const char* const * papszAllowedDrivers );
-    friend GDALDatasetH GDALOpenInternal( GDALOpenInfo& oOpenInfo,
-                                          const char* const * papszAllowedDrivers,
-                                          int bVerboseError,
-                                          int bOGRDriverOnly );
-    friend GDALDatasetH GDALOpenSharedInternal( GDALOpenInfo& oOpenInfo,
-                                                const char* const * papszAllowedDrivers,
-                                                int bVerboseError,
-                                                int bOGRDriverOnly);
+    friend GDALDatasetH GDALOpenExInternal( const char* pszFilename,
+                                 unsigned int nOpenFlags,
+                                 const char* const* papszAllowedDrivers,
+                                 const char* const* papszOpenOptions,
+                                 char** papszSiblingFiles );
 
     friend class GDALDriver;
     friend class GDALDefaultOverviews;
@@ -1045,6 +1034,13 @@ CPLErr EXIFExtractMetadata(char**& papszMetadata,
                            void *fpL, int nOffset,
                            int bSwabflag, int nTIFFHEADER,
                            int& nExifOffset, int& nInterOffset, int& nGPSOffset);
+
+int GDALValidateOpenOptions( GDALDriverH hDriver,
+                             const char* const* papszOptionOptions);
+int GDALValidateOptions( const char* pszOptionList,
+                         const char* const* papszOptionsToValidate,
+                         const char* pszErrorMessageOptionType,
+                         const char* pszErrorMessageContainerName);
 
 #define DIV_ROUND_UP(a, b) ( ((a) % (b)) == 0 ? ((a) / (b)) : (((a) / (b)) + 1) )
 

@@ -95,8 +95,8 @@ OGRDataSourceH OGROpen( const char *pszName, int bUpdate,
 {
     VALIDATE_POINTER1( pszName, "OGROpen", NULL );
     
-    GDALOpenInfo oOpenInfo(pszName, (bUpdate) ? GA_Update : GA_ReadOnly);
-    GDALDatasetH hDS = GDALOpenInternal(oOpenInfo, NULL, FALSE, TRUE );
+    GDALDatasetH hDS = GDALOpenEx(pszName, GDAL_OF_VECTOR |
+                                    ((bUpdate) ? GDAL_OF_UPDATE: 0), NULL, NULL);
     if( hDS != NULL && pahDriverList != NULL )
         *pahDriverList = (OGRSFDriverH) GDALGetDatasetDriver(hDS);
     return (OGRDataSourceH) hDS;
@@ -112,8 +112,8 @@ OGRDataSourceH OGROpenShared( const char *pszName, int bUpdate,
 {
     VALIDATE_POINTER1( pszName, "OGROpenShared", NULL );
 
-    GDALOpenInfo oOpenInfo(pszName, (bUpdate) ? GA_Update : GA_ReadOnly);
-    GDALDatasetH hDS = GDALOpenSharedInternal(oOpenInfo, NULL, FALSE, TRUE );
+    GDALDatasetH hDS = GDALOpenEx(pszName, GDAL_OF_VECTOR |
+                                    ((bUpdate) ? GDAL_OF_UPDATE: 0) | GDAL_OF_SHARED, NULL, NULL);
     if( hDS != NULL && pahDriverList != NULL )
         *pahDriverList = (OGRSFDriverH) GDALGetDatasetDriver(hDS);
     return (OGRDataSourceH) hDS;

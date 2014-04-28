@@ -132,6 +132,15 @@
 %constant CPLE_NoWriteAccess              = CPLE_NoWriteAccess;
 %constant CPLE_UserInterrupt              = CPLE_UserInterrupt;
 
+// Open flags
+%constant OF_ALL     = GDAL_OF_ALL;
+%constant OF_RASTER = GDAL_OF_RASTER;
+%constant OF_VECTOR = GDAL_OF_VECTOR;
+%constant OF_READONLY = GDAL_OF_READONLY;
+%constant OF_UPDATE = GDAL_OF_UPDATE;
+%constant OF_SHARED = GDAL_OF_SHARED;
+%constant OF_VERBOSE_ERROR = GDAL_OF_VERBOSE_ERROR;
+
 #if !defined(SWIGCSHARP) && !defined(SWIGJAVA)
 
 %constant char *DMD_LONGNAME           = GDAL_DMD_LONGNAME;

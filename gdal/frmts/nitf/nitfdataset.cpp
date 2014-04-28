@@ -612,7 +612,7 @@ GDALDataset *NITFDataset::OpenInternal( GDALOpenInfo * poOpenInfo,
             static const char * const apszDrivers[] = { "JP2KAK", "JP2ECW", "JP2MRSID",
                                                         "JPEG2000", "JP2OPENJPEG", NULL };
             poDS->poJ2KDataset = (GDALPamDataset *)
-                GDALOpenInternal( osDSName, GA_ReadOnly, apszDrivers);
+                GDALOpenEx( osDSName, GDAL_OF_RASTER, apszDrivers, NULL);
 
             if( poDS->poJ2KDataset == NULL )
             {

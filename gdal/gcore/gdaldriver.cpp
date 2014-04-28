@@ -1284,13 +1284,46 @@ const char * CPL_STDCALL GDALGetDriverCreationOptionList( GDALDriverH hDriver )
 int CPL_STDCALL GDALValidateCreationOptions( GDALDriverH hDriver,
                                              char** papszCreationOptions)
 {
-    int bRet = TRUE;
     VALIDATE_POINTER1( hDriver, "GDALValidateCreationOptions", FALSE );
-
     const char *pszOptionList = 
         ((GDALDriver *) hDriver)->GetMetadataItem( GDAL_DMD_CREATIONOPTIONLIST );
+    CPLString osDriver;
+    osDriver.Printf("driver %s", ((GDALDriver *) hDriver)->GetDescription());
+    return GDALValidateOptions( pszOptionList,
+                                (const char* const* )papszCreationOptions,
+                                "creation option",
+                                osDriver);
+}
 
-    if( papszCreationOptions == NULL || *papszCreationOptions == NULL)
+/************************************************************************/
+/*                     GDALValidateOpenOptions()                        */
+/************************************************************************/
+
+int GDALValidateOpenOptions( GDALDriverH hDriver,
+                             const char* const* papszOptionOptions)
+{
+    VALIDATE_POINTER1( hDriver, "GDALValidateOpenOptions", FALSE );
+    const char *pszOptionList = 
+        ((GDALDriver *) hDriver)->GetMetadataItem( GDAL_DMD_OPENOPTIONLIST );
+    CPLString osDriver;
+    osDriver.Printf("driver %s", ((GDALDriver *) hDriver)->GetDescription());
+    return GDALValidateOptions( pszOptionList, papszOptionOptions,
+                                "open option",
+                                osDriver);
+}
+
+/************************************************************************/
+/*                           GDALValidateOptions()                      */
+/************************************************************************/
+
+int GDALValidateOptions( const char* pszOptionList,
+                         const char* const* papszOptionsToValidate,
+                         const char* pszErrorMessageOptionType,
+                         const char* pszErrorMessageContainerName)
+{
+    int bRet = TRUE;
+
+    if( papszOptionsToValidate == NULL || *papszOptionsToValidate == NULL)
         return TRUE;
     if( pszOptionList == NULL )
         return TRUE;
@@ -1299,23 +1332,24 @@ int CPL_STDCALL GDALValidateCreationOptions( GDALDriverH hDriver,
     if (psNode == NULL)
     {
         CPLError(CE_Warning, CPLE_AppDefined,
-                 "Could not parse creation option list of driver %s. Assuming creation options are valid.",
-                 ((GDALDriver *) hDriver)->GetDescription());
+                 "Could not parse %s list of %s. Assuming options are valid.",
+                 pszErrorMessageOptionType, pszErrorMessageContainerName);
         return TRUE;
     }
 
-    while(*papszCreationOptions)
+    while(*papszOptionsToValidate)
     {
         char* pszKey = NULL;
-        const char* pszValue = CPLParseNameValue(*papszCreationOptions, &pszKey);
+        const char* pszValue = CPLParseNameValue(*papszOptionsToValidate, &pszKey);
         if (pszKey == NULL)
         {
             CPLError(CE_Warning, CPLE_NotSupported,
-                     "Creation option '%s' is not formatted with the key=value format",
-                     *papszCreationOptions);
+                     "%s '%s' is not formatted with the key=value format",
+                     pszErrorMessageOptionType,
+                     *papszOptionsToValidate);
             bRet = FALSE;
 
-            papszCreationOptions ++;
+            papszOptionsToValidate ++;
             continue;
         }
 
@@ -1344,13 +1378,14 @@ int CPL_STDCALL GDALValidateCreationOptions( GDALDriverH hDriver,
         if (psChildNode == NULL)
         {
             CPLError(CE_Warning, CPLE_NotSupported,
-                     "Driver %s does not support %s creation option",
-                     ((GDALDriver *) hDriver)->GetDescription(),
+                     "%s does not support %s %s",
+                     pszErrorMessageContainerName,
+                     pszErrorMessageOptionType,
                      pszKey);
             CPLFree(pszKey);
             bRet = FALSE;
 
-            papszCreationOptions ++;
+            papszOptionsToValidate ++;
             continue;
         }
         const char* pszType = CPLGetXMLValue(psChildNode, "type", NULL);
@@ -1365,8 +1400,8 @@ int CPL_STDCALL GDALValidateCreationOptions( GDALDriverH hDriver,
                            *pszValueIter == '+' || *pszValueIter == '-'))
                     {
                         CPLError(CE_Warning, CPLE_NotSupported,
-                             "'%s' is an unexpected value for %s creation option of type int.",
-                             pszValue, pszKey);
+                             "'%s' is an unexpected value for %s %s of type int.",
+                             pszValue, pszKey, pszErrorMessageOptionType);
                         bRet = FALSE;
                         break;
                     }
@@ -1382,8 +1417,8 @@ int CPL_STDCALL GDALValidateCreationOptions( GDALDriverH hDriver,
                            *pszValueIter == '+'))
                     {
                         CPLError(CE_Warning, CPLE_NotSupported,
-                             "'%s' is an unexpected value for %s creation option of type unsigned int.",
-                             pszValue, pszKey);
+                             "'%s' is an unexpected value for %s %s of type unsigned int.",
+                             pszValue, pszKey, pszErrorMessageOptionType);
                         bRet = FALSE;
                         break;
                     }
@@ -1397,8 +1432,8 @@ int CPL_STDCALL GDALValidateCreationOptions( GDALDriverH hDriver,
                 if ( !(endPtr == NULL || *endPtr == '\0') )
                 {
                     CPLError(CE_Warning, CPLE_NotSupported,
-                             "'%s' is an unexpected value for %s creation option of type float.",
-                             pszValue, pszKey);
+                             "'%s' is an unexpected value for %s %s of type float.",
+                             pszValue, pszKey, pszErrorMessageOptionType);
                     bRet = FALSE;
                 }
             }
@@ -1408,8 +1443,8 @@ int CPL_STDCALL GDALValidateCreationOptions( GDALDriverH hDriver,
                       EQUAL(pszValue, "OFF") || EQUAL(pszValue, "FALSE") || EQUAL(pszValue, "NO")))
                 {
                     CPLError(CE_Warning, CPLE_NotSupported,
-                             "'%s' is an unexpected value for %s creation option of type boolean.",
-                             pszValue, pszKey);
+                             "'%s' is an unexpected value for %s %s of type boolean.",
+                             pszValue, pszKey, pszErrorMessageOptionType);
                     bRet = FALSE;
                 }
             }
@@ -1441,8 +1476,8 @@ int CPL_STDCALL GDALValidateCreationOptions( GDALDriverH hDriver,
                 if (!bMatchFound)
                 {
                     CPLError(CE_Warning, CPLE_NotSupported,
-                             "'%s' is an unexpected value for %s creation option of type string-select.",
-                             pszValue, pszKey);
+                             "'%s' is an unexpected value for %s %s of type string-select.",
+                             pszValue, pszKey, pszErrorMessageOptionType);
                     bRet = FALSE;
                 }
             }
@@ -1454,8 +1489,9 @@ int CPL_STDCALL GDALValidateCreationOptions( GDALDriverH hDriver,
                     if ((int)strlen(pszValue) > atoi(pszMaxSize))
                     {
                         CPLError(CE_Warning, CPLE_NotSupported,
-                             "'%s' is of size %d, whereas maximum size for %s creation option is %d.",
-                             pszValue, (int)strlen(pszValue), pszKey, atoi(pszMaxSize));
+                             "'%s' is of size %d, whereas maximum size for %s %s is %d.",
+                             pszValue, (int)strlen(pszValue), pszKey,
+                                 pszErrorMessageOptionType, atoi(pszMaxSize));
                         bRet = FALSE;
                     }
                 }
@@ -1464,22 +1500,24 @@ int CPL_STDCALL GDALValidateCreationOptions( GDALDriverH hDriver,
             {
                 /* Driver error */
                 CPLError(CE_Warning, CPLE_NotSupported,
-                     "Driver %s : type '%s' for %s creation option is not recognized.",
-                     ((GDALDriver *) hDriver)->GetDescription(),
-                     pszType,
-                     pszKey);
+                         "%s : type '%s' for %s %s is not recognized.",
+                         pszErrorMessageContainerName,
+                         pszType,
+                         pszKey,
+                         pszErrorMessageOptionType);
             }
         }
         else
         {
             /* Driver error */
             CPLError(CE_Warning, CPLE_NotSupported,
-                     "Driver %s : no type for %s creation option.",
-                     ((GDALDriver *) hDriver)->GetDescription(),
-                     pszKey);
+                     "%s : no type for %s %s.",
+                     pszErrorMessageContainerName,
+                     pszKey,
+                     pszErrorMessageOptionType);
         }
         CPLFree(pszKey);
-        papszCreationOptions++;
+        papszOptionsToValidate++;
     }
 
     CPLDestroyXMLNode(psNode);

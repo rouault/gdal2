@@ -78,6 +78,7 @@ GDALOpenInfo::GDALOpenInfo( const char * pszFilenameIn, GDALAccess eAccessIn,
     bStatOK = FALSE;
     eAccess = eAccessIn;
     fpL = NULL;
+    papszOpenOptions = NULL;
 
 #ifdef HAVE_READLINK
     int  bHasRetried = FALSE;

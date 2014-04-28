@@ -2594,6 +2594,20 @@ GDALGeneralCmdLineProcessor( int nArgc, char ***ppapszArgv, int nOptions )
                 printf( "\n%s\n", pszFormattedXML );
                 CPLFree( pszFormattedXML );
             }
+            if( CSLFetchNameValue( papszMD, GDAL_DMD_OPENOPTIONLIST ) )
+            {
+                CPLXMLNode *psCOL = 
+                    CPLParseXMLString( 
+                        CSLFetchNameValue( papszMD, 
+                                           GDAL_DMD_OPENOPTIONLIST ) );
+                char *pszFormattedXML = 
+                    CPLSerializeXMLTree( psCOL );
+
+                CPLDestroyXMLNode( psCOL );
+                
+                printf( "%s\n", pszFormattedXML );
+                CPLFree( pszFormattedXML );
+            }
             return 0;
         }
 

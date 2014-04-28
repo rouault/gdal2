@@ -709,6 +709,28 @@ GDALDatasetShadow* Open( char const* utf8_path, GDALAccess eAccess = GA_ReadOnly
   return (GDALDatasetShadow*) ds;
 }
 %}
+
+%newobject OpenEx;
+%feature( "kwargs" ) OpenEx;
+%apply (char **options) {char** allowed_drivers};
+%apply (char **options) {char** open_options};
+%inline %{
+GDALDatasetShadow* OpenEx( char const* utf8_path, unsigned int nOpenFlags = 0,
+                           char** allowed_drivers = NULL, char** open_options = NULL ) {
+  CPLErrorReset();
+  GDALDatasetShadow *ds = GDALOpenEx( utf8_path, nOpenFlags, allowed_drivers, open_options);
+  if( ds != NULL && CPLGetLastErrorType() == CE_Failure )
+  {
+      if ( GDALDereferenceDataset( ds ) <= 0 )
+          GDALClose(ds);
+      ds = NULL;
+  }
+  return (GDALDatasetShadow*) ds;
+}
+%}
+%clear char** allowed_drivers;
+%clear char** open_options;
+
 #endif
 
 %newobject OpenShared;

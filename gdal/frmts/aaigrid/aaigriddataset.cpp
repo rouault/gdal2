@@ -741,6 +741,8 @@ GDALDataset *AAIGDataset::CommonOpen( GDALOpenInfo * poOpenInfo,
     const char* pszDataTypeOption = (eFormat == FORMAT_AAIG) ? "AAIGRID_DATATYPE":
                                                                "GRASSASCIIGRID_DATATYPE";
     const char* pszDataType = CPLGetConfigOption(pszDataTypeOption, NULL);
+    if( pszDataType == NULL )
+        pszDataType = CSLFetchNameValue( poOpenInfo->papszOpenOptions, "DATATYPE" );
     if (pszDataType != NULL)
     {
         poDS->eDataType = GDALGetDataTypeByName(pszDataType);
@@ -1304,6 +1306,14 @@ void GDALRegister_AAIGrid()
 "   <Option name='DECIMAL_PRECISION' type='int' description='Number of decimal when writing floating-point numbers(%f).'/>\n"
 "   <Option name='SIGNIFICANT_DIGITS' type='int' description='Number of significant digits when writing floating-point numbers(%g).'/>\n"
 "</CreationOptionList>\n" );
+        poDriver->SetMetadataItem( GDAL_DMD_OPENOPTIONLIST, 
+"<OpenOptionLists>\n"
+"   <Option name='DATATYPE' type='string-select' description='Data type to be used.'>\n"
+"       <Value>Int32</Value>\n"
+"       <Value>Float32</Value>\n"
+"       <Value>Float64</Value>\n"
+"   </Option>\n"
+"</OpenOptionLists>\n" );
 
         poDriver->pfnOpen = AAIGDataset::Open;
         poDriver->pfnIdentify = AAIGDataset::Identify;

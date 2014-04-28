@@ -1735,6 +1735,14 @@ def Open(*args):
   return _gdal.Open(*args)
 Open = _gdal.Open
 
+def OpenEx(*args, **kwargs):
+  """
+    OpenEx(char utf8_path, unsigned int nOpenFlags = 0, char allowed_drivers = None, 
+        char open_options = None) -> Dataset
+    """
+  return _gdal.OpenEx(*args, **kwargs)
+OpenEx = _gdal.OpenEx
+
 def OpenShared(*args):
   """OpenShared(char utf8_path, GDALAccess eAccess = GA_ReadOnly) -> Dataset"""
   return _gdal.OpenShared(*args)

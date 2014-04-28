@@ -44,10 +44,11 @@ CPL_CVSID("$Id$");
 OGRDataSourceH RasterliteOpenSQLiteDB(const char* pszFilename,
                                       GDALAccess eAccess)
 {
-    const char* apszAllowedDrivers[] = { "SQLITE", NULL };
-    return (OGRDataSourceH)GDALOpenInternal(pszFilename,
-                                            eAccess,
-                                            (char**)apszAllowedDrivers);
+    const char* const apszAllowedDrivers[] = { "SQLITE", NULL };
+    return (OGRDataSourceH)GDALOpenEx(pszFilename,
+                                      GDAL_OF_VECTOR |
+                                      ((eAccess == GA_Update) ? GDAL_OF_UPDATE : 0),
+                                      apszAllowedDrivers, NULL);
 }
 
 /************************************************************************/
