@@ -206,7 +206,7 @@ class CPL_DLL OGRLayer : public GDALMajorObject
 /************************************************************************/
 
 /**
- * LEGACY class. USe GDALDataset in your new code !
+ * LEGACY class. Use GDALDataset in your new code !
  * 
  * This class represents a data source.  A data source potentially
  * consists of many layers (OGRLayer).  A data source normally consists
@@ -215,6 +215,8 @@ class CPL_DLL OGRLayer : public GDALMajorObject
  *
  * When an OGRDataSource is destroyed, all it's associated OGRLayers objects
  * are also destroyed.
+ *
+ * @deprecated
  */ 
 
 class CPL_DLL OGRDataSource : public GDALDataset
@@ -232,12 +234,16 @@ public:
 /************************************************************************/
 
 /**
+ * LEGACY class. Use GDALDriver in your new code !
+ *
  * Represents an operational format driver.
  *
  * One OGRSFDriver derived class will normally exist for each file format
  * registered for use, regardless of whether a file has or will be opened.
  * The list of available drivers is normally managed by the
  * OGRSFDriverRegistrar.
+ *
+ * @deprecated
  */
 
 class CPL_DLL OGRSFDriver : public GDALDriver
@@ -248,6 +254,8 @@ class CPL_DLL OGRSFDriver : public GDALDriver
     virtual const char  *GetName() = 0;
 
     virtual OGRDataSource *Open( const char *pszName, int bUpdate=FALSE ) = 0;
+    
+    virtual int            TestCapability( const char *pszCap ) = 0;
 
     virtual OGRDataSource *CreateDataSource( const char *pszName,
                                              char ** = NULL );
@@ -260,11 +268,15 @@ class CPL_DLL OGRSFDriver : public GDALDriver
 /************************************************************************/
 
 /**
+ * LEGACY class. Use GDALDriverManager in your new code !
+ *
  * Singleton manager for OGRSFDriver instances that will be used to try
  * and open datasources.  Normally the registrar is populated with 
  * standard drivers using the OGRRegisterAll() function and does not need
  * to be directly accessed.  The driver registrar and all registered drivers
  * may be cleaned up on shutdown using OGRCleanupAll().
+ *
+ * @deprecated
  */
 
 class CPL_DLL OGRSFDriverRegistrar

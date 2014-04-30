@@ -712,7 +712,7 @@ int OGRGeneralCmdLineProcessor( int nArgc, char ***ppapszArgv, int nOptions )
             {
                 GDALDriver *poDriver = poR->GetDriver(iDr);
 
-                if( poDriver->TestCapability( ODrCCreateDataSource ) )
+                if( CSLTestBoolean( CSLFetchNameValueDef(poDriver->GetMetadata(), GDAL_DCAP_CREATE, "FALSE") ) )
                     printf( "  -> \"%s\" (read/write)\n", 
                             poDriver->GetDescription() );
                 else

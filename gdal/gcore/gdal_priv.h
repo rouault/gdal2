@@ -785,7 +785,6 @@ class CPL_DLL GDALDriver : public GDALMajorObject
                                      GDALProgressFunc pfnProgress, 
                                      void * pProgressData ) CPL_WARN_UNUSED_RESULT;
 
-    virtual int         TestCapability( const char * );
 /* -------------------------------------------------------------------- */
 /*      The following are semiprivate, not intended to be accessed      */
 /*      by anyone but the formats instantiating and populating the      */

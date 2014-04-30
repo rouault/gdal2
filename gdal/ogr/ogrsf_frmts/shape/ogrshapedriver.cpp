@@ -193,22 +193,6 @@ CPLErr OGRShapeDriver::Delete( const char *pszDataSource )
     return CE_None;
 }
 
-
-/************************************************************************/
-/*                           TestCapability()                           */
-/************************************************************************/
-
-int OGRShapeDriver::TestCapability( const char * pszCap )
-
-{
-    if( EQUAL(pszCap,ODrCCreateDataSource) )
-        return TRUE;
-    else if( EQUAL(pszCap,ODrCDeleteDataSource) )
-        return TRUE;
-    else
-        return FALSE;
-}
-
 /************************************************************************/
 /*                          RegisterOGRShape()                          */
 /************************************************************************/

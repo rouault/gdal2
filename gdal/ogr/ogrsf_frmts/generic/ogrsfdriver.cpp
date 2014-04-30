@@ -140,7 +140,19 @@ int OGR_Dr_TestCapability( OGRSFDriverH hDriver, const char *pszCap )
     VALIDATE_POINTER1( hDriver, "OGR_Dr_TestCapability", 0 );
     VALIDATE_POINTER1( pszCap, "OGR_Dr_TestCapability", 0 );
 
-    return ((GDALDriver *) hDriver)->TestCapability( pszCap );
+    GDALDriver* poDriver = (GDALDriver *) hDriver;
+    if( EQUAL(pszCap, ODrCCreateDataSource) )
+    {
+        return poDriver->pfnCreate != NULL ||
+               poDriver->pfnCreateVectorOnly != NULL;
+    }
+    else if( EQUAL(pszCap, ODrCDeleteDataSource) )
+    {
+        return poDriver->pfnDelete != NULL ||
+               poDriver->pfnDeleteDataSource != NULL;
+    }
+    else
+        return FALSE;
 }
 
 /************************************************************************/
@@ -158,7 +170,7 @@ OGRDataSourceH OGR_Dr_CopyDataSource( OGRSFDriverH hDriver,
     VALIDATE_POINTER1( pszNewName, "OGR_Dr_CopyDataSource", NULL );
 
     GDALDriver* poDriver = (GDALDriver*)hDriver;
-    if( !poDriver->TestCapability( ODrCCreateDataSource ) )
+    if( !poDriver->GetMetadataItem( GDAL_DCAP_CREATE ) )
     {
         CPLError( CE_Failure, CPLE_NotSupported, 
                   "%s driver does not support data source creation.",

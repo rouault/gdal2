@@ -251,8 +251,6 @@ class OGRShapeDriver : public GDALDriver
                                         int nBands, int nXSize, int nYSize, GDALDataType eDT,
                                         char **papszOptions );
     static CPLErr       Delete( const char *pszDataSource );
-
-    int                 TestCapability( const char * );
 };
 
 

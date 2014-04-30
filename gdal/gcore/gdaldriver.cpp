@@ -1615,8 +1615,3 @@ GDALIdentifyDriver( const char * pszFilename,
 
     return NULL;
 }
-
-int GDALDriver::TestCapability( const char * )
-{
-    return FALSE;
-}

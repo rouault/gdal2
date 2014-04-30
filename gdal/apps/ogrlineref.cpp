@@ -100,7 +100,7 @@ static void Usage(const char* pszAdditionalMsg, int bShort = TRUE)
     {
         GDALDriver *poDriver = poR->GetDriver(iDriver);
 
-        if (poDriver->TestCapability(ODrCCreateDataSource))
+        if( CSLTestBoolean( CSLFetchNameValueDef(poDriver->GetMetadata(), GDAL_DCAP_CREATE, "FALSE") ) )
             printf("     -f \"%s\"\n", poDriver->GetDescription());
     }
 
@@ -1399,7 +1399,7 @@ int main( int nArgc, char ** papszArgv )
             exit( 1 );
         }
 
-        if( !poDriver->TestCapability( ODrCCreateDataSource ) )
+        if( !CSLTestBoolean( CSLFetchNameValueDef(poDriver->GetMetadata(), GDAL_DCAP_CREATE, "FALSE") ) )
         {
             fprintf( stderr,  "%s driver does not support data source creation.\n",
                     pszFormat );
@@ -1657,7 +1657,7 @@ int main( int nArgc, char ** papszArgv )
             exit(1);
         }
 
-        if (!poDriver->TestCapability(ODrCCreateDataSource))
+        if( !CSLTestBoolean( CSLFetchNameValueDef(poDriver->GetMetadata(), GDAL_DCAP_CREATE, "FALSE") ) )
         {
             fprintf(stderr, "%s driver does not support data source creation.\n",
                 pszFormat);
