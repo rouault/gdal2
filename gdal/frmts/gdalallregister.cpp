@@ -49,25 +49,8 @@ static char *szConfiguredFormats = "GDAL_FORMATS";
  * Register all known configured GDAL drivers.
  *
  * This function will drive any of the following that are configured into
- * GDAL.  Many others as well haven't been updated in this
- * documentation (see <a href="http://gdal.org/formats_list.html">full list</a>):
- *
- * <ul>
- * <li> GeoTIFF (GTiff)
- * <li> Geosoft GXF (GXF)
- * <li> Erdas Imagine (HFA)
- * <li> CEOS (CEOS)
- * <li> ELAS (ELAS)
- * <li> Arc/Info Binary Grid (AIGrid)
- * <li> SDTS Raster DEM (SDTS)
- * <li> OGDI (OGDI)
- * <li> ESRI Labelled BIL (EHdr)
- * <li> PCI .aux Labelled Raw Raster (PAux)
- * <li> HDF4 Hierachal Data Format Release 4
- * <li> HDF5 Hierachal Data Format Release 5
- * <li> GSAG Golden Software ASCII Grid
- * <li> GSBG Golden Software Binary Grid
- * </ul>
+ * GDAL.  See <a href="http://gdal.org/formats_list.html">raster list</a> and
+ * <a href="http://gdal.org/ogr/ogr_formats.html">vector full list</a>
  *
  * This function should generally be called once at the beginning of the application.
  */

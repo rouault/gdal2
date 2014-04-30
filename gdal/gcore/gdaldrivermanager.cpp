@@ -575,44 +575,58 @@ GDALDriverH CPL_STDCALL GDALGetDriverByName( const char * pszName )
 /**
  * \brief This method unload undesirable drivers.
  *
- * All drivers specified in the space delimited list in the GDAL_SKIP 
+ * All drivers specified in the comma delimited list in the GDAL_SKIP 
  * environment variable) will be deregistered and destroyed.  This method 
  * should normally be called after registration of standard drivers to allow 
  * the user a way of unloading undesired drivers.  The GDALAllRegister()
  * function already invokes AutoSkipDrivers() at the end, so if that functions
  * is called, it should not be necessary to call this method from application
  * code. 
+ *
+ * Note: space separator is also accepted for backward compatibility, but some
+ * vector formats have spaces in their names, so it is encouraged to use comma
+ * to avoid issues.
  */
 
 void GDALDriverManager::AutoSkipDrivers()
 
 {
-    if( CPLGetConfigOption( "GDAL_SKIP", NULL ) == NULL &&
-        CPLGetConfigOption( "OGR_SKIP", NULL ) == NULL )
-        return;
-
-    CPLString osDriversToSkip( CPLGetConfigOption( "GDAL_SKIP", "" ) );
-    osDriversToSkip += " ";
-    osDriversToSkip += CPLGetConfigOption( "OGR_SKIP", "" );
-    char **papszList = CSLTokenizeString( osDriversToSkip );
-
-    for( int i = 0; i < CSLCount(papszList); i++ )
+    char **apapszList[2] = { NULL, NULL };
+    const char* pszGDAL_SKIP = CPLGetConfigOption( "GDAL_SKIP", NULL );
+    if( pszGDAL_SKIP != NULL )
     {
-        GDALDriver *poDriver = GetDriverByName( papszList[i] );
+        /* Favour comma as a separator. If not found, then use space */
+        const char* pszSep = (strchr(pszGDAL_SKIP, ',') != NULL) ? "," : " ";
+        apapszList[0] = CSLTokenizeStringComplex( pszGDAL_SKIP, pszSep, FALSE, FALSE);
+    }
+    const char* pszOGR_SKIP = CPLGetConfigOption( "OGR_SKIP", NULL );
+    if( pszOGR_SKIP != NULL )
+    {
+        /* OGR has always used comma as a separator */
+        apapszList[1] = CSLTokenizeStringComplex(pszOGR_SKIP, ",", FALSE, FALSE);
+    }
 
-        if( poDriver == NULL )
-            CPLError( CE_Warning, CPLE_AppDefined, 
-                      "Unable to find driver %s to unload from GDAL_SKIP environment variable.", 
-                      papszList[i] );
-        else
+    for( int j = 0; j < 2; j++ )
+    {
+        for( int i = 0; apapszList[j] != NULL &&  apapszList[j][i] != NULL; i++ )
         {
-            CPLDebug( "GDAL", "AutoSkipDriver(%s)", papszList[i] );
-            DeregisterDriver( poDriver );
-            delete poDriver;
+            GDALDriver *poDriver = GetDriverByName( apapszList[j][i] );
+
+            if( poDriver == NULL )
+                CPLError( CE_Warning, CPLE_AppDefined, 
+                        "Unable to find driver %s to unload from GDAL_SKIP environment variable.", 
+                        apapszList[j][i] );
+            else
+            {
+                CPLDebug( "GDAL", "AutoSkipDriver(%s)", apapszList[j][i] );
+                DeregisterDriver( poDriver );
+                delete poDriver;
+            }
         }
     }
 
-    CSLDestroy( papszList );
+    CSLDestroy( apapszList[0] );
+    CSLDestroy( apapszList[1] );
 }
 
 /************************************************************************/
@@ -646,6 +660,8 @@ void GDALDriverManager::AutoLoadDrivers()
     char     **papszSearchPath = NULL;
     const char *pszGDAL_DRIVER_PATH = 
         CPLGetConfigOption( "GDAL_DRIVER_PATH", NULL );
+    if( pszGDAL_DRIVER_PATH == NULL )
+        pszGDAL_DRIVER_PATH = CPLGetConfigOption( "OGR_DRIVER_PATH", NULL );
 
 /* -------------------------------------------------------------------- */
 /*      Allow applications to completely disable this search by         */
