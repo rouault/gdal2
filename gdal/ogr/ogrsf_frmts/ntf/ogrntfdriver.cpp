@@ -48,41 +48,42 @@ OGRNTFDriver::~OGRNTFDriver()
 }
 
 /************************************************************************/
-/*                              GetName()                               */
-/************************************************************************/
-
-const char *OGRNTFDriver::GetName()
-
-{
-    return "UK .NTF";
-}
-
-/************************************************************************/
-/*                           TestCapability()                           */
-/************************************************************************/
-
-int OGRNTFDriver::TestCapability( const char * )
-
-{
-    return FALSE;
-}
-
-/************************************************************************/
 /*                                Open()                                */
 /************************************************************************/
 
-OGRDataSource *OGRNTFDriver::Open( const char * pszFilename, int bUpdate )
+GDALDataset *OGRNTFDriver::Open( GDALOpenInfo* poOpenInfo )
 
 {
     OGRNTFDataSource    *poDS = new OGRNTFDataSource;
 
-    if( !poDS->Open( pszFilename, TRUE ) )
+    if( !poOpenInfo->bStatOK )
+        return NULL;
+    if( poOpenInfo->fpL != NULL )
+    {
+        if( poOpenInfo->nHeaderBytes < 80 )
+            return NULL;
+        const char* pszHeader = (const char*)poOpenInfo->pabyHeader;
+        if( !EQUALN(pszHeader,"01",2) )
+            return NULL;
+
+        int j;
+        for( j = 0; j < 80; j++ )
+        {
+            if( pszHeader[j] == 10 || pszHeader[j] == 13 )
+                break;
+        }
+
+        if( j == 80 || pszHeader[j-1] != '%' )
+            return FALSE;
+    }
+
+    if( !poDS->Open( poOpenInfo->pszFilename, TRUE ) )
     {
         delete poDS;
         poDS = NULL;
     }
 
-    if( poDS != NULL && bUpdate )
+    if( poDS != NULL && poOpenInfo->eAccess == GA_Update )
     {
         CPLError( CE_Failure, CPLE_OpenFailed,
                   "NTF Driver doesn't support update." );
@@ -100,6 +101,22 @@ OGRDataSource *OGRNTFDriver::Open( const char * pszFilename, int bUpdate )
 void RegisterOGRNTF()
 
 {
-    OGRSFDriverRegistrar::GetRegistrar()->RegisterDriver( new OGRNTFDriver );
+    GDALDriver  *poDriver;
+
+    if( GDALGetDriverByName( "UK .NTF" ) == NULL )
+    {
+        poDriver = new OGRNTFDriver();
+
+        poDriver->SetDescription( "UK .NTF" );
+        poDriver->SetMetadataItem( GDAL_DCAP_VECTOR, "YES" );
+        poDriver->SetMetadataItem( GDAL_DMD_LONGNAME,
+                                   "UK .NTF" );
+        poDriver->SetMetadataItem( GDAL_DMD_HELPTOPIC,
+                                   "drv_ntf.html" );
+
+        poDriver->pfnOpen = OGRNTFDriver::Open;
+
+        GetGDALDriverManager()->RegisterDriver( poDriver );
+    }
 }
 

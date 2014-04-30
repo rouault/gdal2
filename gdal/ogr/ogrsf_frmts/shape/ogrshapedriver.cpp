@@ -51,6 +51,16 @@ GDALDataset *OGRShapeDriver::Open( GDALOpenInfo* poOpenInfo )
 {
     OGRShapeDataSource  *poDS;
 
+    /* Files not ending with .shp or .dbf are not handled by this driver */
+    if( !poOpenInfo->bStatOK )
+        return NULL;
+    if( poOpenInfo->fpL != NULL &&
+        !EQUAL(CPLGetExtension(poOpenInfo->pszFilename), "SHP") &&
+        !EQUAL(CPLGetExtension(poOpenInfo->pszFilename), "DBF") )
+    {
+        return NULL;
+    }
+
     poDS = new OGRShapeDataSource();
 
     if( !poDS->Open( poOpenInfo, TRUE ) )

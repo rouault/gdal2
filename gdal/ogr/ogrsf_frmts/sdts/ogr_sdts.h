@@ -103,15 +103,13 @@ class OGRSDTSDataSource : public OGRDataSource
 /*                            OGRSDTSDriver                             */
 /************************************************************************/
 
-class OGRSDTSDriver : public OGRSFDriver
+class OGRSDTSDriver : public GDALDriver
 {
   public:
                 ~OGRSDTSDriver();
-                
-    const char *GetName();
-    OGRDataSource *Open( const char *, int );
-    int         TestCapability( const char * );
-};
 
+    /* static int         Identify( GDALOpenInfo* poOpenInfo ); */
+    static GDALDataset *Open( GDALOpenInfo* poOpenInfo );
+};
 
 #endif /* ndef _OGR_SDTS_H_INCLUDED */

@@ -107,7 +107,7 @@ class OGRTABDataSource : public OGRDataSource
                 OGRTABDataSource();
     virtual     ~OGRTABDataSource();
 
-    int         Open( const char *pszName, int bTestOpen );
+    int         Open( GDALOpenInfo* poOpenInfo, int bTestOpen );
     int         Create( const char *pszName, char ** papszOptions );
 
     const char  *GetName() { return m_pszName; }
@@ -125,16 +125,17 @@ class OGRTABDataSource : public OGRDataSource
 /*                             OGRTABDriver                             */
 /************************************************************************/
 
-class OGRTABDriver : public OGRSFDriver
+class OGRTABDriver : public GDALDriver
 {
 public:
     virtual     ~OGRTABDriver();
 
-    const char  *GetName();
-    OGRDataSource *Open ( const char *,int );
-    int         TestCapability( const char * );
-    virtual OGRDataSource *CreateDataSource( const char *, char ** = NULL );
-    virtual OGRErr DeleteDataSource( const char * );
+    /* static int         Identify( GDALOpenInfo* poOpenInfo ); */
+    static GDALDataset *Open( GDALOpenInfo* poOpenInfo );
+    static GDALDataset *Create( const char * pszName,
+                                        int nBands, int nXSize, int nYSize, GDALDataType eDT,
+                                        char **papszOptions );
+    static CPLErr       Delete( const char *pszDataSource );
 };
 
 void CPL_DLL RegisterOGRTAB();

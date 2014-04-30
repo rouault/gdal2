@@ -785,6 +785,15 @@ CPLErr GDALDriver::QuietDelete( const char *pszName )
     if( poDriver == NULL )
         return CE_None;
 
+    VSIStatBufL sStat;
+    if( VSIStatExL(pszName, &sStat, VSI_STAT_EXISTS_FLAG | VSI_STAT_NATURE_FLAG) == 0 &&
+        VSI_ISDIR(sStat.st_mode) )
+    {
+        /* It is not desirable to remove directories quietly */
+        /* Necessary to avoid ogr_mitab_12 to destroy file created at ogr_mitab_7 */
+        return CE_None;
+    }
+
     CPLDebug( "GDAL", "QuietDelete(%s) invoking Delete()", pszName );
 
     return poDriver->Delete( pszName );

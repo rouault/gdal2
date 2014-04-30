@@ -42,41 +42,34 @@ OGRSDTSDriver::~OGRSDTSDriver()
 }
 
 /************************************************************************/
-/*                           TestCapability()                           */
-/************************************************************************/
-
-int OGRSDTSDriver::TestCapability( const char * )
-
-{
-    return FALSE;
-}
-
-/************************************************************************/
-/*                              GetName()                               */
-/************************************************************************/
-
-const char *OGRSDTSDriver::GetName()
-
-{
-    return "OGR_SDTS";
-}
-
-/************************************************************************/
 /*                                Open()                                */
 /************************************************************************/
 
-OGRDataSource *OGRSDTSDriver::Open( const char * pszFilename, int bUpdate )
+GDALDataset *OGRSDTSDriver::Open( GDALOpenInfo* poOpenInfo )
 
 {
     OGRSDTSDataSource   *poDS = new OGRSDTSDataSource();
 
-    if( !poDS->Open( pszFilename, TRUE ) )
+    if( !EQUAL(CPLGetExtension(poOpenInfo->pszFilename), "DDF") )
+        return NULL;
+    if( poOpenInfo->nHeaderBytes < 10 )
+        return NULL;
+    const char* pachLeader = (const char* )poOpenInfo->pabyHeader;
+    if( (pachLeader[5] != '1' && pachLeader[5] != '2'
+                && pachLeader[5] != '3' )
+            || pachLeader[6] != 'L'
+            || (pachLeader[8] != '1' && pachLeader[8] != ' ') )
+    {
+        return NULL;
+    }
+
+    if( !poDS->Open( poOpenInfo->pszFilename, TRUE ) )
     {
         delete poDS;
         poDS = NULL;
     }
 
-    if( poDS != NULL && bUpdate )
+    if( poDS != NULL && poOpenInfo->eAccess == GA_Update )
     {
         CPLError( CE_Failure, CPLE_OpenFailed,
                   "SDTS Driver doesn't support update." );
@@ -94,8 +87,21 @@ OGRDataSource *OGRSDTSDriver::Open( const char * pszFilename, int bUpdate )
 void RegisterOGRSDTS()
 
 {
-    if (! GDAL_CHECK_VERSION("SDTS driver"))
-        return;
-    OGRSFDriverRegistrar::GetRegistrar()->RegisterDriver( new OGRSDTSDriver );
-}
+    GDALDriver  *poDriver;
 
+    if( GDALGetDriverByName( "OGR_SDTS" ) == NULL )
+    {
+        poDriver = new OGRSDTSDriver();
+
+        poDriver->SetDescription( "OGR_SDTS" );
+        poDriver->SetMetadataItem( GDAL_DCAP_VECTOR, "YES" );
+        poDriver->SetMetadataItem( GDAL_DMD_LONGNAME,
+                                   "SDTS" );
+        poDriver->SetMetadataItem( GDAL_DMD_HELPTOPIC,
+                                   "drv_sdts.html" );
+
+        poDriver->pfnOpen = OGRSDTSDriver::Open;
+
+        GetGDALDriverManager()->RegisterDriver( poDriver );
+    }
+}

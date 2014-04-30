@@ -212,40 +212,23 @@ int OGRTABDataSource::Create( const char * pszName, char **papszOptions )
 /*      Open an existing file, or directory of files.                   */
 /************************************************************************/
 
-int OGRTABDataSource::Open( const char * pszName, int bTestOpen )
+int OGRTABDataSource::Open( GDALOpenInfo* poOpenInfo, int bTestOpen )
 
 {
     VSIStatBuf  stat;
 
     CPLAssert( m_pszName == NULL );
-    
-    m_pszName = CPLStrdup( pszName );
 
-/* -------------------------------------------------------------------- */
-/*      Is this a file or directory?                                    */
-/* -------------------------------------------------------------------- */
-    if( VSIStat( pszName, &stat ) != 0 
-        || (!VSI_ISDIR(stat.st_mode) && !VSI_ISREG(stat.st_mode)) )
-    {
-        if( !bTestOpen )
-        {
-            CPLError( CE_Failure, CPLE_OpenFailed,
-                      "%s is not a file or directory.\n"
-                      "Unable to open as a Mapinfo dataset.\n",
-                      pszName );
-        }
-
-        return FALSE;
-    }
+    m_pszName = CPLStrdup( poOpenInfo->pszFilename );
 
 /* -------------------------------------------------------------------- */
 /*      If it is a file, try to open as a Mapinfo file.                 */
 /* -------------------------------------------------------------------- */
-    if( VSI_ISREG(stat.st_mode) )
+    if( !poOpenInfo->bIsDirectory )
     {
         IMapInfoFile    *poFile;
 
-        poFile = IMapInfoFile::SmartOpen( pszName, bTestOpen );
+        poFile = IMapInfoFile::SmartOpen( m_pszName, bTestOpen );
         if( poFile == NULL )
             return FALSE;
 
@@ -253,7 +236,7 @@ int OGRTABDataSource::Open( const char * pszName, int bTestOpen )
         m_papoLayers = (IMapInfoFile **) CPLMalloc(sizeof(void*));
         m_papoLayers[0] = poFile;
 
-        m_pszDirectory = CPLStrdup( CPLGetPath(pszName) );
+        m_pszDirectory = CPLStrdup( CPLGetPath(m_pszName) );
     }
 
 /* -------------------------------------------------------------------- */
@@ -262,9 +245,9 @@ int OGRTABDataSource::Open( const char * pszName, int bTestOpen )
 /* -------------------------------------------------------------------- */
     else
     {
-        char    **papszFileList = CPLReadDir( pszName );
+        char    **papszFileList = CPLReadDir( m_pszName );
         
-        m_pszDirectory = CPLStrdup( pszName );
+        m_pszDirectory = CPLStrdup( m_pszName );
 
         for( int iFile = 0;
              papszFileList != NULL && papszFileList[iFile] != NULL;

@@ -562,14 +562,13 @@ class OGRNTFDataSource : public OGRDataSource
 /*                             OGRNTFDriver                             */
 /************************************************************************/
 
-class OGRNTFDriver : public OGRSFDriver
+class OGRNTFDriver : public GDALDriver
 {
   public:
                 ~OGRNTFDriver();
-                
-    const char *GetName();
-    OGRDataSource *Open( const char *, int );
-    int                 TestCapability( const char * );
+
+    /* static int         Identify( GDALOpenInfo* poOpenInfo ); */
+    static GDALDataset *Open( GDALOpenInfo* poOpenInfo );
 };
 
 /************************************************************************/
