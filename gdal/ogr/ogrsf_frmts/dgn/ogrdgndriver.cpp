@@ -40,6 +40,7 @@ static int OGRDGNDriverIdentify( GDALOpenInfo* poOpenInfo )
 
 {
     return poOpenInfo->fpL != NULL &&
+           poOpenInfo->nHeaderBytes >= 512 &&
            DGNTestOpen(poOpenInfo->pabyHeader, poOpenInfo->nHeaderBytes);
 }
 
