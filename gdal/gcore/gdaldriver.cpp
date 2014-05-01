@@ -780,7 +780,9 @@ GDALDatasetH CPL_STDCALL GDALCreateCopy( GDALDriverH hDriver,
 CPLErr GDALDriver::QuietDelete( const char *pszName )
 
 {
+    CPLPushErrorHandler(CPLQuietErrorHandler);
     GDALDriver *poDriver = (GDALDriver*) GDALIdentifyDriver( pszName, NULL );
+    CPLPopErrorHandler();
 
     if( poDriver == NULL )
         return CE_None;
