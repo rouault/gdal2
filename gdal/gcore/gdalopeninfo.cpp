@@ -73,6 +73,7 @@ GDALOpenInfo::GDALOpenInfo( const char * pszFilenameIn, GDALAccess eAccessIn,
 /* -------------------------------------------------------------------- */
 
     nHeaderBytes = 0;
+    nHeaderBytesTried = 0;
     pabyHeader = NULL;
     bIsDirectory = FALSE;
     bStatOK = FALSE;
@@ -104,7 +105,8 @@ retry:
             fpL = VSIFOpenL( pszFilename, (eAccess == GA_Update) ? "r+b" : "rb" );
             if( fpL != NULL )
             {
-                nHeaderBytes = (int) VSIFReadL( pabyHeader, 1, 1024, fpL );
+                nHeaderBytesTried = 1024;
+                nHeaderBytes = (int) VSIFReadL( pabyHeader, 1, nHeaderBytesTried, fpL );
                 VSIRewindL( fpL );
             }
         }
@@ -186,3 +188,22 @@ GDALOpenInfo::~GDALOpenInfo()
     CSLDestroy( papszSiblingFiles );
 }
 
+/************************************************************************/
+/*                           TryToIngest()                              */
+/************************************************************************/
+
+int GDALOpenInfo::TryToIngest(int nBytes)
+{
+    if( fpL == NULL )
+        return FALSE;
+    if( nHeaderBytes < nHeaderBytesTried )
+        return TRUE;
+    pabyHeader = (GByte*) CPLRealloc(pabyHeader, nBytes + 1);
+    memset(pabyHeader, 0, nBytes + 1);
+    VSIRewindL(fpL);
+    nHeaderBytesTried = nBytes;
+    nHeaderBytes = (int) VSIFReadL(pabyHeader, 1, nBytes, fpL);
+    VSIRewindL(fpL);
+
+    return TRUE;
+}

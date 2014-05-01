@@ -240,6 +240,8 @@ class CPL_DLL GDALOpenInfo
     int         nHeaderBytes;
     GByte       *pabyHeader;
 
+    int         nHeaderBytesTried;
+    int         TryToIngest(int nBytes);
 };
 
 /* ******************************************************************** */
