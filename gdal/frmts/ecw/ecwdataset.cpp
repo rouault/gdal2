@@ -2518,10 +2518,10 @@ GDALDataset *ECWDataset::Open( GDALOpenInfo * poOpenInfo, int bIsJPEG2000 )
             poDS->bGeoTransformValid |= 
                 GDALReadWorldFile2( osFilename, NULL,
                                     poDS->adfGeoTransform,
-                                    poOpenInfo->papszSiblingFiles, NULL )
+                                    poOpenInfo->GetSiblingFiles(), NULL )
                 || GDALReadWorldFile2( osFilename, ".wld",
                                     poDS->adfGeoTransform,
-                                    poOpenInfo->papszSiblingFiles, NULL );
+                                    poOpenInfo->GetSiblingFiles(), NULL );
         }
     }
 

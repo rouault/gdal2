@@ -221,13 +221,16 @@ class CPL_DLL GDALDefaultOverviews
 
 class CPL_DLL GDALOpenInfo
 {
+    int         bHasGotSiblingFiles;
+    char        **papszSiblingFiles;
+    int         nHeaderBytesTried;
+
   public:
                 GDALOpenInfo( const char * pszFile, GDALAccess eAccessIn,
                               char **papszSiblingFiles = NULL );
                 ~GDALOpenInfo( void );
 
     char        *pszFilename;
-    char        **papszSiblingFiles;
     char**      papszOpenOptions;
 
     GDALAccess  eAccess;
@@ -240,8 +243,8 @@ class CPL_DLL GDALOpenInfo
     int         nHeaderBytes;
     GByte       *pabyHeader;
 
-    int         nHeaderBytesTried;
     int         TryToIngest(int nBytes);
+    char      **GetSiblingFiles();
 };
 
 /* ******************************************************************** */

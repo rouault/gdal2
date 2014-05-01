@@ -1210,13 +1210,13 @@ GDALDataset *PNGDataset::Open( GDALOpenInfo * poOpenInfo )
 /*      Initialize any PAM information.                                 */
 /* -------------------------------------------------------------------- */
     poDS->SetDescription( poOpenInfo->pszFilename );
-    poDS->TryLoadXML( poOpenInfo->papszSiblingFiles );
+    poDS->TryLoadXML( poOpenInfo->GetSiblingFiles() );
 
 /* -------------------------------------------------------------------- */
 /*      Open overviews.                                                 */
 /* -------------------------------------------------------------------- */
     poDS->oOvManager.Initialize( poDS, poOpenInfo->pszFilename,
-                                 poOpenInfo->papszSiblingFiles );
+                                 poOpenInfo->GetSiblingFiles() );
 
     return poDS;
 }

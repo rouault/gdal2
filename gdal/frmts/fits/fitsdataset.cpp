@@ -512,7 +512,7 @@ GDALDataset* FITSDataset::Open(GDALOpenInfo* poOpenInfo) {
 /* -------------------------------------------------------------------- */
 /*      Check for external overviews.                                   */
 /* -------------------------------------------------------------------- */
-      dataset->oOvManager.Initialize( dataset, poOpenInfo->pszFilename, poOpenInfo->papszSiblingFiles );
+      dataset->oOvManager.Initialize( dataset, poOpenInfo->pszFilename, poOpenInfo->GetSiblingFiles() );
 
       return dataset;
   }

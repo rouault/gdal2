@@ -1860,7 +1860,7 @@ GDALDataset *JPGDatasetCommon::Open( GDALOpenInfo * poOpenInfo )
         return NULL;
     }
 
-    return JPGDataset::Open(poOpenInfo->pszFilename, poOpenInfo->papszSiblingFiles);
+    return JPGDataset::Open(poOpenInfo->pszFilename, poOpenInfo->GetSiblingFiles());
 }
 
 #endif // !defined(JPGDataset)

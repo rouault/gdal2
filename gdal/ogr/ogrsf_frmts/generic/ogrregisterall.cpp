@@ -56,9 +56,6 @@ void OGRRegisterAllInternal()
 #ifdef SDTS_ENABLED
     RegisterOGRSDTS();
 #endif
-#ifdef TIGER_ENABLED
-    RegisterOGRTiger();
-#endif
 #ifdef S57_ENABLED
     RegisterOGRS57();
 #endif
@@ -161,10 +158,6 @@ void OGRRegisterAllInternal()
 #endif
 #ifdef XPLANE_ENABLED
     RegisterOGRXPlane();
-#endif
-#ifdef AVCBIN_ENABLED
-    RegisterOGRAVCBin();
-    RegisterOGRAVCE00();
 #endif
 #ifdef DWGDIRECT_ENABLED
     RegisterOGRDXFDWG();
@@ -278,4 +271,14 @@ void OGRRegisterAllInternal()
 #ifdef SXF_ENABLED
     RegisterOGRSXF();
 #endif
+
+/* Put TIGER and AVCBIN at end since they need poOpenInfo->GetSiblingFiles() */
+#ifdef TIGER_ENABLED
+    RegisterOGRTiger();
+#endif
+#ifdef AVCBIN_ENABLED
+    RegisterOGRAVCBin();
+    RegisterOGRAVCE00();
+#endif
+
 } /* OGRRegisterAll */

@@ -6982,7 +6982,7 @@ GDALDataset *GTiffDataset::Open( GDALOpenInfo * poOpenInfo )
                           TIFFCurrentDirOffset(hTIFF), TRUE,
                           poOpenInfo->eAccess, 
                           bAllowRGBAInterface, TRUE,
-                          poOpenInfo->papszSiblingFiles) != CE_None )
+                          poOpenInfo->GetSiblingFiles()) != CE_None )
     {
         delete poDS;
         return NULL;
@@ -6991,7 +6991,7 @@ GDALDataset *GTiffDataset::Open( GDALOpenInfo * poOpenInfo )
 /* -------------------------------------------------------------------- */
 /*      Initialize any PAM information.                                 */
 /* -------------------------------------------------------------------- */
-    poDS->TryLoadXML( poOpenInfo->papszSiblingFiles);
+    poDS->TryLoadXML( poOpenInfo->GetSiblingFiles() );
     poDS->ApplyPamInfo();
 
     int i;
@@ -7026,7 +7026,7 @@ GDALDataset *GTiffDataset::Open( GDALOpenInfo * poOpenInfo )
 /* -------------------------------------------------------------------- */
 /*      Check for external overviews.                                   */
 /* -------------------------------------------------------------------- */
-    poDS->oOvManager.Initialize( poDS, pszFilename, poOpenInfo->papszSiblingFiles );
+    poDS->oOvManager.Initialize( poDS, pszFilename, poOpenInfo->GetSiblingFiles() );
     
     return poDS;
 }
@@ -7418,7 +7418,7 @@ GDALDataset *GTiffDataset::OpenDir( GDALOpenInfo * poOpenInfo )
     if( poDS->OpenOffset( hTIFF, &(poDS->poActiveDS),
                           nOffset, FALSE, GA_ReadOnly,
                           bAllowRGBAInterface, TRUE,
-                          poOpenInfo->papszSiblingFiles ) != CE_None )
+                          poOpenInfo->GetSiblingFiles() ) != CE_None )
     {
         delete poDS;
         return NULL;

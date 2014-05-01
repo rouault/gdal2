@@ -41,16 +41,17 @@ static GDALDataset *OGRTigerDriverOpen( GDALOpenInfo* poOpenInfo )
 {
     if( !poOpenInfo->bStatOK )
         return NULL;
-    if( poOpenInfo->papszSiblingFiles != NULL )
+    char** papszSiblingFiles = poOpenInfo->GetSiblingFiles();
+    if( papszSiblingFiles != NULL )
     {
         int i;
         int bFoundCompatibleFile = FALSE;
-        for( i = 0; poOpenInfo->papszSiblingFiles[i] != NULL; i++ )
+        for( i = 0; papszSiblingFiles[i] != NULL; i++ )
         {
-            int nLen = (int)strlen(poOpenInfo->papszSiblingFiles[i]);
+            int nLen = (int)strlen(papszSiblingFiles[i]);
             if( nLen > 4 &&
-                poOpenInfo->papszSiblingFiles[i][nLen-4] == '.' &&
-                poOpenInfo->papszSiblingFiles[i][nLen-1] == '1' )
+                papszSiblingFiles[i][nLen-4] == '.' &&
+                papszSiblingFiles[i][nLen-1] == '1' )
             {
                 bFoundCompatibleFile = TRUE;
                 break;

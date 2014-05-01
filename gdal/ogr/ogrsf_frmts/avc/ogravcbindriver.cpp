@@ -51,20 +51,24 @@ static GDALDataset *OGRAVCBinDriverOpen( GDALOpenInfo* poOpenInfo )
         {
             /* ok */
         }
-        else if( poOpenInfo->papszSiblingFiles != NULL )
+        else
         {
-            int i;
-            int bFoundCandidateFile = FALSE;
-            for( i = 0; poOpenInfo->papszSiblingFiles[i] != NULL; i++ )
+            char** papszSiblingFiles = poOpenInfo->GetSiblingFiles();
+            if( papszSiblingFiles != NULL )
             {
-                if( EQUAL(CPLGetExtension(poOpenInfo->papszSiblingFiles[i]), "ADF") )
+                int i;
+                int bFoundCandidateFile = FALSE;
+                for( i = 0; papszSiblingFiles[i] != NULL; i++ )
                 {
-                    bFoundCandidateFile = TRUE;
-                    break;
+                    if( EQUAL(CPLGetExtension(papszSiblingFiles[i]), "ADF") )
+                    {
+                        bFoundCandidateFile = TRUE;
+                        break;
+                    }
                 }
+                if( !bFoundCandidateFile )
+                    return NULL;
             }
-            if( !bFoundCandidateFile )
-                return NULL;
         }
     }
 

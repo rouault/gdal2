@@ -341,7 +341,7 @@ int HF2Dataset::Identify( GDALOpenInfo * poOpenInfo)
         osFilename += poOpenInfo->pszFilename;
         poOpenInfo = poOpenInfoToDelete =
                 new GDALOpenInfo(osFilename.c_str(), GA_ReadOnly,
-                                 poOpenInfo->papszSiblingFiles);
+                                 poOpenInfo->GetSiblingFiles());
     }
 
     if (poOpenInfo->nHeaderBytes < 28)
@@ -385,7 +385,7 @@ GDALDataset *HF2Dataset::Open( GDALOpenInfo * poOpenInfo )
         osFilename += poOpenInfo->pszFilename;
         poOpenInfo = poOpenInfoToDelete =
                 new GDALOpenInfo(osFilename.c_str(), GA_ReadOnly,
-                                 poOpenInfo->papszSiblingFiles);
+                                 poOpenInfo->GetSiblingFiles());
     }
 
 /* -------------------------------------------------------------------- */

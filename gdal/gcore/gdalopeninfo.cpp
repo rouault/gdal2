@@ -93,53 +93,96 @@ GDALOpenInfo::GDALOpenInfo( const char * pszFilenameIn, GDALAccess eAccessIn,
 #ifdef HAVE_READLINK
 retry:
 #endif
-    if( VSIStatExL( pszFilename, &sStat,
-                    VSI_STAT_EXISTS_FLAG | VSI_STAT_NATURE_FLAG ) == 0 )
+    int bPotentialDirectory = FALSE;
+
+    /* Check if the filename might be a directory of a special virtual file system */
+    if( strncmp(pszFilename, "/vsizip/", strlen("/vsizip/")) == 0 ||
+        strncmp(pszFilename, "/vsitar/", strlen("/vsitar/")) == 0 )
+    {
+        const char* pszExt = CPLGetExtension(pszFilename);
+        if( EQUAL(pszExt, "zip") || EQUAL(pszExt, "tar") || EQUAL(pszExt, "gz") )
+            bPotentialDirectory = TRUE;
+    }
+    else if( strncmp(pszFilename, "/vsicurl/", strlen("/vsicurl/")) == 0 )
+    {
+        bPotentialDirectory = TRUE;
+    }
+
+    if( bPotentialDirectory )
+    {
+        /* For those special files, opening them with VSIFOpenL() might result */
+        /* in content, even if they should be considered as directories, so */
+        /* use stat */
+        if( VSIStatExL( pszFilename, &sStat,
+                        VSI_STAT_EXISTS_FLAG | VSI_STAT_NATURE_FLAG ) == 0 )
+        {
+            bStatOK = TRUE;
+            if( VSI_ISDIR( sStat.st_mode ) )
+                bIsDirectory = TRUE;
+        }
+    }
+
+    if( !bIsDirectory )
+        fpL = VSIFOpenL( pszFilename, (eAccess == GA_Update) ? "r+b" : "rb" );
+    if( fpL != NULL )
     {
         bStatOK = TRUE;
+        pabyHeader = (GByte *) CPLCalloc(1025,1);
+        nHeaderBytesTried = 1024;
+        nHeaderBytes = (int) VSIFReadL( pabyHeader, 1, nHeaderBytesTried, fpL );
+        VSIRewindL( fpL );
 
-        if( VSI_ISREG( sStat.st_mode ) )
+        /* If we cannot read anything, check if it is not a directory instead */
+        if( nHeaderBytes == 0 &&
+            VSIStatExL( pszFilename, &sStat,
+                        VSI_STAT_EXISTS_FLAG | VSI_STAT_NATURE_FLAG ) == 0 &&
+            VSI_ISDIR( sStat.st_mode ) )
         {
-            pabyHeader = (GByte *) CPLCalloc(1025,1);
-
-            fpL = VSIFOpenL( pszFilename, (eAccess == GA_Update) ? "r+b" : "rb" );
-            if( fpL != NULL )
+            VSIFCloseL(fpL);
+            fpL = NULL;
+            CPLFree(pabyHeader);
+            pabyHeader = NULL;
+            bIsDirectory = TRUE;
+        }
+    }
+    else if( !bStatOK )
+    {
+        if( VSIStatExL( pszFilename, &sStat,
+                        VSI_STAT_EXISTS_FLAG | VSI_STAT_NATURE_FLAG ) == 0 )
+        {
+            bStatOK = TRUE;
+            if( VSI_ISDIR( sStat.st_mode ) )
+                bIsDirectory = TRUE;
+        }
+#ifdef HAVE_READLINK
+        else if (!bHasRetried)
+        {
+            /* If someone creates a file with "ln -sf /vsicurl/http://download.osgeo.org/gdal/data/gtiff/utm.tif my_remote_utm.tif" */
+            /* we will be able to open it by passing my_remote_utm.tif */
+            /* This helps a lot for GDAL based readers that only provide file explorers to open datasets */
+            char szPointerFilename[2048];
+            int nBytes = readlink(pszFilename, szPointerFilename, sizeof(szPointerFilename));
+            if (nBytes != -1)
             {
-                nHeaderBytesTried = 1024;
-                nHeaderBytes = (int) VSIFReadL( pabyHeader, 1, nHeaderBytesTried, fpL );
-                VSIRewindL( fpL );
+                szPointerFilename[MIN(nBytes, (int)sizeof(szPointerFilename)-1)] = 0;
+                CPLFree(pszFilename);
+                pszFilename = CPLStrdup(szPointerFilename);
+                papszSiblingsIn = NULL;
+                bHasRetried = TRUE;
+                goto retry;
             }
         }
-        else if( VSI_ISDIR( sStat.st_mode ) )
-            bIsDirectory = TRUE;
-    }
-#ifdef HAVE_READLINK
-    else if (!bHasRetried)
-    {
-        /* If someone creates a file with "ln -sf /vsicurl/http://download.osgeo.org/gdal/data/gtiff/utm.tif my_remote_utm.tif" */
-        /* we will be able to open it by passing my_remote_utm.tif */
-        /* This helps a lot for GDAL based readers that only provide file explorers to open datasets */
-        char szPointerFilename[2048];
-        int nBytes = readlink(pszFilename, szPointerFilename, sizeof(szPointerFilename));
-        if (nBytes != -1)
-        {
-            szPointerFilename[MIN(nBytes, (int)sizeof(szPointerFilename)-1)] = 0;
-            CPLFree(pszFilename);
-            pszFilename = CPLStrdup(szPointerFilename);
-            papszSiblingsIn = NULL;
-            bHasRetried = TRUE;
-            goto retry;
-        }
-    }
 #endif
+    }
 
 /* -------------------------------------------------------------------- */
 /*      Capture sibling list either from passed in values, or by        */
-/*      scanning for them.                                              */
+/*      scanning for them only if requested through GetSiblingFiles().  */
 /* -------------------------------------------------------------------- */
     if( papszSiblingsIn != NULL )
     {
         papszSiblingFiles = CSLDuplicate( papszSiblingsIn );
+        bHasGotSiblingFiles = TRUE;
     }
     else if( bStatOK && !bIsDirectory )
     {
@@ -148,29 +191,26 @@ retry:
         if (EQUAL(pszOptionVal, "EMPTY_DIR"))
         {
             papszSiblingFiles = CSLAddString( NULL, CPLGetFilename(pszFilename) );
+            bHasGotSiblingFiles = TRUE;
         }
         else if( CSLTestBoolean(pszOptionVal) )
         {
             /* skip reading the directory */
             papszSiblingFiles = NULL;
+            bHasGotSiblingFiles = TRUE;
         }
         else
         {
-            CPLString osDir = CPLGetDirname( pszFilename );
-            papszSiblingFiles = VSIReadDir( osDir );
-
-            /* Small optimization to avoid unnecessary stat'ing from PAux or ENVI */
-            /* drivers. The MBTiles driver needs no companion file. */
-            if( papszSiblingFiles == NULL &&
-                strncmp(pszFilename, "/vsicurl/", 9) == 0 &&
-                EQUAL(CPLGetExtension( pszFilename ),"mbtiles") )
-            {
-                papszSiblingFiles = CSLAddString( NULL, CPLGetFilename(pszFilename) );
-            }
+            /* will be lazy loaded */
+            papszSiblingFiles = NULL;
+            bHasGotSiblingFiles = FALSE;
         }
     }
     else
+    {
         papszSiblingFiles = NULL;
+        bHasGotSiblingFiles = TRUE;
+    }
 }
 
 /************************************************************************/
@@ -187,6 +227,32 @@ GDALOpenInfo::~GDALOpenInfo()
         VSIFCloseL( fpL );
     CSLDestroy( papszSiblingFiles );
 }
+
+/************************************************************************/
+/*                         GetSiblingFiles()                            */
+/************************************************************************/
+
+char** GDALOpenInfo::GetSiblingFiles()
+{
+    if( bHasGotSiblingFiles )
+        return papszSiblingFiles;
+    bHasGotSiblingFiles = TRUE;
+
+    CPLString osDir = CPLGetDirname( pszFilename );
+    papszSiblingFiles = VSIReadDir( osDir );
+
+    /* Small optimization to avoid unnecessary stat'ing from PAux or ENVI */
+    /* drivers. The MBTiles driver needs no companion file. */
+    if( papszSiblingFiles == NULL &&
+        strncmp(pszFilename, "/vsicurl/", 9) == 0 &&
+        EQUAL(CPLGetExtension( pszFilename ),"mbtiles") )
+    {
+        papszSiblingFiles = CSLAddString( NULL, CPLGetFilename(pszFilename) );
+    }
+
+    return papszSiblingFiles;
+}
+
 
 /************************************************************************/
 /*                           TryToIngest()                              */
