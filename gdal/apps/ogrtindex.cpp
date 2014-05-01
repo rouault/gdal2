@@ -337,7 +337,7 @@ int main( int nArgc, char ** papszArgv )
             fileNameToWrite = CPLStrdup(papszArgv[nFirstSourceDataset]);
         }
 
-        poDS = (GDALDataset*) GDALOpen( papszArgv[nFirstSourceDataset], GA_ReadOnly );
+        poDS = (GDALDataset*) OGROpen( papszArgv[nFirstSourceDataset], FALSE, NULL );
 
         if( poDS == NULL )
         {

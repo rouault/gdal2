@@ -265,7 +265,6 @@ int FindSRS( const char *pszInput, OGRSpatialReference &oSRS )
     VSILFILE      *fp = NULL;
     GDALDataset	  *poGDALDS = NULL; 
 #ifdef OGR_ENABLED
-    OGRDataSource *poOGRDS = NULL;
     OGRLayer      *poLayer = NULL;
 #endif
     const char    *pszProjection = NULL;
@@ -292,7 +291,7 @@ int FindSRS( const char *pszInput, OGRSpatialReference &oSRS )
                 strlen("http://spatialreference.org/")) != 0 )
     {
         CPLDebug( "gdalsrsinfo", "trying to open with GDAL" );
-        poGDALDS = (GDALDataset *) GDALOpen( pszInput, GA_ReadOnly );
+        poGDALDS = (GDALDataset *) GDALOpenEx( pszInput, 0, NULL, NULL );
     }
     if ( poGDALDS != NULL ) {
         pszProjection = poGDALDS->GetProjectionRef( );

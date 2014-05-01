@@ -227,7 +227,7 @@ static OGRGeometry* LoadGeometry( const char* pszDS,
     OGRFeature          *poFeat;
     OGRGeometry         *poGeom = NULL;
         
-    poDS = (GDALDataset*) GDALOpen( pszDS, GA_ReadOnly );
+    poDS = (GDALDataset*) OGROpen( pszDS, FALSE, NULL );
     if (poDS == NULL)
         return NULL;
 
