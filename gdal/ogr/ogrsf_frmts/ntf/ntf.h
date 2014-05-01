@@ -559,19 +559,6 @@ class OGRNTFDataSource : public OGRDataSource
 };
 
 /************************************************************************/
-/*                             OGRNTFDriver                             */
-/************************************************************************/
-
-class OGRNTFDriver : public GDALDriver
-{
-  public:
-                ~OGRNTFDriver();
-
-    /* static int         Identify( GDALOpenInfo* poOpenInfo ); */
-    static GDALDataset *Open( GDALOpenInfo* poOpenInfo );
-};
-
-/************************************************************************/
 /*                          Support functions.                          */
 /************************************************************************/
 int NTFArcCenterFromEdgePoints( double x_c0, double y_c0,

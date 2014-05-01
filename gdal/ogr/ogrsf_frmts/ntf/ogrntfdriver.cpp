@@ -39,23 +39,12 @@ CPL_CVSID("$Id$");
 /************************************************************************/
 
 /************************************************************************/
-/*                           ~OGRNTFDriver()                            */
-/************************************************************************/
-
-OGRNTFDriver::~OGRNTFDriver()
-
-{
-}
-
-/************************************************************************/
 /*                                Open()                                */
 /************************************************************************/
 
-GDALDataset *OGRNTFDriver::Open( GDALOpenInfo* poOpenInfo )
+static GDALDataset *OGRNTFDriverOpen( GDALOpenInfo* poOpenInfo )
 
 {
-    OGRNTFDataSource    *poDS = new OGRNTFDataSource;
-
     if( !poOpenInfo->bStatOK )
         return NULL;
     if( poOpenInfo->fpL != NULL )
@@ -77,6 +66,7 @@ GDALDataset *OGRNTFDriver::Open( GDALOpenInfo* poOpenInfo )
             return FALSE;
     }
 
+    OGRNTFDataSource    *poDS = new OGRNTFDataSource;
     if( !poDS->Open( poOpenInfo->pszFilename, TRUE ) )
     {
         delete poDS;
@@ -105,7 +95,7 @@ void RegisterOGRNTF()
 
     if( GDALGetDriverByName( "UK .NTF" ) == NULL )
     {
-        poDriver = new OGRNTFDriver();
+        poDriver = new GDALDriver();
 
         poDriver->SetDescription( "UK .NTF" );
         poDriver->SetMetadataItem( GDAL_DCAP_VECTOR, "YES" );
@@ -114,7 +104,7 @@ void RegisterOGRNTF()
         poDriver->SetMetadataItem( GDAL_DMD_HELPTOPIC,
                                    "drv_ntf.html" );
 
-        poDriver->pfnOpen = OGRNTFDriver::Open;
+        poDriver->pfnOpen = OGRNTFDriverOpen;
 
         GetGDALDriverManager()->RegisterDriver( poDriver );
     }
