@@ -120,7 +120,7 @@ OGRGenSQLResultsLayer::OGRGenSQLResultsLayer( GDALDataset *poSrcDS,
 
         if( psTableDef->data_source != NULL )
         {
-            poTableDS = (GDALDataset*) GDALOpenShared( psTableDef->data_source, GA_ReadOnly );
+            poTableDS = (GDALDataset*) GDALOpenEx( psTableDef->data_source, GDAL_OF_VECTOR | GDAL_OF_SHARED, NULL, NULL );
             if( poTableDS == NULL )
             {
                 if( strlen(CPLGetLastErrorMsg()) == 0 )
