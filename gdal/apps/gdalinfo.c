@@ -187,7 +187,7 @@ int main( int argc, char ** argv )
 /* -------------------------------------------------------------------- */
 /*      Open dataset.                                                   */
 /* -------------------------------------------------------------------- */
-    hDataset = GDALOpenEx( pszFilename, GDAL_OF_READONLY, NULL,
+    hDataset = GDALOpenEx( pszFilename, GDAL_OF_READONLY | GDAL_OF_RASTER, NULL,
                            (const char* const* )papszOpenOptions );
 
     if( hDataset == NULL )
