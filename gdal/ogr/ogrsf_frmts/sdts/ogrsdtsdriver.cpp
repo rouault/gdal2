@@ -33,23 +33,12 @@
 CPL_CVSID("$Id$");
 
 /************************************************************************/
-/*                           ~OGRSDTSDriver()                           */
-/************************************************************************/
-
-OGRSDTSDriver::~OGRSDTSDriver()
-
-{
-}
-
-/************************************************************************/
 /*                                Open()                                */
 /************************************************************************/
 
-GDALDataset *OGRSDTSDriver::Open( GDALOpenInfo* poOpenInfo )
+static GDALDataset *OGRSDTSDriverOpen( GDALOpenInfo* poOpenInfo )
 
 {
-    OGRSDTSDataSource   *poDS = new OGRSDTSDataSource();
-
     if( !EQUAL(CPLGetExtension(poOpenInfo->pszFilename), "DDF") )
         return NULL;
     if( poOpenInfo->nHeaderBytes < 10 )
@@ -63,6 +52,7 @@ GDALDataset *OGRSDTSDriver::Open( GDALOpenInfo* poOpenInfo )
         return NULL;
     }
 
+    OGRSDTSDataSource   *poDS = new OGRSDTSDataSource();
     if( !poDS->Open( poOpenInfo->pszFilename, TRUE ) )
     {
         delete poDS;
@@ -91,7 +81,7 @@ void RegisterOGRSDTS()
 
     if( GDALGetDriverByName( "OGR_SDTS" ) == NULL )
     {
-        poDriver = new OGRSDTSDriver();
+        poDriver = new GDALDriver();
 
         poDriver->SetDescription( "OGR_SDTS" );
         poDriver->SetMetadataItem( GDAL_DCAP_VECTOR, "YES" );
@@ -100,7 +90,7 @@ void RegisterOGRSDTS()
         poDriver->SetMetadataItem( GDAL_DMD_HELPTOPIC,
                                    "drv_sdts.html" );
 
-        poDriver->pfnOpen = OGRSDTSDriver::Open;
+        poDriver->pfnOpen = OGRSDTSDriverOpen;
 
         GetGDALDriverManager()->RegisterDriver( poDriver );
     }

@@ -34,19 +34,10 @@
 CPL_CVSID("$Id$");
 
 /************************************************************************/
-/*                          ~OGRShapeDriver()                           */
-/************************************************************************/
-
-OGRShapeDriver::~OGRShapeDriver()
-
-{
-}
-
-/************************************************************************/
 /*                                Open()                                */
 /************************************************************************/
 
-GDALDataset *OGRShapeDriver::Open( GDALOpenInfo* poOpenInfo )
+static GDALDataset *OGRShapeDriverOpen( GDALOpenInfo* poOpenInfo )
 
 {
     OGRShapeDataSource  *poDS;
@@ -76,7 +67,7 @@ GDALDataset *OGRShapeDriver::Open( GDALOpenInfo* poOpenInfo )
 /*                               Create()                               */
 /************************************************************************/
 
-GDALDataset *OGRShapeDriver::Create( const char * pszName,
+static GDALDataset *OGRShapeDriverCreate( const char * pszName,
                                         int nBands, int nXSize, int nYSize, GDALDataType eDT,
                                         char **papszOptions )
 
@@ -146,7 +137,7 @@ GDALDataset *OGRShapeDriver::Create( const char * pszName,
 /*                           Delete()                                   */
 /************************************************************************/
 
-CPLErr OGRShapeDriver::Delete( const char *pszDataSource )
+static CPLErr OGRShapeDriverDelete( const char *pszDataSource )
 
 {
     int iExt;
@@ -214,7 +205,7 @@ void RegisterOGRShape()
 
     if( GDALGetDriverByName( "ESRI Shapefile" ) == NULL )
     {
-        poDriver = new OGRShapeDriver();
+        poDriver = new GDALDriver();
 
         poDriver->SetDescription( "ESRI Shapefile" );
         poDriver->SetMetadataItem( GDAL_DCAP_VECTOR, "YES" );
@@ -225,10 +216,10 @@ void RegisterOGRShape()
 
         poDriver->SetMetadataItem( GDAL_DCAP_VIRTUALIO, "YES" );
 
-        poDriver->pfnOpen = OGRShapeDriver::Open;
+        poDriver->pfnOpen = OGRShapeDriverOpen;
         /* poDriver->pfnIdentify = OGRShapeDriver::Identify; */
-        poDriver->pfnCreate = OGRShapeDriver::Create;
-        poDriver->pfnDelete = OGRShapeDriver::Delete;
+        poDriver->pfnCreate = OGRShapeDriverCreate;
+        poDriver->pfnDelete = OGRShapeDriverDelete;
 
         GetGDALDriverManager()->RegisterDriver( poDriver );
     }

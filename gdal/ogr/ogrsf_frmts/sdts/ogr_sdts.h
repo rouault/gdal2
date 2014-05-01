@@ -99,17 +99,4 @@ class OGRSDTSDataSource : public OGRDataSource
     OGRSpatialReference *GetSpatialRef() { return poSRS; }
 };
 
-/************************************************************************/
-/*                            OGRSDTSDriver                             */
-/************************************************************************/
-
-class OGRSDTSDriver : public GDALDriver
-{
-  public:
-                ~OGRSDTSDriver();
-
-    /* static int         Identify( GDALOpenInfo* poOpenInfo ); */
-    static GDALDataset *Open( GDALOpenInfo* poOpenInfo );
-};
-
 #endif /* ndef _OGR_SDTS_H_INCLUDED */

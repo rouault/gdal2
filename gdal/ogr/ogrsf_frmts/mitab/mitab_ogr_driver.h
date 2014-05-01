@@ -120,23 +120,6 @@ class OGRTABDataSource : public OGRDataSource
                              OGRwkbGeometryType = wkbUnknown,
                              char ** = NULL );
 };
- 
-/************************************************************************/
-/*                             OGRTABDriver                             */
-/************************************************************************/
-
-class OGRTABDriver : public GDALDriver
-{
-public:
-    virtual     ~OGRTABDriver();
-
-    /* static int         Identify( GDALOpenInfo* poOpenInfo ); */
-    static GDALDataset *Open( GDALOpenInfo* poOpenInfo );
-    static GDALDataset *Create( const char * pszName,
-                                        int nBands, int nXSize, int nYSize, GDALDataType eDT,
-                                        char **papszOptions );
-    static CPLErr       Delete( const char *pszDataSource );
-};
 
 void CPL_DLL RegisterOGRTAB();
 

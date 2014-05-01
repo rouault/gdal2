@@ -236,22 +236,4 @@ class OGRShapeDataSource : public OGRDataSource
     DBFHandle            DS_DBFOpen( const char * pszDBFFile, const char * pszAccess );
 };
 
-/************************************************************************/
-/*                            OGRShapeDriver                            */
-/************************************************************************/
-
-class OGRShapeDriver : public GDALDriver
-{
-  public:
-                ~OGRShapeDriver();
-
-    /* static int         Identify( GDALOpenInfo* poOpenInfo ); */
-    static GDALDataset *Open( GDALOpenInfo* poOpenInfo );
-    static GDALDataset *Create( const char * pszName,
-                                        int nBands, int nXSize, int nYSize, GDALDataType eDT,
-                                        char **papszOptions );
-    static CPLErr       Delete( const char *pszDataSource );
-};
-
-
 #endif /* ndef _OGRSHAPE_H_INCLUDED */

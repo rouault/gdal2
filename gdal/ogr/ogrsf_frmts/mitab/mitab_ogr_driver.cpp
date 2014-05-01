@@ -75,19 +75,10 @@
 
 
 /************************************************************************/
-/*                           ~OGRTABDriver()                            */
-/************************************************************************/
-
-OGRTABDriver::~OGRTABDriver()
-
-{
-}
-
-/************************************************************************/
 /*                  OGRTABDriver::Open()                                */
 /************************************************************************/
 
-GDALDataset *OGRTABDriver::Open( GDALOpenInfo* poOpenInfo )
+static GDALDataset *OGRTABDriverOpen( GDALOpenInfo* poOpenInfo )
 
 {
     OGRTABDataSource    *poDS;
@@ -123,7 +114,7 @@ GDALDataset *OGRTABDriver::Open( GDALOpenInfo* poOpenInfo )
 /*                              Create()                                */
 /************************************************************************/
 
-GDALDataset *OGRTABDriver::Create( const char * pszName,
+static GDALDataset *OGRTABDriverCreate( const char * pszName,
                                    int nBands, int nXSize, int nYSize, GDALDataType eDT,
                                    char **papszOptions )
 
@@ -147,7 +138,7 @@ GDALDataset *OGRTABDriver::Create( const char * pszName,
 /*                              Delete()                                */
 /************************************************************************/
 
-CPLErr OGRTABDriver::Delete( const char *pszDataSource )
+static CPLErr OGRTABDriverDelete( const char *pszDataSource )
 
 {
     int iExt;
@@ -217,7 +208,7 @@ void RegisterOGRTAB()
 
     if( GDALGetDriverByName( "MapInfo File" ) == NULL )
     {
-        poDriver = new OGRTABDriver();
+        poDriver = new GDALDriver();
 
         poDriver->SetDescription( "MapInfo File" );
         poDriver->SetMetadataItem( GDAL_DCAP_VECTOR, "YES" );
@@ -226,10 +217,9 @@ void RegisterOGRTAB()
         poDriver->SetMetadataItem( GDAL_DMD_HELPTOPIC,
                                    "drv_mitab.html" );
 
-        poDriver->pfnOpen = OGRTABDriver::Open;
-        /* poDriver->pfnIdentify = OGRTABDriver::Identify; */
-        poDriver->pfnCreate = OGRTABDriver::Create;
-        poDriver->pfnDelete = OGRTABDriver::Delete;
+        poDriver->pfnOpen = OGRTABDriverOpen;
+        poDriver->pfnCreate = OGRTABDriverCreate;
+        poDriver->pfnDelete = OGRTABDriverDelete;
 
         GetGDALDriverManager()->RegisterDriver( poDriver );
     }
