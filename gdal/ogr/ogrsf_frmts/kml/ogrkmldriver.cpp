@@ -33,16 +33,29 @@
 #include "cpl_error.h"
 
 /************************************************************************/
+/*                         OGRKMLDriverIdentify()                       */
+/************************************************************************/
+
+static int OGRKMLDriverIdentify( GDALOpenInfo* poOpenInfo )
+
+{
+    if( poOpenInfo->fpL == NULL )
+        return NULL;
+
+    return( strstr((const char*)poOpenInfo->pabyHeader, "<kml") != NULL );
+}
+
+/************************************************************************/
 /*                                Open()                                */
 /************************************************************************/
 
 static GDALDataset *OGRKMLDriverOpen( GDALOpenInfo* poOpenInfo )
 
 {
-    if( poOpenInfo->eAccess == GA_Update || poOpenInfo->fpL == NULL )
+    if( poOpenInfo->eAccess == GA_Update )
         return NULL;
 
-    if( strstr((const char*)poOpenInfo->pabyHeader, "<kml") == NULL )
+    if( !OGRKMLDriverIdentify(poOpenInfo) )
         return NULL;
 
     OGRKMLDataSource* poDS = NULL;
@@ -115,6 +128,7 @@ void RegisterOGRKML()
         poDriver->SetMetadataItem( GDAL_DCAP_VIRTUALIO, "YES" );
 
         poDriver->pfnOpen = OGRKMLDriverOpen;
+        poDriver->pfnIdentify = OGRKMLDriverIdentify;
         poDriver->pfnCreate = OGRKMLDriverCreate;
 
         GetGDALDriverManager()->RegisterDriver( poDriver );

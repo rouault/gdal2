@@ -30,18 +30,43 @@
 #include <cpl_conv.h>
 
 /************************************************************************/
-/*                           Open()                                     */
+/*                        OGRGeoJSONDriverIdentify()                    */
 /************************************************************************/
 
-static GDALDataset* OGRGeoJSONDriverOpen( GDALOpenInfo* poOpenInfo )
+static int OGRGeoJSONDriverIdentifyInternal( GDALOpenInfo* poOpenInfo,
+                                     GeoJSONSourceType& nSrcType )
 {
 /* -------------------------------------------------------------------- */
 /*      Determine type of data source: text file (.geojson, .json),     */
 /*      Web Service or text passed directly and load data.              */
 /* -------------------------------------------------------------------- */
-    GeoJSONSourceType nSrcType;
+
     nSrcType = GeoJSONGetSourceType( poOpenInfo );
     if( nSrcType == eGeoJSONSourceUnknown )
+        return FALSE;
+    if( nSrcType == eGeoJSONSourceService )
+        return -1;
+    return TRUE;
+}
+
+/************************************************************************/
+/*                        OGRGeoJSONDriverIdentify()                    */
+/************************************************************************/
+
+static int OGRGeoJSONDriverIdentify( GDALOpenInfo* poOpenInfo )
+{
+    GeoJSONSourceType nSrcType;
+    return OGRGeoJSONDriverIdentifyInternal(poOpenInfo, nSrcType);
+}
+
+/************************************************************************/
+/*                           Open()                                     */
+/************************************************************************/
+
+static GDALDataset* OGRGeoJSONDriverOpen( GDALOpenInfo* poOpenInfo )
+{
+    GeoJSONSourceType nSrcType;
+    if( OGRGeoJSONDriverIdentifyInternal(poOpenInfo, nSrcType) == FALSE )
         return NULL;
 
     OGRGeoJSONDataSource* poDS = NULL;
@@ -151,6 +176,7 @@ void RegisterOGRGeoJSON()
         poDriver->SetMetadataItem( GDAL_DCAP_VIRTUALIO, "YES" );
 
         poDriver->pfnOpen = OGRGeoJSONDriverOpen;
+        poDriver->pfnIdentify = OGRGeoJSONDriverIdentify;
         poDriver->pfnCreate = OGRGeoJSONDriverCreate;
         poDriver->pfnDelete = OGRGeoJSONDriverDelete;
 

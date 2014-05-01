@@ -33,37 +33,29 @@
 CPL_CVSID("$Id$");
 
 /************************************************************************/
-/*                          ~OGRDXFDriver()                          */
+/*                       OGRDXFDriverIdentify()                         */
 /************************************************************************/
 
-OGRDXFDriver::~OGRDXFDriver()
+static int OGRDXFDriverIdentify( GDALOpenInfo* poOpenInfo )
 
 {
-}
-
-/************************************************************************/
-/*                              GetName()                               */
-/************************************************************************/
-
-const char *OGRDXFDriver::GetName()
-
-{
-    return "DXF";
+    return poOpenInfo->fpL != NULL &&
+           EQUAL(CPLGetExtension(poOpenInfo->pszFilename),"dxf");
 }
 
 /************************************************************************/
 /*                                Open()                                */
 /************************************************************************/
 
-OGRDataSource *OGRDXFDriver::Open( const char * pszFilename, int bUpdate )
+static GDALDataset *OGRDXFDriverOpen( GDALOpenInfo* poOpenInfo )
 
 {
-    if( !EQUAL(CPLGetExtension(pszFilename),"dxf") )
+    if( !OGRDXFDriverIdentify(poOpenInfo) )
         return NULL;
 
     OGRDXFDataSource   *poDS = new OGRDXFDataSource();
 
-    if( !poDS->Open( pszFilename ) )
+    if( !poDS->Open( poOpenInfo->pszFilename ) )
     {
         delete poDS;
         poDS = NULL;
@@ -73,11 +65,12 @@ OGRDataSource *OGRDXFDriver::Open( const char * pszFilename, int bUpdate )
 }
 
 /************************************************************************/
-/*                          CreateDataSource()                          */
+/*                              Create()                                */
 /************************************************************************/
 
-OGRDataSource *OGRDXFDriver::CreateDataSource( const char * pszName,
-                                               char **papszOptions )
+static GDALDataset *OGRDXFDriverCreate( const char * pszName,
+                                int nBands, int nXSize, int nYSize, GDALDataType eDT,
+                                char **papszOptions )
 
 {
     OGRDXFWriterDS *poDS = new OGRDXFWriterDS();
@@ -92,25 +85,32 @@ OGRDataSource *OGRDXFDriver::CreateDataSource( const char * pszName,
 }
 
 /************************************************************************/
-/*                           TestCapability()                           */
-/************************************************************************/
-
-int OGRDXFDriver::TestCapability( const char * pszCap )
-
-{
-    if( EQUAL(pszCap,ODrCCreateDataSource) )
-        return TRUE;
-    else
-        return FALSE;
-}
-
-/************************************************************************/
 /*                           RegisterOGRDXF()                           */
 /************************************************************************/
 
 void RegisterOGRDXF()
 
 {
-    OGRSFDriverRegistrar::GetRegistrar()->RegisterDriver( new OGRDXFDriver );
+    GDALDriver  *poDriver;
+
+    if( GDALGetDriverByName( "DXF" ) == NULL )
+    {
+        poDriver = new GDALDriver();
+
+        poDriver->SetDescription( "DXF" );
+        poDriver->SetMetadataItem( GDAL_DCAP_VECTOR, "YES" );
+        poDriver->SetMetadataItem( GDAL_DMD_LONGNAME,
+                                   "DXF" );
+        poDriver->SetMetadataItem( GDAL_DMD_HELPTOPIC,
+                                   "drv_dxf.html" );
+
+        poDriver->SetMetadataItem( GDAL_DCAP_VIRTUALIO, "YES" );
+
+        poDriver->pfnOpen = OGRDXFDriverOpen;
+        poDriver->pfnIdentify = OGRDXFDriverIdentify;
+        poDriver->pfnCreate = OGRDXFDriverCreate;
+
+        GetGDALDriverManager()->RegisterDriver( poDriver );
+    }
 }
 

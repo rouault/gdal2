@@ -51,20 +51,30 @@ static void OGRLIBKMLDriverUnload ( GDALDriver* poDriver )
     m_poKmlFactory = NULL;
 }
 
+/************************************************************************/
+/*                    OGRLIBKMLDriverIdentify()                         */
+/************************************************************************/
+
+static int OGRLIBKMLDriverIdentify( GDALOpenInfo* poOpenInfo )
+
+{
+    if( !poOpenInfo->bStatOK )
+        return FALSE;
+    if( poOpenInfo->bIsDirectory )
+        return -1;
+
+    return( EQUAL(CPLGetExtension(poOpenInfo->pszFilename), "kml") ||
+            EQUAL(CPLGetExtension(poOpenInfo->pszFilename), "kmz") );
+}
+
 /******************************************************************************
  Open()
 ******************************************************************************/
 
 static GDALDataset *OGRLIBKMLDriverOpen ( GDALOpenInfo* poOpenInfo )
 {
-    if( !poOpenInfo->bStatOK )
+    if( OGRLIBKMLDriverIdentify(poOpenInfo) == FALSE )
         return NULL;
-    if( !poOpenInfo->bIsDirectory )
-    {
-        if( !EQUAL(CPLGetExtension(poOpenInfo->pszFilename), "kml") &&
-            !EQUAL(CPLGetExtension(poOpenInfo->pszFilename), "kmz") )
-            return NULL;
-    }
 
     {
         CPLMutexHolderD(&hMutex);
@@ -199,6 +209,7 @@ void RegisterOGRLIBKML (
         poDriver->SetMetadataItem( GDAL_DCAP_VIRTUALIO, "YES" );
 
         poDriver->pfnOpen = OGRLIBKMLDriverOpen;
+        poDriver->pfnIdentify = OGRLIBKMLDriverIdentify;
         poDriver->pfnCreate = OGRLIBKMLDriverCreate;
         poDriver->pfnDelete = OGRLIBKMLDriverDelete;
         poDriver->pfnUnloadDriver = OGRLIBKMLDriverUnload;

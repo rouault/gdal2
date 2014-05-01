@@ -36,12 +36,23 @@ CPL_CVSID("$Id$");
 /*                                Open()                                */
 /************************************************************************/
 
+static int OGRDGNDriverIdentify( GDALOpenInfo* poOpenInfo )
+
+{
+    return poOpenInfo->fpL != NULL &&
+           DGNTestOpen(poOpenInfo->pabyHeader, poOpenInfo->nHeaderBytes);
+}
+
+/************************************************************************/
+/*                                Open()                                */
+/************************************************************************/
+
 static GDALDataset *OGRDGNDriverOpen( GDALOpenInfo* poOpenInfo )
 
 {
     OGRDGNDataSource    *poDS;
     
-    if( !DGNTestOpen(poOpenInfo->pabyHeader, poOpenInfo->nHeaderBytes) )
+    if( !OGRDGNDriverIdentify(poOpenInfo) )
         return NULL;
 
     poDS = new OGRDGNDataSource();
@@ -102,6 +113,7 @@ void RegisterOGRDGN()
                                    "drv_dgn.html" );
 
         poDriver->pfnOpen = OGRDGNDriverOpen;
+        poDriver->pfnIdentify = OGRDGNDriverIdentify;
         poDriver->pfnCreate = OGRDGNDriverCreate;
 
         GetGDALDriverManager()->RegisterDriver( poDriver );

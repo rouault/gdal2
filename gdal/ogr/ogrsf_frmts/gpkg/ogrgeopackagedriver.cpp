@@ -37,19 +37,19 @@ static const char aGpkgId[4] = {0x47, 0x50, 0x31, 0x30};
 static const size_t szGpkgIdPos = 68;
 
 /************************************************************************/
-/*                                Open()                                */
+/*                       OGRGeoPackageDriverIdentify()                  */
 /************************************************************************/
 
-static GDALDataset *OGRGeoPackageDriverOpen( GDALOpenInfo* poOpenInfo )
+static int OGRGeoPackageDriverIdentify( GDALOpenInfo* poOpenInfo )
 {
     /* Requirement 3: File name has to end in "gpkg" */
     /* http://opengis.github.io/geopackage/#_file_extension_name */
     if( !EQUAL(CPLGetExtension(poOpenInfo->pszFilename), "GPKG") )
-        return NULL;
+        return FALSE;
 
     /* Check that the filename exists and is a file */
     if( poOpenInfo->fpL == NULL)
-        return NULL;
+        return FALSE;
 
     /* Requirement 2: A GeoPackage SHALL contain 0x47503130 ("GP10" in ASCII) */
     /* in the application id */
@@ -59,8 +59,20 @@ static GDALDataset *OGRGeoPackageDriverOpen( GDALOpenInfo* poOpenInfo )
     {
         CPLError( CE_Failure, CPLE_AppDefined, "bad application_id on '%s'",
                   poOpenInfo->pszFilename);
-        return NULL;
+        return FALSE;
     }
+
+    return TRUE;
+}
+
+/************************************************************************/
+/*                                Open()                                */
+/************************************************************************/
+
+static GDALDataset *OGRGeoPackageDriverOpen( GDALOpenInfo* poOpenInfo )
+{
+    if( !OGRGeoPackageDriverIdentify(poOpenInfo) )
+        return NULL;
 
     OGRGeoPackageDataSource   *poDS = new OGRGeoPackageDataSource();
 
@@ -72,7 +84,6 @@ static GDALDataset *OGRGeoPackageDriverOpen( GDALOpenInfo* poOpenInfo )
 
     return poDS;
 }
-
 
 /************************************************************************/
 /*                               Create()                               */
@@ -138,6 +149,7 @@ void RegisterOGRGeoPackage()
                                    "drv_geopackage.html" );
 
         poDriver->pfnOpen = OGRGeoPackageDriverOpen;
+        poDriver->pfnIdentify = OGRGeoPackageDriverIdentify;
         poDriver->pfnCreate = OGRGeoPackageDriverCreate;
         poDriver->pfnDelete = OGRGeoPackageDriverDelete;
 

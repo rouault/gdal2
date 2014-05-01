@@ -37,20 +37,35 @@ extern "C" void CPL_DLL RegisterOGROSM();
 CPL_CVSID("$Id$");
 
 /************************************************************************/
+/*                      OGROSMDriverIdentify()                          */
+/************************************************************************/
+
+static int OGROSMDriverIdentify( GDALOpenInfo* poOpenInfo )
+
+{
+    if (poOpenInfo->fpL == NULL )
+        return FALSE;
+    const char* pszExt = CPLGetExtension(poOpenInfo->pszFilename);
+    if( EQUAL(pszExt, "pbf") ||
+        EQUAL(pszExt, "osm") )
+        return TRUE;
+    if( EQUALN(poOpenInfo->pszFilename, "/vsicurl_streaming/", strlen("/vsicurl_streaming/")) ||
+        strcmp(poOpenInfo->pszFilename, "/vsistdin/") == 0 ||
+        strcmp(poOpenInfo->pszFilename, "/dev/stdin/") == 0 )
+        return -1;
+    return FALSE;
+}
+
+/************************************************************************/
 /*                                Open()                                */
 /************************************************************************/
 
 static GDALDataset *OGROSMDriverOpen( GDALOpenInfo* poOpenInfo )
 
 {
-    if (poOpenInfo->eAccess == GA_Update || poOpenInfo->fpL == NULL )
+    if (poOpenInfo->eAccess == GA_Update )
         return NULL;
-    const char* pszExt = CPLGetExtension(poOpenInfo->pszFilename);
-    if( !EQUAL(pszExt, "pbf") &&
-        !EQUAL(pszExt, "osm") &&
-        !EQUALN(poOpenInfo->pszFilename, "/vsicurl_streaming/", strlen("/vsicurl_streaming/")) &&
-        strcmp(poOpenInfo->pszFilename, "/vsistdin/") != 0 &&
-        strcmp(poOpenInfo->pszFilename, "/dev/stdin/") != 0 )
+    if( OGROSMDriverIdentify(poOpenInfo) == FALSE )
         return NULL;
 
     OGROSMDataSource   *poDS = new OGROSMDataSource();
@@ -88,6 +103,7 @@ void RegisterOGROSM()
         poDriver->SetMetadataItem( GDAL_DCAP_VIRTUALIO, "YES" );
 
         poDriver->pfnOpen = OGROSMDriverOpen;
+        poDriver->pfnIdentify = OGROSMDriverIdentify;
 
         GetGDALDriverManager()->RegisterDriver( poDriver );
     }

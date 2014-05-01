@@ -47,21 +47,17 @@ static void OGRGMLDriverUnload(GDALDriver* poDriver)
 }
 
 /************************************************************************/
-/*                                Open()                                */
+/*                         OGRGMLDriverIdentify()                       */
 /************************************************************************/
 
-static GDALDataset *OGRGMLDriverOpen( GDALOpenInfo* poOpenInfo )
+static int OGRGMLDriverIdentify( GDALOpenInfo* poOpenInfo )
 
 {
-    OGRGMLDataSource    *poDS;
-
-    if( poOpenInfo->eAccess == GA_Update )
-        return NULL;
-
     if( poOpenInfo->fpL == NULL )
     {
-        if( strstr(poOpenInfo->pszFilename, "xsd=") == NULL )
-            return NULL;
+        if( strstr(poOpenInfo->pszFilename, "xsd=") != NULL )
+            return -1; /* must be later checked */
+        return FALSE;
     }
     /* Might be a OS-Mastermap gzipped GML, so let be nice and try to open */
     /* it transparently with /vsigzip/ */
@@ -70,7 +66,7 @@ static GDALDataset *OGRGMLDriverOpen( GDALOpenInfo* poOpenInfo )
          EQUAL(CPLGetExtension(poOpenInfo->pszFilename), "gz") &&
          strncmp(poOpenInfo->pszFilename, "/vsigzip/", strlen("/vsigzip/")) != 0 )
     {
-        /* ok */
+        return -1; /* must be later checked */
     }
     else
     {
@@ -86,15 +82,16 @@ static GDALDataset *OGRGMLDriverOpen( GDALOpenInfo* poOpenInfo )
 /*      Here, we expect the opening chevrons of GML tree root element   */
 /* -------------------------------------------------------------------- */
         if( szPtr[0] != '<' )
-            return NULL;
+            return FALSE;
 
         if( !poOpenInfo->TryToIngest(4096) )
-            return NULL;
+            return FALSE;
+
         szPtr = (const char*)poOpenInfo->pabyHeader;
 
         if( strstr(szPtr,"opengis.net/gml") == NULL )
         {
-            return NULL;
+            return FALSE;
         }
 
         /* Ignore .xsd schemas */
@@ -102,21 +99,39 @@ static GDALDataset *OGRGMLDriverOpen( GDALOpenInfo* poOpenInfo )
             || strstr(szPtr, "<xs:schema") != NULL
             || strstr(szPtr, "<xsd:schema") != NULL )
         {
-            return NULL;
+            return FALSE;
         }
 
         /* Ignore GeoRSS documents. They will be recognized by the GeoRSS driver */
         if( strstr(szPtr, "<rss") != NULL && strstr(szPtr, "xmlns:georss") != NULL )
         {
-            return NULL;
+            return FALSE;
         }
 
         /* Ignore OGR WFS xml description files */
         if( strstr(szPtr, "<OGRWFSDataSource>") != NULL )
         {
-            return NULL;
+            return FALSE;
         }
+
+        return TRUE;
     }
+}
+
+/************************************************************************/
+/*                                Open()                                */
+/************************************************************************/
+
+static GDALDataset *OGRGMLDriverOpen( GDALOpenInfo* poOpenInfo )
+
+{
+    OGRGMLDataSource    *poDS;
+
+    if( poOpenInfo->eAccess == GA_Update )
+        return NULL;
+
+    if( OGRGMLDriverIdentify( poOpenInfo ) == FALSE )
+        return NULL;
 
     poDS = new OGRGMLDataSource();
 
@@ -172,6 +187,7 @@ void RegisterOGRGML()
         poDriver->SetMetadataItem( GDAL_DCAP_VIRTUALIO, "YES" );
 
         poDriver->pfnOpen = OGRGMLDriverOpen;
+        poDriver->pfnIdentify = OGRGMLDriverIdentify;
         poDriver->pfnCreate = OGRGMLDriverCreate;
         poDriver->pfnUnloadDriver = OGRGMLDriverUnload;
 

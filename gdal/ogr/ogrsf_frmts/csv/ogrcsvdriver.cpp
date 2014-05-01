@@ -34,10 +34,10 @@
 CPL_CVSID("$Id$");
 
 /************************************************************************/
-/*                                Open()                                */
+/*                         OGRCSVDriverIdentify()                       */
 /************************************************************************/
 
-static GDALDataset *OGRCSVDriverOpen( GDALOpenInfo* poOpenInfo )
+static int OGRCSVDriverIdentify( GDALOpenInfo* poOpenInfo )
 
 {
     if( poOpenInfo->fpL != NULL )
@@ -50,7 +50,7 @@ static GDALDataset *OGRCSVDriverOpen( GDALOpenInfo* poOpenInfo )
             EQUAL(osBaseFilename, "NfdcRemarks.xls") ||
             EQUAL(osBaseFilename, "NfdcSchedules.xls"))
         {
-            /* ok */
+            return TRUE;
         }
         else if ((EQUALN(osBaseFilename, "NationalFile_", 13) ||
               EQUALN(osBaseFilename, "POP_PLACES_", 11) ||
@@ -67,32 +67,48 @@ static GDALDataset *OGRCSVDriverOpen( GDALOpenInfo* poOpenInfo )
               (strlen(osBaseFilename) > 2 && EQUALN(osBaseFilename+2, "_FedCodes_", 10))) &&
              (EQUAL(osExt, "txt") || EQUAL(osExt, "zip")) )
         {
-            /* ok */
+            return TRUE;
         }
         else if (EQUAL(osBaseFilename, "allCountries.txt") ||
              EQUAL(osBaseFilename, "allCountries.zip"))
         {
-            /* ok */
+            return TRUE;
         }
         else if (EQUAL(osExt,"csv") || EQUAL(osExt,"tsv"))
         {
-            /* ok */
+            return TRUE;
         }
         else if (strncmp(poOpenInfo->pszFilename, "/vsizip/", 8) == 0 &&
                  EQUAL(osExt,"zip"))
         {
-            /* ok */
+            return -1; /* unsure */
         }
         else
         {
-            return NULL;
+            return FALSE;
         }
     }
-    else if( !EQUALN(poOpenInfo->pszFilename, "CSV:", 4) &&
-             !poOpenInfo->bIsDirectory )
+    else if( EQUALN(poOpenInfo->pszFilename, "CSV:", 4) )
     {
-        return NULL;
+        return TRUE;
     }
+    else if ( poOpenInfo->bIsDirectory )
+    {
+        return -1; /* unsure */
+    }
+    else
+        return FALSE;
+}
+
+/************************************************************************/
+/*                                Open()                                */
+/************************************************************************/
+
+static GDALDataset *OGRCSVDriverOpen( GDALOpenInfo* poOpenInfo )
+
+{
+    if( !OGRCSVDriverIdentify(poOpenInfo) )
+        return NULL;
 
     OGRCSVDataSource   *poDS = new OGRCSVDataSource();
 
@@ -222,6 +238,7 @@ void RegisterOGRCSV()
         poDriver->SetMetadataItem( GDAL_DCAP_VIRTUALIO, "YES" );
 
         poDriver->pfnOpen = OGRCSVDriverOpen;
+        poDriver->pfnIdentify = OGRCSVDriverIdentify;
         poDriver->pfnCreate = OGRCSVDriverCreate;
         poDriver->pfnDelete = OGRCSVDriverDelete;
 

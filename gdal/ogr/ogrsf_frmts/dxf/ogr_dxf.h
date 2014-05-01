@@ -399,22 +399,4 @@ class OGRDXFWriterDS : public OGRDataSource
     void                UpdateExtent( OGREnvelope* psEnvelope );
 };
 
-/************************************************************************/
-/*                             OGRDXFDriver                             */
-/************************************************************************/
-
-class OGRDXFDriver : public OGRSFDriver
-{
-  public:
-                ~OGRDXFDriver();
-
-    const char *GetName();
-    OGRDataSource *Open( const char *, int );
-    int         TestCapability( const char * );
-
-    OGRDataSource      *CreateDataSource( const char *pszName,
-                                          char ** = NULL );
-};
-
-
 #endif /* ndef _OGR_DXF_H_INCLUDED */

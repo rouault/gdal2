@@ -34,6 +34,43 @@
 CPL_CVSID("$Id$");
 
 /************************************************************************/
+/*                              Identify()                              */
+/************************************************************************/
+
+static int OGRShapeDriverIdentify( GDALOpenInfo* poOpenInfo )
+{
+    /* Files not ending with .shp, .shx or .dbf are not handled by this driver */
+    if( !poOpenInfo->bStatOK )
+        return FALSE;
+    if( poOpenInfo->bIsDirectory )
+        return -1; /* unsure */
+    if( poOpenInfo->fpL != NULL &&
+        (EQUAL(CPLGetExtension(poOpenInfo->pszFilename), "SHP") ||
+         EQUAL(CPLGetExtension(poOpenInfo->pszFilename), "SHX")) )
+    {
+        return memcmp(poOpenInfo->pabyHeader, "\x00\x00\x27\x0A", 4) == 0 ||
+               memcmp(poOpenInfo->pabyHeader, "\x00\x00\x27\x0D", 4) == 0;
+    }
+    if( poOpenInfo->fpL != NULL && EQUAL(CPLGetExtension(poOpenInfo->pszFilename), "DBF") )
+    {
+        if( poOpenInfo->nHeaderBytes < 32 )
+            return FALSE;
+        const GByte* pabyBuf = poOpenInfo->pabyHeader;
+        unsigned int nHeadLen = pabyBuf[8] + pabyBuf[9]*256;
+        unsigned int nRecordLength = pabyBuf[10] + pabyBuf[11]*256;
+        if( nHeadLen < 32 )
+            return FALSE;
+        if( (nHeadLen % 32) != 0 && (nHeadLen % 32) != 1 )
+            return FALSE;
+        unsigned int nFields = (nHeadLen - 32) / 32;
+        if( nRecordLength < nFields )
+            return FALSE;
+        return TRUE;
+    }
+    return FALSE;
+}
+
+/************************************************************************/
 /*                                Open()                                */
 /************************************************************************/
 
@@ -42,15 +79,8 @@ static GDALDataset *OGRShapeDriverOpen( GDALOpenInfo* poOpenInfo )
 {
     OGRShapeDataSource  *poDS;
 
-    /* Files not ending with .shp or .dbf are not handled by this driver */
-    if( !poOpenInfo->bStatOK )
+    if( OGRShapeDriverIdentify(poOpenInfo) == FALSE )
         return NULL;
-    if( poOpenInfo->fpL != NULL &&
-        !EQUAL(CPLGetExtension(poOpenInfo->pszFilename), "SHP") &&
-        !EQUAL(CPLGetExtension(poOpenInfo->pszFilename), "DBF") )
-    {
-        return NULL;
-    }
 
     poDS = new OGRShapeDataSource();
 
@@ -217,7 +247,7 @@ void RegisterOGRShape()
         poDriver->SetMetadataItem( GDAL_DCAP_VIRTUALIO, "YES" );
 
         poDriver->pfnOpen = OGRShapeDriverOpen;
-        /* poDriver->pfnIdentify = OGRShapeDriver::Identify; */
+        poDriver->pfnIdentify = OGRShapeDriverIdentify;
         poDriver->pfnCreate = OGRShapeDriverCreate;
         poDriver->pfnDelete = OGRShapeDriverDelete;
 

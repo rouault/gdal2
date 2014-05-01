@@ -75,6 +75,41 @@
 
 
 /************************************************************************/
+/*                  OGRTABDriverIdentify()                              */
+/************************************************************************/
+
+static int OGRTABDriverIdentify( GDALOpenInfo* poOpenInfo )
+
+{
+    /* Files not ending with .tab, .mif or .mid are not handled by this driver */
+    if( !poOpenInfo->bStatOK )
+        return FALSE;
+    if( poOpenInfo->bIsDirectory )
+        return -1; /* unsure */
+    if( poOpenInfo->fpL == NULL )
+        return FALSE;
+    if (EQUAL(CPLGetExtension(poOpenInfo->pszFilename), "MIF") ||
+        EQUAL(CPLGetExtension(poOpenInfo->pszFilename), "MID") )
+    {
+        return TRUE;
+    }
+    if (EQUAL(CPLGetExtension(poOpenInfo->pszFilename), "TAB") )
+    {
+        for( int i = 0; i < poOpenInfo->nHeaderBytes; i++)
+        {
+            const char* pszLine = (const char*)poOpenInfo->pabyHeader + i;
+            if (EQUALN(pszLine, "Fields", 6))
+                return TRUE;
+            else if (EQUALN(pszLine, "create view", 11))
+                return TRUE;
+            else if (EQUALN(pszLine, "\"\\IsSeamless\" = \"TRUE\"", 21))
+                return TRUE;
+        }
+    }
+    return FALSE;
+}
+
+/************************************************************************/
 /*                  OGRTABDriver::Open()                                */
 /************************************************************************/
 
@@ -83,13 +118,7 @@ static GDALDataset *OGRTABDriverOpen( GDALOpenInfo* poOpenInfo )
 {
     OGRTABDataSource    *poDS;
 
-    /* Files not ending with .tab, .mif or .mid are not handled by this driver */
-    if( !poOpenInfo->bStatOK )
-        return NULL;
-    if( poOpenInfo->fpL != NULL &&
-        !EQUAL(CPLGetExtension(poOpenInfo->pszFilename), "TAB") &&
-        !EQUAL(CPLGetExtension(poOpenInfo->pszFilename), "MIF") &&
-        !EQUAL(CPLGetExtension(poOpenInfo->pszFilename), "MID") )
+    if( OGRTABDriverIdentify(poOpenInfo) == FALSE )
     {
         return NULL;
     }
@@ -218,6 +247,7 @@ void RegisterOGRTAB()
                                    "drv_mitab.html" );
 
         poDriver->pfnOpen = OGRTABDriverOpen;
+        poDriver->pfnIdentify = OGRTABDriverIdentify;
         poDriver->pfnCreate = OGRTABDriverCreate;
         poDriver->pfnDelete = OGRTABDriverDelete;
 

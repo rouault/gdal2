@@ -106,7 +106,7 @@ class OGRS57DataSource : public OGRDataSource
     void                SetOptionList( char ** );
     const char         *GetOption( const char * );
     
-    int                 Open( const char * pszName, int bTestOpen = FALSE );
+    int                 Open( const char * pszName );
     int                 Create( const char *pszName, char **papszOptions );
 
     const char          *GetName() { return pszName; }

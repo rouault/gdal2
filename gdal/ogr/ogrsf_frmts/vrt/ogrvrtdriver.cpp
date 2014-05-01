@@ -44,6 +44,32 @@ static void CPL_STDCALL OGRVRTErrorHandler(CPLErr eErr, int nType, const char* p
 }
 
 /************************************************************************/
+/*                         OGRVRTDriverIdentify()                       */
+/************************************************************************/
+
+static int OGRVRTDriverIdentify( GDALOpenInfo* poOpenInfo )
+{
+    if( !poOpenInfo->bStatOK )
+    {
+/* -------------------------------------------------------------------- */
+/*      Are we being passed the XML definition directly?                */
+/*      Skip any leading spaces/blanks.                                 */
+/* -------------------------------------------------------------------- */
+        const char *pszTestXML = poOpenInfo->pszFilename;
+        while( *pszTestXML != '\0' && isspace( (unsigned char)*pszTestXML ) )
+            pszTestXML++;
+        if( EQUALN(pszTestXML,"<OGRVRTDataSource>",18) )
+        {
+            return TRUE;
+        }
+        return FALSE;
+    }
+
+    return ( poOpenInfo->fpL != NULL &&
+             strstr((const char*)poOpenInfo->pabyHeader,"<OGRVRTDataSource") != NULL );
+}
+
+/************************************************************************/
 /*                                Open()                                */
 /************************************************************************/
 
@@ -51,6 +77,10 @@ static GDALDataset *OGRVRTDriverOpen( GDALOpenInfo* poOpenInfo )
 
 {
     OGRVRTDataSource     *poDS;
+
+    if( !OGRVRTDriverIdentify(poOpenInfo) )
+        return NULL;
+
     char *pszXML = NULL;
 
 /* -------------------------------------------------------------------- */
@@ -71,11 +101,6 @@ static GDALDataset *OGRVRTDriverOpen( GDALOpenInfo* poOpenInfo )
 /* -------------------------------------------------------------------- */
     else
     {
-        if( poOpenInfo->fpL == NULL || poOpenInfo->nHeaderBytes == 0 )
-            return NULL;
-        if( strstr((const char*)poOpenInfo->pabyHeader,"<OGRVRTDataSource") == NULL )
-            return NULL;
-
         VSIStatBufL sStatBuf;
         if ( VSIStatL( poOpenInfo->pszFilename, &sStatBuf ) != 0 ||
              sStatBuf.st_size > 1024 * 1024 )
@@ -182,6 +207,7 @@ void RegisterOGRVRT()
         poDriver->SetMetadataItem( GDAL_DCAP_VIRTUALIO, "YES" );
 
         poDriver->pfnOpen = OGRVRTDriverOpen;
+        poDriver->pfnIdentify = OGRVRTDriverIdentify;
 
         GetGDALDriverManager()->RegisterDriver( poDriver );
     }

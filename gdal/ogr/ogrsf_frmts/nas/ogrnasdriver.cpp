@@ -48,16 +48,14 @@ static void OGRNASDriverUnload(GDALDriver* poDriver)
 }
 
 /************************************************************************/
-/*                                Open()                                */
+/*                     OGRNASDriverIdentify()                           */
 /************************************************************************/
 
-static GDALDataset *OGRNASDriverOpen( GDALOpenInfo* poOpenInfo )
+static int OGRNASDriverIdentify( GDALOpenInfo* poOpenInfo )
 
 {
-    OGRNASDataSource    *poDS;
-
-    if( poOpenInfo->eAccess == GA_Update || poOpenInfo->fpL == NULL )
-        return NULL;
+    if( poOpenInfo->fpL == NULL )
+        return FALSE;
 
 /* -------------------------------------------------------------------- */
 /*      Check for a UTF-8 BOM and skip if found                         */
@@ -80,10 +78,10 @@ static GDALDataset *OGRNASDriverOpen( GDALOpenInfo* poOpenInfo )
 /*      Here, we expect the opening chevrons of NAS tree root element   */
 /* -------------------------------------------------------------------- */
     if( szPtr[0] != '<' )
-        return NULL;
+        return FALSE;
 
     if( !poOpenInfo->TryToIngest(8192) )
-        return NULL;
+        return FALSE;
     szPtr = (const char*)poOpenInfo->pabyHeader;
 
     if( strstr(szPtr,"opengis.net/gml") == NULL
@@ -91,8 +89,23 @@ static GDALDataset *OGRNASDriverOpen( GDALOpenInfo* poOpenInfo )
             strstr(szPtr,"NAS-Operationen_optional.xsd") == NULL &&
             strstr(szPtr,"AAA-Fachschema.xsd") == NULL ) )
     {
-        return NULL;
+        return FALSE;
     }
+    return TRUE;
+}
+
+/************************************************************************/
+/*                                Open()                                */
+/************************************************************************/
+
+static GDALDataset *OGRNASDriverOpen( GDALOpenInfo* poOpenInfo )
+
+{
+    OGRNASDataSource    *poDS;
+
+    if( poOpenInfo->eAccess == GA_Update ||
+        !OGRNASDriverIdentify(poOpenInfo) )
+        return NULL;
 
     VSIFCloseL(poOpenInfo->fpL);
     poOpenInfo->fpL = NULL;
@@ -130,6 +143,7 @@ void RegisterOGRNAS()
                                    "drv_nas.html" );
 
         poDriver->pfnOpen = OGRNASDriverOpen;
+        poDriver->pfnIdentify = OGRNASDriverIdentify;
         poDriver->pfnUnloadDriver = OGRNASDriverUnload;
 
         GetGDALDriverManager()->RegisterDriver( poDriver );

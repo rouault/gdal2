@@ -186,20 +186,6 @@ public:
   virtual int         TestCapability( const char * );
 };
 
-/************************************************************************/
-/*                        OGROpenFileGDBDriver                          */
-/************************************************************************/
-
-class OGROpenFileGDBDriver : public OGRSFDriver
-{
-public:
-  virtual ~OGROpenFileGDBDriver();
-
-  virtual const char *GetName();
-  virtual OGRDataSource *Open( const char *, int );
-  virtual int TestCapability( const char * );
-};
-
 int OGROpenFileGDBIsComparisonOp(int op);
 
 #endif /* ndef _OGR_OPENFILEGDB_H_INCLUDED */

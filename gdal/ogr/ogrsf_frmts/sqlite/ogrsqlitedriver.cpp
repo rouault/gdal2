@@ -57,12 +57,40 @@ static void OGRSQLiteDriverUnload(GDALDriver* poDriver)
 }
 
 /************************************************************************/
+/*                     OGRSQLiteDriverIdentify()                        */
+/************************************************************************/
+
+static int OGRSQLiteDriverIdentify( GDALOpenInfo* poOpenInfo )
+
+{
+    int nLen = (int) strlen(poOpenInfo->pszFilename);
+    if (EQUALN(poOpenInfo->pszFilename, "VirtualShape:", strlen( "VirtualShape:" )) &&
+        nLen > 4 && EQUAL(poOpenInfo->pszFilename + nLen - 4, ".SHP"))
+    {
+        return TRUE;
+    }
+
+    if( EQUAL(poOpenInfo->pszFilename, ":memory:") )
+        return TRUE;
+/* -------------------------------------------------------------------- */
+/*      Verify that the target is a real file, and has an               */
+/*      appropriate magic string at the beginning.                      */
+/* -------------------------------------------------------------------- */
+    if( poOpenInfo->nHeaderBytes < 16 )
+        return FALSE;
+
+    return( strncmp( (const char*)poOpenInfo->pabyHeader, "SQLite format 3", 15 ) == 0 );
+}
+
+/************************************************************************/
 /*                                Open()                                */
 /************************************************************************/
 
 static GDALDataset *OGRSQLiteDriverOpen( GDALOpenInfo* poOpenInfo )
 
 {
+    if( !OGRSQLiteDriverIdentify(poOpenInfo) )
+        return NULL;
 
 /* -------------------------------------------------------------------- */
 /*      Check VirtualShape:xxx.shp syntax                               */
@@ -108,19 +136,6 @@ static GDALDataset *OGRSQLiteDriverOpen( GDALOpenInfo* poOpenInfo )
         CPLFree(pszSQL);
         CPLFree(pszSQLiteFilename);
         return poDS;
-    }
-
-/* -------------------------------------------------------------------- */
-/*      Verify that the target is a real file, and has an               */
-/*      appropriate magic string at the beginning.                      */
-/* -------------------------------------------------------------------- */
-    if( !EQUAL(poOpenInfo->pszFilename, ":memory:") )
-    {
-        if( poOpenInfo->nHeaderBytes < 16 )
-            return NULL;
-
-        if( strncmp( (const char*)poOpenInfo->pabyHeader, "SQLite format 3", 15 ) != 0 )
-            return NULL;
     }
 
 /* -------------------------------------------------------------------- */
@@ -216,6 +231,7 @@ void RegisterOGRSQLite()
         poDriver->SetMetadataItem( GDAL_DCAP_VIRTUALIO, "YES" );
 
         poDriver->pfnOpen = OGRSQLiteDriverOpen;
+        poDriver->pfnIdentify = OGRSQLiteDriverIdentify;
         poDriver->pfnCreate = OGRSQLiteDriverCreate;
         poDriver->pfnDelete = OGRSQLiteDriverDelete;
         poDriver->pfnUnloadDriver = OGRSQLiteDriverUnload;

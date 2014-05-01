@@ -67,6 +67,26 @@ OGRS57Driver::~OGRS57Driver()
 }
 
 /************************************************************************/
+/*                          OGRS57DriverIdentify()                      */
+/************************************************************************/
+
+static int OGRS57DriverIdentify( GDALOpenInfo* poOpenInfo )
+
+{
+    if( poOpenInfo->nHeaderBytes < 10 )
+        return FALSE;
+    const char* pachLeader = (const char* )poOpenInfo->pabyHeader;
+    if( (pachLeader[5] != '1' && pachLeader[5] != '2'
+                && pachLeader[5] != '3' )
+            || pachLeader[6] != 'L'
+            || (pachLeader[8] != '1' && pachLeader[8] != ' ') )
+    {
+        return FALSE;
+    }
+    return strstr( pachLeader, "DSID") != NULL;
+}
+
+/************************************************************************/
 /*                                Open()                                */
 /************************************************************************/
 
@@ -75,19 +95,11 @@ GDALDataset *OGRS57Driver::Open( GDALOpenInfo* poOpenInfo )
 {
     OGRS57DataSource    *poDS;
 
-    if( poOpenInfo->nHeaderBytes < 10 )
+    if( !OGRS57DriverIdentify(poOpenInfo) )
         return NULL;
-    const char* pachLeader = (const char* )poOpenInfo->pabyHeader;
-    if( (pachLeader[5] != '1' && pachLeader[5] != '2'
-                && pachLeader[5] != '3' )
-            || pachLeader[6] != 'L'
-            || (pachLeader[8] != '1' && pachLeader[8] != ' ') )
-    {
-        return NULL;
-    }
 
     poDS = new OGRS57DataSource;
-    if( !poDS->Open( poOpenInfo->pszFilename, TRUE ) )
+    if( !poDS->Open( poOpenInfo->pszFilename ) )
     {
         delete poDS;
         poDS = NULL;
@@ -172,6 +184,7 @@ void RegisterOGRS57()
         poDriver->SetMetadataItem( GDAL_DCAP_VIRTUALIO, "YES" );
 
         poDriver->pfnOpen = OGRS57Driver::Open;
+        poDriver->pfnIdentify = OGRS57DriverIdentify;
         poDriver->pfnCreate = OGRS57Driver::Create;
 
         GetGDALDriverManager()->RegisterDriver( poDriver );
