@@ -5397,9 +5397,11 @@ GDALDatasetShadow* Open( char const* utf8_path, GDALAccess eAccess = GA_ReadOnly
 
 
 GDALDatasetShadow* OpenEx( char const* utf8_path, unsigned int nOpenFlags = 0,
-                           char** allowed_drivers = NULL, char** open_options = NULL ) {
+                           char** allowed_drivers = NULL, char** open_options = NULL,
+                           char** sibling_files = NULL ) {
   CPLErrorReset();
-  GDALDatasetShadow *ds = GDALOpenEx( utf8_path, nOpenFlags, allowed_drivers, open_options);
+  GDALDatasetShadow *ds = GDALOpenEx( utf8_path, nOpenFlags, allowed_drivers,
+                                      open_options, sibling_files );
   if( ds != NULL && CPLGetLastErrorType() == CE_Failure )
   {
       if ( GDALDereferenceDataset( ds ) <= 0 )
@@ -22839,6 +22841,7 @@ SWIGINTERN PyObject *_wrap_OpenEx(PyObject *SWIGUNUSEDPARM(self), PyObject *args
   unsigned int arg2 = (unsigned int) 0 ;
   char **arg3 = (char **) NULL ;
   char **arg4 = (char **) NULL ;
+  char **arg5 = (char **) NULL ;
   int bToFree1 = 0 ;
   unsigned int val2 ;
   int ecode2 = 0 ;
@@ -22846,12 +22849,13 @@ SWIGINTERN PyObject *_wrap_OpenEx(PyObject *SWIGUNUSEDPARM(self), PyObject *args
   PyObject * obj1 = 0 ;
   PyObject * obj2 = 0 ;
   PyObject * obj3 = 0 ;
+  PyObject * obj4 = 0 ;
   char *  kwnames[] = {
-    (char *) "utf8_path",(char *) "nOpenFlags",(char *) "allowed_drivers",(char *) "open_options", NULL 
+    (char *) "utf8_path",(char *) "nOpenFlags",(char *) "allowed_drivers",(char *) "open_options",(char *) "sibling_files", NULL 
   };
   GDALDatasetShadow *result = 0 ;
   
-  if (!PyArg_ParseTupleAndKeywords(args,kwargs,(char *)"O|OOO:OpenEx",kwnames,&obj0,&obj1,&obj2,&obj3)) SWIG_fail;
+  if (!PyArg_ParseTupleAndKeywords(args,kwargs,(char *)"O|OOOO:OpenEx",kwnames,&obj0,&obj1,&obj2,&obj3,&obj4)) SWIG_fail;
   {
     /* %typemap(in) (const char *utf8_path) */
     arg1 = GDALPythonObjectToCStr( obj0, &bToFree1 );
@@ -22960,6 +22964,52 @@ SWIGINTERN PyObject *_wrap_OpenEx(PyObject *SWIGUNUSEDPARM(self), PyObject *args
       }
     }
   }
+  if (obj4) {
+    {
+      /* %typemap(in) char **options */
+      /* Check if is a list (and reject strings, that are seen as sequence of characters)  */
+      if ( ! PySequence_Check(obj4) || PyUnicode_Check(obj4)
+  #if PY_VERSION_HEX < 0x03000000
+        || PyString_Check(obj4)
+  #endif
+        ) {
+        PyErr_SetString(PyExc_TypeError,"not a sequence");
+        SWIG_fail;
+      }
+      
+      int size = PySequence_Size(obj4);
+      for (int i = 0; i < size; i++) {
+        PyObject* pyObj = PySequence_GetItem(obj4,i);
+        if (PyUnicode_Check(pyObj))
+        {
+          char *pszStr;
+          Py_ssize_t nLen;
+          PyObject* pyUTF8Str = PyUnicode_AsUTF8String(pyObj);
+#if PY_VERSION_HEX >= 0x03000000
+          PyBytes_AsStringAndSize(pyUTF8Str, &pszStr, &nLen);
+#else
+          PyString_AsStringAndSize(pyUTF8Str, &pszStr, &nLen);
+#endif
+          arg5 = CSLAddString( arg5, pszStr );
+          Py_XDECREF(pyUTF8Str);
+        }
+#if PY_VERSION_HEX >= 0x03000000
+        else if (PyBytes_Check(pyObj))
+        arg5 = CSLAddString( arg5, PyBytes_AsString(pyObj) );
+#else
+        else if (PyString_Check(pyObj))
+        arg5 = CSLAddString( arg5, PyString_AsString(pyObj) );
+#endif
+        else
+        {
+          Py_DECREF(pyObj);
+          PyErr_SetString(PyExc_TypeError,"sequence must contain strings");
+          SWIG_fail;
+        }
+        Py_DECREF(pyObj);
+      }
+    }
+  }
   {
     if (!arg1) {
       SWIG_exception(SWIG_ValueError,"Received a NULL pointer.");
@@ -22969,7 +23019,7 @@ SWIGINTERN PyObject *_wrap_OpenEx(PyObject *SWIGUNUSEDPARM(self), PyObject *args
     if ( bUseExceptions ) {
       CPLErrorReset();
     }
-    result = (GDALDatasetShadow *)OpenEx((char const *)arg1,arg2,arg3,arg4);
+    result = (GDALDatasetShadow *)OpenEx((char const *)arg1,arg2,arg3,arg4,arg5);
     if ( bUseExceptions ) {
       CPLErr eclass = CPLGetLastErrorType();
       if ( eclass == CE_Failure || eclass == CE_Fatal ) {
@@ -22990,6 +23040,10 @@ SWIGINTERN PyObject *_wrap_OpenEx(PyObject *SWIGUNUSEDPARM(self), PyObject *args
     /* %typemap(freearg) char **options */
     CSLDestroy( arg4 );
   }
+  {
+    /* %typemap(freearg) char **options */
+    CSLDestroy( arg5 );
+  }
   return resultobj;
 fail:
   {
@@ -23003,6 +23057,10 @@ fail:
   {
     /* %typemap(freearg) char **options */
     CSLDestroy( arg4 );
+  }
+  {
+    /* %typemap(freearg) char **options */
+    CSLDestroy( arg5 );
   }
   return NULL;
 }
@@ -23725,7 +23783,8 @@ static PyMethodDef SwigMethods[] = {
 	 { (char *)"Open", _wrap_Open, METH_VARARGS, (char *)"Open(char utf8_path, GDALAccess eAccess = GA_ReadOnly) -> Dataset"},
 	 { (char *)"OpenEx", (PyCFunction) _wrap_OpenEx, METH_VARARGS | METH_KEYWORDS, (char *)"\n"
 		"OpenEx(char utf8_path, unsigned int nOpenFlags = 0, char allowed_drivers = None, \n"
-		"    char open_options = None) -> Dataset\n"
+		"    char open_options = None, \n"
+		"    char sibling_files = None) -> Dataset\n"
 		""},
 	 { (char *)"OpenShared", _wrap_OpenShared, METH_VARARGS, (char *)"OpenShared(char utf8_path, GDALAccess eAccess = GA_ReadOnly) -> Dataset"},
 	 { (char *)"IdentifyDriver", _wrap_IdentifyDriver, METH_VARARGS, (char *)"IdentifyDriver(char utf8_path, char papszSiblings = None) -> Driver"},

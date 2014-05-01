@@ -714,11 +714,14 @@ GDALDatasetShadow* Open( char const* utf8_path, GDALAccess eAccess = GA_ReadOnly
 %feature( "kwargs" ) OpenEx;
 %apply (char **options) {char** allowed_drivers};
 %apply (char **options) {char** open_options};
+%apply (char **options) {char** sibling_files};
 %inline %{
 GDALDatasetShadow* OpenEx( char const* utf8_path, unsigned int nOpenFlags = 0,
-                           char** allowed_drivers = NULL, char** open_options = NULL ) {
+                           char** allowed_drivers = NULL, char** open_options = NULL,
+                           char** sibling_files = NULL ) {
   CPLErrorReset();
-  GDALDatasetShadow *ds = GDALOpenEx( utf8_path, nOpenFlags, allowed_drivers, open_options);
+  GDALDatasetShadow *ds = GDALOpenEx( utf8_path, nOpenFlags, allowed_drivers,
+                                      open_options, sibling_files );
   if( ds != NULL && CPLGetLastErrorType() == CE_Failure )
   {
       if ( GDALDereferenceDataset( ds ) <= 0 )
@@ -730,6 +733,7 @@ GDALDatasetShadow* OpenEx( char const* utf8_path, unsigned int nOpenFlags = 0,
 %}
 %clear char** allowed_drivers;
 %clear char** open_options;
+%clear char** sibling_files;
 
 #endif
 

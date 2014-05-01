@@ -778,7 +778,7 @@ CPLErr GTiffJPEGOverviewBand::IReadBlock( int nBlockXOff, int nBlockYOff, void *
             poGDS->poJPEGDS = (GDALDataset*) GDALOpenEx(osFileToOpen,
                                                                 GDAL_OF_RASTER,
                                                                 apszDrivers,
-                                                                NULL);
+                                                                NULL, NULL);
             if( poGDS->poJPEGDS != NULL )
             {
                 /* Force all implicit overviews to be available, even for small tiles */

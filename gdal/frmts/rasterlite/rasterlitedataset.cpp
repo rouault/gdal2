@@ -48,7 +48,7 @@ OGRDataSourceH RasterliteOpenSQLiteDB(const char* pszFilename,
     return (OGRDataSourceH)GDALOpenEx(pszFilename,
                                       GDAL_OF_VECTOR |
                                       ((eAccess == GA_Update) ? GDAL_OF_UPDATE : 0),
-                                      apszAllowedDrivers, NULL);
+                                      apszAllowedDrivers, NULL, NULL);
 }
 
 /************************************************************************/

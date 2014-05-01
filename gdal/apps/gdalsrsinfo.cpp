@@ -291,7 +291,7 @@ int FindSRS( const char *pszInput, OGRSpatialReference &oSRS )
                 strlen("http://spatialreference.org/")) != 0 )
     {
         CPLDebug( "gdalsrsinfo", "trying to open with GDAL" );
-        poGDALDS = (GDALDataset *) GDALOpenEx( pszInput, 0, NULL, NULL );
+        poGDALDS = (GDALDataset *) GDALOpenEx( pszInput, 0, NULL, NULL, NULL );
     }
     if ( poGDALDS != NULL ) {
         pszProjection = poGDALDS->GetProjectionRef( );

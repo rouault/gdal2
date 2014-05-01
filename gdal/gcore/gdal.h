@@ -245,7 +245,8 @@ GDALDatasetH CPL_DLL CPL_STDCALL GDALOpenShared( const char *, GDALAccess ) CPL_
 GDALDatasetH CPL_DLL CPL_STDCALL GDALOpenEx( const char* pszFilename,
                                              unsigned int nOpenFlags,
                                              const char* const* papszAllowedDrivers,
-                                             const char* const* papszOpenOptions ) CPL_WARN_UNUSED_RESULT;
+                                             const char* const* papszOpenOptions,
+                                             const char* const* papszSiblingFiles ) CPL_WARN_UNUSED_RESULT;
 
 int          CPL_DLL CPL_STDCALL GDALDumpOpenDatasets( FILE * );
 

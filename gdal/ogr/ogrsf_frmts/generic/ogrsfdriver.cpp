@@ -127,7 +127,7 @@ OGRDataSourceH OGR_Dr_Open( OGRSFDriverH hDriver, const char *pszName,
     return (OGRDataSourceH)GDALOpenEx(pszName,
                                       GDAL_OF_VECTOR |
                                       ((bUpdate) ? GDAL_OF_UPDATE: 0),
-                                      apszDrivers, NULL);
+                                      apszDrivers, NULL, NULL);
 }
 
 /************************************************************************/

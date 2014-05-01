@@ -253,22 +253,15 @@ class OGRGeometry;
 class OGRSpatialReference;
 class OGRStyleTable;
 
-/* Do not use outside of GDAL code base */
-GDALDatasetH GDALOpenExInternal( const char* pszFilename,
-                                 unsigned int nOpenFlags,
-                                 const char* const* papszAllowedDrivers,
-                                 const char* const* papszOpenOptions,
-                                 char** papszSiblingFiles );
-
 //! A set of associated raster bands, usually from one file.
 
 class CPL_DLL GDALDataset : public GDALMajorObject
 {
-    friend GDALDatasetH GDALOpenExInternal( const char* pszFilename,
+    friend GDALDatasetH CPL_STDCALL GDALOpenEx( const char* pszFilename,
                                  unsigned int nOpenFlags,
                                  const char* const* papszAllowedDrivers,
                                  const char* const* papszOpenOptions,
-                                 char** papszSiblingFiles );
+                                 const char* const* papszSiblingFiles );
 
     friend class GDALDriver;
     friend class GDALDefaultOverviews;

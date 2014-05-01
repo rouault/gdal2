@@ -1738,7 +1738,8 @@ Open = _gdal.Open
 def OpenEx(*args, **kwargs):
   """
     OpenEx(char utf8_path, unsigned int nOpenFlags = 0, char allowed_drivers = None, 
-        char open_options = None) -> Dataset
+        char open_options = None, 
+        char sibling_files = None) -> Dataset
     """
   return _gdal.OpenEx(*args, **kwargs)
 OpenEx = _gdal.OpenEx

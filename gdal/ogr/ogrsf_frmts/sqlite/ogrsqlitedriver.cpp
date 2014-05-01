@@ -86,7 +86,8 @@ static GDALDataset *OGRSQLiteDriverOpen( GDALOpenInfo* poOpenInfo )
         }
 
         char* pszSQLiteFilename = CPLStrdup(poOpenInfo->pszFilename + strlen( "VirtualShape:" ));
-        GDALDataset* poSQLiteDS = (GDALDataset*) GDALOpenEx(pszSQLiteFilename, GDAL_OF_VECTOR, NULL, NULL);
+        GDALDataset* poSQLiteDS = (GDALDataset*) GDALOpenEx(pszSQLiteFilename,
+                                            GDAL_OF_VECTOR, NULL, NULL, NULL);
         if (poSQLiteDS == NULL)
         {
             CPLFree(pszSQLiteFilename);

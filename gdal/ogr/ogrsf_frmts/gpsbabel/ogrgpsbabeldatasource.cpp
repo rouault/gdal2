@@ -295,7 +295,8 @@ int OGRGPSBabelDataSource::Open( const char * pszDatasourceName,
 
     if (bRet)
     {
-        poGPXDS = (GDALDataset*) GDALOpenEx(osTmpFileName.c_str(), GDAL_OF_VECTOR, NULL, NULL);
+        poGPXDS = (GDALDataset*) GDALOpenEx(osTmpFileName.c_str(),
+                                            GDAL_OF_VECTOR, NULL, NULL, NULL);
         if (poGPXDS)
         {
             OGRLayer* poLayer;

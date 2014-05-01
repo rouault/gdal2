@@ -56,7 +56,7 @@ OGRDataSourceH MBTILESOpenSQLiteDB(const char* pszFilename,
     return (OGRDataSourceH)GDALOpenEx(pszFilename,
                                       GDAL_OF_VECTOR |
                                       ((eAccess == GA_Update) ? GDAL_OF_UPDATE : 0),
-                                      apszAllowedDrivers, NULL);
+                                      apszAllowedDrivers, NULL, NULL);
 }
 
 /************************************************************************/
@@ -198,7 +198,7 @@ CPLErr MBTilesBand::IReadBlock( int nBlockXOff, int nBlockYOff, void * pImage)
         VSIFCloseL(fp);
 
         GDALDatasetH hDSTile = GDALOpenEx(osMemFileName.c_str(), GDAL_OF_RASTER,
-                                          apszAllowedDrivers, NULL);
+                                          apszAllowedDrivers, NULL, NULL);
         if (hDSTile != NULL)
         {
             int nTileBands = GDALGetRasterCount(hDSTile);
@@ -1623,7 +1623,7 @@ int MBTilesGetBandCount(OGRDataSourceH &hDS, int nMinLevel, int nMaxLevel,
                                     nDataSize, FALSE));
 
     GDALDatasetH hDSTile = GDALOpenEx(osMemFileName.c_str(), GDAL_OF_RASTER,
-                                          apszAllowedDrivers, NULL);
+                                          apszAllowedDrivers, NULL, NULL);
     if (hDSTile == NULL)
     {
         VSIUnlink(osMemFileName.c_str());

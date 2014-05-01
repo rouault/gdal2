@@ -2225,7 +2225,7 @@ GDALDatasetH CPL_STDCALL
 GDALOpen( const char * pszFilename, GDALAccess eAccess )
 
 {
-    return GDALOpenExInternal( pszFilename,
+    return GDALOpenEx( pszFilename,
                        GDAL_OF_RASTER |
                        (eAccess == GA_Update ? GDAL_OF_UPDATE : 0) |
                        GDAL_OF_VERBOSE_ERROR,
@@ -2263,6 +2263,15 @@ GDALOpen( const char * pszFilename, GDALAccess eAccess )
  * In some situations (dealing with unverified data), the datasets can be opened in another
  * process through the \ref gdal_api_proxy mechanism.
  *
+ * In order to reduce the need for searches through the operating system
+ * file system machinery, it is possible to give an optional list of files with
+ * the papszSiblingFiles parameter.
+ * This is the list of all files at the same level in the file system as the
+ * target file, including the target file. The filenames must not include any
+ * path components, are an essentially just the output of CPLReadDir() on the
+ * parent directory. If the target object does not have filesystem semantics
+ * then the file list should be NULL.
+ *
  * @param pszFilename the name of the file to access.  In the case of
  * exotic drivers this may not refer to a physical file, but instead contain
  * information for the driver on how to access a dataset.  It should be in UTF-8
@@ -2289,6 +2298,10 @@ GDALOpen( const char * pszFilename, GDALAccess eAccess )
  *
  * @param papszOpenOptions NULL, or a NULL terminated list of strings with open
  * options passed to candidate drivers.
+  *
+ * @param papszSiblingFiles  NULL, or a NULL terminated list of strings that are
+ * filenames that are auxiliary to the main filename. If NULL is passed, a probing
+ * of the file system will be done.
  *
  * @return A GDALDatasetH handle or NULL on failure.  For C++ applications
  * this handle can be cast to a GDALDataset *. 
@@ -2297,19 +2310,10 @@ GDALOpen( const char * pszFilename, GDALAccess eAccess )
  */
 
 GDALDatasetH CPL_STDCALL GDALOpenEx( const char* pszFilename,
-                         unsigned int nOpenFlags,
-                         const char* const* papszAllowedDrivers,
-                         const char* const* papszOpenOptions )
-{
-    return GDALOpenExInternal( pszFilename, nOpenFlags, papszAllowedDrivers,
-                              papszOpenOptions, NULL );
-}
-
-GDALDatasetH GDALOpenExInternal( const char* pszFilename,
                                  unsigned int nOpenFlags,
                                  const char* const* papszAllowedDrivers,
                                  const char* const* papszOpenOptions,
-                                 char** papszSiblingFiles )
+                                 const char* const* papszSiblingFiles )
 {
     VALIDATE_POINTER1( pszFilename, "GDALOpen", NULL );
 
@@ -2376,7 +2380,7 @@ GDALDatasetH GDALOpenExInternal( const char* pszFilename,
     /* shared dataset was asked before */
     GDALOpenInfo oOpenInfo(pszFilename,
                            (nOpenFlags & GDAL_OF_UPDATE) ? GA_Update : GA_ReadOnly,
-                           papszSiblingFiles);
+                           (char**) papszSiblingFiles);
     oOpenInfo.papszOpenOptions = (char**) papszOpenOptions;
 
     for( iDriver = -1; iDriver < poDM->GetDriverCount(); iDriver++ )
@@ -2536,7 +2540,7 @@ GDALOpenShared( const char *pszFilename, GDALAccess eAccess )
                        (eAccess == GA_Update ? GDAL_OF_UPDATE : 0) |
                        GDAL_OF_SHARED |
                        GDAL_OF_VERBOSE_ERROR,
-                       NULL, NULL );
+                       NULL, NULL, NULL );
 }
 
 /************************************************************************/
