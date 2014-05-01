@@ -104,12 +104,13 @@ GeoJSONSourceType GeoJSONGetSourceType( GDALOpenInfo* poOpenInfo )
     // NOTE: Sometimes URL ends with .geojson token, for example
     //       http://example/path/2232.geojson
     //       It's important to test beginning of source first.
-    if ( (strstr(poOpenInfo->pszFilename, "SERVICE=WFS") ||
-          strstr(poOpenInfo->pszFilename, "service=WFS") ||
-          strstr(poOpenInfo->pszFilename, "service=wfs")) &&
-          !strstr(poOpenInfo->pszFilename, "json") &&
-          eGeoJSONProtocolUnknown != GeoJSONGetProtocolType( poOpenInfo->pszFilename ) )
+    if ( eGeoJSONProtocolUnknown != GeoJSONGetProtocolType( poOpenInfo->pszFilename ) )
     {
+        if( (strstr(poOpenInfo->pszFilename, "SERVICE=WFS") ||
+             strstr(poOpenInfo->pszFilename, "service=WFS") ||
+             strstr(poOpenInfo->pszFilename, "service=wfs")) &&
+             !strstr(poOpenInfo->pszFilename, "json") )
+            return srcType;
         srcType = eGeoJSONSourceService;
     }
     else if( EQUAL( CPLGetExtension( poOpenInfo->pszFilename ), "geojson" )
