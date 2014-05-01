@@ -143,7 +143,7 @@ static GDALDataset *HTTPOpen( GDALOpenInfo * poOpenInfo )
     /* suppress errors as not all drivers support /vsimem */
     CPLPushErrorHandler( CPLQuietErrorHandler );
     GDALDataset *poDS = (GDALDataset *) 
-        GDALOpen( osResultFilename, GA_ReadOnly );
+        GDALOpenEx( osResultFilename, 0, NULL, NULL, NULL);
     CPLPopErrorHandler();
 
 /* -------------------------------------------------------------------- */
@@ -164,7 +164,7 @@ static GDALDataset *HTTPOpen( GDALOpenInfo * poOpenInfo )
         else
         {
             poDS =  (GDALDataset *) 
-                GDALOpen( osTempFilename, GA_ReadOnly );
+                GDALOpenEx( osResultFilename, 0, NULL, NULL, NULL);
             VSIUnlink( osTempFilename ); /* this may not work on windows */
         }
     }
@@ -194,6 +194,7 @@ void GDALRegister_HTTP()
         
         poDriver->SetDescription( "HTTP" );
         poDriver->SetMetadataItem( GDAL_DCAP_RASTER, "YES" );
+        poDriver->SetMetadataItem( GDAL_DCAP_VECTOR, "YES" );
         poDriver->SetMetadataItem( GDAL_DMD_LONGNAME, 
                                    "HTTP Fetching Wrapper" );
         

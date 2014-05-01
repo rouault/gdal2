@@ -416,10 +416,6 @@ void CPL_STDCALL GDALAllRegister()
     GDALRegister_DODS();
 #endif
 
-#ifdef FRMT_wcs
-    GDALRegister_HTTP();
-#endif
-
 #ifdef FRMT_hdf5
     GDALRegister_BAG();
     GDALRegister_HDF5();
@@ -517,6 +513,10 @@ void CPL_STDCALL GDALAllRegister()
 #endif
     
     OGRRegisterAllInternal();
+
+#ifdef FRMT_wcs
+    GDALRegister_HTTP();
+#endif
     
 /* -------------------------------------------------------------------- */
 /*      Deregister any drivers explicitly marked as supressed by the    */
