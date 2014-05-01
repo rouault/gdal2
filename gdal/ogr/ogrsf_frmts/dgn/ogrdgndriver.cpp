@@ -33,36 +33,20 @@
 CPL_CVSID("$Id$");
 
 /************************************************************************/
-/*                          ~OGRDGNDriver()                             */
-/************************************************************************/
-
-OGRDGNDriver::~OGRDGNDriver()
-
-{
-}
-
-/************************************************************************/
-/*                              GetName()                               */
-/************************************************************************/
-
-const char *OGRDGNDriver::GetName()
-
-{
-    return "DGN";
-}
-
-/************************************************************************/
 /*                                Open()                                */
 /************************************************************************/
 
-OGRDataSource *OGRDGNDriver::Open( const char * pszFilename, int bUpdate )
+static GDALDataset *OGRDGNDriverOpen( GDALOpenInfo* poOpenInfo )
 
 {
     OGRDGNDataSource    *poDS;
+    
+    if( !DGNTestOpen(poOpenInfo->pabyHeader, poOpenInfo->nHeaderBytes) )
+        return NULL;
 
     poDS = new OGRDGNDataSource();
 
-    if( !poDS->Open( pszFilename, TRUE, bUpdate )
+    if( !poDS->Open( poOpenInfo->pszFilename, TRUE, (poOpenInfo->eAccess == GA_Update) )
         || poDS->GetLayerCount() == 0 )
     {
         delete poDS;
@@ -73,11 +57,12 @@ OGRDataSource *OGRDGNDriver::Open( const char * pszFilename, int bUpdate )
 }
 
 /************************************************************************/
-/*                          CreateDataSource()                          */
+/*                              Create()                                */
 /************************************************************************/
 
-OGRDataSource *OGRDGNDriver::CreateDataSource( const char * pszName,
-                                               char **papszOptions )
+static GDALDataset *OGRDGNDriverCreate( const char * pszName,
+                                int nBands, int nXSize, int nYSize, GDALDataType eDT,
+                                char **papszOptions )
 
 {
 /* -------------------------------------------------------------------- */
@@ -97,25 +82,29 @@ OGRDataSource *OGRDGNDriver::CreateDataSource( const char * pszName,
 }
 
 /************************************************************************/
-/*                           TestCapability()                           */
-/************************************************************************/
-
-int OGRDGNDriver::TestCapability( const char * pszCap )
-
-{
-    if( EQUAL(pszCap,ODrCCreateDataSource) )
-        return TRUE;
-    else
-        return FALSE;
-}
-
-/************************************************************************/
 /*                          RegisterOGRDGN()                            */
 /************************************************************************/
 
 void RegisterOGRDGN()
 
 {
-    OGRSFDriverRegistrar::GetRegistrar()->RegisterDriver( new OGRDGNDriver );
+    GDALDriver  *poDriver;
+
+    if( GDALGetDriverByName( "DGN" ) == NULL )
+    {
+        poDriver = new GDALDriver();
+
+        poDriver->SetDescription( "DGN" );
+        poDriver->SetMetadataItem( GDAL_DCAP_VECTOR, "YES" );
+        poDriver->SetMetadataItem( GDAL_DMD_LONGNAME,
+                                   "DGN" );
+        poDriver->SetMetadataItem( GDAL_DMD_HELPTOPIC,
+                                   "drv_dgn.html" );
+
+        poDriver->pfnOpen = OGRDGNDriverOpen;
+        poDriver->pfnCreate = OGRDGNDriverCreate;
+
+        GetGDALDriverManager()->RegisterDriver( poDriver );
+    }
 }
 

@@ -697,25 +697,6 @@ class OGRSQLiteDataSource : public OGRDataSource
     void                ReloadLayers();
 };
 
-/************************************************************************/
-/*                           OGRSQLiteDriver                            */
-/************************************************************************/
-
-class OGRSQLiteDriver : public OGRSFDriver
-{
-  public:
-                ~OGRSQLiteDriver();
-                
-    const char *GetName();
-    OGRDataSource *Open( const char *, int );
-
-    virtual OGRDataSource *CreateDataSource( const char *pszName,
-                                             char ** = NULL );
-    virtual OGRErr      DeleteDataSource( const char *pszName );
-    
-    int                 TestCapability( const char * );
-};
-
 /* To escape literals. The returned string doesn't contain the surrounding single quotes */
 CPLString OGRSQLiteEscape( const char *pszLiteral );
 

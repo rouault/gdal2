@@ -57,7 +57,8 @@ class OGRGPSBabelDataSource : public OGRDataSource
 
     virtual int         TestCapability( const char * );
 
-    int                 Open ( const char* pszFilename, int bUpdateIn );
+    int                 Open ( const char* pszFilename,
+                               const char* pszGPSBabelDriverNameIn );
 
     static int          IsSpecialFile(const char* pszFilename);
     static int          IsValidDriverName(const char* pszGPSBabelDriverName);
@@ -94,24 +95,6 @@ class OGRGPSBabelWriteDataSource : public OGRDataSource
                                      char ** papszOptions );
 
     int                 Create ( const char* pszFilename, char **papszOptions );
-};
-
-/************************************************************************/
-/*                        OGRGPSBabelDriver                             */
-/************************************************************************/
-
-class OGRGPSBabelDriver : public OGRSFDriver
-{
-  public:
-                ~OGRGPSBabelDriver();
-
-    virtual const char    *GetName();
-    virtual OGRDataSource *Open( const char *, int );
-    virtual OGRDataSource *CreateDataSource( const char * pszName,
-                                             char **papszOptions );
-    virtual OGRErr         DeleteDataSource( const char *pszFilename );
-
-    virtual int            TestCapability( const char * );
 };
 
 #endif /* ndef _OGR_GPSBABEL_H_INCLUDED */

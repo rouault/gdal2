@@ -67,32 +67,33 @@ OGRS57Driver::~OGRS57Driver()
 }
 
 /************************************************************************/
-/*                              GetName()                               */
-/************************************************************************/
-
-const char *OGRS57Driver::GetName()
-
-{
-    return "S57";
-}
-
-/************************************************************************/
 /*                                Open()                                */
 /************************************************************************/
 
-OGRDataSource *OGRS57Driver::Open( const char * pszFilename, int bUpdate )
+GDALDataset *OGRS57Driver::Open( GDALOpenInfo* poOpenInfo )
 
 {
     OGRS57DataSource    *poDS;
 
+    if( poOpenInfo->nHeaderBytes < 10 )
+        return NULL;
+    const char* pachLeader = (const char* )poOpenInfo->pabyHeader;
+    if( (pachLeader[5] != '1' && pachLeader[5] != '2'
+                && pachLeader[5] != '3' )
+            || pachLeader[6] != 'L'
+            || (pachLeader[8] != '1' && pachLeader[8] != ' ') )
+    {
+        return NULL;
+    }
+
     poDS = new OGRS57DataSource;
-    if( !poDS->Open( pszFilename, TRUE ) )
+    if( !poDS->Open( poOpenInfo->pszFilename, TRUE ) )
     {
         delete poDS;
         poDS = NULL;
     }
 
-    if( poDS && bUpdate )
+    if( poDS && poOpenInfo->eAccess == GA_Update )
     {
         delete poDS;
         CPLError( CE_Failure, CPLE_OpenFailed,
@@ -104,12 +105,12 @@ OGRDataSource *OGRS57Driver::Open( const char * pszFilename, int bUpdate )
 }
 
 /************************************************************************/
-/*                          CreateDataSource()                          */
+/*                              Create()                                */
 /************************************************************************/
 
-OGRDataSource *OGRS57Driver::CreateDataSource( const char *pszName, 
-                                               char **papszOptions )
-
+GDALDataset *OGRS57Driver::Create( const char * pszName,
+                                int nBands, int nXSize, int nYSize, GDALDataType eDT,
+                                char **papszOptions )
 {
     OGRS57DataSource *poDS = new OGRS57DataSource();
 
@@ -120,19 +121,6 @@ OGRDataSource *OGRS57Driver::CreateDataSource( const char *pszName,
         delete poDS;
         return NULL;
     }
-}
-
-/************************************************************************/
-/*                           TestCapability()                           */
-/************************************************************************/
-
-int OGRS57Driver::TestCapability( const char * pszCap )
-
-{
-    if( EQUAL(pszCap,ODrCCreateDataSource) )
-        return TRUE;
-    else
-        return FALSE;
 }
 
 /************************************************************************/
@@ -168,7 +156,24 @@ S57ClassRegistrar *OGRS57Driver::GetS57Registrar()
 void RegisterOGRS57()
 
 {
-    OGRSFDriverRegistrar::GetRegistrar()->RegisterDriver( new OGRS57Driver );
+    GDALDriver  *poDriver;
+
+    if( GDALGetDriverByName( "S57" ) == NULL )
+    {
+        poDriver = new OGRS57Driver();
+
+        poDriver->SetDescription( "S57" );
+        poDriver->SetMetadataItem( GDAL_DCAP_VECTOR, "YES" );
+        poDriver->SetMetadataItem( GDAL_DMD_LONGNAME,
+                                   "SDTS" );
+        poDriver->SetMetadataItem( GDAL_DMD_HELPTOPIC,
+                                   "drv_s57.html" );
+
+        poDriver->SetMetadataItem( GDAL_DCAP_VIRTUALIO, "YES" );
+
+        poDriver->pfnOpen = OGRS57Driver::Open;
+        poDriver->pfnCreate = OGRS57Driver::Create;
+
+        GetGDALDriverManager()->RegisterDriver( poDriver );
+    }
 }
-
-

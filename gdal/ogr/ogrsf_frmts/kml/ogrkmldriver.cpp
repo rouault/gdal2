@@ -33,39 +33,24 @@
 #include "cpl_error.h"
 
 /************************************************************************/
-/*                          ~OGRKMLDriver()                           */
-/************************************************************************/
-
-OGRKMLDriver::~OGRKMLDriver()
-{
-}
-
-/************************************************************************/
-/*                              GetName()                               */
-/************************************************************************/
-
-const char *OGRKMLDriver::GetName()
-{
-    return "KML";
-}
-
-/************************************************************************/
 /*                                Open()                                */
 /************************************************************************/
 
-OGRDataSource *OGRKMLDriver::Open( const char * pszName, int bUpdate )
+static GDALDataset *OGRKMLDriverOpen( GDALOpenInfo* poOpenInfo )
+
 {
-    CPLAssert( NULL != pszName );
+    if( poOpenInfo->eAccess == GA_Update || poOpenInfo->fpL == NULL )
+        return NULL;
+
+    if( strstr((const char*)poOpenInfo->pabyHeader, "<kml") == NULL )
+        return NULL;
 
     OGRKMLDataSource* poDS = NULL;
 
 #ifdef HAVE_EXPAT
-    if( bUpdate )
-        return NULL;
-
     poDS = new OGRKMLDataSource();
 
-    if( poDS->Open( pszName, TRUE ) )
+    if( poDS->Open( poOpenInfo->pszFilename, TRUE ) )
     {
         /*if( poDS->GetLayerCount() == 0 )
         {
@@ -87,11 +72,12 @@ OGRDataSource *OGRKMLDriver::Open( const char * pszName, int bUpdate )
 }
 
 /************************************************************************/
-/*                          CreateDataSource()                          */
+/*                               Create()                               */
 /************************************************************************/
 
-OGRDataSource *OGRKMLDriver::CreateDataSource( const char* pszName,
-                                               char** papszOptions )
+static GDALDataset *OGRKMLDriverCreate( const char * pszName,
+                                    int nBands, int nXSize, int nYSize, GDALDataType eDT,
+                                    char **papszOptions )
 {
     CPLAssert( NULL != pszName );
     CPLDebug( "KML", "Attempt to create: %s", pszName );
@@ -108,24 +94,31 @@ OGRDataSource *OGRKMLDriver::CreateDataSource( const char* pszName,
 }
 
 /************************************************************************/
-/*                           TestCapability()                           */
-/************************************************************************/
-
-int OGRKMLDriver::TestCapability( const char* pszCap )
-{
-    if( EQUAL(pszCap, ODrCCreateDataSource) )
-        return TRUE;
-    else
-        return FALSE;
-}
-
-/************************************************************************/
 /*                           RegisterOGRKML()                           */
 /************************************************************************/
 
 void RegisterOGRKML()
 {
-    OGRSFDriverRegistrar::GetRegistrar()->RegisterDriver( new OGRKMLDriver );
+    GDALDriver  *poDriver;
+
+    if( GDALGetDriverByName( "KML" ) == NULL )
+    {
+        poDriver = new GDALDriver();
+
+        poDriver->SetDescription( "KML" );
+        poDriver->SetMetadataItem( GDAL_DCAP_VECTOR, "YES" );
+        poDriver->SetMetadataItem( GDAL_DMD_LONGNAME,
+                                   "KML" );
+        poDriver->SetMetadataItem( GDAL_DMD_HELPTOPIC,
+                                   "drv_kml.html" );
+
+        poDriver->SetMetadataItem( GDAL_DCAP_VIRTUALIO, "YES" );
+
+        poDriver->pfnOpen = OGRKMLDriverOpen;
+        poDriver->pfnCreate = OGRKMLDriverCreate;
+
+        GetGDALDriverManager()->RegisterDriver( poDriver );
+    }
 }
 
 

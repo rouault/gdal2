@@ -170,23 +170,4 @@ class OGRCSVDataSource : public OGRDataSource
     static CPLString    GetRealExtension(CPLString osFilename);
 };
 
-/************************************************************************/
-/*                             OGRCSVDriver                             */
-/************************************************************************/
-
-class OGRCSVDriver : public OGRSFDriver
-{
-  public:
-                ~OGRCSVDriver();
-                
-    const char *GetName();
-    OGRDataSource *Open( const char *, int );
-    OGRDataSource *CreateDataSource( const char *, char ** );
-    int         TestCapability( const char * );
-
-    virtual OGRErr      DeleteDataSource( const char *pszName );
-    
-};
-
-
 #endif /* ndef _OGR_CSV_H_INCLUDED */

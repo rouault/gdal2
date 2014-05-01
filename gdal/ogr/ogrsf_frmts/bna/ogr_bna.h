@@ -153,22 +153,4 @@ class OGRBNADataSource : public OGRDataSource
     int                 TestCapability( const char * );
 };
 
-/************************************************************************/
-/*                             OGRBNADriver                             */
-/************************************************************************/
-
-class OGRBNADriver : public OGRSFDriver
-{
-  public:
-                ~OGRBNADriver();
-
-    const char*         GetName();
-    OGRDataSource*      Open( const char *, int );
-    OGRDataSource*      CreateDataSource( const char * pszName, char **papszOptions );
-    int                 DeleteDataSource( const char *pszFilename );
-    int                 TestCapability( const char * );
-    
-};
-
-
 #endif /* ndef _OGR_BNA_H_INCLUDED */

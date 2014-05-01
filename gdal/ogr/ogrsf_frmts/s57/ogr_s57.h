@@ -128,7 +128,7 @@ class OGRS57DataSource : public OGRDataSource
 /*                            OGRS57Driver                              */
 /************************************************************************/
 
-class OGRS57Driver : public OGRSFDriver
+class OGRS57Driver : public GDALDriver
 {
     static S57ClassRegistrar *poRegistrar;
 
@@ -136,11 +136,10 @@ class OGRS57Driver : public OGRSFDriver
                  OGRS57Driver();
                 ~OGRS57Driver();
                 
-    const char *GetName();
-    OGRDataSource *Open( const char *, int );
-    virtual OGRDataSource *CreateDataSource( const char *pszName,
-                                             char ** = NULL );
-    int                 TestCapability( const char * );
+    static GDALDataset *Open( GDALOpenInfo* poOpenInfo );
+    static GDALDataset *Create( const char * pszName,
+                                int nBands, int nXSize, int nYSize, GDALDataType eDT,
+                                char **papszOptions );
 
     static S57ClassRegistrar *GetS57Registrar();
 };

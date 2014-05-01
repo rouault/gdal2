@@ -33,39 +33,22 @@
 CPL_CVSID("$Id$");
 
 /************************************************************************/
-/*                           ~OGRGeoRSSDriver()                            */
-/************************************************************************/
-
-OGRGeoRSSDriver::~OGRGeoRSSDriver()
-
-{
-}
-
-/************************************************************************/
-/*                              GetName()                               */
-/************************************************************************/
-
-const char *OGRGeoRSSDriver::GetName()
-
-{
-    return "GeoRSS";
-}
-
-/************************************************************************/
 /*                                Open()                                */
 /************************************************************************/
 
-OGRDataSource *OGRGeoRSSDriver::Open( const char * pszFilename, int bUpdate )
+static GDALDataset *OGRGeoRSSDriverOpen( GDALOpenInfo* poOpenInfo )
 
 {
-    if (bUpdate)
-    {
+    if( poOpenInfo->eAccess == GA_Update || poOpenInfo->fpL == NULL )
         return NULL;
-    }
+
+    if( strstr((const char*)poOpenInfo->pabyHeader, "<rss") == NULL &&
+        strstr((const char*)poOpenInfo->pabyHeader, "<feed") == NULL )
+        return NULL;
 
     OGRGeoRSSDataSource   *poDS = new OGRGeoRSSDataSource();
 
-    if( !poDS->Open( pszFilename, bUpdate ) )
+    if( !poDS->Open( poOpenInfo->pszFilename, poOpenInfo->eAccess == GA_Update ) )
     {
         delete poDS;
         poDS = NULL;
@@ -75,12 +58,12 @@ OGRDataSource *OGRGeoRSSDriver::Open( const char * pszFilename, int bUpdate )
 }
 
 /************************************************************************/
-/*                          CreateDataSource()                          */
+/*                               Create()                               */
 /************************************************************************/
 
-OGRDataSource *OGRGeoRSSDriver::CreateDataSource( const char * pszName,
-                                               char **papszOptions )
-
+static GDALDataset *OGRGeoRSSDriverCreate( const char * pszName,
+                                    int nBands, int nXSize, int nYSize, GDALDataType eDT,
+                                    char **papszOptions )
 {
     OGRGeoRSSDataSource   *poDS = new OGRGeoRSSDataSource();
 
@@ -94,33 +77,17 @@ OGRDataSource *OGRGeoRSSDriver::CreateDataSource( const char * pszName,
 }
 
 /************************************************************************/
-/*                          DeleteDataSource()                          */
+/*                               Delete()                               */
 /************************************************************************/
 
-OGRErr OGRGeoRSSDriver::DeleteDataSource( const char *pszFilename )
+static CPLErr OGRGeoRSSDriverDelete( const char *pszFilename )
 
 {
     if( VSIUnlink( pszFilename ) == 0 )
-        return OGRERR_NONE;
+        return CE_None;
     else
-        return OGRERR_FAILURE;
+        return CE_Failure;
 }
-
-/************************************************************************/
-/*                           TestCapability()                           */
-/************************************************************************/
-
-int OGRGeoRSSDriver::TestCapability( const char * pszCap )
-
-{
-    if( EQUAL(pszCap,ODrCCreateDataSource) )
-        return TRUE;
-    else if( EQUAL(pszCap,ODrCDeleteDataSource) )
-        return TRUE;
-    else
-        return FALSE;
-}
-
 
 /************************************************************************/
 /*                           RegisterOGRGeoRSS()                           */
@@ -131,6 +98,26 @@ void RegisterOGRGeoRSS()
 {
     if (! GDAL_CHECK_VERSION("OGR/GeoRSS driver"))
         return;
-    OGRSFDriverRegistrar::GetRegistrar()->RegisterDriver( new OGRGeoRSSDriver );
+    GDALDriver  *poDriver;
+
+    if( GDALGetDriverByName( "GeoRSS" ) == NULL )
+    {
+        poDriver = new GDALDriver();
+
+        poDriver->SetDescription( "GeoRSS" );
+        poDriver->SetMetadataItem( GDAL_DCAP_VECTOR, "YES" );
+        poDriver->SetMetadataItem( GDAL_DMD_LONGNAME,
+                                   "GeoRSS" );
+        poDriver->SetMetadataItem( GDAL_DMD_HELPTOPIC,
+                                   "drv_georss.html" );
+
+        poDriver->SetMetadataItem( GDAL_DCAP_VIRTUALIO, "YES" );
+
+        poDriver->pfnOpen = OGRGeoRSSDriverOpen;
+        poDriver->pfnCreate = OGRGeoRSSDriverCreate;
+        poDriver->pfnDelete = OGRGeoRSSDriverDelete;
+
+        GetGDALDriverManager()->RegisterDriver( poDriver );
+    }
 }
 

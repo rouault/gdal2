@@ -33,36 +33,28 @@
 CPL_CVSID("$Id$");
 
 /************************************************************************/
-/*                          ~OGRILI1Driver()                           */
-/************************************************************************/
-
-OGRILI1Driver::~OGRILI1Driver() {
-}
-
-/************************************************************************/
-/*                              GetName()                               */
-/************************************************************************/
-
-const char *OGRILI1Driver::GetName() {
-    return "Interlis 1";
-}
-
-/************************************************************************/
 /*                                Open()                                */
 /************************************************************************/
 
-OGRDataSource *OGRILI1Driver::Open( const char * pszFilename,
-                                   int bUpdate )
+static GDALDataset *OGRILI1DriverOpen( GDALOpenInfo* poOpenInfo )
 
 {
     OGRILI1DataSource    *poDS;
 
-    if( bUpdate )
+    if( poOpenInfo->eAccess == GA_Update )
         return NULL;
+
+    if( poOpenInfo->fpL != NULL )
+    {
+        if( strstr((const char*)poOpenInfo->pabyHeader,"SCNT") == NULL )
+        {
+            return NULL;
+        }
+    }
 
     poDS = new OGRILI1DataSource();
 
-    if( !poDS->Open( pszFilename, TRUE )
+    if( !poDS->Open( poOpenInfo->pszFilename, TRUE )
         || poDS->GetLayerCount() == 0 )
     {
         delete poDS;
@@ -73,11 +65,12 @@ OGRDataSource *OGRILI1Driver::Open( const char * pszFilename,
 }
 
 /************************************************************************/
-/*                          CreateDataSource()                          */
+/*                               Create()                               */
 /************************************************************************/
 
-OGRDataSource *OGRILI1Driver::CreateDataSource( const char * pszName,
-                                               char **papszOptions )
+static GDALDataset *OGRILI1DriverCreate( const char * pszName,
+                                    int nBands, int nXSize, int nYSize, GDALDataType eDT,
+                                    char **papszOptions )
 
 {
     OGRILI1DataSource    *poDS = new OGRILI1DataSource();
@@ -92,23 +85,27 @@ OGRDataSource *OGRILI1Driver::CreateDataSource( const char * pszName,
 }
 
 /************************************************************************/
-/*                           TestCapability()                           */
-/************************************************************************/
-
-int OGRILI1Driver::TestCapability( const char * pszCap ) {
-    if( EQUAL(pszCap,ODrCCreateDataSource) )
-        return TRUE;
-    else if( EQUAL(pszCap,ODrCDeleteDataSource) )
-        return FALSE;
-    else
-        return FALSE;
-}
-
-/************************************************************************/
 /*                           RegisterOGRILI1()                           */
 /************************************************************************/
 
 void RegisterOGRILI1() {
-    OGRSFDriverRegistrar::GetRegistrar()->RegisterDriver( new OGRILI1Driver );
+    GDALDriver  *poDriver;
+
+    if( GDALGetDriverByName( "Interlis 1" ) == NULL )
+    {
+        poDriver = new GDALDriver();
+
+        poDriver->SetDescription( "Interlis 1" );
+        poDriver->SetMetadataItem( GDAL_DCAP_VECTOR, "YES" );
+        poDriver->SetMetadataItem( GDAL_DMD_LONGNAME,
+                                   "Interlis 1" );
+        poDriver->SetMetadataItem( GDAL_DMD_HELPTOPIC,
+                                   "drv_ili.html" );
+
+        poDriver->pfnOpen = OGRILI1DriverOpen;
+        poDriver->pfnCreate = OGRILI1DriverCreate;
+
+        GetGDALDriverManager()->RegisterDriver( poDriver );
+    }
 }
 

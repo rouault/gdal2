@@ -33,39 +33,21 @@
 CPL_CVSID("$Id$");
 
 /************************************************************************/
-/*                           ~OGRGPXDriver()                            */
-/************************************************************************/
-
-OGRGPXDriver::~OGRGPXDriver()
-
-{
-}
-
-/************************************************************************/
-/*                              GetName()                               */
-/************************************************************************/
-
-const char *OGRGPXDriver::GetName()
-
-{
-    return "GPX";
-}
-
-/************************************************************************/
 /*                                Open()                                */
 /************************************************************************/
 
-OGRDataSource *OGRGPXDriver::Open( const char * pszFilename, int bUpdate )
+static GDALDataset *OGRGPXDriverOpen( GDALOpenInfo* poOpenInfo )
 
 {
-    if (bUpdate)
-    {
+    if( poOpenInfo->eAccess == GA_Update || poOpenInfo->fpL == NULL )
         return NULL;
-    }
+
+    if( strstr((const char*)poOpenInfo->pabyHeader, "<gpx") == NULL )
+        return NULL;
 
     OGRGPXDataSource   *poDS = new OGRGPXDataSource();
 
-    if( !poDS->Open( pszFilename, bUpdate ) )
+    if( !poDS->Open( poOpenInfo->pszFilename, FALSE ) )
     {
         delete poDS;
         poDS = NULL;
@@ -75,11 +57,12 @@ OGRDataSource *OGRGPXDriver::Open( const char * pszFilename, int bUpdate )
 }
 
 /************************************************************************/
-/*                          CreateDataSource()                          */
+/*                               Create()                               */
 /************************************************************************/
 
-OGRDataSource *OGRGPXDriver::CreateDataSource( const char * pszName,
-                                               char **papszOptions )
+static GDALDataset *OGRGPXDriverCreate( const char * pszName,
+                                    int nBands, int nXSize, int nYSize, GDALDataType eDT,
+                                    char **papszOptions )
 
 {
     OGRGPXDataSource   *poDS = new OGRGPXDataSource();
@@ -94,33 +77,17 @@ OGRDataSource *OGRGPXDriver::CreateDataSource( const char * pszName,
 }
 
 /************************************************************************/
-/*                          DeleteDataSource()                          */
+/*                               Delete()                               */
 /************************************************************************/
 
-OGRErr OGRGPXDriver::DeleteDataSource( const char *pszFilename )
+static CPLErr OGRGPXDriverDelete( const char *pszFilename )
 
 {
     if( VSIUnlink( pszFilename ) == 0 )
-        return OGRERR_NONE;
+        return CE_None;
     else
-        return OGRERR_FAILURE;
+        return CE_Failure;
 }
-
-/************************************************************************/
-/*                           TestCapability()                           */
-/************************************************************************/
-
-int OGRGPXDriver::TestCapability( const char * pszCap )
-
-{
-    if( EQUAL(pszCap,ODrCCreateDataSource) )
-        return TRUE;
-    else if( EQUAL(pszCap,ODrCDeleteDataSource) )
-        return TRUE;
-    else
-        return FALSE;
-}
-
 
 /************************************************************************/
 /*                           RegisterOGRGPX()                           */
@@ -131,6 +98,25 @@ void RegisterOGRGPX()
 {
     if (! GDAL_CHECK_VERSION("OGR/GPX driver"))
         return;
-    OGRSFDriverRegistrar::GetRegistrar()->RegisterDriver( new OGRGPXDriver );
-}
+    GDALDriver  *poDriver;
 
+    if( GDALGetDriverByName( "GPX" ) == NULL )
+    {
+        poDriver = new GDALDriver();
+
+        poDriver->SetDescription( "GPX" );
+        poDriver->SetMetadataItem( GDAL_DCAP_VECTOR, "YES" );
+        poDriver->SetMetadataItem( GDAL_DMD_LONGNAME,
+                                   "GPX" );
+        poDriver->SetMetadataItem( GDAL_DMD_HELPTOPIC,
+                                   "drv_gpx.html" );
+
+        poDriver->SetMetadataItem( GDAL_DCAP_VIRTUALIO, "YES" );
+
+        poDriver->pfnOpen = OGRGPXDriverOpen;
+        poDriver->pfnCreate = OGRGPXDriverCreate;
+        poDriver->pfnDelete = OGRGPXDriverDelete;
+
+        GetGDALDriverManager()->RegisterDriver( poDriver );
+    }
+}

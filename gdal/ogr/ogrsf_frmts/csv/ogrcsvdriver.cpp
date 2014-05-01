@@ -34,34 +34,69 @@
 CPL_CVSID("$Id$");
 
 /************************************************************************/
-/*                           ~OGRCSVDriver()                            */
-/************************************************************************/
-
-OGRCSVDriver::~OGRCSVDriver()
-
-{
-}
-
-/************************************************************************/
-/*                              GetName()                               */
-/************************************************************************/
-
-const char *OGRCSVDriver::GetName()
-
-{
-    return "CSV";
-}
-
-/************************************************************************/
 /*                                Open()                                */
 /************************************************************************/
 
-OGRDataSource *OGRCSVDriver::Open( const char * pszFilename, int bUpdate )
+static GDALDataset *OGRCSVDriverOpen( GDALOpenInfo* poOpenInfo )
 
 {
+    if( poOpenInfo->fpL != NULL )
+    {
+        CPLString osBaseFilename = CPLGetFilename(poOpenInfo->pszFilename);
+        CPLString osExt = OGRCSVDataSource::GetRealExtension(poOpenInfo->pszFilename);
+
+        if (EQUAL(osBaseFilename, "NfdcFacilities.xls") ||
+            EQUAL(osBaseFilename, "NfdcRunways.xls") ||
+            EQUAL(osBaseFilename, "NfdcRemarks.xls") ||
+            EQUAL(osBaseFilename, "NfdcSchedules.xls"))
+        {
+            /* ok */
+        }
+        else if ((EQUALN(osBaseFilename, "NationalFile_", 13) ||
+              EQUALN(osBaseFilename, "POP_PLACES_", 11) ||
+              EQUALN(osBaseFilename, "HIST_FEATURES_", 14) ||
+              EQUALN(osBaseFilename, "US_CONCISE_", 11) ||
+              EQUALN(osBaseFilename, "AllNames_", 9) ||
+              EQUALN(osBaseFilename, "Feature_Description_History_", 28) ||
+              EQUALN(osBaseFilename, "ANTARCTICA_", 11) ||
+              EQUALN(osBaseFilename, "GOVT_UNITS_", 11) ||
+              EQUALN(osBaseFilename, "NationalFedCodes_", 17) ||
+              EQUALN(osBaseFilename, "AllStates_", 10) ||
+              EQUALN(osBaseFilename, "AllStatesFedCodes_", 18) ||
+              (strlen(osBaseFilename) > 2 && EQUALN(osBaseFilename+2, "_Features_", 10)) ||
+              (strlen(osBaseFilename) > 2 && EQUALN(osBaseFilename+2, "_FedCodes_", 10))) &&
+             (EQUAL(osExt, "txt") || EQUAL(osExt, "zip")) )
+        {
+            /* ok */
+        }
+        else if (EQUAL(osBaseFilename, "allCountries.txt") ||
+             EQUAL(osBaseFilename, "allCountries.zip"))
+        {
+            /* ok */
+        }
+        else if (EQUAL(osExt,"csv") || EQUAL(osExt,"tsv"))
+        {
+            /* ok */
+        }
+        else if (strncmp(poOpenInfo->pszFilename, "/vsizip/", 8) == 0 &&
+                 EQUAL(osExt,"zip"))
+        {
+            /* ok */
+        }
+        else
+        {
+            return NULL;
+        }
+    }
+    else if( !EQUALN(poOpenInfo->pszFilename, "CSV:", 4) &&
+             !poOpenInfo->bIsDirectory )
+    {
+        return NULL;
+    }
+
     OGRCSVDataSource   *poDS = new OGRCSVDataSource();
 
-    if( !poDS->Open( pszFilename, bUpdate, FALSE ) )
+    if( !poDS->Open( poOpenInfo->pszFilename, poOpenInfo->eAccess == GA_Update, FALSE ) )
     {
         delete poDS;
         poDS = NULL;
@@ -71,11 +106,12 @@ OGRDataSource *OGRCSVDriver::Open( const char * pszFilename, int bUpdate )
 }
 
 /************************************************************************/
-/*                          CreateDataSource()                          */
+/*                               Create()                               */
 /************************************************************************/
 
-OGRDataSource *OGRCSVDriver::CreateDataSource( const char * pszName,
-                                               char **papszOptions )
+static GDALDataset *OGRCSVDriverCreate( const char * pszName,
+                                    int nBands, int nXSize, int nYSize, GDALDataType eDT,
+                                    char **papszOptions )
 
 {
 /* -------------------------------------------------------------------- */
@@ -151,31 +187,16 @@ OGRDataSource *OGRCSVDriver::CreateDataSource( const char * pszName,
 }
 
 /************************************************************************/
-/*                           TestCapability()                           */
+/*                              Delete()                                */
 /************************************************************************/
 
-int OGRCSVDriver::TestCapability( const char * pszCap )
-
-{
-    if( EQUAL(pszCap,ODrCCreateDataSource) )
-        return TRUE;
-    else if( EQUAL(pszCap,ODrCDeleteDataSource) )
-        return TRUE;
-    else
-        return FALSE;
-}
-
-/************************************************************************/
-/*                          DeleteDataSource()                          */
-/************************************************************************/
-
-OGRErr OGRCSVDriver::DeleteDataSource( const char *pszFilename )
+static CPLErr OGRCSVDriverDelete( const char *pszFilename )
 
 {
     if( CPLUnlinkTree( pszFilename ) == 0 )
-        return OGRERR_NONE;
+        return CE_None;
     else
-        return OGRERR_FAILURE;
+        return CE_Failure;
 }
 
 /************************************************************************/
@@ -185,6 +206,26 @@ OGRErr OGRCSVDriver::DeleteDataSource( const char *pszFilename )
 void RegisterOGRCSV()
 
 {
-    OGRSFDriverRegistrar::GetRegistrar()->RegisterDriver( new OGRCSVDriver );
+    GDALDriver  *poDriver;
+
+    if( GDALGetDriverByName( "CSV" ) == NULL )
+    {
+        poDriver = new GDALDriver();
+
+        poDriver->SetDescription( "CSV" );
+        poDriver->SetMetadataItem( GDAL_DCAP_VECTOR, "YES" );
+        poDriver->SetMetadataItem( GDAL_DMD_LONGNAME,
+                                   "CSV" );
+        poDriver->SetMetadataItem( GDAL_DMD_HELPTOPIC,
+                                   "drv_csv.html" );
+
+        poDriver->SetMetadataItem( GDAL_DCAP_VIRTUALIO, "YES" );
+
+        poDriver->pfnOpen = OGRCSVDriverOpen;
+        poDriver->pfnCreate = OGRCSVDriverCreate;
+        poDriver->pfnDelete = OGRCSVDriverDelete;
+
+        GetGDALDriverManager()->RegisterDriver( poDriver );
+    }
 }
 

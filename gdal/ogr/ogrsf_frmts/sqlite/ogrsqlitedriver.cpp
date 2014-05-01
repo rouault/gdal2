@@ -45,10 +45,10 @@
 CPL_CVSID("$Id$");
 
 /************************************************************************/
-/*                            ~OGRSQLiteDriver()                        */
+/*                          OGRSQLiteDriverUnload()                     */
 /************************************************************************/
 
-OGRSQLiteDriver::~OGRSQLiteDriver()
+static void OGRSQLiteDriverUnload(GDALDriver* poDriver)
 
 {
 #ifdef SPATIALITE_412_OR_LATER
@@ -57,30 +57,19 @@ OGRSQLiteDriver::~OGRSQLiteDriver()
 }
 
 /************************************************************************/
-/*                              GetName()                               */
-/************************************************************************/
-
-const char *OGRSQLiteDriver::GetName()
-
-{
-    return "SQLite";
-}
-
-/************************************************************************/
 /*                                Open()                                */
 /************************************************************************/
 
-OGRDataSource *OGRSQLiteDriver::Open( const char * pszFilename,
-                                     int bUpdate )
+static GDALDataset *OGRSQLiteDriverOpen( GDALOpenInfo* poOpenInfo )
 
 {
 
 /* -------------------------------------------------------------------- */
 /*      Check VirtualShape:xxx.shp syntax                               */
 /* -------------------------------------------------------------------- */
-    int nLen = (int) strlen(pszFilename);
-    if (EQUALN(pszFilename, "VirtualShape:", strlen( "VirtualShape:" )) &&
-        nLen > 4 && EQUAL(pszFilename + nLen - 4, ".SHP"))
+    int nLen = (int) strlen(poOpenInfo->pszFilename);
+    if (EQUALN(poOpenInfo->pszFilename, "VirtualShape:", strlen( "VirtualShape:" )) &&
+        nLen > 4 && EQUAL(poOpenInfo->pszFilename + nLen - 4, ".SHP"))
     {
         OGRSQLiteDataSource     *poDS;
 
@@ -88,7 +77,7 @@ OGRDataSource *OGRSQLiteDriver::Open( const char * pszFilename,
 
         char** papszOptions = CSLAddString(NULL, "SPATIALITE=YES");
         int nRet = poDS->Create( ":memory:", papszOptions );
-        poDS->SetName(pszFilename);
+        poDS->SetName(poOpenInfo->pszFilename);
         CSLDestroy(papszOptions);
         if (!nRet)
         {
@@ -96,27 +85,27 @@ OGRDataSource *OGRSQLiteDriver::Open( const char * pszFilename,
             return NULL;
         }
 
-        char* pszShapeFilename = CPLStrdup(pszFilename + strlen( "VirtualShape:" ));
-        GDALDataset* poShapeDS = (GDALDataset*) GDALOpen(pszShapeFilename, GA_ReadOnly);
-        if (poShapeDS == NULL)
+        char* pszSQLiteFilename = CPLStrdup(poOpenInfo->pszFilename + strlen( "VirtualShape:" ));
+        GDALDataset* poSQLiteDS = (GDALDataset*) GDALOpenEx(pszSQLiteFilename, GDAL_OF_VECTOR, NULL, NULL);
+        if (poSQLiteDS == NULL)
         {
-            CPLFree(pszShapeFilename);
+            CPLFree(pszSQLiteFilename);
             delete poDS;
             return NULL;
         }
-        delete poShapeDS;
+        delete poSQLiteDS;
 
-        char* pszLastDot = strrchr(pszShapeFilename, '.');
+        char* pszLastDot = strrchr(pszSQLiteFilename, '.');
         if (pszLastDot)
             *pszLastDot = '\0';
 
-        const char* pszTableName = CPLGetBasename(pszShapeFilename);
+        const char* pszTableName = CPLGetBasename(pszSQLiteFilename);
 
         char* pszSQL = CPLStrdup(CPLSPrintf("CREATE VIRTUAL TABLE %s USING VirtualShape(%s, CP1252, -1)",
-                                            pszTableName, pszShapeFilename));
+                                            pszTableName, pszSQLiteFilename));
         poDS->ExecuteSQL(pszSQL, NULL, NULL);
         CPLFree(pszSQL);
-        CPLFree(pszShapeFilename);
+        CPLFree(pszSQLiteFilename);
         return poDS;
     }
 
@@ -124,33 +113,12 @@ OGRDataSource *OGRSQLiteDriver::Open( const char * pszFilename,
 /*      Verify that the target is a real file, and has an               */
 /*      appropriate magic string at the beginning.                      */
 /* -------------------------------------------------------------------- */
-    if( !EQUAL(pszFilename, ":memory:") )
+    if( !EQUAL(poOpenInfo->pszFilename, ":memory:") )
     {
-        char szHeader[16];
-
-#ifdef HAVE_SQLITE_VFS
-        VSILFILE *fpDB;
-        fpDB = VSIFOpenL( pszFilename, "rb" );
-        if( fpDB == NULL )
-            return NULL;
-        
-        if( VSIFReadL( szHeader, 1, 16, fpDB ) != 16 )
-            memset( szHeader, 0, 16 );
-        
-        VSIFCloseL( fpDB );
-#else
-        FILE *fpDB;
-        fpDB = VSIFOpen( pszFilename, "rb" );
-        if( fpDB == NULL )
+        if( poOpenInfo->nHeaderBytes < 16 )
             return NULL;
 
-        if( VSIFRead( szHeader, 1, 16, fpDB ) != 16 )
-            memset( szHeader, 0, 16 );
-
-        VSIFClose( fpDB );
-#endif
-    
-        if( strncmp( szHeader, "SQLite format 3", 15 ) != 0 )
+        if( strncmp( (const char*)poOpenInfo->pabyHeader, "SQLite format 3", 15 ) != 0 )
             return NULL;
     }
 
@@ -162,7 +130,7 @@ OGRDataSource *OGRSQLiteDriver::Open( const char * pszFilename,
 
     poDS = new OGRSQLiteDataSource();
 
-    if( !poDS->Open( pszFilename, bUpdate ) )
+    if( !poDS->Open( poOpenInfo->pszFilename, poOpenInfo->eAccess == GA_Update ) )
     {
         delete poDS;
         return NULL;
@@ -172,11 +140,12 @@ OGRDataSource *OGRSQLiteDriver::Open( const char * pszFilename,
 }
 
 /************************************************************************/
-/*                          CreateDataSource()                          */
+/*                               Create()                               */
 /************************************************************************/
 
-OGRDataSource *OGRSQLiteDriver::CreateDataSource( const char * pszName,
-                                                  char **papszOptions )
+static GDALDataset *OGRSQLiteDriverCreate( const char * pszName,
+                                        int nBands, int nXSize, int nYSize, GDALDataType eDT,
+                                        char **papszOptions )
 
 {
 /* -------------------------------------------------------------------- */
@@ -210,30 +179,15 @@ OGRDataSource *OGRSQLiteDriver::CreateDataSource( const char * pszName,
 }
 
 /************************************************************************/
-/*                         DeleteDataSource()                           */
+/*                             Delete()                                 */
 /************************************************************************/
 
-OGRErr OGRSQLiteDriver::DeleteDataSource( const char *pszName )
+CPLErr OGRSQLiteDriverDelete( const char *pszName )
 {
     if (VSIUnlink( pszName ) == 0)
-        return OGRERR_NONE;
+        return CE_None;
     else
-        return OGRERR_FAILURE;
-}
-
-/************************************************************************/
-/*                           TestCapability()                           */
-/************************************************************************/
-
-int OGRSQLiteDriver::TestCapability( const char * pszCap )
-
-{
-    if( EQUAL(pszCap,ODrCCreateDataSource) )
-        return TRUE;
-    else if( EQUAL(pszCap,ODrCDeleteDataSource) )
-        return TRUE;
-    else
-        return FALSE;
+        return CE_Failure;
 }
 
 /************************************************************************/
@@ -245,6 +199,27 @@ void RegisterOGRSQLite()
 {
     if (! GDAL_CHECK_VERSION("SQLite driver"))
         return;
-    OGRSFDriverRegistrar::GetRegistrar()->RegisterDriver( new OGRSQLiteDriver );
+    GDALDriver  *poDriver;
+
+    if( GDALGetDriverByName( "SQLite" ) == NULL )
+    {
+        poDriver = new GDALDriver();
+
+        poDriver->SetDescription( "SQLite" );
+        poDriver->SetMetadataItem( GDAL_DCAP_VECTOR, "YES" );
+        poDriver->SetMetadataItem( GDAL_DMD_LONGNAME,
+                                   "SQLite / Spatialite" );
+        poDriver->SetMetadataItem( GDAL_DMD_HELPTOPIC,
+                                   "drv_sqlite.html" );
+
+        poDriver->SetMetadataItem( GDAL_DCAP_VIRTUALIO, "YES" );
+
+        poDriver->pfnOpen = OGRSQLiteDriverOpen;
+        poDriver->pfnCreate = OGRSQLiteDriverCreate;
+        poDriver->pfnDelete = OGRSQLiteDriverDelete;
+        poDriver->pfnUnloadDriver = OGRSQLiteDriverUnload;
+
+        GetGDALDriverManager()->RegisterDriver( poDriver );
+    }
 }
 

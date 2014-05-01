@@ -36,22 +36,6 @@
 #define UNDEFINED_SRID 0
 
 /************************************************************************/
-/*                           OGRGeoPackageDriver                        */
-/************************************************************************/
-
-class OGRGeoPackageDriver : public OGRSFDriver
-{
-    public:
-                            ~OGRGeoPackageDriver();
-        const char*         GetName();
-        OGRDataSource*      Open( const char *, int );
-        OGRDataSource*      CreateDataSource( const char * pszFilename, char **papszOptions );
-        OGRErr              DeleteDataSource( const char * pszFilename );
-        int                 TestCapability( const char * );
-};
-
-
-/************************************************************************/
 /*                           OGRGeoPackageDataSource                    */
 /************************************************************************/
 
@@ -99,7 +83,6 @@ class OGRGeoPackageDataSource : public OGRDataSource
     private:
     
         OGRErr              PragmaCheck(const char * pszPragma, const char * pszExpected, int nRowsExpected);
-        bool                CheckApplicationId(const char * pszFileName);
         OGRErr              SetApplicationId();
     
 };

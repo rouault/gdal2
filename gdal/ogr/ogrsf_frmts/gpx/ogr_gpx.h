@@ -241,22 +241,4 @@ class OGRGPXDataSource : public OGRDataSource
     void                PrintLine(const char *fmt, ...) CPL_PRINT_FUNC_FORMAT (2, 3);
 };
 
-/************************************************************************/
-/*                             OGRGPXDriver                             */
-/************************************************************************/
-
-class OGRGPXDriver : public OGRSFDriver
-{
-  public:
-                ~OGRGPXDriver();
-
-    const char*         GetName();
-    OGRDataSource*      Open( const char *, int );
-    OGRDataSource*      CreateDataSource( const char * pszName, char **papszOptions );
-    int                 DeleteDataSource( const char *pszFilename );
-    int                 TestCapability( const char * );
-    
-};
-
-
 #endif /* ndef _OGR_GPX_H_INCLUDED */

@@ -115,22 +115,4 @@ class OGRILI2DataSource : public OGRDataSource
     int         TestCapability( const char * );
 };
 
-/************************************************************************/
-/*                            OGRILI2Driver                             */
-/************************************************************************/
-
-class OGRILI2Driver : public OGRSFDriver
-{
-  public:
-                ~OGRILI2Driver();
-
-    const char *GetName();
-    OGRDataSource *Open( const char *, int );
-
-    virtual OGRDataSource *CreateDataSource( const char *pszName,
-                                             char ** = NULL );
-
-    int                 TestCapability( const char * );
-};
-
 #endif /* _OGR_ILI2_H_INCLUDED */

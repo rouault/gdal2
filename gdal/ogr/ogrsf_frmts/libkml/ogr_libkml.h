@@ -348,28 +348,4 @@ class OGRLIBKMLDataSource:public OGRDataSource
                                          int nGuess);
 };
 
-
-/******************************************************************************
-  driver class
-******************************************************************************/
-
-class OGRLIBKMLDriver:public OGRSFDriver
-{
-    KmlFactory               *m_poKmlFactory;
-    
-  public:
-    OGRLIBKMLDriver           (  );
-    ~OGRLIBKMLDriver          (  );
-
-    const char               *GetName (  );
-    OGRDataSource            *Open ( const char *pszFilename,
-                                     int bUpdate );
-    OGRDataSource            *CreateDataSource ( const char *pszFilename,
-                                                 char **papszOptions );
-
-    OGRErr                    DeleteDataSource ( const char *pszName );
-
-    int                       TestCapability ( const char * );
-};
-
 #endif

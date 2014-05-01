@@ -31,34 +31,28 @@
 #include "cpl_conv.h"
 
 /************************************************************************/
-/*                           ~OGRBNADriver()                            */
-/************************************************************************/
-
-OGRBNADriver::~OGRBNADriver()
-
-{
-}
-
-/************************************************************************/
-/*                              GetName()                               */
-/************************************************************************/
-
-const char *OGRBNADriver::GetName()
-
-{
-    return "BNA";
-}
-
-/************************************************************************/
 /*                                Open()                                */
 /************************************************************************/
 
-OGRDataSource *OGRBNADriver::Open( const char * pszFilename, int bUpdate )
+static GDALDataset *OGRBNADriverOpen( GDALOpenInfo* poOpenInfo )
 
 {
+// -------------------------------------------------------------------- 
+//      Does this appear to be a .bna file?
+// --------------------------------------------------------------------
+    if( poOpenInfo->fpL == NULL ||
+        !(EQUAL( CPLGetExtension(poOpenInfo->pszFilename), "bna" )
+           || ((EQUALN( poOpenInfo->pszFilename, "/vsigzip/", 9) ||
+                EQUALN( poOpenInfo->pszFilename, "/vsizip/", 8)) &&
+               (strstr( poOpenInfo->pszFilename, ".bna") ||
+                strstr( poOpenInfo->pszFilename, ".BNA")))) )
+    {
+        return NULL;
+    }
+
     OGRBNADataSource   *poDS = new OGRBNADataSource();
 
-    if( !poDS->Open( pszFilename, bUpdate ) )
+    if( !poDS->Open( poOpenInfo->pszFilename, poOpenInfo->eAccess == GA_Update ) )
     {
         delete poDS;
         poDS = NULL;
@@ -68,11 +62,12 @@ OGRDataSource *OGRBNADriver::Open( const char * pszFilename, int bUpdate )
 }
 
 /************************************************************************/
-/*                          CreateDataSource()                          */
+/*                               Create()                               */
 /************************************************************************/
 
-OGRDataSource *OGRBNADriver::CreateDataSource( const char * pszName,
-                                                 char **papszOptions )
+static GDALDataset *OGRBNADriverCreate( const char * pszName,
+                                    int nBands, int nXSize, int nYSize, GDALDataType eDT,
+                                    char **papszOptions )
 
 {
     OGRBNADataSource   *poDS = new OGRBNADataSource();
@@ -87,33 +82,17 @@ OGRDataSource *OGRBNADriver::CreateDataSource( const char * pszName,
 }
 
 /************************************************************************/
-/*                          DeleteDataSource()                          */
+/*                               Delete()                               */
 /************************************************************************/
 
-OGRErr OGRBNADriver::DeleteDataSource( const char *pszFilename )
+static CPLErr OGRBNADriverDelete( const char *pszFilename )
 
 {
     if( VSIUnlink( pszFilename ) == 0 )
-        return OGRERR_NONE;
+        return CE_None;
     else
-        return OGRERR_FAILURE;
+        return CE_Failure;
 }
-
-/************************************************************************/
-/*                           TestCapability()                           */
-/************************************************************************/
-
-int OGRBNADriver::TestCapability( const char * pszCap )
-
-{
-    if( EQUAL(pszCap,ODrCCreateDataSource) )
-        return TRUE;
-    else if( EQUAL(pszCap,ODrCDeleteDataSource) )
-        return TRUE;
-    else
-        return FALSE;
-}
-
 
 /************************************************************************/
 /*                           RegisterOGRBNA()                           */
@@ -122,6 +101,26 @@ int OGRBNADriver::TestCapability( const char * pszCap )
 void RegisterOGRBNA()
 
 {
-    OGRSFDriverRegistrar::GetRegistrar()->RegisterDriver( new OGRBNADriver );
+    GDALDriver  *poDriver;
+
+    if( GDALGetDriverByName( "BNA" ) == NULL )
+    {
+        poDriver = new GDALDriver();
+
+        poDriver->SetDescription( "BNA" );
+        poDriver->SetMetadataItem( GDAL_DCAP_VECTOR, "YES" );
+        poDriver->SetMetadataItem( GDAL_DMD_LONGNAME,
+                                   "Atlas BNA" );
+        poDriver->SetMetadataItem( GDAL_DMD_HELPTOPIC,
+                                   "drv_bna.html" );
+
+        poDriver->SetMetadataItem( GDAL_DCAP_VIRTUALIO, "YES" );
+
+        poDriver->pfnOpen = OGRBNADriverOpen;
+        poDriver->pfnCreate = OGRBNADriverCreate;
+        poDriver->pfnDelete = OGRBNADriverDelete;
+
+        GetGDALDriverManager()->RegisterDriver( poDriver );
+    }
 }
 

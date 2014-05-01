@@ -213,22 +213,4 @@ class OGRGeoRSSDataSource : public OGRDataSource
 #endif
 };
 
-/************************************************************************/
-/*                             OGRGeoRSSDriver                             */
-/************************************************************************/
-
-class OGRGeoRSSDriver : public OGRSFDriver
-{
-  public:
-                ~OGRGeoRSSDriver();
-
-    const char*         GetName();
-    OGRDataSource*      Open( const char *, int );
-    OGRDataSource*      CreateDataSource( const char * pszName, char **papszOptions );
-    int                 DeleteDataSource( const char *pszFilename );
-    int                 TestCapability( const char * );
-    
-};
-
-
 #endif /* ndef _OGR_GeoRSS_H_INCLUDED */

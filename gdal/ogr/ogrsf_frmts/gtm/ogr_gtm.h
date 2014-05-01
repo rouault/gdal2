@@ -259,23 +259,4 @@ private:
     void WriteWaypointStyles();
 };
 
-/************************************************************************/
-/*                             OGRGTMDriver                             */
-/************************************************************************/
-
-class OGRGTMDriver : public OGRSFDriver
-{
-public:
-    ~OGRGTMDriver();
-
-    //
-    // OGRSFDriver Interface
-    //
-    const char* GetName();
-    OGRDataSource* Open( const char * pszName_, int bUpdate );
-    OGRDataSource* CreateDataSource( const char *pszName_, char** papszOptions );
-
-    int TestCapability( const char* pszCap );
-};
-
 #endif //OGR_GTM_H_INCLUDED

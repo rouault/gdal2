@@ -166,23 +166,5 @@ private:
 	bool bIssuedCTError_;		
 };
 
-/************************************************************************/
-/*                             OGRKMLDriver                             */
-/************************************************************************/
-
-class OGRKMLDriver : public OGRSFDriver
-{
-public:
-    ~OGRKMLDriver();
-
-    //
-    // OGRSFDriver Interface
-    //
-    const char* GetName();
-    OGRDataSource* Open( const char * pszName_, int bUpdate );
-    OGRDataSource* CreateDataSource( const char *pszName_, char** papszOptions );
-    int TestCapability( const char* pszCap );
-};
-
 #endif /* OGR_KML_H_INCLUDED */
 

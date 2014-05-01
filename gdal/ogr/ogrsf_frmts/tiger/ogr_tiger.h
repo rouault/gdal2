@@ -602,23 +602,4 @@ class OGRTigerDataSource : public OGRDataSource
                                       char ** = NULL );
 };
 
-/************************************************************************/
-/*                            OGRTigerDriver                            */
-/************************************************************************/
-
-class OGRTigerDriver : public OGRSFDriver
-{
-  public:
-                ~OGRTigerDriver();
-
-    const char *GetName();
-
-    OGRDataSource *Open( const char *, int );
-
-    virtual OGRDataSource *CreateDataSource( const char *pszName,
-                                             char ** = NULL );
-
-    int         TestCapability( const char * );
-};
-
 #endif /* ndef _OGR_TIGER_H_INCLUDED */

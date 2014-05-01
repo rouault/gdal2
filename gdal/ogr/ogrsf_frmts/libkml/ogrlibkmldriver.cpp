@@ -29,57 +29,52 @@
 #include "ogr_libkml.h"
 #include "cpl_conv.h"
 #include "cpl_error.h"
-#include "cpl_atomic_ops.h"
+#include "cpl_multiproc.h"
 
 #include <kml/dom.h>
 
 using kmldom::KmlFactory;
 
-static volatile int nKmlFactoryRefCount = 0;
+static void *hMutex = NULL;
+static KmlFactory* m_poKmlFactory = NULL;
 
 /******************************************************************************
- OGRLIBKMLDriver()
+ OGRLIBKMLDriverUnload()
 ******************************************************************************/
 
-OGRLIBKMLDriver::OGRLIBKMLDriver (  )
+static void OGRLIBKMLDriverUnload ( GDALDriver* poDriver )
 {
-    CPLAtomicInc(&nKmlFactoryRefCount);
-    m_poKmlFactory = KmlFactory::GetFactory (  );
-
-}
-
-/******************************************************************************
- ~OGRLIBKMLDriver()
-******************************************************************************/
-
-OGRLIBKMLDriver::~OGRLIBKMLDriver (  )
-{
-    if (CPLAtomicDec(&nKmlFactoryRefCount) == 0)
-        delete m_poKmlFactory;
-}
-
-/******************************************************************************
- GetName()
-******************************************************************************/
-
-const char *OGRLIBKMLDriver::GetName (
-     )
-{
-
-    return "LIBKML";
+    if( hMutex != NULL )
+        CPLDestroyMutex(hMutex);
+    hMutex = NULL;
+    delete m_poKmlFactory;
+    m_poKmlFactory = NULL;
 }
 
 /******************************************************************************
  Open()
 ******************************************************************************/
 
-OGRDataSource *OGRLIBKMLDriver::Open (
-    const char *pszFilename,
-    int bUpdate )
+static GDALDataset *OGRLIBKMLDriverOpen ( GDALOpenInfo* poOpenInfo )
 {
+    if( !poOpenInfo->bStatOK )
+        return NULL;
+    if( !poOpenInfo->bIsDirectory )
+    {
+        if( !EQUAL(CPLGetExtension(poOpenInfo->pszFilename), "kml") &&
+            !EQUAL(CPLGetExtension(poOpenInfo->pszFilename), "kmz") )
+            return NULL;
+    }
+
+    {
+        CPLMutexHolderD(&hMutex);
+        if( m_poKmlFactory == NULL )
+            m_poKmlFactory = KmlFactory::GetFactory (  );
+    }
+
     OGRLIBKMLDataSource *poDS = new OGRLIBKMLDataSource ( m_poKmlFactory );
 
-    if ( !poDS->Open ( pszFilename, bUpdate ) ) {
+    if ( !poDS->Open ( poOpenInfo->pszFilename, poOpenInfo->eAccess == GA_Update ) ) {
         delete poDS;
 
         poDS = NULL;
@@ -88,16 +83,23 @@ OGRDataSource *OGRLIBKMLDriver::Open (
     return poDS;
 }
 
-/******************************************************************************
- CreateDataSource()
-******************************************************************************/
 
-OGRDataSource *OGRLIBKMLDriver::CreateDataSource (
-    const char *pszName,
-    char **papszOptions )
+/************************************************************************/
+/*                               Create()                               */
+/************************************************************************/
+
+static GDALDataset *OGRLIBKMLDriverCreate( const char * pszName,
+                                    int nBands, int nXSize, int nYSize, GDALDataType eDT,
+                                    char **papszOptions )
 {
     CPLAssert ( NULL != pszName );
     CPLDebug ( "LIBKML", "Attempt to create: %s", pszName );
+
+    {
+        CPLMutexHolderD(&hMutex);
+        if( m_poKmlFactory == NULL )
+            m_poKmlFactory = KmlFactory::GetFactory (  );
+    }
 
     OGRLIBKMLDataSource *poDS = new OGRLIBKMLDataSource ( m_poKmlFactory );
 
@@ -118,8 +120,7 @@ OGRDataSource *OGRLIBKMLDriver::CreateDataSource (
  
 ******************************************************************************/
 
-OGRErr OGRLIBKMLDriver::DeleteDataSource (
-    const char *pszName )
+static CPLErr OGRLIBKMLDriverDelete( const char *pszName )
 {
 
     /***** dir *****/
@@ -131,23 +132,23 @@ OGRErr OGRLIBKMLDriver::DeleteDataSource (
 
         if ( !( papszDirList = VSIReadDir ( pszName ) ) ) {
             if ( VSIRmdir ( pszName ) < 0 )
-                return OGRERR_FAILURE;
+                return CE_Failure;
         }
 
         int nFiles = CSLCount ( papszDirList );
         int iFile;
 
         for ( iFile = 0; iFile < nFiles; iFile++ ) {
-            if ( OGRERR_FAILURE ==
-                 this->DeleteDataSource ( papszDirList[iFile] ) ) {
+            if ( CE_Failure ==
+                 OGRLIBKMLDriverDelete ( papszDirList[iFile] ) ) {
                 CSLDestroy ( papszDirList );
-                return OGRERR_FAILURE;
+                return CE_Failure;
             }
         }
 
         if ( VSIRmdir ( pszName ) < 0 ) {
             CSLDestroy ( papszDirList );
-            return OGRERR_FAILURE;
+            return CE_Failure;
         }
 
         CSLDestroy ( papszDirList );
@@ -157,38 +158,22 @@ OGRErr OGRLIBKMLDriver::DeleteDataSource (
 
     else if ( EQUAL ( CPLGetExtension ( pszName ), "kml" ) ) {
         if ( VSIUnlink ( pszName ) < 0 )
-            return OGRERR_FAILURE;
+            return CE_Failure;
     }
 
     /***** kmz *****/
 
     else if ( EQUAL ( CPLGetExtension ( pszName ), "kmz" ) ) {
         if ( VSIUnlink ( pszName ) < 0 )
-            return OGRERR_FAILURE;
+            return CE_Failure;
     }
 
     /***** do not delete other types of files *****/
 
     else
-        return OGRERR_FAILURE;
+        return CE_Failure;
 
-    return OGRERR_NONE;
-}
-
-/******************************************************************************
- TestCapability()
-******************************************************************************/
-
-int OGRLIBKMLDriver::TestCapability (
-    const char *pszCap )
-{
-    if ( EQUAL ( pszCap, ODrCCreateDataSource ) )
-        return TRUE;
-
-    else if ( EQUAL ( pszCap, ODrCDeleteDataSource ) )
-        return TRUE;
-
-    return FALSE;
+    return CE_None;
 }
 
 /******************************************************************************
@@ -198,7 +183,26 @@ int OGRLIBKMLDriver::TestCapability (
 void RegisterOGRLIBKML (
      )
 {
-    OGRSFDriverRegistrar::GetRegistrar (  )->
-        RegisterDriver ( new OGRLIBKMLDriver );
+    GDALDriver  *poDriver;
 
+    if( GDALGetDriverByName( "LIBKML" ) == NULL )
+    {
+        poDriver = new GDALDriver();
+
+        poDriver->SetDescription( "LIBKML" );
+        poDriver->SetMetadataItem( GDAL_DCAP_VECTOR, "YES" );
+        poDriver->SetMetadataItem( GDAL_DMD_LONGNAME,
+                                   "LIBKML" );
+        poDriver->SetMetadataItem( GDAL_DMD_HELPTOPIC,
+                                   "drv_libkml.html" );
+
+        poDriver->SetMetadataItem( GDAL_DCAP_VIRTUALIO, "YES" );
+
+        poDriver->pfnOpen = OGRLIBKMLDriverOpen;
+        poDriver->pfnCreate = OGRLIBKMLDriverCreate;
+        poDriver->pfnDelete = OGRLIBKMLDriverDelete;
+        poDriver->pfnUnloadDriver = OGRLIBKMLDriverUnload;
+
+        GetGDALDriverManager()->RegisterDriver( poDriver );
+    }
 }

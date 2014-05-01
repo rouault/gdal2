@@ -37,65 +37,31 @@ extern "C" void CPL_DLL RegisterOGROSM();
 CPL_CVSID("$Id$");
 
 /************************************************************************/
-/*                         ~OGROSMDriver()                           */
-/************************************************************************/
-
-OGROSMDriver::~OGROSMDriver()
-
-{
-}
-
-/************************************************************************/
-/*                              GetName()                               */
-/************************************************************************/
-
-const char *OGROSMDriver::GetName()
-
-{
-    return "OSM";
-}
-
-/************************************************************************/
 /*                                Open()                                */
 /************************************************************************/
 
-OGRDataSource *OGROSMDriver::Open( const char * pszFilename,
-                                   int bUpdate )
+static GDALDataset *OGROSMDriverOpen( GDALOpenInfo* poOpenInfo )
 
 {
-    if (bUpdate)
+    if (poOpenInfo->eAccess == GA_Update || poOpenInfo->fpL == NULL )
+        return NULL;
+    const char* pszExt = CPLGetExtension(poOpenInfo->pszFilename);
+    if( !EQUAL(pszExt, "pbf") &&
+        !EQUAL(pszExt, "osm") &&
+        !EQUALN(poOpenInfo->pszFilename, "/vsicurl_streaming/", strlen("/vsicurl_streaming/")) &&
+        strcmp(poOpenInfo->pszFilename, "/vsistdin/") != 0 &&
+        strcmp(poOpenInfo->pszFilename, "/dev/stdin/") != 0 )
         return NULL;
 
     OGROSMDataSource   *poDS = new OGROSMDataSource();
 
-    if( !poDS->Open( pszFilename, bUpdate ) )
+    if( !poDS->Open( poOpenInfo->pszFilename ) )
     {
         delete poDS;
         poDS = NULL;
     }
 
     return poDS;
-}
-
-/************************************************************************/
-/*                          CreateDataSource()                          */
-/************************************************************************/
-
-OGRDataSource *OGROSMDriver::CreateDataSource( const char * pszName,
-                                               char **papszOptions )
-
-{
-    return NULL;
-}
-
-/************************************************************************/
-/*                           TestCapability()                           */
-/************************************************************************/
-
-int OGROSMDriver::TestCapability( const char * pszCap )
-
-{
-    return FALSE;
 }
 
 /************************************************************************/
@@ -106,7 +72,24 @@ void RegisterOGROSM()
 {
     if (! GDAL_CHECK_VERSION("OGR/OSM driver"))
         return;
+    GDALDriver  *poDriver;
 
-    OGRSFDriverRegistrar::GetRegistrar()->RegisterDriver( new OGROSMDriver );
+    if( GDALGetDriverByName( "OSM" ) == NULL )
+    {
+        poDriver = new GDALDriver();
+
+        poDriver->SetDescription( "OSM" );
+        poDriver->SetMetadataItem( GDAL_DCAP_VECTOR, "YES" );
+        poDriver->SetMetadataItem( GDAL_DMD_LONGNAME,
+                                   "OSM" );
+        poDriver->SetMetadataItem( GDAL_DMD_HELPTOPIC,
+                                   "drv_osm.html" );
+
+        poDriver->SetMetadataItem( GDAL_DCAP_VIRTUALIO, "YES" );
+
+        poDriver->pfnOpen = OGROSMDriverOpen;
+
+        GetGDALDriverManager()->RegisterDriver( poDriver );
+    }
 }
 

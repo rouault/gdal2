@@ -211,22 +211,4 @@ class OGRGMLDataSource : public OGRDataSource
     virtual void                ReleaseResultSet( OGRLayer * poResultsSet );
 };
 
-/************************************************************************/
-/*                             OGRGMLDriver                             */
-/************************************************************************/
-
-class OGRGMLDriver : public OGRSFDriver
-{
-  public:
-                ~OGRGMLDriver();
-                
-    const char *GetName();
-    OGRDataSource *Open( const char *, int );
-
-    virtual OGRDataSource *CreateDataSource( const char *pszName,
-                                             char ** = NULL );
-    
-    int                 TestCapability( const char * );
-};
-
 #endif /* _OGR_GML_H_INCLUDED */

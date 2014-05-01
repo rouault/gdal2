@@ -262,20 +262,6 @@ class OGRVRTDataSource : public OGRDataSource
     int                 IsInForbiddenNames(const char* pszOtherDSName);
 };
 
-/************************************************************************/
-/*                             OGRVRTDriver                             */
-/************************************************************************/
-
-class OGRVRTDriver : public OGRSFDriver
-{
-  public:
-                ~OGRVRTDriver();
-                
-    const char *GetName();
-    OGRDataSource *Open( const char *, int );
-    int         TestCapability( const char * );
-};
-
 OGRwkbGeometryType OGRVRTGetGeometryType(const char* pszGType, int* pbError);
 
 #endif /* ndef _OGR_VRT_H_INCLUDED */
