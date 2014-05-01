@@ -107,7 +107,7 @@ static int OGRCSVDriverIdentify( GDALOpenInfo* poOpenInfo )
 static GDALDataset *OGRCSVDriverOpen( GDALOpenInfo* poOpenInfo )
 
 {
-    if( !OGRCSVDriverIdentify(poOpenInfo) )
+    if( OGRCSVDriverIdentify(poOpenInfo) == FALSE )
         return NULL;
 
     OGRCSVDataSource   *poDS = new OGRCSVDataSource();
