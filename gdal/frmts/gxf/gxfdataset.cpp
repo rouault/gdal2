@@ -256,6 +256,8 @@ GDALDataset *GXFDataset::Open( GDALOpenInfo * poOpenInfo )
              || poOpenInfo->pabyHeader[i] == 13)
             && poOpenInfo->pabyHeader[i+1] == '#' )
         {
+            if( strncmp((const char*)poOpenInfo->pabyHeader + 2, "include", strlen("include")) == 0 )
+                return NULL;
             bFoundKeyword = TRUE;
         }
         if( poOpenInfo->pabyHeader[i] == 0 )
