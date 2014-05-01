@@ -262,7 +262,7 @@ def misc_6_internal(datatype, nBands):
         for i in range(gdal.GetDriverCount()):
             drv = gdal.GetDriver(i)
             md = drv.GetMetadata()
-            if 'DCAP_CREATECOPY' in md or 'DCAP_CREATE' in md:
+            if 'DCAP_CREATECOPY' in md or 'DCAP_CREATE' in md and 'DCAP_RASTER' in md:
                 #print ('drv = %s, nBands = %d, datatype = %s' % (drv.ShortName, nBands, gdal.GetDataTypeName(datatype)))
 
                 skip = False
@@ -520,7 +520,7 @@ def misc_12():
         #if drv.ShortName == 'ECW' or drv.ShortName == 'JP2ECW':
         #    continue
         md = drv.GetMetadata()
-        if 'DCAP_CREATECOPY' in md or 'DCAP_CREATE' in md:
+        if 'DCAP_CREATECOPY' in md or 'DCAP_CREATE' in md and 'DCAP_RASTER' in md:
 
             ext = ''
             if drv.ShortName == 'GTX':
