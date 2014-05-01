@@ -140,6 +140,7 @@ class RIKDataset : public GDALPamDataset
     ~RIKDataset();
 
     static GDALDataset *Open( GDALOpenInfo * );
+    static int Identify( GDALOpenInfo * );
 
     CPLErr 	GetGeoTransform( double * padfTransform );
     const char *GetProjectionRef();
@@ -659,13 +660,48 @@ static GUInt16 GetRikString( VSILFILE *fp,
 }
 
 /************************************************************************/
+/*                          Identify()                                  */
+/************************************************************************/
+
+int RIKDataset::Identify( GDALOpenInfo * poOpenInfo )
+
+{
+    if( poOpenInfo->fpL == NULL || poOpenInfo->nHeaderBytes < 50 )
+        return FALSE;
+
+    if( EQUALN((const char *) poOpenInfo->pabyHeader, "RIK3", 4) )
+    {
+        return TRUE;
+    }
+    else
+    {
+        GUInt16 actLength;
+        memcpy(&actLength, poOpenInfo->pabyHeader, 2);
+#ifdef CPL_MSB
+        CPL_SWAP16PTR( &actLength );
+#endif
+        if( actLength + 2 > 1024 )
+        {
+            return FALSE;
+        }
+        if( actLength == 0 )
+            return -1;
+        if( strlen( (const char*)poOpenInfo->pabyHeader + 2 ) != actLength )
+        {
+            return FALSE;
+        }
+        return TRUE;
+    }
+}
+
+/************************************************************************/
 /*                                Open()                                */
 /************************************************************************/
 
 GDALDataset *RIKDataset::Open( GDALOpenInfo * poOpenInfo )
 
 {
-    if( poOpenInfo->fpL == NULL || poOpenInfo->nHeaderBytes < 50 )
+    if( Identify(poOpenInfo) == FALSE )
         return NULL;
 
     bool rik3header = false;
@@ -673,10 +709,8 @@ GDALDataset *RIKDataset::Open( GDALOpenInfo * poOpenInfo )
     if( EQUALN((const char *) poOpenInfo->pabyHeader, "RIK3", 4) )
     {
         rik3header = true;
-    }
-
-    if( rik3header )
         VSIFSeekL( poOpenInfo->fpL, 4, SEEK_SET );
+    }
     else
         VSIFSeekL( poOpenInfo->fpL, 0, SEEK_SET );
 
@@ -1173,7 +1207,10 @@ void GDALRegister_RIK()
                                    "frmt_various.html#RIK" );
         poDriver->SetMetadataItem( GDAL_DMD_EXTENSION, "rik" );
 
+        poDriver->SetMetadataItem( GDAL_DCAP_VIRTUALIO, "YES" );
+
         poDriver->pfnOpen = RIKDataset::Open;
+        poDriver->pfnIdentify = RIKDataset::Identify;
 
         GetGDALDriverManager()->RegisterDriver( poDriver );
     }
