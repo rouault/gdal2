@@ -1580,8 +1580,30 @@ GDALIdentifyDriver( const char * pszFilename,
 
     CPLErrorReset();
     CPLAssert( NULL != poDM );
-    
-    for( iDriver = -1; iDriver < poDM->GetDriverCount(); iDriver++ )
+
+    int nDriverCount = poDM->GetDriverCount();
+
+    // First pass: only use drivers that have a pfnIdentify implementation
+    for( iDriver = -1; iDriver < nDriverCount; iDriver++ )
+    {
+        GDALDriver      *poDriver;
+
+        if( iDriver < 0 )
+            poDriver = GDALGetAPIPROXYDriver();
+        else
+            poDriver = poDM->GetDriver( iDriver );
+
+        VALIDATE_POINTER1( poDriver, "GDALIdentifyDriver", NULL );
+
+        if( poDriver->pfnIdentify != NULL )
+        {
+            if( poDriver->pfnIdentify( &oOpenInfo ) > 0 )
+                return (GDALDriverH) poDriver;
+        }
+    }
+
+    // Second pass: slow method
+    for( iDriver = -1; iDriver < nDriverCount; iDriver++ )
     {
         GDALDriver      *poDriver;
         GDALDataset     *poDS;
@@ -1595,10 +1617,11 @@ GDALIdentifyDriver( const char * pszFilename,
 
         if( poDriver->pfnIdentify != NULL )
         {
-            if( poDriver->pfnIdentify( &oOpenInfo ) )
-                return (GDALDriverH) poDriver;
+            if( poDriver->pfnIdentify( &oOpenInfo ) == 0 )
+                continue;
         }
-        else if( poDriver->pfnOpen != NULL )
+
+        if( poDriver->pfnOpen != NULL )
         {
             poDS = poDriver->pfnOpen( &oOpenInfo );
             if( poDS != NULL )
