@@ -61,6 +61,10 @@ OGRDataSource *OGRPGDriver::Open( const char * pszFilename,
 {
     OGRPGDataSource     *poDS;
 
+    if( !EQUALN(pszFilename,"PGB:",4) &&
+        !EQUALN(pszFilename,"PG:",3) )
+        return NULL;
+
     poDS = new OGRPGDataSource();
 
     if( !poDS->Open( pszFilename, bUpdate, TRUE ) )

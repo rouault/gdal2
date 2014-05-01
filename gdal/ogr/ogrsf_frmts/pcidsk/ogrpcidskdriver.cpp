@@ -60,6 +60,9 @@ const char *OGRPCIDSKDriver::GetName()
 OGRDataSource *OGRPCIDSKDriver::Open( const char * pszFilename, int bUpdate )
 
 {
+    if( !EQUAL(CPLGetExtension(pszFilename),"pix") )
+        return NULL;
+
     OGRPCIDSKDataSource   *poDS = new OGRPCIDSKDataSource();
 
     if( !poDS->Open( pszFilename, bUpdate ) )

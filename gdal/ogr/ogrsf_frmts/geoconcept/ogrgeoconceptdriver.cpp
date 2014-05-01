@@ -64,6 +64,15 @@ OGRDataSource *OGRGeoconceptDriver::Open( const char* pszFilename,
 {
     OGRGeoconceptDataSource  *poDS;
 
+/* -------------------------------------------------------------------- */
+/*      We will only consider .gxt and .txt files.                      */
+/* -------------------------------------------------------------------- */
+    const char* pszExtension = CPLGetExtension(pszFilename);
+    if( !EQUAL(pszExtension,"gxt") && !EQUAL(pszExtension,"txt") )
+    {
+        return NULL;
+    }
+
     poDS = new OGRGeoconceptDataSource();
 
     if( !poDS->Open( pszFilename, TRUE, bUpdate ) )

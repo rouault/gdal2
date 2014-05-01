@@ -137,9 +137,6 @@ CPLString OGRCARTODBGetOptionValue(const char* pszFilename,
 int OGRCARTODBDataSource::Open( const char * pszFilename, int bUpdateIn)
 
 {
-    if (!EQUALN(pszFilename, "CARTODB:", strlen("CARTODB:")))
-        return FALSE;
-
     bReadWrite = bUpdateIn;
 
     pszName = CPLStrdup( pszFilename );

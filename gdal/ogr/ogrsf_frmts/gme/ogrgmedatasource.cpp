@@ -133,9 +133,6 @@ CPLString OGRGMEGetOptionValue(const char* pszFilename,
 int OGRGMEDataSource::Open( const char * pszFilename, int bUpdateIn)
 
 {
-    if (!EQUALN(pszFilename, "GME:", 4))
-        return FALSE;
-
     bReadWrite = bUpdateIn;
 
     pszName = CPLStrdup( pszFilename );

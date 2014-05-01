@@ -60,6 +60,9 @@ const char *OGRGMEDriver::GetName()
 OGRDataSource *OGRGMEDriver::Open( const char * pszFilename, int bUpdate )
 
 {
+    if (!EQUALN(pszFilename, "GME:", 4))
+        return FALSE;
+
     OGRGMEDataSource   *poDS = new OGRGMEDataSource();
 
     if( !poDS->Open( pszFilename, bUpdate ) )

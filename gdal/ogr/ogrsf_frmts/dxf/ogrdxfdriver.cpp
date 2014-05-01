@@ -58,6 +58,9 @@ const char *OGRDXFDriver::GetName()
 OGRDataSource *OGRDXFDriver::Open( const char * pszFilename, int bUpdate )
 
 {
+    if( !EQUAL(CPLGetExtension(pszFilename),"dxf") )
+        return NULL;
+
     OGRDXFDataSource   *poDS = new OGRDXFDataSource();
 
     if( !poDS->Open( pszFilename ) )

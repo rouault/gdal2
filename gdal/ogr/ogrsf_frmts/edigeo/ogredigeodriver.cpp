@@ -62,9 +62,18 @@ const char *OGREDIGEODriver::GetName()
 OGRDataSource *OGREDIGEODriver::Open( const char * pszFilename, int bUpdate )
 
 {
+    if( bUpdate )
+        return NULL;
+
+/* -------------------------------------------------------------------- */
+/*      Does this appear to be a .THF file?                             */
+/* -------------------------------------------------------------------- */
+    if( !EQUAL(CPLGetExtension(pszFilename), "thf") )
+        return NULL;
+
     OGREDIGEODataSource   *poDS = new OGREDIGEODataSource();
 
-    if( !poDS->Open( pszFilename, bUpdate ) )
+    if( !poDS->Open( pszFilename ) )
     {
         delete poDS;
         poDS = NULL;

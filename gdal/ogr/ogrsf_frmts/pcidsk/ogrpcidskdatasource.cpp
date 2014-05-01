@@ -101,8 +101,7 @@ int OGRPCIDSKDataSource::Open( const char * pszFilename, int bUpdateIn )
 
 {
     VSIStatBufL sStat;
-    if( !EQUAL(CPLGetExtension(pszFilename),"pix") ||
-        VSIStatL(pszFilename, &sStat) != 0 )
+    if( VSIStatL(pszFilename, &sStat) != 0 )
         return FALSE;
 
     osName = pszFilename;

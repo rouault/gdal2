@@ -49,8 +49,11 @@ OGRDataSource *OGRXPlaneDriver::Open( const char * pszFilename, int bUpdate )
 {
     if ( bUpdate )
     {
-        return FALSE;
+        return NULL;
     }
+
+    if( !EQUAL(CPLGetExtension(pszFilename), "dat") )
+        return NULL;
 
     OGRXPlaneDataSource   *poDS = new OGRXPlaneDataSource();
 

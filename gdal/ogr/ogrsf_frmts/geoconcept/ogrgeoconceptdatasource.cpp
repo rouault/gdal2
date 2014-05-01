@@ -112,15 +112,6 @@ int OGRGeoconceptDataSource::Open( const char* pszName, int bTestOpen, int bUpda
 
 {
 /* -------------------------------------------------------------------- */
-/*      We will only consider .gxt and .txt files.                      */
-/* -------------------------------------------------------------------- */
-    const char* pszExtension = CPLGetExtension(pszName);
-    if( !EQUAL(pszExtension,"gxt") && !EQUAL(pszExtension,"txt") )
-    {
-        return FALSE;
-    }
-
-/* -------------------------------------------------------------------- */
 /*      Is the given path a directory or a regular file?                */
 /* -------------------------------------------------------------------- */
     VSIStatBuf  stat;

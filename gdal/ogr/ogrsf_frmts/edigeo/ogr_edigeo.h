@@ -228,8 +228,7 @@ class OGREDIGEODataSource : public OGRDataSource
                         OGREDIGEODataSource();
                         ~OGREDIGEODataSource();
 
-    int                 Open( const char * pszFilename,
-                              int bUpdate );
+    int                 Open( const char * pszFilename );
 
     virtual const char*         GetName() { return pszName; }
 
