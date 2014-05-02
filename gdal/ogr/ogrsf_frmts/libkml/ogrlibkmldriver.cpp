@@ -203,6 +203,7 @@ void RegisterOGRLIBKML (
         poDriver->SetMetadataItem( GDAL_DCAP_VECTOR, "YES" );
         poDriver->SetMetadataItem( GDAL_DMD_LONGNAME,
                                    "LIBKML" );
+        poDriver->SetMetadataItem( GDAL_DMD_EXTENSIONS, "kml kmz" );
         poDriver->SetMetadataItem( GDAL_DMD_HELPTOPIC,
                                    "drv_libkml.html" );
 

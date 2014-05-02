@@ -80,10 +80,9 @@ void RegisterOGRREC()
 
         poDriver->SetDescription( "REC" );
         poDriver->SetMetadataItem( GDAL_DCAP_VECTOR, "YES" );
+        poDriver->SetMetadataItem( GDAL_DMD_EXTENSION, "rec" );
         poDriver->SetMetadataItem( GDAL_DMD_LONGNAME,
-                                   "REC" );
-        poDriver->SetMetadataItem( GDAL_DMD_HELPTOPIC,
-                                   "drv_rec.html" );
+                                   "EPIInfo .REC " );
 
         poDriver->pfnOpen = OGRRECDriverOpen;
 

@@ -117,6 +117,11 @@ int OGRGFTDriver::TestCapability( const char * pszCap )
 void RegisterOGRGFT()
 
 {
-    OGRSFDriverRegistrar::GetRegistrar()->RegisterDriver( new OGRGFTDriver );
+    OGRSFDriver* poDriver = new OGRGFTDriver;
+    poDriver->SetMetadataItem( GDAL_DMD_LONGNAME,
+                                   "Google Fusion Tables" );
+    poDriver->SetMetadataItem( GDAL_DMD_HELPTOPIC,
+                                   "drv_gft.html" );
+    OGRSFDriverRegistrar::GetRegistrar()->RegisterDriver(poDriver);
 }
 

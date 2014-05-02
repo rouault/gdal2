@@ -109,7 +109,8 @@ void RegisterOGRDGN()
         poDriver->SetDescription( "DGN" );
         poDriver->SetMetadataItem( GDAL_DCAP_VECTOR, "YES" );
         poDriver->SetMetadataItem( GDAL_DMD_LONGNAME,
-                                   "DGN" );
+                                   "Microstation DGN" );
+        poDriver->SetMetadataItem( GDAL_DMD_EXTENSION, "dgn" );
         poDriver->SetMetadataItem( GDAL_DMD_HELPTOPIC,
                                    "drv_dgn.html" );
 

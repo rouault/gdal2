@@ -145,6 +145,7 @@ void RegisterOGRGeoPackage()
         poDriver->SetMetadataItem( GDAL_DCAP_VECTOR, "YES" );
         poDriver->SetMetadataItem( GDAL_DMD_LONGNAME,
                                    "GeoPackage" );
+        poDriver->SetMetadataItem( GDAL_DMD_EXTENSION, "gpkg" );
         poDriver->SetMetadataItem( GDAL_DMD_HELPTOPIC,
                                    "drv_geopackage.html" );
 

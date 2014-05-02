@@ -123,6 +123,12 @@ void RegisterOGRPG()
 {
     if (! GDAL_CHECK_VERSION("PG driver"))
         return;
-    OGRSFDriverRegistrar::GetRegistrar()->RegisterDriver( new OGRPGDriver );
+    OGRSFDriver* poDriver = new OGRPGDriver;
+    poDriver->SetMetadataItem( GDAL_DMD_LONGNAME,
+                                "PostgreSQL/PostGIS" );
+    poDriver->SetMetadataItem( GDAL_DMD_HELPTOPIC,
+                                "drv_pg.html" );
+
+    OGRSFDriverRegistrar::GetRegistrar()->RegisterDriver(poDriver);
 }
 

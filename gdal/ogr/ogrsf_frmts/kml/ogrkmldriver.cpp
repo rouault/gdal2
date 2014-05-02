@@ -122,6 +122,7 @@ void RegisterOGRKML()
         poDriver->SetMetadataItem( GDAL_DCAP_VECTOR, "YES" );
         poDriver->SetMetadataItem( GDAL_DMD_LONGNAME,
                                    "KML" );
+        poDriver->SetMetadataItem( GDAL_DMD_EXTENSION, "kml" );
         poDriver->SetMetadataItem( GDAL_DMD_HELPTOPIC,
                                    "drv_kml.html" );
 

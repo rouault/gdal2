@@ -100,7 +100,8 @@ void RegisterOGRDXF()
         poDriver->SetDescription( "DXF" );
         poDriver->SetMetadataItem( GDAL_DCAP_VECTOR, "YES" );
         poDriver->SetMetadataItem( GDAL_DMD_LONGNAME,
-                                   "DXF" );
+                                   "AutoCAD DXF" );
+        poDriver->SetMetadataItem( GDAL_DMD_EXTENSION, "dxf" );
         poDriver->SetMetadataItem( GDAL_DMD_HELPTOPIC,
                                    "drv_dxf.html" );
 

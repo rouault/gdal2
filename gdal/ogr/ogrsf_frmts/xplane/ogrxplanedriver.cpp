@@ -84,6 +84,13 @@ int OGRXPlaneDriver::TestCapability( const char * pszCap )
 void RegisterOGRXPlane()
 
 {
-    OGRSFDriverRegistrar::GetRegistrar()->RegisterDriver( new OGRXPlaneDriver );
+    OGRSFDriver* poDriver = new OGRXPlaneDriver;
+    poDriver->SetMetadataItem( GDAL_DMD_LONGNAME,
+                                "X-Plane/Flightgear aeronautical data" );
+    poDriver->SetMetadataItem( GDAL_DMD_EXTENSION, "dat" );
+    poDriver->SetMetadataItem( GDAL_DMD_HELPTOPIC,
+                                "drv_xplane.html" );
+    poDriver->SetMetadataItem( GDAL_DCAP_VIRTUALIO, "YES" );
+    OGRSFDriverRegistrar::GetRegistrar()->RegisterDriver(poDriver);
 }
 

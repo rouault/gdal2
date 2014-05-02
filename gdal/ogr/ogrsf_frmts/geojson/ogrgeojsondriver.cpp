@@ -170,6 +170,7 @@ void RegisterOGRGeoJSON()
         poDriver->SetMetadataItem( GDAL_DCAP_VECTOR, "YES" );
         poDriver->SetMetadataItem( GDAL_DMD_LONGNAME,
                                    "GeoJSON" );
+        poDriver->SetMetadataItem( GDAL_DMD_EXTENSIONS, "json geojson topojson" );
         poDriver->SetMetadataItem( GDAL_DMD_HELPTOPIC,
                                    "drv_geojson.html" );
 

@@ -108,6 +108,7 @@ void RegisterOGRGPX()
         poDriver->SetMetadataItem( GDAL_DCAP_VECTOR, "YES" );
         poDriver->SetMetadataItem( GDAL_DMD_LONGNAME,
                                    "GPX" );
+        poDriver->SetMetadataItem( GDAL_DMD_EXTENSION, "gpx" );
         poDriver->SetMetadataItem( GDAL_DMD_HELPTOPIC,
                                    "drv_gpx.html" );
 

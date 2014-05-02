@@ -177,7 +177,8 @@ void RegisterOGRS57()
         poDriver->SetDescription( "S57" );
         poDriver->SetMetadataItem( GDAL_DCAP_VECTOR, "YES" );
         poDriver->SetMetadataItem( GDAL_DMD_LONGNAME,
-                                   "SDTS" );
+                                   "IHO S-57 (ENC)" );
+        poDriver->SetMetadataItem( GDAL_DMD_EXTENSION, "000" );
         poDriver->SetMetadataItem( GDAL_DMD_HELPTOPIC,
                                    "drv_s57.html" );
 

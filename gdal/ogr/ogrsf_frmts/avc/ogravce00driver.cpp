@@ -76,6 +76,7 @@ void RegisterOGRAVCE00()
         poDriver->SetMetadataItem( GDAL_DCAP_VECTOR, "YES" );
         poDriver->SetMetadataItem( GDAL_DMD_LONGNAME,
                                    "Arc/Info E00 (ASCII) Coverage" );
+        poDriver->SetMetadataItem( GDAL_DMD_EXTENSION, "e00" );
         poDriver->SetMetadataItem( GDAL_DMD_HELPTOPIC,
                                    "drv_avce00.html" );
 

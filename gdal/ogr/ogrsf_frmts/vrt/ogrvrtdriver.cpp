@@ -200,7 +200,8 @@ void RegisterOGRVRT()
         poDriver->SetDescription( "OGR_VRT" );
         poDriver->SetMetadataItem( GDAL_DCAP_VECTOR, "YES" );
         poDriver->SetMetadataItem( GDAL_DMD_LONGNAME,
-                                   "VRT" );
+                                   "VRT - Virtual Datasource" );
+        poDriver->SetMetadataItem( GDAL_DMD_EXTENSION, "vrt" );
         poDriver->SetMetadataItem( GDAL_DMD_HELPTOPIC,
                                    "drv_vrt.html" );
 

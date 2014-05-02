@@ -240,19 +240,5 @@ class OGREDIGEODataSource : public OGRDataSource
     int                         HasUTF8ContentOnly() { return bHasUTF8ContentOnly; }
 };
 
-/************************************************************************/
-/*                           OGREDIGEODriver                            */
-/************************************************************************/
-
-class OGREDIGEODriver : public OGRSFDriver
-{
-  public:
-                ~OGREDIGEODriver();
-
-    virtual const char*         GetName();
-    virtual OGRDataSource*      Open( const char *, int );
-    virtual int                 TestCapability( const char * );
-};
-
 
 #endif /* ndef _OGR_EDIGEO_H_INCLUDED */

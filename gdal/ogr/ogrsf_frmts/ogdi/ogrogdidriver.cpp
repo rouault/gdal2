@@ -104,6 +104,11 @@ void RegisterOGROGDI()
 {
     if (! GDAL_CHECK_VERSION("OGR/OGDI driver"))
         return;
-    OGRSFDriverRegistrar::GetRegistrar()->RegisterDriver( new OGROGDIDriver );
+    OGRSFDriver* poDriver = new OGROGDIDriver;
+    poDriver->SetMetadataItem( GDAL_DMD_LONGNAME,
+                                "OGDI Vectors (VPF, VMAP, DCW)" );
+    poDriver->SetMetadataItem( GDAL_DMD_HELPTOPIC,
+                                "drv_ogdi.html" );
+    OGRSFDriverRegistrar::GetRegistrar()->RegisterDriver(poDriver);
 }
 

@@ -80,7 +80,8 @@ void RegisterOGRSVG()
         poDriver->SetDescription( "SVG" );
         poDriver->SetMetadataItem( GDAL_DCAP_VECTOR, "YES" );
         poDriver->SetMetadataItem( GDAL_DMD_LONGNAME,
-                                   "SVG" );
+                                   "Scalable Vector Graphics" );
+        poDriver->SetMetadataItem( GDAL_DMD_EXTENSION, "svg" );
         poDriver->SetMetadataItem( GDAL_DMD_HELPTOPIC,
                                    "drv_svg.html" );
 

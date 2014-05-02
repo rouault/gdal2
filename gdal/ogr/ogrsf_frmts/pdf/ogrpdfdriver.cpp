@@ -153,6 +153,14 @@ int OGRPDFDriver::TestCapability( const char * pszCap )
 void RegisterOGRPDF()
 
 {
-    OGRSFDriverRegistrar::GetRegistrar()->RegisterDriver( new OGRPDFDriver );
+    OGRSFDriver* poDriver = new OGRPDFDriver ;
+    poDriver->SetMetadataItem( GDAL_DMD_LONGNAME,
+                                "Geospatial PDF" );
+    poDriver->SetMetadataItem( GDAL_DMD_EXTENSION,
+                                "pdf" );
+    poDriver->SetMetadataItem( GDAL_DMD_HELPTOPIC,
+                                "drv_pdf.html" );
+    poDriver->SetMetadataItem( GDAL_DCAP_VIRTUALIO, "YES" );
+    OGRSFDriverRegistrar::GetRegistrar()->RegisterDriver(poDriver);
 }
 

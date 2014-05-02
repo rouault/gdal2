@@ -120,6 +120,8 @@ int OGRCouchDBDriver::TestCapability( const char * pszCap )
 void RegisterOGRCouchDB()
 
 {
-    OGRSFDriverRegistrar::GetRegistrar()->RegisterDriver( new OGRCouchDBDriver );
+    OGRSFDriver* poDriver = new OGRCouchDBDriver;
+    poDriver->SetMetadataItem( GDAL_DMD_LONGNAME, "CouchDB / GeoCouch" );
+    OGRSFDriverRegistrar::GetRegistrar()->RegisterDriver( poDriver );
 }
 

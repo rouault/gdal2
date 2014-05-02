@@ -76,7 +76,7 @@ void RegisterOGRPDS()
         poDriver->SetDescription( "OGR_PDS" );
         poDriver->SetMetadataItem( GDAL_DCAP_VECTOR, "YES" );
         poDriver->SetMetadataItem( GDAL_DMD_LONGNAME,
-                                   "PDS" );
+                                   "Planetary Data Systems TABLE" );
         poDriver->SetMetadataItem( GDAL_DMD_HELPTOPIC,
                                    "drv_pds.html" );
 

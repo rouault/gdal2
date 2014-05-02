@@ -231,7 +231,8 @@ void RegisterOGRCSV()
         poDriver->SetDescription( "CSV" );
         poDriver->SetMetadataItem( GDAL_DCAP_VECTOR, "YES" );
         poDriver->SetMetadataItem( GDAL_DMD_LONGNAME,
-                                   "CSV" );
+                                   "Comma Separated Value (.csv)" );
+        poDriver->SetMetadataItem( GDAL_DMD_EXTENSION, "csv" );
         poDriver->SetMetadataItem( GDAL_DMD_HELPTOPIC,
                                    "drv_csv.html" );
 

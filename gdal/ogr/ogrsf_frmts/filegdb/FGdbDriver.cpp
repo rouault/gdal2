@@ -272,6 +272,12 @@ void RegisterOGRFileGDB()
 {
     if (! GDAL_CHECK_VERSION("OGR FGDB"))
         return;
-    OGRSFDriverRegistrar::GetRegistrar()->RegisterDriver( new FGdbDriver );
+    OGRSFDriver* poDriver = new FGdbDriver;
+    poDriver->SetMetadataItem( GDAL_DMD_LONGNAME,
+                                "ESRI FileGDB" );
+    poDriver->SetMetadataItem( GDAL_DMD_EXTENSION, "gdb" );
+    poDriver->SetMetadataItem( GDAL_DMD_HELPTOPIC,
+                                "drv_filegdb.html" );
+    OGRSFDriverRegistrar::GetRegistrar()->RegisterDriver(poDriver);
 }
 

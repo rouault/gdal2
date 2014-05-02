@@ -35,6 +35,13 @@
 
 CPL_CVSID("$Id$");
 
+static int OGRVFKDriverIdentify(GDALOpenInfo* poOpenInfo)
+{
+    return ( poOpenInfo->fpL != NULL &&
+             poOpenInfo->nHeaderBytes >= 2 &&
+             strncmp((const char*)poOpenInfo->pabyHeader, "&H", 2) == 0 );
+}
+
 /*
   \brief Open existing data source
   \return NULL on failure
@@ -44,9 +51,7 @@ static GDALDataset *OGRVFKDriverOpen(GDALOpenInfo* poOpenInfo)
     OGRVFKDataSource *poDS;
 
     if( poOpenInfo->eAccess == GA_Update ||
-        poOpenInfo->fpL == NULL ||
-        poOpenInfo->nHeaderBytes < 2 ||
-        strncmp((const char*)poOpenInfo->pabyHeader, "&H", 2) != 0)
+        !OGRVFKDriverIdentify(poOpenInfo) )
         return NULL;
 
     poDS = new OGRVFKDataSource();
@@ -76,11 +81,13 @@ void RegisterOGRVFK()
         poDriver->SetDescription( "VFK" );
         poDriver->SetMetadataItem( GDAL_DCAP_VECTOR, "YES" );
         poDriver->SetMetadataItem( GDAL_DMD_LONGNAME,
-                                   "VFK" );
+                                   "Czech Cadastral Exchange Data Format" );
+        poDriver->SetMetadataItem( GDAL_DMD_EXTENSION, "vfk" );
         poDriver->SetMetadataItem( GDAL_DMD_HELPTOPIC,
                                    "drv_vfk.html" );
 
         poDriver->pfnOpen = OGRVFKDriverOpen;
+        poDriver->pfnIdentify = OGRVFKDriverIdentify;
 
         GetGDALDriverManager()->RegisterDriver( poDriver );
     }

@@ -106,7 +106,7 @@ void RegisterOGRSOSI() {
         poDriver->SetDescription( "SOSI" );
         poDriver->SetMetadataItem( GDAL_DCAP_VECTOR, "YES" );
         poDriver->SetMetadataItem( GDAL_DMD_LONGNAME,
-                                   "SOSI" );
+                                   "Norwegian SOSI Standard" );
         poDriver->SetMetadataItem( GDAL_DMD_HELPTOPIC,
                                    "drv_sosi.html" );
 

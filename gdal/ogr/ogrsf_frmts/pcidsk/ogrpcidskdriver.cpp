@@ -134,6 +134,13 @@ int OGRPCIDSKDriver::TestCapability( const char * pszCap )
 void RegisterOGRPCIDSK()
 
 {
-    OGRSFDriverRegistrar::GetRegistrar()->RegisterDriver( new OGRPCIDSKDriver );
+    OGRSFDriver* poDriver = new OGRPCIDSKDriver ;
+    poDriver->SetMetadataItem( GDAL_DMD_LONGNAME,
+                                "PCI Geomatics Database File" );
+    poDriver->SetMetadataItem( GDAL_DMD_EXTENSION,
+                                "pix" );
+    poDriver->SetMetadataItem( GDAL_DMD_HELPTOPIC,
+                                "drv_pcidsk.html" );
+    OGRSFDriverRegistrar::GetRegistrar()->RegisterDriver(poDriver);
 }
 

@@ -114,5 +114,10 @@ int OGRGMEDriver::TestCapability( const char * pszCap )
 void RegisterOGRGME()
 
 {
-    OGRSFDriverRegistrar::GetRegistrar()->RegisterDriver( new OGRGMEDriver );
+    OGRSFDriver* poDriver = new OGRGMEDriver;
+    poDriver->SetMetadataItem( GDAL_DMD_LONGNAME,
+                                   "Google Maps Engine" );
+    poDriver->SetMetadataItem( GDAL_DMD_HELPTOPIC,
+                                   "http://trac.osgeo.org/gdal/wiki/GMEDriver" );
+    OGRSFDriverRegistrar::GetRegistrar()->RegisterDriver(poDriver);
 }

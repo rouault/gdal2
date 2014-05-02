@@ -37,43 +37,30 @@ extern "C" void RegisterOGREDIGEO();
 // g++ -fPIC -g -Wall ogr/ogrsf_frmts/edigeo/*.cpp -shared -o ogr_EDIGEO.so -Iport -Igcore -Iogr -Iogr/ogrsf_frmts -Iogr/ogrsf_frmts/generic -Iogr/ogrsf_frmts/edigeo -L. -lgdal
 
 /************************************************************************/
-/*                         ~OGREDIGEODriver()                           */
+/*                        OGREDIGEODriverIdentify()                     */
 /************************************************************************/
 
-OGREDIGEODriver::~OGREDIGEODriver()
+static int OGREDIGEODriverIdentify( GDALOpenInfo * poOpenInfo )
 
 {
-}
-
-/************************************************************************/
-/*                              GetName()                               */
-/************************************************************************/
-
-const char *OGREDIGEODriver::GetName()
-
-{
-    return "EDIGEO";
+    return poOpenInfo->fpL != NULL &&
+           EQUAL(CPLGetExtension(poOpenInfo->pszFilename), "thf");
 }
 
 /************************************************************************/
 /*                                Open()                                */
 /************************************************************************/
 
-OGRDataSource *OGREDIGEODriver::Open( const char * pszFilename, int bUpdate )
+static GDALDataset *OGREDIGEODriverOpen( GDALOpenInfo * poOpenInfo )
 
 {
-    if( bUpdate )
-        return NULL;
-
-/* -------------------------------------------------------------------- */
-/*      Does this appear to be a .THF file?                             */
-/* -------------------------------------------------------------------- */
-    if( !EQUAL(CPLGetExtension(pszFilename), "thf") )
+    if( poOpenInfo->eAccess == GA_Update ||
+        !OGREDIGEODriverIdentify(poOpenInfo) )
         return NULL;
 
     OGREDIGEODataSource   *poDS = new OGREDIGEODataSource();
 
-    if( !poDS->Open( pszFilename ) )
+    if( !poDS->Open( poOpenInfo->pszFilename ) )
     {
         delete poDS;
         poDS = NULL;
@@ -83,22 +70,32 @@ OGRDataSource *OGREDIGEODriver::Open( const char * pszFilename, int bUpdate )
 }
 
 /************************************************************************/
-/*                           TestCapability()                           */
-/************************************************************************/
-
-int OGREDIGEODriver::TestCapability( const char * pszCap )
-
-{
-    return FALSE;
-}
-
-/************************************************************************/
 /*                           RegisterOGREDIGEO()                        */
 /************************************************************************/
 
 void RegisterOGREDIGEO()
 
 {
-    OGRSFDriverRegistrar::GetRegistrar()->RegisterDriver( new OGREDIGEODriver );
+    GDALDriver  *poDriver;
+
+    if( GDALGetDriverByName( "EDIGEO" ) == NULL )
+    {
+        poDriver = new GDALDriver();
+
+        poDriver->SetDescription( "EDIGEO" );
+        poDriver->SetMetadataItem( GDAL_DCAP_VECTOR, "YES" );
+        poDriver->SetMetadataItem( GDAL_DMD_LONGNAME,
+                                   "French EDIGEO exchange format" );
+        poDriver->SetMetadataItem( GDAL_DMD_EXTENSION, "thf" );
+        poDriver->SetMetadataItem( GDAL_DMD_HELPTOPIC,
+                                   "drv_edigeo.html" );
+
+        poDriver->SetMetadataItem( GDAL_DCAP_VIRTUALIO, "YES" );
+
+        poDriver->pfnOpen = OGREDIGEODriverOpen;
+        poDriver->pfnIdentify = OGREDIGEODriverIdentify;
+
+        GetGDALDriverManager()->RegisterDriver( poDriver );
+    }
 }
 

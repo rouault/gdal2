@@ -108,6 +108,7 @@ void RegisterOGRGTM()
         poDriver->SetMetadataItem( GDAL_DCAP_VECTOR, "YES" );
         poDriver->SetMetadataItem( GDAL_DMD_LONGNAME,
                                    "GPSTrackMaker" );
+        poDriver->SetMetadataItem( GDAL_DMD_EXTENSIONS, "gtm gtz" );
         poDriver->SetMetadataItem( GDAL_DMD_HELPTOPIC,
                                    "drv_gtm.html" );
 

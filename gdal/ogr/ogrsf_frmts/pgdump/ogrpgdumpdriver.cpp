@@ -100,6 +100,13 @@ int OGRPGDumpDriver::TestCapability( const char * pszCap )
 void RegisterOGRPGDump()
 
 {
-    OGRSFDriverRegistrar::GetRegistrar()->RegisterDriver( new OGRPGDumpDriver );
+    OGRSFDriver* poDriver = new OGRPGDumpDriver;
+    poDriver->SetMetadataItem( GDAL_DMD_LONGNAME,
+                                "PostgreSQL SQL dump" );
+    poDriver->SetMetadataItem( GDAL_DMD_HELPTOPIC,
+                                "drv_pgdump.html" );
+
+    poDriver->SetMetadataItem( GDAL_DCAP_VIRTUALIO, "YES" );
+    OGRSFDriverRegistrar::GetRegistrar()->RegisterDriver(poDriver);
 }
 

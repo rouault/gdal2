@@ -75,7 +75,7 @@ void RegisterOGRHTF()
         poDriver->SetDescription( "HTF" );
         poDriver->SetMetadataItem( GDAL_DCAP_VECTOR, "YES" );
         poDriver->SetMetadataItem( GDAL_DMD_LONGNAME,
-                                   "HTF" );
+                                   "Hydrographic Transfer Vector" );
         poDriver->SetMetadataItem( GDAL_DMD_HELPTOPIC,
                                    "drv_htf.html" );
 
