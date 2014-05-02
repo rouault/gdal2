@@ -306,6 +306,13 @@ def basic_test_11():
     if ds is None:
         gdaltest.post_reason('fail')
         return 'fail'
+    if ds.GetLayerCount() != 1:
+        gdaltest.post_reason('fail')
+        return 'fail'
+    if ds.GetLayer(0) is None:
+        gdaltest.post_reason('fail')
+        return 'fail'
+    ds.GetLayer(0).GetMetadata()
 
     ds = gdal.OpenEx('../ogr/data/poly.shp', allowed_drivers = ['ESRI Shapefile'] )
     if ds is None:
