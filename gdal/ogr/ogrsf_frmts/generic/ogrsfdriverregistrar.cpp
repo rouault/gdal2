@@ -240,7 +240,10 @@ void OGRSFDriverRegistrar::RegisterDriver( OGRSFDriver * poDriver )
             poDriver->SetMetadataItem( GDAL_DCAP_CREATE, "YES" );
             poDriver->pfnCreateVectorOnly = CreateVectorOnly;
         }
-        poDriver->pfnDeleteDataSource = DeleteDataSource;
+        if( poDriver->TestCapability(ODrCDeleteDataSource) )
+        {
+            poDriver->pfnDeleteDataSource = DeleteDataSource;
+        }
 
         poDriver->SetMetadataItem( GDAL_DCAP_VECTOR, "YES" );
 
