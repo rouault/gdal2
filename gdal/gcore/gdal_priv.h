@@ -765,6 +765,10 @@ class CPL_DLL GDALDriver : public GDALMajorObject
                         GDALDriver();
                         ~GDALDriver();
 
+    virtual CPLErr      SetMetadataItem( const char * pszName,
+                                 const char * pszValue,
+                                 const char * pszDomain = "" );
+
 /* -------------------------------------------------------------------- */
 /*      Public C++ methods.                                             */
 /* -------------------------------------------------------------------- */

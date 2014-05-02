@@ -1649,3 +1649,24 @@ GDALIdentifyDriver( const char * pszFilename,
 
     return NULL;
 }
+
+/************************************************************************/
+/*                          SetMetadataItem()                           */
+/************************************************************************/
+
+CPLErr GDALDriver::SetMetadataItem( const char * pszName, 
+                                    const char * pszValue, 
+                                    const char * pszDomain )
+
+{
+    if( pszDomain == NULL || pszDomain[0] == '\0' )
+    {
+        /* Automatically sets GDAL_DMD_EXTENSIONS from GDAL_DMD_EXTENSION */
+        if( EQUAL(pszName, GDAL_DMD_EXTENSION) &&
+            GDALMajorObject::GetMetadataItem(GDAL_DMD_EXTENSIONS) == NULL )
+        {
+            GDALMajorObject::SetMetadataItem(GDAL_DMD_EXTENSIONS, pszValue);
+        }
+    }
+    return GDALMajorObject::SetMetadataItem(pszName, pszValue, pszDomain);
+}

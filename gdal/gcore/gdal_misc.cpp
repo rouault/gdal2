@@ -2559,9 +2559,11 @@ GDALGeneralCmdLineProcessor( int nArgc, char ***ppapszArgv, int nOptions )
             if( CSLFetchBoolean( papszMD, GDAL_DCAP_VECTOR, FALSE ) )
                 printf( "  Supports: Vector\n" );
 
-            if( CSLFetchNameValue( papszMD, GDAL_DMD_EXTENSION ) )
-                printf( "  Extension: %s\n", 
-                        CSLFetchNameValue( papszMD, GDAL_DMD_EXTENSION ) );
+            const char* pszExt = CSLFetchNameValue( papszMD, GDAL_DMD_EXTENSIONS );
+            if( pszExt != NULL )
+                printf( "  Extension%s: %s\n", (strchr(pszExt, ' ') ? "s" : ""),
+                        pszExt );
+
             if( CSLFetchNameValue( papszMD, GDAL_DMD_MIMETYPE ) )
                 printf( "  Mime Type: %s\n", 
                         CSLFetchNameValue( papszMD, GDAL_DMD_MIMETYPE ) );
