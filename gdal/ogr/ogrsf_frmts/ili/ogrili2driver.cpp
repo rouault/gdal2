@@ -52,6 +52,8 @@ static GDALDataset *OGRILI2DriverOpen( GDALOpenInfo* poOpenInfo )
             return NULL;
         }
     }
+    else if( poOpenInfo->bIsDirectory )
+        return NULL;
 
     poDS = new OGRILI2DataSource();
 
