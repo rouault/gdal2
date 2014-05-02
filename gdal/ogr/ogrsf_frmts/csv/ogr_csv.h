@@ -153,7 +153,7 @@ class OGRCSVDataSource : public OGRDataSource
     int                 GetLayerCount() { return nLayers; }
     OGRLayer            *GetLayer( int );
 
-    virtual OGRLayer   *CreateLayer( const char *pszName, 
+    virtual OGRLayer   *ICreateLayer( const char *pszName, 
                                      OGRSpatialReference *poSpatialRef = NULL,
                                      OGRwkbGeometryType eGType = wkbUnknown,
                                      char ** papszOptions = NULL );

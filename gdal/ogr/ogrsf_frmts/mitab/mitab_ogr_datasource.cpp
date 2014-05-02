@@ -41,7 +41,7 @@
  * fixed CPLReadDir memory leak
  *
  * Revision 1.9  2004/10/15 01:52:30  fwarmerdam
- * Modified CreateLayer() to use  -1000,-1000,1000,1000 bounds for GEOGCS
+ * ModifiedICreateLayer() to use  -1000,-1000,1000,1000 bounds for GEOGCS
  * much like in mitab_bounds.cpp.  This ensures that geographic files in
  * the range 0-360 works as well as -180 to 180.
  *
@@ -60,7 +60,7 @@
  * added support for FORMAT=MIF option for creating layers
  *
  * Revision 1.4  2001/02/06 22:13:54  warmerda
- * fixed memory leak in OGRTABDataSource::CreateLayer()
+ * fixed memory leak in OGRTABDataSource::ICreateLayer()
  *
  * Revision 1.3  2001/01/22 16:03:58  warmerda
  * expanded tabs
@@ -321,11 +321,11 @@ OGRLayer *OGRTABDataSource::GetLayer( int iLayer )
 }
 
 /************************************************************************/
-/*                            CreateLayer()                             */
+/*                           ICreateLayer()                             */
 /************************************************************************/
 
 OGRLayer *
-OGRTABDataSource::CreateLayer( const char * pszLayerName,
+OGRTABDataSource::ICreateLayer( const char * pszLayerName,
                                OGRSpatialReference *poSRSIn,
                                OGRwkbGeometryType /* eGeomTypeIn */,
                                char ** /* papszOptions */ )

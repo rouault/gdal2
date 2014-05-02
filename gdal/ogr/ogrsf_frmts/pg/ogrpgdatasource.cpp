@@ -1187,11 +1187,11 @@ int OGRPGDataSource::DeleteLayer( int iLayer )
 }
 
 /************************************************************************/
-/*                            CreateLayer()                             */
+/*                           ICreateLayer()                             */
 /************************************************************************/
 
 OGRLayer *
-OGRPGDataSource::CreateLayer( const char * pszLayerName,
+OGRPGDataSource::ICreateLayer( const char * pszLayerName,
                               OGRSpatialReference *poSRS,
                               OGRwkbGeometryType eType,
                               char ** papszOptions )

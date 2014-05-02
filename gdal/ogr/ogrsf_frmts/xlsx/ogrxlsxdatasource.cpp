@@ -1363,11 +1363,11 @@ void OGRXLSXDataSource::AnalyseStyles(VSILFILE* fpStyles)
 }
 
 /************************************************************************/
-/*                            CreateLayer()                             */
+/*                           ICreateLayer()                             */
 /************************************************************************/
 
 OGRLayer *
-OGRXLSXDataSource::CreateLayer( const char * pszLayerName,
+OGRXLSXDataSource::ICreateLayer( const char * pszLayerName,
                                 OGRSpatialReference *poSRS,
                                 OGRwkbGeometryType eType,
                                 char ** papszOptions )

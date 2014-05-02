@@ -2196,7 +2196,7 @@ OGRLIBKMLLayer *OGRLIBKMLDataSource::CreateLayerKmz (
 }
 
 /******************************************************************************
- CreateLayer()
+ICreateLayer()
  
  Args:          pszLayerName    name of the layer to create
                 poOgrSRS        the SRS of the layer
@@ -2207,7 +2207,7 @@ OGRLIBKMLLayer *OGRLIBKMLDataSource::CreateLayerKmz (
 
 ******************************************************************************/
 
-OGRLayer *OGRLIBKMLDataSource::CreateLayer (
+OGRLayer *OGRLIBKMLDataSource::ICreateLayer(
     const char *pszLayerName,
     OGRSpatialReference * poOgrSRS,
     OGRwkbGeometryType eGType,

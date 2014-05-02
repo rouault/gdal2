@@ -217,7 +217,7 @@ class OGRShapeDataSource : public OGRDataSource
     virtual OGRLayer    *GetLayer( int );
     virtual OGRLayer    *GetLayerByName(const char *);
 
-    virtual OGRLayer    *CreateLayer( const char *, 
+    virtual OGRLayer    *ICreateLayer( const char *, 
                                       OGRSpatialReference * = NULL,
                                       OGRwkbGeometryType = wkbUnknown,
                                       char ** = NULL );

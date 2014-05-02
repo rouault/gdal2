@@ -191,10 +191,10 @@ OGRNULLDataSource::~OGRNULLDataSource()
 }
 
 /************************************************************************/
-/*                            CreateLayer()                             */
+/*                           ICreateLayer()                             */
 /************************************************************************/
 
-OGRLayer    *OGRNULLDataSource::CreateLayer( const char *pszLayerName,
+OGRLayer    *OGRNULLDataSource::ICreateLayer( const char *pszLayerName,
                                              OGRSpatialReference *poSRS,
                                              OGRwkbGeometryType eType,
                                              char **papszOptions )

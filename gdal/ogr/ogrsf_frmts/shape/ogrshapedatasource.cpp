@@ -75,6 +75,7 @@ OGRShapeDataSource::OGRShapeDataSource()
     b2GBLimit = CSLTestBoolean(CPLGetConfigOption("SHAPE_2GB_LIMIT", "FALSE"));
 }
 
+
 /************************************************************************/
 /*                        ~OGRShapeDataSource()                         */
 /************************************************************************/
@@ -122,7 +123,7 @@ int OGRShapeDataSource::Open( GDALOpenInfo* poOpenInfo,
 /*      This is only utilized when the OGRShapeDriver::Create()         */
 /*      method wants to create a stub OGRShapeDataSource for a          */
 /*      single shapefile.  The driver will take care of creating the    */
-/*      file by calling CreateLayer().                                  */
+/*      file by callingICreateLayer().                                  */
 /* -------------------------------------------------------------------- */
     if( bSingleFileDataSource )
         return TRUE;
@@ -417,11 +418,11 @@ void OGRShapeDataSource::AddLayer(OGRShapeLayer* poLayer)
 }
 
 /************************************************************************/
-/*                            CreateLayer()                             */
+/*                           ICreateLayer()                             */
 /************************************************************************/
 
 OGRLayer *
-OGRShapeDataSource::CreateLayer( const char * pszLayerName,
+OGRShapeDataSource::ICreateLayer( const char * pszLayerName,
                                  OGRSpatialReference *poSRS,
                                  OGRwkbGeometryType eType,
                                  char ** papszOptions )

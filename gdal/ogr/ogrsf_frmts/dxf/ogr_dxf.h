@@ -387,7 +387,7 @@ class OGRDXFWriterDS : public OGRDataSource
 
     int                 TestCapability( const char * );
 
-    OGRLayer           *CreateLayer( const char *pszName, 
+    OGRLayer           *ICreateLayer( const char *pszName, 
                                      OGRSpatialReference *poSpatialRef = NULL,
                                      OGRwkbGeometryType eGType = wkbUnknown,
                                      char ** papszOptions = NULL );

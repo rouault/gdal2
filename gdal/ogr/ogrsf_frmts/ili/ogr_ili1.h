@@ -119,7 +119,7 @@ class OGRILI1DataSource : public OGRDataSource
 
     FILE       *GetTransferFile() { return fpTransfer; }
 
-    virtual OGRLayer *CreateLayer( const char *,
+    virtual OGRLayer *ICreateLayer( const char *,
                                       OGRSpatialReference * = NULL,
                                       OGRwkbGeometryType = wkbUnknown,
                                       char ** = NULL );

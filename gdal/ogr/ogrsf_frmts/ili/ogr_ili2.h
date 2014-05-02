@@ -106,7 +106,7 @@ class OGRILI2DataSource : public OGRDataSource
     int         GetLayerCount() { return listLayer.size(); }
     OGRLayer   *GetLayer( int );
 
-    virtual OGRLayer *CreateLayer( const char *, 
+    virtual OGRLayer *ICreateLayer( const char *, 
                                       OGRSpatialReference * = NULL,
                                       OGRwkbGeometryType = wkbUnknown,
                                       char ** = NULL );

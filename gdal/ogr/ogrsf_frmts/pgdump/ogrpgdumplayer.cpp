@@ -704,7 +704,7 @@ CPLString OGRPGDumpEscapeString(
         }
         /* FIXME: at some point (when we drop PostgreSQL < 9.1 support, remove
            the escaping of backslash and remove 'SET standard_conforming_strings = OFF'
-           in CreateLayer() */
+           inICreateLayer() */
         else if (pszStrValue[i] == '\\')
         {
             pszDestStr[j++] = '\\';

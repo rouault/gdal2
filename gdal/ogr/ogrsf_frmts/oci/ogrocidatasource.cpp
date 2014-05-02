@@ -450,11 +450,11 @@ void OGROCIDataSource::TruncateLayer( const char *pszLayerName )
 }
 
 /************************************************************************/
-/*                            CreateLayer()                             */
+/*                           ICreateLayer()                             */
 /************************************************************************/
 
 OGRLayer *
-OGROCIDataSource::CreateLayer( const char * pszLayerName,
+OGROCIDataSource::ICreateLayer( const char * pszLayerName,
                                OGRSpatialReference *poSRS,
                                OGRwkbGeometryType eType,
                                char ** papszOptions )

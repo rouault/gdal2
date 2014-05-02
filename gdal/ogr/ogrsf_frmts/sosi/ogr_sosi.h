@@ -119,7 +119,7 @@ public:
         return nLayers;
     }
     OGRLayer            *GetLayer( int );
-    OGRLayer            *CreateLayer( const char *pszName, OGRSpatialReference  *poSpatialRef=NULL, OGRwkbGeometryType eGType=wkbUnknown, char **papszOptions=NULL);
+    OGRLayer            *ICreateLayer( const char *pszName, OGRSpatialReference  *poSpatialRef=NULL, OGRwkbGeometryType eGType=wkbUnknown, char **papszOptions=NULL);
     int                 TestCapability( const char * );
 };
 

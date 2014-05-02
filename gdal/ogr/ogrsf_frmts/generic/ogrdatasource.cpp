@@ -162,10 +162,10 @@ int OGR_DS_GetSummaryRefCount( OGRDataSourceH hDataSource )
 }
 
 /************************************************************************/
-/*                            CreateLayer()                             */
+/*                           ICreateLayer()                             */
 /************************************************************************/
 
-OGRLayer *GDALDataset::CreateLayer( const char * pszName,
+OGRLayer *GDALDataset::ICreateLayer( const char * pszName,
                                       OGRSpatialReference * poSpatialRef,
                                       OGRwkbGeometryType eGType,
                                       char **papszOptions )
@@ -230,11 +230,11 @@ OGRLayer *GDALDataset::CopyLayer( OGRLayer *poSrcLayer,
     if( poSrcDefn->GetGeomFieldCount() > 1 &&
         TestCapability(ODsCCreateGeomFieldAfterCreateLayer) )
     {
-        poDstLayer = CreateLayer( pszNewName, NULL, wkbNone, papszOptions );
+        poDstLayer =ICreateLayer( pszNewName, NULL, wkbNone, papszOptions );
     }
     else
     {
-        poDstLayer = CreateLayer( pszNewName, poSrcLayer->GetSpatialRef(),
+        poDstLayer =ICreateLayer( pszNewName, poSrcLayer->GetSpatialRef(),
                                   poSrcDefn->GetGeomType(), papszOptions );
     }
     

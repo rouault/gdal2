@@ -59,7 +59,7 @@ class OGRGeoPackageDataSource : public OGRDataSource
         int                 Create( const char * pszFilename, char **papszOptions );
         OGRLayer*           GetLayer( int iLayer );
         int                 DeleteLayer( int iLayer );
-        OGRLayer*           CreateLayer( const char * pszLayerName,
+        OGRLayer*           ICreateLayer( const char * pszLayerName,
                                          OGRSpatialReference * poSpatialRef,
                                          OGRwkbGeometryType eGType,
                                          char **papszOptions );

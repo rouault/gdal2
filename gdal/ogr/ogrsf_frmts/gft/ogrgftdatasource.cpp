@@ -298,10 +298,10 @@ const char*  OGRGFTDataSource::GetAPIURL() const
 }
 
 /************************************************************************/
-/*                           CreateLayer()                              */
+/*                          ICreateLayer()                              */
 /************************************************************************/
 
-OGRLayer   *OGRGFTDataSource::CreateLayer( const char *pszName,
+OGRLayer   *OGRGFTDataSource::ICreateLayer( const char *pszName,
                                            OGRSpatialReference *poSpatialRef,
                                            OGRwkbGeometryType eGType,
                                            char ** papszOptions )

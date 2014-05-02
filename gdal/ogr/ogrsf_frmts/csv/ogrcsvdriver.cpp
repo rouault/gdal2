@@ -236,6 +236,38 @@ void RegisterOGRCSV()
         poDriver->SetMetadataItem( GDAL_DMD_HELPTOPIC,
                                    "drv_csv.html" );
 
+        poDriver->SetMetadataItem( GDAL_DMD_CREATIONOPTIONLIST,
+"<CreationOptionList>"
+"  <Option name='GEOMETRY' type='string-select' description='how to encode geometry fields'>"
+"    <Value>AS_WKT</Value>"
+"  </Option>"
+"</CreationOptionList>");
+
+        poDriver->SetMetadataItem( GDAL_DS_LAYER_CREATIONOPTIONLIST,
+"<LayerCreationOptionList>"
+"  <Option name='SEPARATOR' type='string-select' description='field separator' default='COMMA'>"
+"    <Value>COMMA</Value>"
+"    <Value>SEMICOLON</Value>"
+"    <Value>TAB</Value>"
+"  </Option>"
+#ifdef WIN32
+"  <Option name='LINEFORMAT' type='string-select' description='end-of-line sequence' default='CRLF'>"
+#else
+"  <Option name='LINEFORMAT' type='string-select' description='end-of-line sequence' default='LF'>"
+#endif
+"    <Value>CRLF</Value>"
+"    <Value>LF</Value>"
+"  </Option>"
+"  <Option name='GEOMETRY' type='string-select' description='how to encode geometry fields'>"
+"    <Value>AS_WKT</Value>"
+"    <Value>AS_XYZ</Value>"
+"    <Value>AS_XY</Value>"
+"    <Value>AS_YX</Value>"
+"  </Option>"
+"  <Option name='CREATE_CSVT' type='boolean' description='whether to create a .csvt file' default='NO'/>"
+"  <Option name='WRITE_BOM' type='boolean' description='whether to write a UTF-8 BOM prefix' default='NO'/>"
+"</LayerCreationOptionList>");
+
         poDriver->SetMetadataItem( GDAL_DCAP_VIRTUALIO, "YES" );
 
         poDriver->pfnOpen = OGRCSVDriverOpen;

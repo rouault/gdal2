@@ -810,10 +810,10 @@ int OGRTigerDataSource::Create( const char *pszNameIn, char **papszOptions )
 }
 
 /************************************************************************/
-/*                            CreateLayer()                             */
+/*                           ICreateLayer()                             */
 /************************************************************************/
 
-OGRLayer *OGRTigerDataSource::CreateLayer( const char *pszLayerName, 
+OGRLayer *OGRTigerDataSource::ICreateLayer( const char *pszLayerName, 
                                            OGRSpatialReference *poSpatRef, 
                                            OGRwkbGeometryType eGType, 
                                            char **papszOptions )

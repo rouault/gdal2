@@ -3000,6 +3000,20 @@ OGRErr GDALDatasetDeleteLayer( GDALDatasetH hDS, int iLayer )
 }
 
 /************************************************************************/
+/*                            CreateLayer()                             */
+/************************************************************************/
+
+OGRLayer *GDALDataset::CreateLayer( const char * pszName,
+                                      OGRSpatialReference * poSpatialRef,
+                                      OGRwkbGeometryType eGType,
+                                      char **papszOptions )
+
+{
+    ValidateLayerCreationOptions( papszOptions );
+    return ICreateLayer(pszName, poSpatialRef, eGType, papszOptions);
+}
+
+/************************************************************************/
 /*                         GDALDatasetCreateLayer()                     */
 /************************************************************************/
 
@@ -3075,4 +3089,23 @@ void GDALDatasetSetStyleTable( GDALDatasetH hDS, OGRStyleTableH hStyleTable )
     VALIDATE_POINTER0( hStyleTable, "OGR_DS_SetStyleTable" );
     
     ((GDALDataset *) hDS)->SetStyleTable( (OGRStyleTable *) hStyleTable);
+}
+
+/************************************************************************/
+/*                    ValidateLayerCreationOptions()                    */
+/************************************************************************/
+
+int GDALDataset::ValidateLayerCreationOptions( const char* const* papszLCO )
+{
+    const char *pszOptionList = GetMetadataItem( GDAL_DS_LAYER_CREATIONOPTIONLIST );
+    if( pszOptionList == NULL && poDriver != NULL )
+    {
+        pszOptionList = 
+             poDriver->GetMetadataItem( GDAL_DS_LAYER_CREATIONOPTIONLIST );
+    }
+    CPLString osDataset;
+    osDataset.Printf("dataset %s", GetDescription());
+    return GDALValidateOptions( pszOptionList, papszLCO,
+                                "layer creation option",
+                                osDataset );
 }

@@ -274,10 +274,10 @@ int OGRCARTODBDataSource::FetchSRSId( OGRSpatialReference * poSRS )
 }
 
 /************************************************************************/
-/*                           CreateLayer()                              */
+/*                          ICreateLayer()                              */
 /************************************************************************/
 
-OGRLayer   *OGRCARTODBDataSource::CreateLayer( const char *pszName,
+OGRLayer   *OGRCARTODBDataSource::ICreateLayer( const char *pszName,
                                            OGRSpatialReference *poSpatialRef,
                                            OGRwkbGeometryType eGType,
                                            char ** papszOptions )

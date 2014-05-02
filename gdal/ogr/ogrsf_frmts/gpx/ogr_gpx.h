@@ -214,7 +214,7 @@ class OGRGPXDataSource : public OGRDataSource
     int                 GetLayerCount() { return nLayers; }
     OGRLayer*           GetLayer( int );
     
-    OGRLayer *          CreateLayer( const char * pszLayerName,
+    OGRLayer *          ICreateLayer( const char * pszLayerName,
                                     OGRSpatialReference *poSRS,
                                     OGRwkbGeometryType eType,
                                     char ** papszOptions );

@@ -115,7 +115,7 @@ class OGRTABDataSource : public OGRDataSource
     OGRLayer    *GetLayer( int );
     int          TestCapability( const char * );
     
-    OGRLayer    *CreateLayer(const char *, 
+    OGRLayer    *ICreateLayer(const char *, 
                              OGRSpatialReference * = NULL,
                              OGRwkbGeometryType = wkbUnknown,
                              char ** = NULL );

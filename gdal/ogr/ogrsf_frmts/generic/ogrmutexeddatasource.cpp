@@ -83,7 +83,7 @@ int         OGRMutexedDataSource::TestCapability( const char * pszCap )
     return m_poBaseDataSource->TestCapability(pszCap);
 }
 
-OGRLayer   *OGRMutexedDataSource::CreateLayer( const char *pszName, 
+OGRLayer   *OGRMutexedDataSource::ICreateLayer( const char *pszName, 
                                      OGRSpatialReference *poSpatialRef,
                                      OGRwkbGeometryType eGType,
                                      char ** papszOptions)

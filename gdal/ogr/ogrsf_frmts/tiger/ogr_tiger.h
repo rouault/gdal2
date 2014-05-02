@@ -596,7 +596,7 @@ class OGRTigerDataSource : public OGRDataSource
 
     void                DeleteModuleFiles( const char *pszModule );
 
-    virtual OGRLayer    *CreateLayer( const char *,
+    virtual OGRLayer    *ICreateLayer( const char *,
                                       OGRSpatialReference * = NULL,
                                       OGRwkbGeometryType = wkbUnknown,
                                       char ** = NULL );

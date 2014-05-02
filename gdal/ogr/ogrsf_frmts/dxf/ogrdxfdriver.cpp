@@ -105,6 +105,16 @@ void RegisterOGRDXF()
         poDriver->SetMetadataItem( GDAL_DMD_HELPTOPIC,
                                    "drv_dxf.html" );
 
+        poDriver->SetMetadataItem( GDAL_DMD_CREATIONOPTIONLIST,
+"<CreationOptionList>"
+"  <Option name='HEADER' type='string' description='Template header file' default='header.dxf'/>"
+"  <Option name='TRAILER' type='string' description='Template trailer file' default='trailer.dxf'/>"
+"  <Option name='FIRST_ENTITY' type='int' description='Identifier of first entity'/>"
+"</CreationOptionList>");
+
+        poDriver->SetMetadataItem( GDAL_DS_LAYER_CREATIONOPTIONLIST,
+                                            "<LayerCreationOptionList/>" );
+
         poDriver->SetMetadataItem( GDAL_DCAP_VIRTUALIO, "YES" );
 
         poDriver->pfnOpen = OGRDXFDriverOpen;

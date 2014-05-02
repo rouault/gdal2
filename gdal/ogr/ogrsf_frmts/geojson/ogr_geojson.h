@@ -143,7 +143,7 @@ public:
     const char* GetName();
     int GetLayerCount();
     OGRLayer* GetLayer( int nLayer );
-    OGRLayer* CreateLayer( const char* pszName,
+    OGRLayer* ICreateLayer( const char* pszName,
                            OGRSpatialReference* poSRS = NULL,
                            OGRwkbGeometryType eGType = wkbUnknown,
                            char** papszOptions = NULL );

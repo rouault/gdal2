@@ -188,10 +188,10 @@ int OGRGPSBabelWriteDataSource::Create( const char * pszName,
 }
 
 /************************************************************************/
-/*                            CreateLayer()                             */
+/*                           ICreateLayer()                             */
 /************************************************************************/
 
-OGRLayer * OGRGPSBabelWriteDataSource::CreateLayer( const char * pszLayerName,
+OGRLayer * OGRGPSBabelWriteDataSource::ICreateLayer( const char * pszLayerName,
                                                     OGRSpatialReference *poSRS,
                                                     OGRwkbGeometryType eType,
                                                     char ** papszOptions )

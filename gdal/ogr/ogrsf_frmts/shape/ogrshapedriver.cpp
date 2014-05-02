@@ -245,6 +245,26 @@ void RegisterOGRShape()
         poDriver->SetMetadataItem( GDAL_DMD_HELPTOPIC,
                                    "drv_shape.html" );
 
+        poDriver->SetMetadataItem( GDAL_DMD_CREATIONOPTIONLIST, "<CreationOptionList/>" );
+        poDriver->SetMetadataItem( GDAL_DS_LAYER_CREATIONOPTIONLIST,
+"<LayerCreationOptionList>"
+"  <Option name='SHPT' type='string-select' description='type of shape' default='automatically detected'>"
+"    <Value>POINT</Value>"
+"    <Value>ARC</Value>"
+"    <Value>POLYGON</Value>"
+"    <Value>MULTIPOINT</Value>"
+"    <Value>POINTZ</Value>"
+"    <Value>ARCZ</Value>"
+"    <Value>POLYGONZ</Value>"
+"    <Value>MULTIPOINTZ</Value>"
+"    <Value>NONE</Value>"
+"    <Value>NULL</Value>"
+"  </Option>"
+"  <Option name='2GB_LIMIT' type='boolean' description='Restrict .shp and .dbf to 2GB' default='FALSE'/>"
+"  <Option name='ENCODING' type='string' description='DBF encoding' default='LDID/87'/>"
+"  <Option name='RESIZE' type='boolean' description='To resize fields to their optimal size.' default='FALSE'/>"
+"</LayerCreationOptionList>");
+
         poDriver->SetMetadataItem( GDAL_DCAP_VIRTUALIO, "YES" );
 
         poDriver->pfnOpen = OGRShapeDriverOpen;

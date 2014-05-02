@@ -1945,11 +1945,11 @@ int OGRPDFDataSource::Create( const char * pszName, char **papszOptions )
 }
 
 /************************************************************************/
-/*                            CreateLayer()                             */
+/*                           ICreateLayer()                             */
 /************************************************************************/
 
 OGRLayer *
-OGRPDFDataSource::CreateLayer( const char * pszLayerName,
+OGRPDFDataSource::ICreateLayer( const char * pszLayerName,
                                 OGRSpatialReference *poSRS,
                                 OGRwkbGeometryType eType,
                                 char ** papszOptions )

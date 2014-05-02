@@ -197,7 +197,7 @@ class OGRODSDataSource : public OGRDataSource
 
     virtual int                 TestCapability( const char * );
 
-    virtual OGRLayer* CreateLayer( const char * pszLayerName,
+    virtual OGRLayer* ICreateLayer( const char * pszLayerName,
                                 OGRSpatialReference *poSRS,
                                 OGRwkbGeometryType eType,
                                 char ** papszOptions );

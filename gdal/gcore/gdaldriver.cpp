@@ -1311,14 +1311,14 @@ int CPL_STDCALL GDALValidateCreationOptions( GDALDriverH hDriver,
 /************************************************************************/
 
 int GDALValidateOpenOptions( GDALDriverH hDriver,
-                             const char* const* papszOptionOptions)
+                             const char* const* papszOpenOptions)
 {
     VALIDATE_POINTER1( hDriver, "GDALValidateOpenOptions", FALSE );
     const char *pszOptionList = 
         ((GDALDriver *) hDriver)->GetMetadataItem( GDAL_DMD_OPENOPTIONLIST );
     CPLString osDriver;
     osDriver.Printf("driver %s", ((GDALDriver *) hDriver)->GetDescription());
-    return GDALValidateOptions( pszOptionList, papszOptionOptions,
+    return GDALValidateOptions( pszOptionList, papszOpenOptions,
                                 "open option",
                                 osDriver);
 }

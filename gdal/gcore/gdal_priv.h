@@ -312,6 +312,8 @@ class CPL_DLL GDALDataset : public GDALMajorObject
                                int nBandCount, int *panBandMap);
 
     virtual int         CloseDependentDatasets();
+    
+    int                 ValidateLayerCreationOptions( const char* const* papszLCO );
 
     friend class GDALRasterBand;
     
@@ -380,8 +382,11 @@ class CPL_DLL GDALDataset : public GDALMajorObject
                            int, int *, GDALProgressFunc, void * );
 
     void ReportError(CPLErr eErrClass, int err_no, const char *fmt, ...)  CPL_PRINT_FUNC_FORMAT (4, 5);
-    
-    
+
+    virtual OGRLayer   *ICreateLayer( const char *pszName, 
+                                     OGRSpatialReference *poSpatialRef = NULL,
+                                     OGRwkbGeometryType eGType = wkbUnknown,
+                                     char ** papszOptions = NULL );
 private:
     void        *m_hMutex;
 

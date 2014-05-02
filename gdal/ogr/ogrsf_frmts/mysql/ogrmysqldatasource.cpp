@@ -823,11 +823,11 @@ int OGRMySQLDataSource::DeleteLayer( int iLayer)
 }
 
 /************************************************************************/
-/*                            CreateLayer()                             */
+/*                           ICreateLayer()                             */
 /************************************************************************/
 
 OGRLayer *
-OGRMySQLDataSource::CreateLayer( const char * pszLayerNameIn,
+OGRMySQLDataSource::ICreateLayer( const char * pszLayerNameIn,
                               OGRSpatialReference *poSRS,
                               OGRwkbGeometryType eType,
                               char ** papszOptions )

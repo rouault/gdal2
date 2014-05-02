@@ -338,6 +338,8 @@ void CPL_DLL CPL_STDCALL GDALSetDescription( GDALMajorObjectH, const char * );
 /*      GDALDataset class ... normally this represents one file.        */
 /* ==================================================================== */
 
+#define GDAL_DS_LAYER_CREATIONOPTIONLIST "DS_LAYER_CREATIONOPTIONLIST" 
+
 GDALDriverH CPL_DLL CPL_STDCALL GDALGetDatasetDriver( GDALDatasetH );
 char CPL_DLL ** CPL_STDCALL GDALGetFileList( GDALDatasetH );
 void CPL_DLL CPL_STDCALL   GDALClose( GDALDatasetH );

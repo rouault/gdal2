@@ -102,10 +102,10 @@ OGRLayer *OGRBNADataSource::GetLayer( int iLayer )
 }
 
 /************************************************************************/
-/*                            CreateLayer()                             */
+/*                           ICreateLayer()                             */
 /************************************************************************/
 
-OGRLayer * OGRBNADataSource::CreateLayer( const char * pszLayerName,
+OGRLayer * OGRBNADataSource::ICreateLayer( const char * pszLayerName,
                                           OGRSpatialReference *poSRS,
                                           OGRwkbGeometryType eType,
                                           char ** papszOptions )

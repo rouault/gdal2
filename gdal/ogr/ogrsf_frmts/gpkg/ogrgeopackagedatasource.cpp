@@ -663,14 +663,14 @@ OGRLayer* OGRGeoPackageDataSource::GetLayer( int iLayer )
 
 
 /************************************************************************/
-/*                           CreateLayer()                              */
+/*                          ICreateLayer()                              */
 /* Options:                                                             */
 /*   FID = primary key name                                             */
 /*   OVERWRITE = YES|NO, overwrite existing layer?                      */
 /*   SPATIAL_INDEX = YES|NO, TBD                                        */
 /************************************************************************/
 
-OGRLayer* OGRGeoPackageDataSource::CreateLayer( const char * pszLayerName,
+OGRLayer* OGRGeoPackageDataSource::ICreateLayer( const char * pszLayerName,
                                       OGRSpatialReference * poSpatialRef,
                                       OGRwkbGeometryType eGType,
                                       char **papszOptions )

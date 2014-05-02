@@ -153,10 +153,10 @@ OGRLayer* OGRGeoJSONDataSource::GetLayer( int nLayer )
 }
 
 /************************************************************************/
-/*                            CreateLayer()                             */
+/*                           ICreateLayer()                             */
 /************************************************************************/
 
-OGRLayer* OGRGeoJSONDataSource::CreateLayer( const char* pszName_,
+OGRLayer* OGRGeoJSONDataSource::ICreateLayer( const char* pszName_,
                                              OGRSpatialReference* poSRS,
                                              OGRwkbGeometryType eGType,
                                              char** papszOptions )

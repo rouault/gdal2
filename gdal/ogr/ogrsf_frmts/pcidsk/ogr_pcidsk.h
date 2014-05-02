@@ -105,7 +105,7 @@ class OGRPCIDSKDataSource : public OGRDataSource
 
     int                 TestCapability( const char * );
 
-    OGRLayer           *CreateLayer( const char *, OGRSpatialReference *,
+    OGRLayer           *ICreateLayer( const char *, OGRSpatialReference *,
                                      OGRwkbGeometryType, char ** );
 };
 

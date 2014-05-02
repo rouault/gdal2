@@ -1203,11 +1203,11 @@ void OGRODSDataSource::AnalyseSettings()
 }
 
 /************************************************************************/
-/*                            CreateLayer()                             */
+/*                           ICreateLayer()                             */
 /************************************************************************/
 
 OGRLayer *
-OGRODSDataSource::CreateLayer( const char * pszLayerName,
+OGRODSDataSource::ICreateLayer( const char * pszLayerName,
                                 OGRSpatialReference *poSRS,
                                 OGRwkbGeometryType eType,
                                 char ** papszOptions )

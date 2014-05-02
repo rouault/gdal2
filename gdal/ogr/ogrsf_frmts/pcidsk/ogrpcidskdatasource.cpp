@@ -157,11 +157,11 @@ int OGRPCIDSKDataSource::Open( const char * pszFilename, int bUpdateIn )
 }
 
 /************************************************************************/
-/*                            CreateLayer()                             */
+/*                           ICreateLayer()                             */
 /************************************************************************/
 
 OGRLayer *
-OGRPCIDSKDataSource::CreateLayer( const char * pszLayerName,
+OGRPCIDSKDataSource::ICreateLayer( const char * pszLayerName,
                                   OGRSpatialReference *poSRS,
                                   OGRwkbGeometryType eType,
                                   char ** papszOptions )
