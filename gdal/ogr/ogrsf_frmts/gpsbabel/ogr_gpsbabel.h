@@ -51,6 +51,8 @@ class OGRGPSBabelDataSource : public OGRDataSource
                         OGRGPSBabelDataSource();
                         ~OGRGPSBabelDataSource();
 
+    virtual int         CloseDependentDatasets();
+
     virtual const char  *GetName() { return pszName; }
     virtual int         GetLayerCount() { return nLayers; }
     virtual OGRLayer   *GetLayer( int );

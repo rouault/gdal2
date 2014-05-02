@@ -62,11 +62,26 @@ OGRGPSBabelDataSource::~OGRGPSBabelDataSource()
     CPLFree(pszGPSBabelDriverName);
     CPLFree(pszFilename);
     
-    if (poGPXDS)
-        GDALClose( (GDALDatasetH) poGPXDS );
+    CloseDependentDatasets();
     
     if (osTmpFileName.size() > 0)
         VSIUnlink(osTmpFileName.c_str());
+}
+
+/************************************************************************/
+/*                     CloseDependentDatasets()                         */
+/************************************************************************/
+
+int OGRGPSBabelDataSource::CloseDependentDatasets()
+{
+    int bRet = FALSE;
+    if (poGPXDS)
+    {
+        bRet = TRUE;
+        GDALClose( (GDALDatasetH) poGPXDS );
+        poGPXDS = NULL;
+    }
+    return bRet;
 }
 
 /************************************************************************/
