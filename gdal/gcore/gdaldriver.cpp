@@ -1378,6 +1378,14 @@ int GDALValidateOptions( const char* pszOptionList,
                     break;
                 }
 
+                /* For option names beginning by a wildcard */
+                if( pszOptionName[0] == '*' &&
+                    strlen(pszKey) > strlen(pszOptionName) &&
+                    EQUAL( pszKey + strlen(pszKey) - strlen(pszOptionName + 1), pszOptionName + 1 ) )
+                {
+                    break;
+                }
+
                 if (EQUAL(pszOptionName, pszKey) ||
                     EQUAL(CPLGetXMLValue(psChildNode, "alias", ""), pszKey))
                 {
@@ -1400,6 +1408,8 @@ int GDALValidateOptions( const char* pszOptionList,
             continue;
         }
         const char* pszType = CPLGetXMLValue(psChildNode, "type", NULL);
+        const char* pszMin = CPLGetXMLValue(psChildNode, "min", NULL);
+        const char* pszMax = CPLGetXMLValue(psChildNode, "max", NULL);
         if (pszType != NULL)
         {
             if (EQUAL(pszType, "INT") || EQUAL(pszType, "INTEGER"))
@@ -1418,6 +1428,23 @@ int GDALValidateOptions( const char* pszOptionList,
                     }
                     pszValueIter++;
                 }
+                if( *pszValueIter == '0' )
+                {
+                    if( pszMin && atoi(pszValue) < atoi(pszMin) )
+                    {
+                        CPLError(CE_Warning, CPLE_NotSupported,
+                             "'%s' is an unexpected value for %s %s that should be >= %s.",
+                             pszValue, pszKey, pszErrorMessageOptionType, pszMin);
+                        break;
+                    }
+                    if( pszMax && atoi(pszValue) > atoi(pszMax) )
+                    {
+                        CPLError(CE_Warning, CPLE_NotSupported,
+                             "'%s' is an unexpected value for %s %s that should be <= %s.",
+                             pszValue, pszKey, pszErrorMessageOptionType, pszMax);
+                        break;
+                    }
+                }
             }
             else if (EQUAL(pszType, "UNSIGNED INT"))
             {
@@ -1434,18 +1461,52 @@ int GDALValidateOptions( const char* pszOptionList,
                         break;
                     }
                     pszValueIter++;
+                    if( *pszValueIter == '0' )
+                    {
+                        if( pszMin && atoi(pszValue) < atoi(pszMin) )
+                        {
+                            CPLError(CE_Warning, CPLE_NotSupported,
+                                "'%s' is an unexpected value for %s %s that should be >= %s.",
+                                pszValue, pszKey, pszErrorMessageOptionType, pszMin);
+                            break;
+                        }
+                        if( pszMax && atoi(pszValue) > atoi(pszMax) )
+                        {
+                            CPLError(CE_Warning, CPLE_NotSupported,
+                                "'%s' is an unexpected value for %s %s that should be <= %s.",
+                                pszValue, pszKey, pszErrorMessageOptionType, pszMax);
+                            break;
+                        }
+                    }
                 }
             }
             else if (EQUAL(pszType, "FLOAT"))
             {
                 char* endPtr = NULL;
-                CPLStrtod(pszValue, &endPtr);
+                double dfVal = CPLStrtod(pszValue, &endPtr);
                 if ( !(endPtr == NULL || *endPtr == '\0') )
                 {
                     CPLError(CE_Warning, CPLE_NotSupported,
                              "'%s' is an unexpected value for %s %s of type float.",
                              pszValue, pszKey, pszErrorMessageOptionType);
                     bRet = FALSE;
+                }
+                else
+                {
+                    if( pszMin && dfVal < CPLAtof(pszMin) )
+                    {
+                        CPLError(CE_Warning, CPLE_NotSupported,
+                             "'%s' is an unexpected value for %s %s that should be >= %s.",
+                             pszValue, pszKey, pszErrorMessageOptionType, pszMin);
+                        break;
+                    }
+                    if( pszMax && dfVal > CPLAtof(pszMax) )
+                    {
+                        CPLError(CE_Warning, CPLE_NotSupported,
+                             "'%s' is an unexpected value for %s %s that should be <= %s.",
+                             pszValue, pszKey, pszErrorMessageOptionType, pszMax);
+                        break;
+                    }
                 }
             }
             else if (EQUAL(pszType, "BOOLEAN"))

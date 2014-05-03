@@ -185,6 +185,30 @@ void RegisterOGRGML()
         poDriver->SetMetadataItem( GDAL_DMD_HELPTOPIC,
                                    "drv_gml.html" );
 
+        poDriver->SetMetadataItem( GDAL_DMD_CREATIONOPTIONLIST,
+"<CreationOptionList>"
+"  <Option name='XSISCHEMAURI' type='string' description='URI to be inserted as the schema location.'/>"
+"  <Option name='XSISCHEMA' type='string-select' description='where to write a .xsd application schema. INTERNAL should not normally be used' default='EXTERNAL'>"
+"    <Value>EXTERNAL</Value>"
+"    <Value>INTERNAL</Value>"
+"    <Value>OFF</Value>"
+"  </Option>"
+"  <Option name='PREFIX' type='string' description='Prefix for the application target namespace.' default='ogr'/>"
+"  <Option name='STRIP_PREFIX' type='boolean' description='Whether to avoid writing the prefix of the application target namespace in the GML file.' default='NO'/>"
+"  <Option name='TARGET_NAMESPACE' type='string' description='Application target namespace.' default='http://ogr.maptools.org/'/>"
+"  <Option name='FORMAT' type='string-select' description='Version of GML to use' default='GML2'>"
+"    <Value>GML2</Value>"
+"    <Value>GML3</Value>"
+"    <Value>GML3.2</Value>"
+"    <Value>GML3Deegree</Value>"
+"  </Option>"
+"  <Option name='GML3_LONGSRS' type='boolean' description='Whether to write SRS with \"urn:ogc:def:crs:EPSG::\" prefix with GML3* versions' default='YES'/>"
+"  <Option name='WRITE_FEATURE_BOUNDED_BY' type='boolean' description='Whether to write <gml:boundedBy> element for each feature with GML3* versions' default='YES'/>"
+"  <Option name='SPACE_INDENTATION' type='boolean' description='Whether to indentate the output for readability' default='YES'/>"
+"</CreationOptionList>");
+
+        poDriver->SetMetadataItem( GDAL_DS_LAYER_CREATIONOPTIONLIST, "<LayerCreationOptionList>/");
+
         poDriver->SetMetadataItem( GDAL_DCAP_VIRTUALIO, "YES" );
 
         poDriver->pfnOpen = OGRGMLDriverOpen;

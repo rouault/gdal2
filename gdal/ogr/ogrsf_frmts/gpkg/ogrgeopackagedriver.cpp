@@ -149,6 +149,16 @@ void RegisterOGRGeoPackage()
         poDriver->SetMetadataItem( GDAL_DMD_HELPTOPIC,
                                    "drv_geopackage.html" );
 
+        poDriver->SetMetadataItem( GDAL_DMD_CREATIONOPTIONLIST, "<CreationOptionList/>");
+
+        poDriver->SetMetadataItem( GDAL_DS_LAYER_CREATIONOPTIONLIST,
+"<LayerCreationOptionList>"
+"  <Option name='GEOMETRY_COLUMN' type='string' description='Name of geometry column.' default='geom'/>"
+"  <Option name='FID' type='string' description='Name of the FID column to create' default='fid'/>"
+"  <Option name='OVERWRITE' type='boolean' description='Whether to overwrite an existing table with the layer name to be created' default='NO'/>"
+"  <Option name='SPATIAL_INDEX' type='boolean' description='NOT IMPLEMENTED YEY. Whether to create a spatial index' default='YES'/>"
+"</LayerCreationOptionList>");
+
         poDriver->pfnOpen = OGRGeoPackageDriverOpen;
         poDriver->pfnIdentify = OGRGeoPackageDriverIdentify;
         poDriver->pfnCreate = OGRGeoPackageDriverCreate;

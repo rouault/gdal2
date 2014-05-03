@@ -231,10 +231,10 @@ void RegisterOGRSQLite()
         poDriver->SetMetadataItem( GDAL_DMD_CREATIONOPTIONLIST,
 "<CreationOptionList>"
 #ifdef HAVE_SPATIALITE
-"  <Option name='SPATIALITE' type='boolean' description='Whether to create a Spatialite database' default='FALSE'/>"
+"  <Option name='SPATIALITE' type='boolean' description='Whether to create a Spatialite database' default='NO'/>"
 #endif
-"  <Option name='METADATA' type='boolean' description='Whether to create the geometry_columns and spatial_ref_sys tables' default='TRUE'/>"
-"  <Option name='INIT_WITH_EPSG' type='boolean' description='Whether to insert the content of the EPSG CSV files into the spatial_ref_sys table ' default='FALSE'/>"
+"  <Option name='METADATA' type='boolean' description='Whether to create the geometry_columns and spatial_ref_sys tables' default='YES'/>"
+"  <Option name='INIT_WITH_EPSG' type='boolean' description='Whether to insert the content of the EPSG CSV files into the spatial_ref_sys table ' default='NO'/>"
 "</CreationOptionList>");
 
         poDriver->SetMetadataItem( GDAL_DS_LAYER_CREATIONOPTIONLIST,
@@ -246,14 +246,14 @@ void RegisterOGRSQLite()
 "    <Value>SPATIALITE</Value>"
 #endif
 "  </Option>"
-"  <Option name='LAUNDER' type='boolean' description='Whether layer and field names will be laundered' default='TRUE'/>"
+"  <Option name='LAUNDER' type='boolean' description='Whether layer and field names will be laundered' default='YES'/>"
 #ifdef HAVE_SPATIALITE
-"  <Option name='SPATIAL_INDEX' type='boolean' description='Whether to create a spatial index for Spatialite databases' default='TRUE'/>"
-"  <Option name='COMPRESS_GEOM' type='boolean' description='Whether to use compressed format of Spatialite geometries' default='FALSE'/>"
+"  <Option name='SPATIAL_INDEX' type='boolean' description='Whether to create a spatial index for Spatialite databases' default='YES'/>"
+"  <Option name='COMPRESS_GEOM' type='boolean' description='Whether to use compressed format of Spatialite geometries' default='NO'/>"
 #endif
 "  <Option name='SRID' type='int' description='Forced SRID of the layer'/>"
 "  <Option name='COMPRESS_COLUMNS' type='string' description='=column_name1[,column_name2, ...].  list of (String) columns that must be compressed with ZLib DEFLATE algorithm'/>"
-"  <Option name='OVERWRITE' type='boolean' description='Whether to overwrite an existing table with the layer name to be created' default='FALSE'/>"
+"  <Option name='OVERWRITE' type='boolean' description='Whether to overwrite an existing table with the layer name to be created' default='NO'/>"
 "</LayerCreationOptionList>");
 
         poDriver->SetMetadataItem( GDAL_DCAP_VIRTUALIO, "YES" );

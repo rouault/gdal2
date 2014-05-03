@@ -126,6 +126,20 @@ void RegisterOGRKML()
         poDriver->SetMetadataItem( GDAL_DMD_HELPTOPIC,
                                    "drv_kml.html" );
 
+        poDriver->SetMetadataItem( GDAL_DMD_CREATIONOPTIONLIST,
+"<CreationOptionList>"
+"  <Option name='GPX_USE_EXTENSIONS' type='boolean' description='Whether to write non-GPX attributes in an <extensions> tag' default='NO'/>"
+"  <Option name='NameField' type='string' description='Field to use to fill the KML <name> element' default='Name'/>"
+"  <Option name='DescriptionField' type='string' description='Field to use to fill the KML <description> element' default='Description'/>"
+"  <Option name='AltitudeMode' type='string-select' description='Value of the <AltitudeMode> element for 3D geometries'>"
+"    <Value>clampToGround</Value>"
+"    <Value>relativeToGround</Value>"
+"    <Value>absolute</Value>"
+"  </Option>"
+"</CreationOptionList>");
+
+        poDriver->SetMetadataItem( GDAL_DS_LAYER_CREATIONOPTIONLIST, "<LayerCreationOptionList/>" );
+
         poDriver->SetMetadataItem( GDAL_DCAP_VIRTUALIO, "YES" );
 
         poDriver->pfnOpen = OGRKMLDriverOpen;

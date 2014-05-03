@@ -112,6 +112,27 @@ void RegisterOGRGPX()
         poDriver->SetMetadataItem( GDAL_DMD_HELPTOPIC,
                                    "drv_gpx.html" );
 
+        poDriver->SetMetadataItem( GDAL_DMD_CREATIONOPTIONLIST,
+"<CreationOptionList>"
+#ifdef WIN32
+"  <Option name='LINEFORMAT' type='string-select' description='end-of-line sequence' default='CRLF'>"
+#else
+"  <Option name='LINEFORMAT' type='string-select' description='end-of-line sequence' default='LF'>"
+#endif
+"    <Value>CRLF</Value>"
+"    <Value>LF</Value>"
+"  </Option>"
+"  <Option name='GPX_USE_EXTENSIONS' type='boolean' description='Whether to write non-GPX attributes in an <extensions> tag' default='NO'/>"
+"  <Option name='GPX_EXTENSIONS_NS' type='string' description='Namespace value used for extension tags' default='ogr'/>"
+"  <Option name='GPX_EXTENSIONS_NS_URL' type='string' description='Namespace URI' default='http://osgeo.org/gdal'/>"
+"</CreationOptionList>");
+
+        poDriver->SetMetadataItem( GDAL_DS_LAYER_CREATIONOPTIONLIST,
+"<LayerCreationOptionList>"
+"  <Option name='FORCE_GPX_TRACK' type='boolean' description='Whether to force layers with geometries of type wkbLineString as tracks' default='NO'/>"
+"  <Option name='FORCE_GPX_ROUTE' type='boolean' description='Whether to force layers with geometries of type wkbMultiLineString (with single line string in them) as routes' default='NO'/>"
+"</LayerCreationOptionList>");
+
         poDriver->SetMetadataItem( GDAL_DCAP_VIRTUALIO, "YES" );
 
         poDriver->pfnOpen = OGRGPXDriverOpen;

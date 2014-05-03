@@ -2596,6 +2596,20 @@ GDALGeneralCmdLineProcessor( int nArgc, char ***ppapszArgv, int nOptions )
                 printf( "\n%s\n", pszFormattedXML );
                 CPLFree( pszFormattedXML );
             }
+            if( CSLFetchNameValue( papszMD, GDAL_DS_LAYER_CREATIONOPTIONLIST ) )
+            {
+                CPLXMLNode *psCOL = 
+                    CPLParseXMLString( 
+                        CSLFetchNameValue( papszMD, 
+                                           GDAL_DS_LAYER_CREATIONOPTIONLIST ) );
+                char *pszFormattedXML = 
+                    CPLSerializeXMLTree( psCOL );
+
+                CPLDestroyXMLNode( psCOL );
+                
+                printf( "\n%s\n", pszFormattedXML );
+                CPLFree( pszFormattedXML );
+            }
             if( CSLFetchNameValue( papszMD, GDAL_DMD_OPENOPTIONLIST ) )
             {
                 CPLXMLNode *psCOL = 
