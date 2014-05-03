@@ -2379,7 +2379,7 @@ GDALDatasetH CPL_STDCALL GDALOpenEx( const char* pszFilename,
     /* Build GDALOpenInfo just now to avoid useless file stat'ing if a */
     /* shared dataset was asked before */
     GDALOpenInfo oOpenInfo(pszFilename,
-                           (nOpenFlags & GDAL_OF_UPDATE) ? GA_Update : GA_ReadOnly,
+                           nOpenFlags,
                            (char**) papszSiblingFiles);
     oOpenInfo.papszOpenOptions = (char**) papszOpenOptions;
 

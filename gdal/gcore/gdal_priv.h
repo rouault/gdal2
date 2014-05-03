@@ -226,7 +226,7 @@ class CPL_DLL GDALOpenInfo
     int         nHeaderBytesTried;
 
   public:
-                GDALOpenInfo( const char * pszFile, GDALAccess eAccessIn,
+                GDALOpenInfo( const char * pszFile, int nOpenFlagsIn,
                               char **papszSiblingFiles = NULL );
                 ~GDALOpenInfo( void );
 
@@ -234,6 +234,7 @@ class CPL_DLL GDALOpenInfo
     char**      papszOpenOptions;
 
     GDALAccess  eAccess;
+    int         nOpenFlags;
 
     int         bStatOK;
     int         bIsDirectory;

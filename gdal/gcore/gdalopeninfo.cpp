@@ -47,7 +47,7 @@ CPL_CVSID("$Id$");
 /*                            GDALOpenInfo()                            */
 /************************************************************************/
 
-GDALOpenInfo::GDALOpenInfo( const char * pszFilenameIn, GDALAccess eAccessIn,
+GDALOpenInfo::GDALOpenInfo( const char * pszFilenameIn, int nOpenFlagsIn,
                             char **papszSiblingsIn )
 
 {
@@ -77,7 +77,8 @@ GDALOpenInfo::GDALOpenInfo( const char * pszFilenameIn, GDALAccess eAccessIn,
     pabyHeader = NULL;
     bIsDirectory = FALSE;
     bStatOK = FALSE;
-    eAccess = eAccessIn;
+    nOpenFlags = nOpenFlagsIn;
+    eAccess = (nOpenFlags & GDAL_OF_UPDATE) ? GA_Update : GA_ReadOnly;
     fpL = NULL;
     papszOpenOptions = NULL;
 
