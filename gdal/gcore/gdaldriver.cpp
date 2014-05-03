@@ -29,6 +29,7 @@
  ****************************************************************************/
 
 #include "gdal_priv.h"
+#include "ogrsf_frmts.h"
 
 CPL_CVSID("$Id$");
 
@@ -374,7 +375,8 @@ GDALDataset *GDALDriver::DefaultCreateCopy( const char * pszFilename,
 
     CPLDebug( "GDAL", "Using default GDALDriver::CreateCopy implementation." );
 
-    if (nBands == 0)
+    int nLayerCount = poSrcDS->GetLayerCount();
+    if (nBands == 0 && nLayerCount == 0 && GetMetadataItem(GDAL_DCAP_VECTOR) == NULL )
     {
         CPLError( CE_Failure, CPLE_NotSupported,
                   "GDALDriver::DefaultCreateCopy does not support zero band" );
@@ -393,7 +395,7 @@ GDALDataset *GDALDriver::DefaultCreateCopy( const char * pszFilename,
         "PIXELTYPE", "IMAGE_STRUCTURE", 
         NULL };
 
-    for( iOptItem = 0; apszOptItems[iOptItem] != NULL; iOptItem += 2 )
+    for( iOptItem = 0; nBands > 0 && apszOptItems[iOptItem] != NULL; iOptItem += 2 )
     {
         // does the source have this metadata item on the first band?
         const char *pszValue = 
@@ -424,10 +426,11 @@ GDALDataset *GDALDriver::DefaultCreateCopy( const char * pszFilename,
 /*      Create destination dataset.                                     */
 /* -------------------------------------------------------------------- */
     GDALDataset  *poDstDS;
-    GDALDataType eType;
+    GDALDataType eType = GDT_Unknown;
     CPLErr       eErr = CE_None;
 
-    eType = poSrcDS->GetRasterBand(1)->GetRasterDataType();
+    if( nBands > 0 )
+        eType = poSrcDS->GetRasterBand(1)->GetRasterDataType();
     poDstDS = Create( pszFilename, nXSize, nYSize, 
                       nBands, eType, papszCreateOptions );
                       
@@ -561,7 +564,7 @@ GDALDataset *GDALDriver::DefaultCreateCopy( const char * pszFilename,
 /* -------------------------------------------------------------------- */
 /*      Copy image data.                                                */
 /* -------------------------------------------------------------------- */
-    if( eErr == CE_None )
+    if( eErr == CE_None && nBands > 0 )
         eErr = GDALDatasetCopyWholeRaster( (GDALDatasetH) poSrcDS, 
                                            (GDALDatasetH) poDstDS, 
                                            NULL, pfnProgress, pProgressData );
@@ -569,8 +572,28 @@ GDALDataset *GDALDriver::DefaultCreateCopy( const char * pszFilename,
 /* -------------------------------------------------------------------- */
 /*      Should we copy some masks over?                                 */
 /* -------------------------------------------------------------------- */
-    if( eErr == CE_None )
+    if( eErr == CE_None && nBands > 0 )
         eErr = DefaultCopyMasks( poSrcDS, poDstDS, eErr );
+
+/* -------------------------------------------------------------------- */
+/*      Copy vector layers                                              */
+/* -------------------------------------------------------------------- */
+
+    if( eErr == CE_None )
+    {
+        if( nLayerCount > 0 && poDstDS->TestCapability(ODsCCreateLayer) )
+        {
+            for( int iLayer = 0; iLayer < nLayerCount; iLayer++ )
+            {
+                OGRLayer        *poLayer = poSrcDS->GetLayer(iLayer);
+
+                if( poLayer == NULL )
+                    continue;
+
+                poDstDS->CopyLayer( poLayer, poLayer->GetName(), NULL );
+            }
+        }
+    }
 
 /* -------------------------------------------------------------------- */
 /*      Try to cleanup the output dataset if the translation failed.    */
@@ -835,7 +858,7 @@ CPLErr GDALDriver::Delete( const char * pszFilename )
 /* -------------------------------------------------------------------- */
 /*      Collect file list.                                              */
 /* -------------------------------------------------------------------- */
-    GDALDatasetH hDS = (GDALDataset *) GDALOpen(pszFilename,GA_ReadOnly);
+    GDALDatasetH hDS = (GDALDataset *) GDALOpenEx(pszFilename,0,NULL,NULL,NULL);
         
     if( hDS == NULL )
     {
