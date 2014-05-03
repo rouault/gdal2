@@ -2349,11 +2349,11 @@ OGRLayer * OGRPGDataSource::ExecuteSQL( const char *pszSQLCommand,
         if( !bHasLoadTables )
             return NULL;
 
-        OGRSFDriver* poMemDriver = OGRSFDriverRegistrar::GetRegistrar()->
+        GDALDriver* poMemDriver = OGRSFDriverRegistrar::GetRegistrar()->
                                 GetDriverByName("Memory");
         if (poMemDriver)
         {
-            OGRDataSource* poMemDS = poMemDriver->CreateDataSource("");
+            GDALDataset* poMemDS = poMemDriver->Create("", 0, 0, 0, GDT_Unknown, NULL);
             return new OGRPGMemLayerWrapper(poMemDS);
         }
         return NULL;
