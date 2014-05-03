@@ -70,7 +70,8 @@ class PCIDSK2Dataset : public GDALPamDataset
     static int           Identify( GDALOpenInfo * );
     static GDALDataset  *Open( GDALOpenInfo * );
     static GDALDataset  *LLOpen( const char *pszFilename, PCIDSK::PCIDSKFile *,
-                                 GDALAccess eAccess );
+                                 GDALAccess eAccess,
+                                 char** papszSiblingFiles = NULL );
     static GDALDataset  *Create( const char * pszFilename,
                                  int nXSize, int nYSize, int nBands,
                                  GDALDataType eType,

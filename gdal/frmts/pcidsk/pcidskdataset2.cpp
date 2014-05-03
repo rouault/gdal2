@@ -1697,7 +1697,8 @@ GDALDataset *PCIDSK2Dataset::Open( GDALOpenInfo * poOpenInfo )
             return NULL;
         }
 
-        return LLOpen( poOpenInfo->pszFilename, poFile, poOpenInfo->eAccess );
+        return LLOpen( poOpenInfo->pszFilename, poFile, poOpenInfo->eAccess,
+                       poOpenInfo->GetSiblingFiles() );
     }
 /* -------------------------------------------------------------------- */
 /*      Trap exceptions.                                                */
@@ -1725,7 +1726,8 @@ GDALDataset *PCIDSK2Dataset::Open( GDALOpenInfo * poOpenInfo )
 
 GDALDataset *PCIDSK2Dataset::LLOpen( const char *pszFilename, 
                                      PCIDSK::PCIDSKFile *poFile,
-                                     GDALAccess eAccess )
+                                     GDALAccess eAccess,
+                                     char** papszSiblingFiles )
 
 {
     try {
@@ -1817,12 +1819,12 @@ GDALDataset *PCIDSK2Dataset::LLOpen( const char *pszFilename,
 /*      Initialize any PAM information.                                 */
 /* -------------------------------------------------------------------- */
         poDS->SetDescription( pszFilename );
-        poDS->TryLoadXML();
+        poDS->TryLoadXML( papszSiblingFiles );
 
 /* -------------------------------------------------------------------- */
 /*      Open overviews.                                                 */
 /* -------------------------------------------------------------------- */
-        poDS->oOvManager.Initialize( poDS, pszFilename );
+        poDS->oOvManager.Initialize( poDS, pszFilename, papszSiblingFiles );
         
         return( poDS );
     }
