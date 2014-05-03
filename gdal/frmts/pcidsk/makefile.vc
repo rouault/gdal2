@@ -10,7 +10,7 @@ OBJ		=	pcidskdataset.obj pcidsktiledrasterband.obj
 
 !IF "$(PCIDSK_SETTING)" == "EXTERNAL"
 PCIDSKFLAGS	=	$(PCIDSK_INCLUDE) 
-OBJ		=	pcidskdataset2.obj vsi_pcidsk_io.obj gdal_edb.obj
+OBJ		=	pcidskdataset2.obj ogrpcidsklayer.obj vsi_pcidsk_io.obj gdal_edb.obj
 !ENDIF
 
 !IF "$(PCIDSK_SETTING)" == "INTERNAL"
