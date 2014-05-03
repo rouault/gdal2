@@ -3362,6 +3362,50 @@ def ogr_pg_68():
     return 'success'
 
 ###############################################################################
+# Test differed loading of tables (#5450)
+
+def ogr_pg_69():
+
+    if gdaltest.pg_ds is None:
+        return 'skip'
+
+    gdaltest.pg_ds = None
+    gdaltest.pg_ds = ogr.Open('PG:' + gdaltest.pg_connection_string)
+    if gdaltest.pg_ds.ExecuteSQL('has_run_load_tables') is not None:
+        gdaltest.post_reason('fail')
+        return 'fail'
+    gdaltest.pg_ds.GetLayerByName('tpoly')
+    if gdaltest.pg_ds.ExecuteSQL('has_run_load_tables') is not None:
+        gdaltest.post_reason('fail')
+        return 'fail'
+    sql_lyr = gdaltest.pg_ds.ExecuteSQL('SELECT * FROM tpoly')
+    if gdaltest.pg_ds.ExecuteSQL('has_run_load_tables') is not None:
+        gdaltest.post_reason('fail')
+        return 'fail'
+    feat = sql_lyr.GetNextFeature()
+    if gdaltest.pg_ds.ExecuteSQL('has_run_load_tables') is not None:
+        gdaltest.post_reason('fail')
+        return 'fail'
+    feat = None
+    gdaltest.pg_ds.ReleaseResultSet(sql_lyr)
+
+    gdaltest.pg_ds.GetLayer(0)
+    tmp_lyr = gdaltest.pg_ds.ExecuteSQL('has_run_load_tables')
+    if tmp_lyr is None:
+        gdaltest.post_reason('fail')
+        return 'fail'
+    gdaltest.pg_ds.ReleaseResultSet(tmp_lyr)
+
+    # Test that we can find a layer with non lowercase
+    gdaltest.pg_ds = None
+    gdaltest.pg_ds = ogr.Open('PG:' + gdaltest.pg_connection_string)
+    if gdaltest.pg_ds.GetLayerByName('TPOLY') is None:
+        gdaltest.post_reason('fail')
+        return 'fail'
+
+    return 'success'
+
+###############################################################################
 # 
 
 def ogr_pg_table_cleanup():
@@ -3504,6 +3548,7 @@ gdaltest_list_internal = [
     ogr_pg_66,
     ogr_pg_67,
     ogr_pg_68,
+    ogr_pg_69,
     ogr_pg_cleanup ]
 
 ###############################################################################
