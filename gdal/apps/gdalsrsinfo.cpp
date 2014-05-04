@@ -264,9 +264,7 @@ int FindSRS( const char *pszInput, OGRSpatialReference &oSRS )
     int            bGotSRS = FALSE;
     VSILFILE      *fp = NULL;
     GDALDataset	  *poGDALDS = NULL; 
-#ifdef OGR_ENABLED
     OGRLayer      *poLayer = NULL;
-#endif
     const char    *pszProjection = NULL;
     CPLErrorHandler oErrorHandler = NULL;
     int bIsFile = FALSE;

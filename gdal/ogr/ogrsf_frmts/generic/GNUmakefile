@@ -8,6 +8,10 @@ OBJ	=	ogrsfdriverregistrar.o ogrlayer.o ogrdatasource.o \
 		ogrwarpedlayer.o ogrunionlayer.o ogrlayerpool.o \
 		ogrmutexedlayer.o ogrmutexeddatasource.o
 
+CXXFLAGS :=     $(CXXFLAGS) -DINST_DATA=\"$(INST_DATA)\"
+
+ifeq ($(OGR_ENABLED),yes)
+
 BASEFORMATS = \
 	-DAVCBIN_ENABLED \
 	-DBNA_ENABLED \
@@ -49,7 +53,7 @@ BASEFORMATS = \
 	-DOPENFILEGDB_ENABLED \
 	-DWASP_ENABLED
 
-CXXFLAGS :=     $(CXXFLAGS) -DINST_DATA=\"$(INST_DATA)\" $(BASEFORMATS)
+CXXFLAGS :=     $(CXXFLAGS) $(BASEFORMATS)
 
 ifeq ($(HAVE_OGDI),yes)
 CXXFLAGS :=	$(CXXFLAGS) -DOGDI_ENABLED
@@ -201,6 +205,8 @@ endif
 
 ifeq ($(CURL_SETTING),yes)
 CXXFLAGS :=	$(CXXFLAGS) -DCARTODB_ENABLED
+endif
+
 endif
 
 CPPFLAGS	:=	-I.. -I../.. $(GDAL_INCLUDE) $(CPPFLAGS)

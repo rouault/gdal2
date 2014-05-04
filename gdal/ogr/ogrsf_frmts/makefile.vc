@@ -1,5 +1,9 @@
 GDAL_ROOT	=	..\..
 
+!INCLUDE $(GDAL_ROOT)\nmake.opt
+
+!IFDEF INCLUDE_OGR_FRMTS
+
 DIRLIST		=	generic geojson shape ntf sdts tiger s57 dgn mitab gml \
 			avc rec mem vrt csv gmt bna kml gpx \
 			geoconcept xplane georss gtm dxf pgdump gpsbabel \
@@ -23,8 +27,6 @@ PLUGINDIRLIST	=	$(PLUGIN_ARCOBJECTS_DIR) \
 			$(PLUGIN_SDE_DIR) \
 			$(PLUGIN_INGRESDIR) \
 			$(PLUGIN_LIBKMLDIR)
-
-!INCLUDE $(GDAL_ROOT)\nmake.opt
 
 !IFDEF OGDIDIR
 OGDIDIR	=	ogdi
@@ -204,6 +206,12 @@ CARTODB_OBJ = cartodb\*.obj
 !IFDEF CURL_LIB
 GMEDIR = gme
 GME_OBJ = gme\*.obj
+!ENDIF
+
+!ELSE
+
+DIRLIST		=	generic mitab
+
 !ENDIF
 
 default:

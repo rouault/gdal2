@@ -6,9 +6,7 @@ GDAL_OBJ	=	$(GDAL_ROOT)/frmts/o/*.o \
 			$(GDAL_ROOT)/port/*.o \
 			$(GDAL_ROOT)/alg/*.o
 
-ifeq ($(OGR_ENABLED),yes)
 GDAL_OBJ += $(GDAL_ROOT)/ogr/ogrsf_frmts/o/*.o
-endif
 
 include ./ogr/file.lst
 GDAL_OBJ += $(addprefix ./ogr/,$(OBJ))
