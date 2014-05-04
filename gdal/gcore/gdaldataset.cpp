@@ -2407,14 +2407,15 @@ GDALDatasetH CPL_STDCALL GDALOpenEx( const char* pszFilename,
             poDriver->GetMetadataItem(GDAL_DCAP_VECTOR) == NULL )
             continue;
 
+        if( poDriver->pfnIdentify && poDriver->pfnIdentify(&oOpenInfo) > 0 )
+            GDALValidateOpenOptions( poDriver, papszOpenOptions );
+
         if ( poDriver->pfnOpen != NULL )
         {
-            GDALValidateOpenOptions( poDriver, papszOpenOptions );
             poDS = poDriver->pfnOpen( &oOpenInfo );
         }
         else if( poDriver->pfnOpenWithDriverArg != NULL )
         {
-            GDALValidateOpenOptions( poDriver, papszOpenOptions );
             poDS = poDriver->pfnOpenWithDriverArg( poDriver, &oOpenInfo );
         }
         else
