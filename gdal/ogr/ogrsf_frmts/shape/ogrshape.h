@@ -60,6 +60,33 @@ OGRErr SHPWriteOGRFeature( SHPHandle hSHP, DBFHandle hDBF,
                            int* pbTruncationWarningEmitted );
 
 /************************************************************************/
+/*                         OGRShapeGeomFieldDefn                        */
+/************************************************************************/
+
+class OGRShapeGeomFieldDefn: public OGRGeomFieldDefn
+{
+    char* pszFullName;
+    int   bSRSSet;
+    CPLString osPrjFile;
+
+    public:
+        OGRShapeGeomFieldDefn(const char* pszFullNameIn, OGRwkbGeometryType eType,
+                              int bSRSSetIn, OGRSpatialReference *poSRSIn) :
+            OGRGeomFieldDefn("", eType),
+            pszFullName(CPLStrdup(pszFullNameIn)),
+            bSRSSet(bSRSSetIn)
+        {
+            poSRS = poSRSIn;
+        }
+
+        virtual ~OGRShapeGeomFieldDefn() { CPLFree(pszFullName); }
+
+        virtual OGRSpatialReference* GetSpatialRef();
+
+        const CPLString& GetPrjFilename() { return osPrjFile; }
+};
+
+/************************************************************************/
 /*                            OGRShapeLayer                             */
 /************************************************************************/
 
@@ -176,6 +203,8 @@ class OGRShapeLayer : public OGRAbstractProxiedLayer
     virtual int         TestCapability( const char * );
     virtual void        SetSpatialFilter( OGRGeometry * );
     virtual OGRErr      SetAttributeFilter( const char * );
+    
+    void                AddToFileList( CPLStringList& oFileList );
 };
 
 /************************************************************************/
@@ -228,6 +257,8 @@ class OGRShapeDataSource : public OGRDataSource
 
     virtual int          TestCapability( const char * );
     virtual OGRErr       DeleteLayer( int iLayer );
+
+    virtual char      **GetFileList(void);
 
     void                 SetLastUsedLayer( OGRShapeLayer* poLayer );
     void                 UnchainLayer( OGRShapeLayer* poLayer );

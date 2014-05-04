@@ -1082,3 +1082,19 @@ void OGRShapeDataSource::SetLastUsedLayer( OGRShapeLayer* poLayer )
 
     poPool->SetLastUsedLayer(poLayer);
 }
+
+/************************************************************************/
+/*                            GetFileList()                             */
+/************************************************************************/
+
+char** OGRShapeDataSource::GetFileList()
+{
+    CPLStringList       oFileList;
+    GetLayerCount();
+    for(int i=0;i<nLayers;i++)
+    {
+        OGRShapeLayer* poLayer = papoLayers[i];
+        poLayer->AddToFileList(oFileList);
+    }
+    return oFileList.StealList();
+}
