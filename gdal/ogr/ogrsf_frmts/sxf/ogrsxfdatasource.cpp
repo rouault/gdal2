@@ -42,8 +42,6 @@
 
 CPL_CVSID("$Id: ogrsxfdatasource.cpp  $");
 
-static void  *hIOMutex = NULL;
-
 static const long aoVCS[] =
 {
     0,
@@ -89,6 +87,7 @@ OGRSXFDataSource::OGRSXFDataSource()
     nLayers = 0;
 
     fpSXF = NULL;
+    hIOMutex = NULL;
 
     oSXFPassport.stMapDescription.pSpatRef = NULL;
 }
