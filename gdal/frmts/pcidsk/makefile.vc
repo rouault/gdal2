@@ -16,7 +16,7 @@ OBJ		=	pcidskdataset2.obj ogrpcidsklayer.obj vsi_pcidsk_io.obj gdal_edb.obj
 !IF "$(PCIDSK_SETTING)" == "INTERNAL"
 PCIDSKFLAGS	=	-Isdk -DPCIDSK_INTERNAL -DHAVE_LIBJPEG 
 
-OBJ	=	pcidskdataset2.obj vsi_pcidsk_io.obj gdal_edb.obj \
+OBJ	=	pcidskdataset2.obj ogrpcidsklayer.obj vsi_pcidsk_io.obj gdal_edb.obj \
 	sdk\channel\cbandinterleavedchannel.obj \
 	sdk\channel\cpcidskchannel.obj \
 	sdk\channel\cpixelinterleavedchannel.obj \
