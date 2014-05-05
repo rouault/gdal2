@@ -195,10 +195,6 @@ ifeq ($(HAVE_SQLITE),yes)
 CXXFLAGS :=	$(CXXFLAGS) -DOSM_ENABLED
 endif
 
-ifneq ($(LIBZ_SETTING),no)
-CXXFLAGS :=	$(CXXFLAGS) -DPDF_ENABLED
-endif
-
 ifeq ($(ODBC_SETTING),yes)
 CXXFLAGS :=	$(CXXFLAGS) -DWALK_ENABLED
 endif

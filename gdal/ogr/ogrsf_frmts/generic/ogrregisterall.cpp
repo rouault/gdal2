@@ -256,9 +256,6 @@ void OGRRegisterAllInternal()
 #ifdef ELASTIC_ENABLED
     RegisterOGRElastic();
 #endif
-#ifdef PDF_ENABLED
-    RegisterOGRPDF();
-#endif
 #ifdef WALK_ENABLED
     RegisterOGRWalk();
 #endif

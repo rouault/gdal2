@@ -41,10 +41,6 @@ SUBDIRS-$(HAVE_SQLITE)	+= osm
 SUBDIRS-$(HAVE_SOSI)	+= sosi
 SUBDIRS-$(CURL_SETTING) += cartodb
 
-ifneq ($(LIBZ_SETTING),no)
-SUBDIRS-yes  += pdf
-endif
-
 default:	$(foreach d,$(SUBDIRS-yes),$(d)-target)
 
 clean:	$(foreach d,$(SUBDIRS-yes),$(d)-clean)
