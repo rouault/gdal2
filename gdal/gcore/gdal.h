@@ -43,6 +43,7 @@
 #include "cpl_error.h"
 #include "cpl_progress.h"
 #include "cpl_virtualmem.h"
+#include "ogr_api.h"
 #endif
 
 /* -------------------------------------------------------------------- */
@@ -412,8 +413,6 @@ GDALRegenerateOverviews( GDALRasterBandH hSrcBand,
                          int nOverviewCount, GDALRasterBandH *pahOverviewBands,
                          const char *pszResampling, 
                          GDALProgressFunc pfnProgress, void *pProgressData );
-
-#include "ogr_api.h"
 
 int    CPL_DLL GDALDatasetGetLayerCount( GDALDatasetH );
 OGRLayerH CPL_DLL GDALDatasetGetLayer( GDALDatasetH, int );
