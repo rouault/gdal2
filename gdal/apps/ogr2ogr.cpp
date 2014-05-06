@@ -871,6 +871,8 @@ int main( int nArgc, char ** papszArgv )
     const char  *pszFieldMap = NULL;
     char        **papszFieldMap = NULL;
     int          nCoordDim = -1;
+    char       **papszOpenOptions = NULL;
+    char       **papszDestOpenOptions = NULL;
  
     int          nGCPCount = 0;
     GDAL_GCP    *pasGCPs = NULL;
@@ -929,6 +931,16 @@ int main( int nArgc, char ** papszArgv )
         {
             CHECK_HAS_ENOUGH_ADDITIONAL_ARGS(1);
             papszLCO = CSLAddString(papszLCO, papszArgv[++iArg] );
+        }
+        else if( EQUAL(papszArgv[iArg],"-oo") )
+        {
+            CHECK_HAS_ENOUGH_ADDITIONAL_ARGS(1);
+            papszOpenOptions = CSLAddString(papszOpenOptions, papszArgv[++iArg] );
+        }
+        else if( EQUAL(papszArgv[iArg],"-doo") )
+        {
+            CHECK_HAS_ENOUGH_ADDITIONAL_ARGS(1);
+            papszDestOpenOptions = CSLAddString(papszDestOpenOptions, papszArgv[++iArg] );
         }
         else if( EQUAL(papszArgv[iArg],"-preserve_fid") )
         {
@@ -1429,7 +1441,8 @@ int main( int nArgc, char ** papszArgv )
     /* Known to cause problems with at least FGdb and SQlite drivers. See #4270 */
     if (bUpdate && strcmp(pszDestDataSource, pszDataSource) == 0)
     {
-        poODS = poDS = (GDALDataset*) OGROpen( pszDataSource, TRUE, NULL );
+        poODS = poDS = (GDALDataset*) GDALOpenEx( pszDataSource,
+                GDAL_OF_UPDATE | GDAL_OF_VECTOR, NULL, papszOpenOptions, NULL );
         if( poDS != NULL )
             poDriver = poDS->GetDriver();
 
@@ -1438,7 +1451,8 @@ int main( int nArgc, char ** papszArgv )
         if (poDS && !(EQUAL(poDriver->GetDescription(), "FileGDB") ||
                       EQUAL(poDriver->GetDescription(), "SQLite")))
         {
-            poDS = (GDALDataset*) OGROpen( pszDataSource, FALSE, NULL );
+            poDS = (GDALDataset*) GDALOpenEx( pszDataSource,
+                            GDAL_OF_VECTOR, NULL, papszOpenOptions, NULL );
         }
         else
             bCloseODS = FALSE;
@@ -1467,7 +1481,8 @@ int main( int nArgc, char ** papszArgv )
         }
     }
     else
-        poDS = (GDALDataset*) OGROpen( pszDataSource, FALSE, NULL );
+        poDS = (GDALDataset*) GDALOpenEx( pszDataSource,
+                            GDAL_OF_VECTOR, NULL, papszOpenOptions, NULL );
 
 /* -------------------------------------------------------------------- */
 /*      Report failure                                                  */
@@ -1494,7 +1509,8 @@ int main( int nArgc, char ** papszArgv )
 
     if( bUpdate && poODS == NULL )
     {
-        poODS = (GDALDataset*) OGROpen( pszDestDataSource, TRUE, NULL );
+        poODS = (GDALDataset*) GDALOpenEx( pszDestDataSource,
+                GDAL_OF_UPDATE | GDAL_OF_VECTOR, NULL, papszDestOpenOptions, NULL );
         if( poODS != NULL )
             poDriver = poODS->GetDriver();
 
@@ -1502,7 +1518,8 @@ int main( int nArgc, char ** papszArgv )
         {
             if (bOverwrite || bAppend)
             {
-                poODS = (GDALDataset*) OGROpen( pszDestDataSource, FALSE, NULL );
+                poODS = (GDALDataset*) GDALOpenEx( pszDestDataSource,
+                            GDAL_OF_VECTOR, NULL, papszDestOpenOptions, NULL );
                 if (poODS == NULL)
                 {
                     /* ok the datasource doesn't exist at all */
@@ -2252,6 +2269,8 @@ int main( int nArgc, char ** papszArgv )
     CSLDestroy( papszLayers );
     CSLDestroy( papszDSCO );
     CSLDestroy( papszLCO );
+    CSLDestroy( papszOpenOptions );
+    CSLDestroy( papszDestOpenOptions );
     CSLDestroy( papszFieldTypesToString );
     CPLFree( pszNewLayerName );
 
@@ -2291,6 +2310,7 @@ static void Usage(const char* pszAdditionalMsg, int bShort)
             "\n"
             "Advanced options :\n"
             "               [-gt n]\n"
+            "               [[-oo NAME=VALUE] ...] [[-doo NAME=VALUE] ...]\n"
             "               [-clipsrc [xmin ymin xmax ymax]|WKT|datasource|spat_extent]\n"
             "               [-clipsrcsql sql_statement] [-clipsrclayer layer]\n"
             "               [-clipsrcwhere expression]\n"
@@ -2348,6 +2368,8 @@ static void Usage(const char* pszAdditionalMsg, int bShort)
             "                       Used to create intermediate points\n"
             " -dsco NAME=VALUE: Dataset creation option (format specific)\n"
             " -lco  NAME=VALUE: Layer creation option (format specific)\n"
+            " -oo   NAME=VALUE: Input dataset open option (format specific)\n"
+            " -doo  NAME=VALUE: Destination dataset open option (format specific)\n"
             " -nln name: Assign an alternate name to the new layer\n"
             " -nlt type: Force a geometry type for new layer.  One of NONE, GEOMETRY,\n"
             "      POINT, LINESTRING, POLYGON, GEOMETRYCOLLECTION, MULTIPOINT,\n"

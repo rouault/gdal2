@@ -69,6 +69,7 @@ int main( int nArgc, char ** papszArgv )
     const char  *pszDialect = NULL;
     int          nRet = 0;
     const char* pszGeomField = NULL;
+    char      **papszOpenOptions = NULL;
     
     /* Check strict compilation and runtime library version as we use C++ API */
     if (! GDAL_CHECK_VERSION(papszArgv[0]))
@@ -171,6 +172,12 @@ int main( int nArgc, char ** papszArgv )
             papszOptions = CSLAddString(papszOptions, pszTemp);
             CPLFree(pszTemp);
         }
+        else if( EQUAL(papszArgv[iArg], "-oo") )
+        {
+            CHECK_HAS_ENOUGH_ADDITIONAL_ARGS(1);
+            papszOpenOptions = CSLAddString( papszOpenOptions,
+                                                papszArgv[++iArg] );
+        }
         else if( papszArgv[iArg][0] == '-' )
         {
             Usage(CPLSPrintf("Unknown option name '%s'", papszArgv[iArg]));
@@ -193,10 +200,13 @@ int main( int nArgc, char ** papszArgv )
     GDALDataset        *poDS = NULL;
     GDALDriver         *poDriver = NULL;
 
-    poDS = (GDALDataset*) OGROpen( pszDataSource, !bReadOnly, NULL );
+    poDS = (GDALDataset*) GDALOpenEx( pszDataSource,
+            (!bReadOnly ? GDAL_OF_UPDATE : GDAL_OF_READONLY) | GDAL_OF_VECTOR,
+            NULL, papszOpenOptions, NULL );
     if( poDS == NULL && !bReadOnly )
     {
-        poDS = (GDALDataset*) OGROpen( pszDataSource, FALSE, NULL );
+        poDS = (GDALDataset*) GDALOpenEx( pszDataSource,
+            GDAL_OF_READONLY | GDAL_OF_VECTOR, NULL, papszOpenOptions, NULL );
         if( poDS != NULL && bVerbose )
         {
             printf( "Had to open data source read-only.\n" );
@@ -369,6 +379,7 @@ end:
     CSLDestroy( papszArgv );
     CSLDestroy( papszLayers );
     CSLDestroy( papszOptions );
+    CSLDestroy( papszOpenOptions );
     if( poDS != NULL )
         GDALClose( (GDALDatasetH)poDS );
     if (poSpatialFilter)
