@@ -133,30 +133,8 @@ void CheckDestDataSourceNameConsistency(const char* pszDestFilename,
     int i;
     char* pszDestExtension = CPLStrdup(CPLGetExtension(pszDestFilename));
 
-    /* TODO: Would be good to have driver metadata like for GDAL drivers ! */
-    static const char* apszExtensions[][2] = { { "shp"    , "ESRI Shapefile" },
-                                               { "dbf"    , "ESRI Shapefile" },
-                                               { "sqlite" , "SQLite" },
-                                               { "db"     , "SQLite" },
-                                               { "mif"    , "MapInfo File" },
-                                               { "tab"    , "MapInfo File" },
-                                               { "s57"    , "S57" },
-                                               { "bna"    , "BNA" },
-                                               { "csv"    , "CSV" },
-                                               { "gml"    , "GML" },
-                                               { "kml"    , "KML/LIBKML" },
-                                               { "kmz"    , "LIBKML" },
-                                               { "json"   , "GeoJSON" },
-                                               { "geojson", "GeoJSON" },
-                                               { "dxf"    , "DXF" },
-                                               { "gdb"    , "FileGDB" },
-                                               { "pix"    , "PCIDSK" },
-                                               { "sql"    , "PGDump" },
-                                               { "gtm"    , "GPSTrackMaker" },
-                                               { "gmt"    , "GMT" },
-                                               { "pdf"    , "PDF" },
-                                               { NULL, NULL }
-                                              };
+    CheckExtensionConsistency(pszDestFilename, pszDriverName);
+
     static const char* apszBeginName[][2] =  { { "PG:"      , "PG" },
                                                { "MySQL:"   , "MySQL" },
                                                { "CouchDB:" , "CouchDB" },
@@ -168,20 +146,6 @@ void CheckDestDataSourceNameConsistency(const char* pszDestFilename,
                                                { "WFS:"     , "WFS" },
                                                { NULL, NULL }
                                              };
-
-    for(i=0; apszExtensions[i][0] != NULL; i++)
-    {
-        if (EQUAL(pszDestExtension, apszExtensions[i][0]) && !EQUAL(pszDriverName, apszExtensions[i][1]))
-        {
-            fprintf(stderr,
-                    "Warning: The target file has a '%s' extension, which is normally used by the %s driver,\n"
-                    "but the requested output driver is %s. Is it really what you want ?\n",
-                    pszDestExtension,
-                    apszExtensions[i][1],
-                    pszDriverName);
-            break;
-        }
-    }
 
     for(i=0; apszBeginName[i][0] != NULL; i++)
     {

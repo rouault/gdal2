@@ -242,6 +242,7 @@ void RegisterOGRShape()
         poDriver->SetMetadataItem( GDAL_DMD_LONGNAME,
                                    "ESRI Shapefile" );
         poDriver->SetMetadataItem( GDAL_DMD_EXTENSION, "shp" );
+        poDriver->SetMetadataItem( GDAL_DMD_EXTENSIONS, "shp dbf" );
         poDriver->SetMetadataItem( GDAL_DMD_HELPTOPIC,
                                    "drv_shape.html" );
 

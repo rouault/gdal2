@@ -105,6 +105,7 @@ void RegisterOGRPGDump()
                                 "PostgreSQL SQL dump" );
     poDriver->SetMetadataItem( GDAL_DMD_HELPTOPIC,
                                 "drv_pgdump.html" );
+    poDriver->SetMetadataItem( GDAL_DMD_EXTENSION, "sql" );
 
     poDriver->SetMetadataItem( GDAL_DMD_CREATIONOPTIONLIST,
 "<CreationOptionList>"
