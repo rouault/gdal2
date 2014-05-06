@@ -98,7 +98,7 @@ GDALDataset *OGRS57Driver::Open( GDALOpenInfo* poOpenInfo )
     if( !OGRS57DriverIdentify(poOpenInfo) )
         return NULL;
 
-    poDS = new OGRS57DataSource;
+    poDS = new OGRS57DataSource(poOpenInfo->papszOpenOptions);
     if( !poDS->Open( poOpenInfo->pszFilename ) )
     {
         delete poDS;
@@ -181,6 +181,21 @@ void RegisterOGRS57()
         poDriver->SetMetadataItem( GDAL_DMD_EXTENSION, "000" );
         poDriver->SetMetadataItem( GDAL_DMD_HELPTOPIC,
                                    "drv_s57.html" );
+
+        poDriver->SetMetadataItem( GDAL_DMD_OPENOPTIONLIST,
+"<OpenOptionList>"
+"  <Option name='" S57O_UPDATES "' type='string-select' description='Should update files be incorporated into the base data on the fly' default='APPLY'>"
+"    <Value>APPLY</Value>"
+"    <Value>IGNORE</Value>"
+"  </Option>"
+"  <Option name='" S57O_SPLIT_MULTIPOINT "' type='boolean' description='Should multipoint soundings be split into many single point sounding features' default='NO'/>"
+"  <Option name='" S57O_ADD_SOUNDG_DEPTH "' type='boolean' description='Should a DEPTH attribute be added on SOUNDG features and assign the depth of the sounding' default='NO'/>"
+"  <Option name='" S57O_RETURN_PRIMITIVES "' type='boolean' description='Should all the low level geometry primitives be returned as special IsolatedNode, ConnectedNode, Edge and Face layers' default='NO'/>"
+"  <Option name='" S57O_PRESERVE_EMPTY_NUMBERS "' type='boolean' description='If enabled, numeric attributes assigned an empty string as a value will be preserved as a special numeric value' default='NO'/>"
+"  <Option name='" S57O_LNAM_REFS "' type='boolean' description='Should LNAM and LNAM_REFS fields be attached to features capturing the feature to feature relationships in the FFPT group of the S-57 file' default='YES'/>"
+"  <Option name='" S57O_RETURN_LINKAGES "' type='boolean' description='Should additional attributes relating features to their underlying geometric primtives be attached' default='NO'/>"
+"  <Option name='" S57O_RECODE_BY_DSSI "' type='boolean' description='Should attribute values be recoded to UTF-8 from the character encoding specified in the S57 DSSI record.' default='NO'/>"
+"</OpenOptionList>");
 
         poDriver->SetMetadataItem( GDAL_DCAP_VIRTUALIO, "YES" );
 

@@ -38,7 +38,7 @@ CPL_CVSID("$Id$");
 /*                          OGRS57DataSource()                          */
 /************************************************************************/
 
-OGRS57DataSource::OGRS57DataSource()
+OGRS57DataSource::OGRS57DataSource(char** papszOpenOptions)
 
 {
     nLayers = 0;
@@ -60,22 +60,29 @@ OGRS57DataSource::OGRS57DataSource()
 /* -------------------------------------------------------------------- */
 /*      Allow initialization of options from the environment.           */
 /* -------------------------------------------------------------------- */
-    const char *pszOptString = CPLGetConfigOption( "OGR_S57_OPTIONS", NULL );
-    papszOptions = NULL;
-
-    if ( pszOptString )
+    if( papszOpenOptions != NULL )
     {
-        char    **papszCurOption;
+        papszOptions = CSLDuplicate(papszOpenOptions);
+    }
+    else
+    {
+        const char *pszOptString = CPLGetConfigOption( "OGR_S57_OPTIONS", NULL );
+        papszOptions = NULL;
 
-        papszOptions = 
-            CSLTokenizeStringComplex( pszOptString, ",", FALSE, FALSE );
-
-        if ( papszOptions && *papszOptions )
+        if ( pszOptString )
         {
-            CPLDebug( "S57", "The following S57 options are being set:" );
-            papszCurOption = papszOptions;
-            while( *papszCurOption )
-                CPLDebug( "S57", "    %s", *papszCurOption++ );
+            char    **papszCurOption;
+
+            papszOptions = 
+                CSLTokenizeStringComplex( pszOptString, ",", FALSE, FALSE );
+
+            if ( papszOptions && *papszOptions )
+            {
+                CPLDebug( "S57", "The following S57 options are being set:" );
+                papszCurOption = papszOptions;
+                while( *papszCurOption )
+                    CPLDebug( "S57", "    %s", *papszCurOption++ );
+            }
         }
     }
 }
@@ -210,8 +217,14 @@ int OGRS57DataSource::Open( const char * pszFilename )
             CSLSetNameValue( papszReaderOptions, S57O_RECODE_BY_DSSI,
                              GetOption(S57O_RECODE_BY_DSSI) );
 
-    poModule->SetOptions( papszReaderOptions );
+    int bRet = poModule->SetOptions( papszReaderOptions );
     CSLDestroy( papszReaderOptions );
+    
+    if( !bRet )
+    {
+        delete poModule;
+        return FALSE;
+    }
 
 /* -------------------------------------------------------------------- */
 /*      Try opening.                                                    */
