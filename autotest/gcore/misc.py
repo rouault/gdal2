@@ -214,6 +214,9 @@ def misc_5():
     for i in range(gdal.GetDriverCount()):
         drv = gdal.GetDriver(i)
         md = drv.GetMetadata()
+        if drv.ShortName == 'PDF':
+            # PDF Create() is vector-only
+            continue
         if 'DCAP_CREATE' in md and 'DCAP_RASTER' in md:
             datatype = gdal.GDT_Byte
             for nBands in range(6):
