@@ -73,6 +73,7 @@ OGRShapeDataSource::OGRShapeDataSource()
     bSingleFileDataSource = FALSE;
     poPool = new OGRLayerPool();
     b2GBLimit = CSLTestBoolean(CPLGetConfigOption("SHAPE_2GB_LIMIT", "FALSE"));
+    papszOpenOptions = NULL;
 }
 
 
@@ -95,6 +96,7 @@ OGRShapeDataSource::~OGRShapeDataSource()
     delete poPool;
 
     CPLFree( papoLayers );
+    CSLDestroy( papszOpenOptions );
 }
 
 /************************************************************************/
@@ -111,6 +113,7 @@ int OGRShapeDataSource::Open( GDALOpenInfo* poOpenInfo,
     
     const char * pszNewName = poOpenInfo->pszFilename;
     int bUpdate = poOpenInfo->eAccess == GA_Update;
+    papszOpenOptions = CSLDuplicate( poOpenInfo->papszOpenOptions );
     
     pszName = CPLStrdup( pszNewName );
 

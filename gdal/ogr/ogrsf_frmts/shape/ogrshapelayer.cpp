@@ -115,8 +115,12 @@ OGRShapeLayer::OGRShapeLayer( OGRShapeDataSource* poDSIn,
         osEncoding = ConvertCodePage( hDBF->pszCodePage );
     }
     
-    if( CPLGetConfigOption( "SHAPE_ENCODING", NULL ) != NULL )
-        osEncoding = CPLGetConfigOption( "SHAPE_ENCODING", "" );
+    const char* pszShapeEncoding = NULL;
+    pszShapeEncoding = CSLFetchNameValue(poDS->GetOpenOptions(), "ENCODING");
+    if( pszShapeEncoding == NULL )
+        pszShapeEncoding = CPLGetConfigOption( "SHAPE_ENCODING", NULL );
+    if( pszShapeEncoding != NULL )
+        osEncoding = pszShapeEncoding;
 
     if( osEncoding != "" )
     {

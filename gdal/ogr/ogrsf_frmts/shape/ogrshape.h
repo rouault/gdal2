@@ -229,6 +229,8 @@ class OGRShapeDataSource : public OGRDataSource
     std::vector<CPLString> oVectorLayerName;
     
     int                 b2GBLimit;
+    
+    char              **papszOpenOptions;
 
   public:
                         OGRShapeDataSource();
@@ -265,6 +267,7 @@ class OGRShapeDataSource : public OGRDataSource
 
     SHPHandle            DS_SHPOpen( const char * pszShapeFile, const char * pszAccess );
     DBFHandle            DS_DBFOpen( const char * pszDBFFile, const char * pszAccess );
+    char               **GetOpenOptions() { return papszOpenOptions; }
 };
 
 #endif /* ndef _OGRSHAPE_H_INCLUDED */
