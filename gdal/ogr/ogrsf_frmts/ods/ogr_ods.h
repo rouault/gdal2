@@ -203,7 +203,7 @@ class OGRODSDataSource : public OGRDataSource
                                 char ** papszOptions );
     virtual OGRErr      DeleteLayer(int iLayer);
 
-    virtual OGRErr      SyncToDisk();
+    virtual void        FlushCache();
 
     void startElementCbk(const char *pszName, const char **ppszAttr);
     void endElementCbk(const char *pszName);

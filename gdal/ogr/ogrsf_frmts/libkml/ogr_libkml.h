@@ -265,7 +265,7 @@ class OGRLIBKMLDataSource:public OGRDataSource
     int                       Create ( const char *pszFilename,
                                        char **papszOptions );
 
-    OGRErr                    SyncToDisk (  );
+    void                      FlushCache (  );
     int                       TestCapability (const char * );
     
     KmlFactory               *GetKmlFactory() { return m_poKmlFactory; };

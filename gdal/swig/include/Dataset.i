@@ -838,11 +838,6 @@ CPLErr ReadRaster(  int xoff, int yoff, int xsize, int ysize,
 
 #if defined(SWIGPYTHON) || defined(SWIGJAVA)
 
-/*
-  OGRErr SyncToDisk() {
-    return GDALDatasetSyncToDisk(self);
-  }
-*/
   /* Note that datasources own their layers */
 #ifndef SWIGJAVA
   %feature( "kwargs" ) CreateLayer;

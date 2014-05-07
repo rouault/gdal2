@@ -1746,32 +1746,6 @@ const char *OGR_DS_GetName( OGRDataSourceH hDS )
 }
 
 /************************************************************************/
-/*                             SyncToDisk()                             */
-/************************************************************************/
-
-OGRErr GDALDataset::SyncToDisk()
-
-{
-    CPLMutexHolderD( &m_hMutex );
-    int i;
-    OGRErr eErr;
-
-    for( i = 0; i < GetLayerCount(); i++ )
-    {
-        OGRLayer *poLayer = GetLayer(i);
-
-        if( poLayer )
-        {
-            eErr = poLayer->SyncToDisk();
-            if( eErr != OGRERR_NONE )
-                return eErr;
-        }
-    }
-
-    return OGRERR_NONE;
-}
-
-/************************************************************************/
 /*                         OGR_DS_SyncToDisk()                          */
 /************************************************************************/
 
@@ -1780,7 +1754,11 @@ OGRErr OGR_DS_SyncToDisk( OGRDataSourceH hDS )
 {
     VALIDATE_POINTER1( hDS, "OGR_DS_SyncToDisk", OGRERR_INVALID_HANDLE );
 
-    return ((GDALDataset *) hDS)->SyncToDisk();
+    ((GDALDataset *) hDS)->FlushCache();
+    if( CPLGetLastErrorType() != 0 )
+        return OGRERR_FAILURE;
+    else
+        return OGRERR_NONE;
 }
 
 /************************************************************************/

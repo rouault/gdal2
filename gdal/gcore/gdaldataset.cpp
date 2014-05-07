@@ -33,6 +33,7 @@
 #include "cpl_hash_set.h"
 #include "cpl_multiproc.h"
 #include "ogr_featurestyle.h"
+#include "ogrsf_frmts.h"
 #include <map>
 
 CPL_CVSID("$Id$");
@@ -303,6 +304,12 @@ GDALDataset::~GDALDataset()
  * Any raster (or other GDAL) data written via GDAL calls, but buffered
  * internally will be written to disk.
  *
+ * The default implementation of this method just calls the FlushCache() method
+ * on each of the raster bands and the SyncToDisk() method
+ * on each of the layers.  Conceptionally, calling FlushCache() on a datasource
+ * should include any work that might be accomplished by calling SyncToDisk()
+ * on layers in that data source.
+ *
  * Using this method does not prevent use from calling GDALClose()
  * to properly close a dataset and ensure that important data not addressed
  * by FlushCache() is written in the file.
@@ -318,13 +325,28 @@ void GDALDataset::FlushCache()
     // This sometimes happens if a dataset is destroyed before completely
     // built. 
 
-    if( papoBands == NULL )
-        return;
-
-    for( i = 0; i < nBands; i++ )
+    if( papoBands != NULL )
     {
-        if( papoBands[i] != NULL )
-            papoBands[i]->FlushCache();
+        for( i = 0; i < nBands; i++ )
+        {
+            if( papoBands[i] != NULL )
+                papoBands[i]->FlushCache();
+        }
+    }
+
+    int nLayers = GetLayerCount();
+    if( nLayers > 0 )
+    {
+        CPLMutexHolderD( &m_hMutex );
+        for( i = 0; i < nLayers ; i++ )
+        {
+            OGRLayer *poLayer = GetLayer(i);
+
+            if( poLayer )
+            {
+                poLayer->SyncToDisk();
+            }
+        }
     }
 }
 

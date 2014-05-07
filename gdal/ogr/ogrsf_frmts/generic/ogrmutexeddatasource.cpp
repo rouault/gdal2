@@ -133,8 +133,8 @@ void        OGRMutexedDataSource::ReleaseResultSet( OGRLayer * poResultsSet )
     m_poBaseDataSource->ReleaseResultSet(poResultsSet);
 }
 
-OGRErr      OGRMutexedDataSource::SyncToDisk()
+void      OGRMutexedDataSource::FlushCache()
 {
     CPLMutexHolderOptionalLockD(m_hGlobalMutex);
-    return m_poBaseDataSource->SyncToDisk();
+    return m_poBaseDataSource->FlushCache();
 }

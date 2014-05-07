@@ -654,7 +654,7 @@ OGRLayer * OGROCIDataSource::ExecuteSQL( const char *pszSQLCommand,
 /* -------------------------------------------------------------------- */
 /*      Ensure any pending stuff is flushed to the database.            */
 /* -------------------------------------------------------------------- */
-    SyncToDisk();
+    FlushCache();
 
     CPLDebug( "OCI", "ExecuteSQL(%s)", pszSQLCommand );
 

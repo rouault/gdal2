@@ -569,7 +569,7 @@ void OGRLIBKMLDataSource::WriteDir (
 
 ******************************************************************************/
 
-OGRErr OGRLIBKMLDataSource::SyncToDisk (
+void OGRLIBKMLDataSource::FlushCache (
      )
 {
 
@@ -592,8 +592,6 @@ OGRErr OGRLIBKMLDataSource::SyncToDisk (
 
         bUpdated = FALSE;
     }
-
-    return OGRERR_NONE;
 }
 
 /******************************************************************************
@@ -611,7 +609,7 @@ OGRLIBKMLDataSource::~OGRLIBKMLDataSource (  )
 
     /***** sync the DS to disk *****/
 
-    SyncToDisk (  );
+    FlushCache (  );
 
     CPLFree ( pszName );
 

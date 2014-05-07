@@ -82,8 +82,8 @@ class CPL_DLL OGRMutexedDataSource : public OGRDataSource
                                     OGRGeometry *poSpatialFilter,
                                     const char *pszDialect );
     virtual void        ReleaseResultSet( OGRLayer * poResultsSet );
-
-    virtual OGRErr      SyncToDisk();
+    
+    virtual void        FlushCache();
 };
 
 #endif // _OGRMUTEXEDDATASOURCELAYER_H_INCLUDED

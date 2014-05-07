@@ -422,8 +422,6 @@ private:
                                     const char *pszDialect );
     virtual void        ReleaseResultSet( OGRLayer * poResultsSet );
 
-    virtual OGRErr      SyncToDisk();
-
     int                 GetRefCount() const;
     int                 GetSummaryRefCount() const;
     OGRErr              Release();
