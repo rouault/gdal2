@@ -114,6 +114,23 @@ void RegisterOGRDGN()
         poDriver->SetMetadataItem( GDAL_DMD_HELPTOPIC,
                                    "drv_dgn.html" );
 
+        poDriver->SetMetadataItem( GDAL_DMD_CREATIONOPTIONLIST,
+"<CreationOptionList>"
+"  <Option name='3D' type='boolean' description='whether 2D (seed_2d.dgn) or 3D (seed_3d.dgn) seed file should be used. This option is ignored if the SEED option is provided'/>"
+"  <Option name='SEED' type='string' description='Filename of seed file to use'/>"
+"  <Option name='COPY_WHOLE_SEED_FILE' type='boolean' description='whether the whole seed file should be copied. If not, only the first three elements (and potentially the color table) will be copied.' default='NO'/>"
+"  <Option name='COPY_SEED_FILE_COLOR_TABLE' type='boolean' description='whether the color table should be copied from the seed file.' default='NO'/>"
+"  <Option name='MASTER_UNIT_NAME' type='string' description='Override the master unit name from the seed file with the provided one or two character unit name.'/>"
+"  <Option name='SUB_UNIT_NAME' type='string' description='Override the master unit name from the seed file with the provided one or two character unit name.'/>"
+"  <Option name='MASTER_UNIT_NAME' type='string' description='Override the master unit name from the seed file with the provided one or two character unit name.'/>"
+"  <Option name='SUB_UNIT_NAME' type='string' description='Override the sub unit name from the seed file with the provided one or two character unit name.'/>"
+"  <Option name='SUB_UNITS_PER_MASTER_UNIT' type='int' description='Override the number of subunits per master unit. By default the seed file value is used.'/>"
+"  <Option name='UOR_PER_SUB_UNIT' type='int' description='Override the number of UORs (Units of Resolution) per sub unit. By default the seed file value is used.'/>"
+"  <Option name='ORIGIN' type='string' description='Value as x,y,z. Override the origin of the design plane. By default the origin from the seed file is used.'/>"
+"</CreationOptionList>");
+
+        poDriver->SetMetadataItem( GDAL_DS_LAYER_CREATIONOPTIONLIST, "<LayerCreationOptionList/>" );
+
         poDriver->pfnOpen = OGRDGNDriverOpen;
         poDriver->pfnIdentify = OGRDGNDriverIdentify;
         poDriver->pfnCreate = OGRDGNDriverCreate;
