@@ -613,10 +613,10 @@ CPLErr ReadRaster1(  int xoff, int yoff, int xsize, int ysize,
             for i in range(self.GetLayerCount()):
                 name = self.GetLayer(i).GetName()
                 if name == value:
-                    return _ogr.DataSource_DeleteLayer(self, i)
+                    return _gdal.Dataset_DeleteLayer(self, i)
             raise ValueError("Layer %s not found to delete" % value)
         elif isinstance(value, int):
-            return _ogr.DataSource_DeleteLayer(self, value)
+            return _gdal.Dataset_DeleteLayer(self, value)
         else:
             raise TypeError("Input %s is not of String or Int type" % type(value))
 }

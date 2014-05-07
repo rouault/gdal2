@@ -338,6 +338,63 @@ def basic_test_11():
 
     return 'success'
 
+###############################################################################
+# Test GDAL layer API
+
+def basic_test_12():
+
+    ds = gdal.GetDriverByName('MEMORY').Create('bar', 0, 0, 0)
+    if ds.GetDescription() != 'bar':
+        gdaltest.post_reason('failure')
+        print(ds.GetDescription())
+        return 'fail'
+    lyr = ds.CreateLayer("foo")
+    if lyr is None:
+        gdaltest.post_reason('failure')
+        return 'fail'
+    if lyr.GetDescription() != 'foo':
+        gdaltest.post_reason('failure')
+        print(lyr.GetDescription())
+        return 'fail'
+    from osgeo import ogr
+    if lyr.TestCapability(ogr.OLCCreateField) != 1:
+        gdaltest.post_reason('failure')
+        return 'fail'
+    if ds.GetLayerCount() != 1:
+        gdaltest.post_reason('failure')
+        return 'fail'
+    lyr = ds.GetLayerByName("foo")
+    if lyr is None:
+        gdaltest.post_reason('failure')
+        return 'fail'
+    lyr = ds.GetLayerByIndex(0)
+    if lyr is None:
+        gdaltest.post_reason('failure')
+        return 'fail'
+    lyr = ds.GetLayer(0)
+    if lyr is None:
+        gdaltest.post_reason('failure')
+        return 'fail'
+    sql_lyr = ds.ExecuteSQL('SELECT * FROM foo')
+    if sql_lyr is None:
+        gdaltest.post_reason('failure')
+        return 'fail'
+    ds.ReleaseResultSet(sql_lyr)
+    new_lyr = ds.CopyLayer(lyr, 'bar')
+    if new_lyr is None:
+        gdaltest.post_reason('failure')
+        return 'fail'
+    if ds.DeleteLayer(0) != 0:
+        gdaltest.post_reason('failure')
+        return 'fail'
+    if ds.DeleteLayer('bar') != 0:
+        gdaltest.post_reason('failure')
+        return 'fail'
+    ds.SetStyleTable(ds.GetStyleTable())
+    ds = None
+
+    return 'success'
+    
 gdaltest_list = [ basic_test_1,
                   basic_test_2,
                   basic_test_3,
@@ -348,7 +405,8 @@ gdaltest_list = [ basic_test_1,
                   basic_test_8,
                   basic_test_9,
                   basic_test_10,
-                  basic_test_11 ]
+                  basic_test_11,
+                  basic_test_12 ]
 
 
 if __name__ == '__main__':

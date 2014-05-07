@@ -821,6 +821,10 @@ class Dataset(MajorObject):
         """
         return _gdal.Dataset_CreateLayer(self, *args, **kwargs)
 
+    def CopyLayer(self, *args, **kwargs):
+        """CopyLayer(self, Layer src_layer, char new_name, char options = None) -> Layer"""
+        return _gdal.Dataset_CopyLayer(self, *args, **kwargs)
+
     def DeleteLayer(self, *args):
         """DeleteLayer(self, int index) -> OGRErr"""
         return _gdal.Dataset_DeleteLayer(self, *args)
@@ -1032,10 +1036,10 @@ class Dataset(MajorObject):
             for i in range(self.GetLayerCount()):
                 name = self.GetLayer(i).GetName()
                 if name == value:
-                    return _ogr.DataSource_DeleteLayer(self, i)
+                    return _gdal.Dataset_DeleteLayer(self, i)
             raise ValueError("Layer %s not found to delete" % value)
         elif isinstance(value, int):
-            return _ogr.DataSource_DeleteLayer(self, value)
+            return _gdal.Dataset_DeleteLayer(self, value)
         else:
             raise TypeError("Input %s is not of String or Int type" % type(value))
 

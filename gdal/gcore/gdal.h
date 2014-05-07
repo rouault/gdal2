@@ -421,6 +421,8 @@ OGRErr    CPL_DLL GDALDatasetDeleteLayer( GDALDatasetH, int );
 OGRLayerH CPL_DLL GDALDatasetCreateLayer( GDALDatasetH, const char *, 
                                       OGRSpatialReferenceH, OGRwkbGeometryType,
                                       char ** );
+OGRLayerH CPL_DLL GDALDatasetCopyLayer( GDALDatasetH, OGRLayerH, const char *,
+                                        char ** );
 int    CPL_DLL GDALDatasetTestCapability( GDALDatasetH, const char * );
 OGRLayerH CPL_DLL GDALDatasetExecuteSQL( GDALDatasetH, const char *,
                                      OGRGeometryH, const char * );

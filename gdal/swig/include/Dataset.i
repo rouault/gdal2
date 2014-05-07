@@ -854,7 +854,6 @@ CPLErr ReadRaster(  int xoff, int yoff, int xsize, int ysize,
     return layer;
   }
 
-/*
 #ifndef SWIGJAVA
   %feature( "kwargs" ) CopyLayer;
 #endif
@@ -868,7 +867,6 @@ CPLErr ReadRaster(  int xoff, int yoff, int xsize, int ysize,
                                                       options);
     return layer;
   }
-*/
 
   OGRErr DeleteLayer(int index){
     return GDALDatasetDeleteLayer(self, index);

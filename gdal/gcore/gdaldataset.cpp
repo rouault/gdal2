@@ -3058,6 +3058,25 @@ OGRLayerH GDALDatasetCreateLayer( GDALDatasetH hDS,
         pszName, (OGRSpatialReference *) hSpatialRef, eType, papszOptions );
 }
 
+
+/************************************************************************/
+/*                         GDALDatasetCopyLayer()                       */
+/************************************************************************/
+
+OGRLayerH GDALDatasetCopyLayer( GDALDatasetH hDS, 
+                                OGRLayerH hSrcLayer, const char *pszNewName,
+                                char **papszOptions )
+
+{
+    VALIDATE_POINTER1( hDS, "OGR_DS_CopyGDALDatasetCopyLayerLayer", NULL );
+    VALIDATE_POINTER1( hSrcLayer, "GDALDatasetCopyLayer", NULL );
+    VALIDATE_POINTER1( pszNewName, "GDALDatasetCopyLayer", NULL );
+
+    return (OGRLayerH) 
+        ((GDALDataset *) hDS)->CopyLayer( (OGRLayer *) hSrcLayer, 
+                                            pszNewName, papszOptions );
+}
+
 /************************************************************************/
 /*                        GDALDatasetExecuteSQL()                       */
 /************************************************************************/
