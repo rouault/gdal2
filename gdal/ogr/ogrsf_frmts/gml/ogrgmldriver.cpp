@@ -182,6 +182,7 @@ void RegisterOGRGML()
         poDriver->SetMetadataItem( GDAL_DMD_LONGNAME,
                                    "GML" );
         poDriver->SetMetadataItem( GDAL_DMD_EXTENSION, "gml" );
+        poDriver->SetMetadataItem( GDAL_DMD_EXTENSIONS, "gml xml" );
         poDriver->SetMetadataItem( GDAL_DMD_HELPTOPIC,
                                    "drv_gml.html" );
 
@@ -207,7 +208,7 @@ void RegisterOGRGML()
 "  <Option name='SPACE_INDENTATION' type='boolean' description='Whether to indentate the output for readability' default='YES'/>"
 "</CreationOptionList>");
 
-        poDriver->SetMetadataItem( GDAL_DS_LAYER_CREATIONOPTIONLIST, "<LayerCreationOptionList>/");
+        poDriver->SetMetadataItem( GDAL_DS_LAYER_CREATIONOPTIONLIST, "<LayerCreationOptionList/>");
 
         poDriver->SetMetadataItem( GDAL_DCAP_VIRTUALIO, "YES" );
 
