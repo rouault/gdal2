@@ -2269,7 +2269,9 @@ void GDALComposeGeoTransforms(const double *padfGT1, const double *padfGT2,
  *
  * @param nArgc number of values in the argument list.
  * @param ppapszArgv pointer to the argument list array (will be updated in place).
- * @param nOptions unused for now.
+ * @param nOptions a or-able combination of GDAL_OF_RASTER and GDAL_OF_VECTOR
+ *                 to determine which drivers should be displayed by --formats.
+ *                 If set to 0, GDAL_OF_RASTER is assumed.
  *
  * @return updated nArgc argument count.  Return of 0 requests terminate 
  * without error, return of -1 requests exit with error code.
@@ -2283,8 +2285,6 @@ GDALGeneralCmdLineProcessor( int nArgc, char ***ppapszArgv, int nOptions )
     int  iArg;
     char **papszArgv = *ppapszArgv;
 
-    (void) nOptions;
-    
 /* -------------------------------------------------------------------- */
 /*      Preserve the program name.                                      */
 /* -------------------------------------------------------------------- */
@@ -2475,13 +2475,24 @@ GDALGeneralCmdLineProcessor( int nArgc, char ***ppapszArgv, int nOptions )
         else if( EQUAL(papszArgv[iArg], "--formats") )
         {
             int iDr;
+            
+            if( nOptions == 0 )
+                nOptions = GDAL_OF_RASTER;
 
             printf( "Supported Formats:\n" );
             for( iDr = 0; iDr < GDALGetDriverCount(); iDr++ )
             {
                 GDALDriverH hDriver = GDALGetDriver(iDr);
+
                 const char *pszRWFlag, *pszVirtualIO, *pszSubdatasets, *pszKind;
                 char** papszMD = GDALGetMetadata( hDriver, NULL );
+
+                if( nOptions == GDAL_OF_RASTER &&
+                    !CSLFetchBoolean( papszMD, GDAL_DCAP_RASTER, FALSE ) )
+                    continue;
+                if( nOptions == GDAL_OF_VECTOR &&
+                    !CSLFetchBoolean( papszMD, GDAL_DCAP_VECTOR, FALSE ) )
+                    continue;
 
                 if( CSLFetchBoolean( papszMD, GDAL_DCAP_CREATE, FALSE ) )
                     pszRWFlag = "rw+";
