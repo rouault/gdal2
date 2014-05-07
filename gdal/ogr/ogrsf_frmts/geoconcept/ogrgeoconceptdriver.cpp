@@ -245,5 +245,7 @@ int OGRGeoconceptDriver::TestCapability( const char * pszCap )
 void RegisterOGRGeoconcept()
 
 {
-    OGRSFDriverRegistrar::GetRegistrar()->RegisterDriver( new OGRGeoconceptDriver );
+    OGRSFDriver* poDriver = new OGRGeoconceptDriver;
+    poDriver->SetMetadataItem( GDAL_DMD_EXTENSIONS, "gxt txt" );
+    OGRSFDriverRegistrar::GetRegistrar()->RegisterDriver( poDriver );
 }
