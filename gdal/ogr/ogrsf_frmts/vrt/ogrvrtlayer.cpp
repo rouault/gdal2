@@ -2361,3 +2361,14 @@ OGRErr OGRVRTLayer::SetIgnoredFields( const char **papszFields )
 
     return eErr;
 }
+
+/************************************************************************/
+/*                          GetSrcDataset()                             */
+/************************************************************************/
+
+GDALDataset* OGRVRTLayer::GetSrcDataset()
+{
+    if (!bHasFullInitialized) FullInitialize();
+    if (!poSrcLayer || poDS->GetRecursionDetected()) return NULL;
+    return poSrcDS;
+}

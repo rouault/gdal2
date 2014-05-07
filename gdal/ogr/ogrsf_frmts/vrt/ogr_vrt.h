@@ -191,15 +191,25 @@ class OGRVRTLayer : public OGRLayer
     virtual OGRErr      RollbackTransaction();
 
     virtual OGRErr      SetIgnoredFields( const char **papszFields );
+
+    GDALDataset*        GetSrcDataset();
 };
 
 /************************************************************************/
 /*                           OGRVRTDataSource                            */
 /************************************************************************/
 
+typedef enum
+{
+    OGR_VRT_PROXIED_LAYER,
+    OGR_VRT_LAYER,
+    OGR_VRT_OTHER_LAYER,
+} OGRLayerType;
+
 class OGRVRTDataSource : public OGRDataSource
 {
     OGRLayer          **papoLayers;
+    OGRLayerType       *paeLayerType;
     int                 nLayers;
     
     char               *pszName;
@@ -246,6 +256,8 @@ class OGRVRTDataSource : public OGRDataSource
     OGRLayer            *GetLayer( int );
 
     int                 TestCapability( const char * );
+
+    virtual char      **GetFileList();
 
     /* Anti-recursion mechanism for standard Open */
     void                SetCallLevel(int nCallLevelIn) { nCallLevel = nCallLevelIn; }
