@@ -444,6 +444,14 @@ int GDALDriverManager::RegisterDriver( GDALDriver * poDriver )
                  poDriver->GetDescription() );
         poDriver->SetMetadataItem( GDAL_DCAP_RASTER, "YES" );
     }
+    
+    if( poDriver->GetMetadataItem( GDAL_DMD_OPENOPTIONLIST ) != NULL &&
+        poDriver->pfnIdentify == NULL )
+    {
+        CPLDebug("GDAL", "Driver %s that defines GDAL_DMD_OPENOPTIONLIST must also "
+                 "implement Identify(), so that it can be used",
+                 poDriver->GetDescription() );
+    }
 
     oMapNameToDrivers[CPLString(poDriver->GetDescription()).toupper()] = poDriver;
     
