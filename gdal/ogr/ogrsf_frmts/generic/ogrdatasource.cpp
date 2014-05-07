@@ -70,7 +70,7 @@ void OGR_DS_Destroy( OGRDataSourceH hDS )
 
 {
     VALIDATE_POINTER0( hDS, "OGR_DS_Destroy" );
-    delete (OGRDataSource *) hDS;
+    delete (GDALDataset *) hDS;
 }
 
 /************************************************************************/
@@ -1742,7 +1742,7 @@ const char *OGR_DS_GetName( OGRDataSourceH hDS )
 {
     VALIDATE_POINTER1( hDS, "OGR_DS_GetName", NULL );
 
-    return ((OGRDataSource*)hDS)->GetName();
+    return ((GDALDataset*)hDS)->GetDescription();
 }
 
 /************************************************************************/
