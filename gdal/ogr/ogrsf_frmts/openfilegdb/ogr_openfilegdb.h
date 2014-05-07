@@ -184,6 +184,8 @@ public:
   virtual void        ReleaseResultSet( OGRLayer * poResultsSet );
 
   virtual int         TestCapability( const char * );
+  
+  virtual char      **GetFileList();
 };
 
 int OGROpenFileGDBIsComparisonOp(int op);

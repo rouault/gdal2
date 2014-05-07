@@ -1147,3 +1147,21 @@ void OGROpenFileGDBDataSource::ReleaseResultSet( OGRLayer * poResultsSet )
 {
     delete poResultsSet;
 }
+
+/***********************************************************************/
+/*                           GetFileList()                             */
+/***********************************************************************/
+
+char** OGROpenFileGDBDataSource::GetFileList()
+{
+    char** papszFiles = VSIReadDir(m_osDirName);
+    CPLStringList osStringList;
+    char** papszIter = papszFiles;
+    for( ; papszIter != NULL && *papszIter != NULL ; papszIter ++ )
+    {
+        if( strcmp(*papszIter, ".") == 0 || strcmp(*papszIter, "..") == 0 )
+            continue;
+        osStringList.AddString(CPLFormFilename(m_osDirName, *papszIter, NULL));
+    }
+    return osStringList.StealList();
+}
