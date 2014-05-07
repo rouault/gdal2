@@ -57,6 +57,7 @@ static void ThreadFunctionInternal( ThreadContext* psContext );
 static int TestOGRLayer( GDALDataset * poDS, OGRLayer * poLayer, int bIsSQLLayer );
 static int TestInterleavedReading( const char* pszDataSource, char** papszLayers );
 static int TestDSErrorConditions( GDALDataset * poDS );
+static int TestVirtualIO( GDALDataset* poDS );
 
 /************************************************************************/
 /*                                main()                                */
@@ -187,7 +188,7 @@ static void ThreadFunction( void* user_data )
 static void ThreadFunctionInternal( ThreadContext* psContext )
 
 {
-    int bRet = TRUE;
+    int bRet = TRUE, bRetLocal;
 
 /* -------------------------------------------------------------------- */
 /*      Open data source.                                               */
@@ -264,7 +265,11 @@ static void ThreadFunctionInternal( ThreadContext* psContext )
         
         poDS->ReleaseResultSet(poResultSet);
 
+        bRetLocal = TestDSErrorConditions(poDS);
         bRet &= TestDSErrorConditions(poDS);
+
+        bRetLocal = TestVirtualIO(poDS);
+        bRet &= bRetLocal;
     }
 /* -------------------------------------------------------------------- */
 /*      Process each data source layer.                                 */
@@ -292,13 +297,18 @@ static void ThreadFunctionInternal( ThreadContext* psContext )
             bRet &= TestOGRLayer( poDS, poLayer, FALSE );
         }
 
+        bRetLocal = TestDSErrorConditions(poDS);
         bRet &= TestDSErrorConditions(poDS);
+
+        bRetLocal = TestVirtualIO(poDS);
+        bRet &= bRetLocal;
 
         if (poDS->GetLayerCount() >= 2)
         {
             GDALClose( (GDALDatasetH)poDS );
             poDS = NULL;
-            bRet &= TestInterleavedReading( pszDataSource, NULL );
+            bRetLocal = TestInterleavedReading( pszDataSource, NULL );
+            bRet &= bRetLocal;
         }
     }
     else
@@ -330,13 +340,18 @@ static void ThreadFunctionInternal( ThreadContext* psContext )
             papszLayerIter ++;
         }
 
+        bRetLocal = TestDSErrorConditions(poDS);
         bRet &= TestDSErrorConditions(poDS);
+
+        bRetLocal = TestVirtualIO(poDS);
+        bRet &= bRetLocal;
 
         if (CSLCount(papszLayers) >= 2)
         {
             GDALClose( (GDALDatasetH)poDS );
             poDS = NULL;
-            bRet &= TestInterleavedReading( pszDataSource, papszLayers );
+            bRetLocal = TestInterleavedReading( pszDataSource, papszLayers );
+            bRet &= bRetLocal;
         }
     }
 
@@ -2717,5 +2732,98 @@ static int TestDSErrorConditions( GDALDataset * poDS )
 
 bye:
     CPLPopErrorHandler();
+    return bRet;
+}
+
+/************************************************************************/
+/*                              TestVirtualIO()                         */
+/************************************************************************/
+
+static int TestVirtualIO( GDALDataset * poDS )
+{
+    int bRet = TRUE;
+
+    if( strncmp( poDS->GetDescription(), "/vsimem/", strlen("/vsimem/") ) == 0 )
+        return TRUE;
+
+    VSIStatBufL sStat;
+    if( !(VSIStatL( poDS->GetDescription(), &sStat) == 0) )
+        return TRUE;
+
+    char** papszFileList = poDS->GetFileList();
+    char** papszIter = papszFileList;
+    CPLString osPath;
+    int bAllPathIdentical = TRUE;
+    for( ; *papszIter != NULL; papszIter++ )
+    {
+        if( papszIter == papszFileList )
+            osPath = CPLGetPath(*papszIter);
+        else if( strcmp(osPath, CPLGetPath(*papszIter)) != 0 )
+        {
+            bAllPathIdentical = FALSE;
+            break;
+        }
+    }
+    CPLString osVirtPath;
+    if( bAllPathIdentical && CSLCount(papszFileList) > 1 )
+    {
+        osVirtPath = CPLFormFilename("/vsimem", CPLGetFilename(osPath), NULL);
+        VSIMkdir(osVirtPath, 0666);
+    }
+    else
+        osVirtPath = "/vsimem";
+    papszIter = papszFileList;
+    for( ; *papszIter != NULL; papszIter++ )
+    {
+        const char* pszDestFile = CPLFormFilename(osVirtPath, CPLGetFilename(*papszIter), NULL);
+        /* CPLDebug("test_ogrsf", "Copying %s to %s", *papszIter, pszDestFile); */
+        CPLCopyFile( pszDestFile, *papszIter );
+    }
+    
+    const char* pszVirtFile;
+    if( VSI_ISREG(sStat.st_mode) )
+        pszVirtFile = CPLFormFilename(osVirtPath, CPLGetFilename(poDS->GetDescription()), NULL);
+    else
+        pszVirtFile = osVirtPath;
+    CPLDebug("test_ogrsf", "Trying to open %s", pszVirtFile);
+    GDALDataset* poDS2 = (GDALDataset*)GDALOpenEx(
+        pszVirtFile, GDAL_OF_VECTOR, NULL, NULL, NULL );
+    if( poDS2 != NULL )
+    {
+        if( poDS->GetDriver()->GetMetadataItem( GDAL_DCAP_VIRTUALIO ) == NULL )
+        {
+            printf("WARNING: %s driver apparently supports VirtualIO but does not declare it.\n",
+                    poDS->GetDriver()->GetDescription() );
+        }
+        if( poDS2->GetLayerCount() != poDS->GetLayerCount() )
+        {
+            printf("WARNING: /vsimem dataset reports %d layers where as base dataset reports %d layers.\n",
+                    poDS2->GetLayerCount(), poDS->GetLayerCount() );
+        }
+        GDALClose( (GDALDatasetH) poDS2 );
+
+        if( bVerbose && bRet )
+        {
+            printf("INFO: TestVirtualIO successfull.\n");
+        }
+    }
+    else
+    {
+        if( poDS->GetDriver()->GetMetadataItem( GDAL_DCAP_VIRTUALIO ) != NULL )
+        {
+            printf("WARNING: %s driver declares supporting VirtualIO but "
+                    "test with /vsimem does not work. It might be a sign that "
+                    "GetFileList() is not properly implemented.\n",
+                    poDS->GetDriver()->GetDescription() );
+        }
+    }
+
+    papszIter = papszFileList;
+    for( ; *papszIter != NULL; papszIter++ )
+    {
+        VSIUnlink( CPLFormFilename(osVirtPath, CPLGetFilename(*papszIter), NULL) );
+    }
+    CSLDestroy(papszFileList);
+
     return bRet;
 }
