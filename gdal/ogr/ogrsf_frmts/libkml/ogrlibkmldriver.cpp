@@ -202,7 +202,7 @@ void RegisterOGRLIBKML (
         poDriver->SetDescription( "LIBKML" );
         poDriver->SetMetadataItem( GDAL_DCAP_VECTOR, "YES" );
         poDriver->SetMetadataItem( GDAL_DMD_LONGNAME,
-                                   "LIBKML" );
+                                   "Keyhole Markup Language (LIBKML)" );
         poDriver->SetMetadataItem( GDAL_DMD_EXTENSIONS, "kml kmz" );
         poDriver->SetMetadataItem( GDAL_DMD_HELPTOPIC,
                                    "drv_libkml.html" );

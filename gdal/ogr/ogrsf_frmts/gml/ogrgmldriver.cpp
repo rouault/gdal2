@@ -180,7 +180,7 @@ void RegisterOGRGML()
         poDriver->SetDescription( "GML" );
         poDriver->SetMetadataItem( GDAL_DCAP_VECTOR, "YES" );
         poDriver->SetMetadataItem( GDAL_DMD_LONGNAME,
-                                   "GML" );
+                                   "Geography Markup Language (GML)" );
         poDriver->SetMetadataItem( GDAL_DMD_EXTENSION, "gml" );
         poDriver->SetMetadataItem( GDAL_DMD_EXTENSIONS, "gml xml" );
         poDriver->SetMetadataItem( GDAL_DMD_HELPTOPIC,
