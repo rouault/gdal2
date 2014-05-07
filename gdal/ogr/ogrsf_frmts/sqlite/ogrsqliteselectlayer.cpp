@@ -56,6 +56,7 @@ OGRSQLiteSelectLayer::OGRSQLiteSelectLayer( OGRSQLiteDataSource *poDSIn,
 
     std::set<CPLString> aosEmpty;
     BuildFeatureDefn( "SELECT", hStmtIn, NULL, aosEmpty );
+    SetDescription( "SELECT" );
 
     if( bUseStatementForGetNextFeature )
     {

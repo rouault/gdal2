@@ -46,6 +46,7 @@ OGRPCIDSKLayer::OGRPCIDSKLayer( PCIDSK::PCIDSKSegment *poSegIn,
     poVecSeg = dynamic_cast<PCIDSK::PCIDSKVectorSegment*>( poSeg );
 
     poFeatureDefn = new OGRFeatureDefn( poSeg->GetName().c_str() );
+    SetDescription( poFeatureDefn->GetName() );
     poFeatureDefn->Reference();
 
     hLastShapeId = PCIDSK::NullShapeId;

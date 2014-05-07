@@ -376,12 +376,21 @@ static int TestBasic( OGRLayer *poLayer )
     if( strcmp(pszLayerName, poFDefn->GetName()) != 0 )
     {
         bRet = FALSE;
-        printf( "ERROR: poLayer->GetName() and poFDefn>GetName() differ.\n"
+        printf( "ERROR: poLayer->GetName() and poFDefn->GetName() differ.\n"
                 "poLayer->GetName() = %s\n"
                 "poFDefn->GetName() = %s\n",
                     pszLayerName, poFDefn->GetName());
     }
 
+    if( strcmp(pszLayerName, poLayer->GetDescription()) != 0 )
+    {
+        bRet = FALSE;
+        printf( "ERROR: poLayer->GetName() and poLayer->GetName() differ.\n"
+                "poLayer->GetName() = %s\n"
+                "poLayer->GetDescription() = %s\n",
+                    pszLayerName, poLayer->GetDescription());
+    }
+    
     if( eGeomType != poFDefn->GetGeomType() )
     {
         bRet = FALSE;

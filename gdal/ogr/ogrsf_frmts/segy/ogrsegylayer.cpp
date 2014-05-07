@@ -813,6 +813,7 @@ OGRSEGYHeaderLayer::OGRSEGYHeaderLayer( const char* pszLayerName,
     pszHeaderText = CPLStrdup(pszHeaderTextIn);
 
     poFeatureDefn = new OGRFeatureDefn( pszLayerName );
+    SetDescription( poFeatureDefn->GetName() );
     poFeatureDefn->Reference();
     poFeatureDefn->SetGeomType( wkbNone );
 

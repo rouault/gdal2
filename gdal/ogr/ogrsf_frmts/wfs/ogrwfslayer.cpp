@@ -97,6 +97,8 @@ OGRWFSLayer::OGRWFSLayer( OGRWFSDataSource* poDS,
     this->pszNS = pszNS ? CPLStrdup(pszNS) : NULL;
     this->pszNSVal = pszNSVal ? CPLStrdup(pszNSVal) : NULL;
 
+    SetDescription( pszName );
+
     poFeatureDefn = NULL;
     poGMLFeatureClass = NULL;
     bGotApproximateLayerDefn = FALSE;

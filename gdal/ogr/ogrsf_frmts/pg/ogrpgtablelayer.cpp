@@ -200,6 +200,7 @@ OGRPGTableLayer::OGRPGTableLayer( OGRPGDataSource *poDSIn,
     bInResetReading = FALSE;
 
     poFeatureDefn = new OGRPGTableFeatureDefn( this, osDefnName );
+    SetDescription( poFeatureDefn->GetName() );
     poFeatureDefn->Reference();
 }
 

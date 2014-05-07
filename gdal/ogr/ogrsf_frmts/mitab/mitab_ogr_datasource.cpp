@@ -271,6 +271,7 @@ int OGRTABDataSource::Open( GDALOpenInfo* poOpenInfo, int bTestOpen )
                 CSLDestroy( papszFileList );
                 return FALSE;
             }
+            poFile->SetDescription( poFile->GetName() );
 
             m_nLayerCount++;
             m_papoLayers = (IMapInfoFile **)
@@ -379,6 +380,8 @@ OGRTABDataSource::ICreateLayer( const char * pszLayerName,
             delete poFile;
             return FALSE;
         }
+        
+        poFile->SetDescription( poFile->GetName() );
 
         m_nLayerCount++;
         m_papoLayers = (IMapInfoFile **)

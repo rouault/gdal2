@@ -178,6 +178,7 @@ OGRGenSQLResultsLayer::OGRGenSQLResultsLayer( GDALDataset *poSrcDS,
     OGRFeatureDefn *poSrcDefn = poSrcLayer->GetLayerDefn();
 
     poDefn = new OGRFeatureDefn( psSelectInfo->table_defs[0].table_alias );
+    SetDescription( poDefn->GetName() );
     poDefn->SetGeomType(wkbNone);
     poDefn->Reference();
 

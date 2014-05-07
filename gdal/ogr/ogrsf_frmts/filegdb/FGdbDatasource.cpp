@@ -379,6 +379,7 @@ OGRFGdbSingleFeatureLayer::OGRFGdbSingleFeatureLayer(const char* pszLayerName,
                                                      const char *pszVal )
 {
     poFeatureDefn = new OGRFeatureDefn( pszLayerName );
+    SetDescription( poFeatureDefn->GetName() );
     poFeatureDefn->Reference();
     OGRFieldDefn oField( "FIELD_1", OFTString );
     poFeatureDefn->AddFieldDefn( &oField );

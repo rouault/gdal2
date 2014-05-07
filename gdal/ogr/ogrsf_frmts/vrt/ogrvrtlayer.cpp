@@ -180,6 +180,7 @@ int OGRVRTLayer::FastInitialize( CPLXMLNode *psLTree, const char *pszVRTDirector
     }
 
     osName = pszLayerName;
+    SetDescription( pszLayerName );
 
 /* -------------------------------------------------------------------- */
 /*      Do we have a fixed geometry type?  If so use it                 */

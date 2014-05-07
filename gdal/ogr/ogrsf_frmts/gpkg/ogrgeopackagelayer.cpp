@@ -672,6 +672,7 @@ OGRGeoPackageLayer::OGRGeoPackageLayer(
                     const char * pszTableName)
 {
     m_pszTableName = CPLStrdup(pszTableName);
+    SetDescription( m_pszTableName );
     m_pszFidColumn = NULL;
     m_iSrs = 0;
     m_poDS = poDS;

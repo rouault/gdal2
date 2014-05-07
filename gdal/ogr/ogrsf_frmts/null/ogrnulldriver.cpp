@@ -120,6 +120,7 @@ OGRNULLLayer::OGRNULLLayer( const char *pszLayerName,
                             OGRwkbGeometryType eType )
 {
     poFeatureDefn = new OGRFeatureDefn(pszLayerName);
+    SetDescription( poFeatureDefn->GetName() );
     poFeatureDefn->SetGeomType(eType);
     poFeatureDefn->Reference();
 

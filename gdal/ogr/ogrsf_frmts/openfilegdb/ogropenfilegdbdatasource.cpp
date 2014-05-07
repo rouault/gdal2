@@ -590,6 +590,7 @@ OGROpenFileGDBSingleFeatureLayer::OGROpenFileGDBSingleFeatureLayer(const char* p
                                                                    const char *pszVal )
 {
     poFeatureDefn = new OGRFeatureDefn( pszLayerName );
+    SetDescription( poFeatureDefn->GetName() );
     poFeatureDefn->Reference();
     OGRFieldDefn oField( "FIELD_1", OFTString );
     poFeatureDefn->AddFieldDefn( &oField );
@@ -696,6 +697,7 @@ OGROpenFileGDBSimpleSQLLayer::OGROpenFileGDBSimpleSQLLayer(
             }
         }
     }
+    SetDescription( poFeatureDefn->GetName() );
     ResetReading();
 }
 

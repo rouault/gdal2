@@ -147,6 +147,7 @@ OGRShapeLayer::OGRShapeLayer( OGRShapeDataSource* poDSIn,
     }
     else if( bSRSSetIn && poSRSIn != NULL )
         poSRSIn->Release();
+    SetDescription( poFeatureDefn->GetName() );
 }
 
 /************************************************************************/

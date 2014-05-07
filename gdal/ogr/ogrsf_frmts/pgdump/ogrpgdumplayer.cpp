@@ -52,6 +52,7 @@ OGRPGDumpLayer::OGRPGDumpLayer(OGRPGDumpDataSource* poDS,
 {
     this->poDS = poDS;
     poFeatureDefn = new OGRFeatureDefn( pszTableName );
+    SetDescription( poFeatureDefn->GetName() );
     poFeatureDefn->SetGeomType(wkbNone);
     poFeatureDefn->Reference();
     nFeatures = 0;

@@ -238,6 +238,8 @@ CPLErr OGRMSSQLSpatialTableLayer::Initialize( const char *pszSchema,
 {
     CPLFree( pszFIDColumn );
     pszFIDColumn = NULL;
+    
+    SetDescription( pszLayerName );
 
 /* -------------------------------------------------------------------- */
 /*      Parse out schema name if present in layer.  We assume a         */

@@ -239,6 +239,7 @@ OGRTigerDataSource::~OGRTigerDataSource()
 void OGRTigerDataSource::AddLayer( OGRTigerLayer * poNewLayer )
 
 {
+    poNewLayer->SetDescription( poNewLayer->GetName() );
     papoLayers = (OGRTigerLayer **)
         CPLRealloc( papoLayers, sizeof(void*) * ++nLayers );
     
