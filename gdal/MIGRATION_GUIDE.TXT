@@ -26,6 +26,12 @@ C++ API:
 
   * GDALDriverManager::GetHome() and SetHome() have been removed.
 
+Out-of-tree drivers :
+
+  * Read RFC 46 for the needed changes. Changes in GDALOpenInfo will impact GDAL
+    drivers. GDAL drivers should also declare SetMetadataItem( GDAL_DCAP_RASTER, "YES" ).
+    OGRDataSource::CreateLayer() and SyncToDisk() changes will affect OGR drivers.
+
 Behaviour changes :
 
   * GDALDriverManager::GetDriverCount() and GetDriver() return both raster and
