@@ -111,6 +111,29 @@ void RegisterOGRGeoRSS()
         poDriver->SetMetadataItem( GDAL_DMD_HELPTOPIC,
                                    "drv_georss.html" );
 
+        poDriver->SetMetadataItem( GDAL_DMD_CREATIONOPTIONLIST,
+"<CreationOptionList>"
+"  <Option name='FORMAT' type='string-select' description='whether the document must be in RSS 2.0 or Atom 1.0 format' default='RSS'>"
+"    <Value>RSS</Value>"
+"    <Value>ATOM</Value>"
+"  </Option>"
+"  <Option name='GEOM_DIALECT' type='string-select' description='encoding of location information' default='SIMPLE'>"
+"    <Value>SIMPLE</Value>"
+"    <Value>GML</Value>"
+"    <Value>W3C_GEO</Value>"
+"  </Option>"
+"  <Option name='USE_EXTENSIONS' type='boolean' description='Whether extension fields (that is to say fields not in the base schema of RSS or Atom documents) will be written' default='NO'/>"
+"  <Option name='WRITE_HEADER_AND_FOOTER' type='boolean' description='Whether header and footer are written' default='YES'/>"
+"  <Option name='HEADER' type='string' description='XML content that will be put between the <channel> element and the first <item> element for a RSS document, or between the xml tag and the first <entry> element for an Atom document. If it is specified, it will overload the following options'/>"
+"  <Option name='TITLE' type='string' description='value put inside the <title> element in the header'/>"
+"  <Option name='DESCRIPTION' type='string' description='(RSS only) value put inside the <description> element in the header'/>"
+"  <Option name='LINK' type='string' description='(RSS only) value put inside the <link> element in the header'/>"
+"  <Option name='UPDATED' type='string' description='(RSS only) value put inside the <updated> element in the header. Should be formatted as a XML datetime'/>"
+"  <Option name='AUTHOR_NAME' type='string' description='(ATOM only) value put inside the <author><name> element in the header'/>"
+"  <Option name='ID' type='string' description='(ATOM only) value put inside the <id> element in the header.'/>"
+"</CreationOptionList>");
+        poDriver->SetMetadataItem( GDAL_DS_LAYER_CREATIONOPTIONLIST, "<LayerCreationOptionList/>");
+
         poDriver->SetMetadataItem( GDAL_DCAP_VIRTUALIO, "YES" );
 
         poDriver->pfnOpen = OGRGeoRSSDriverOpen;

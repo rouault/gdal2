@@ -117,6 +117,29 @@ void RegisterOGRBNA()
 
         poDriver->SetMetadataItem( GDAL_DCAP_VIRTUALIO, "YES" );
 
+        poDriver->SetMetadataItem( GDAL_DMD_CREATIONOPTIONLIST,
+"<CreationOptionList>"
+#ifdef WIN32
+"  <Option name='LINEFORMAT' type='string-select' description='end-of-line sequence' default='CRLF'>"
+#else
+"  <Option name='LINEFORMAT' type='string-select' description='end-of-line sequence' default='LF'>"
+#endif
+"    <Value>CRLF</Value>"
+"    <Value>LF</Value>"
+"  </Option>"
+"  <Option name='MULTILINE' type='boolean' description='Whether coordinates should be put on the same line' default='NO'/>"
+"  <Option name='NB_IDS' type='string-select' description='Number of identifiers per record' default='2'>"
+"    <Value>2</Value>"
+"    <Value>3</Value>"
+"    <Value>4</Value>"
+"    <Value>NB_SOURCE_FIELDS</Value>"
+"  </Option>"
+"  <Option name='ELLIPSES_AS_ELLIPSES' type='boolean' description='Whether ellipses and circles should be recognized and written as such, instead of polygons' default='YES'/>"
+"  <Option name='NB_PAIRS_PER_LINE' type='int' description='Maximum number of coordinate pair per line in multiline format'/>"
+"  <Option name='COORDINATE_PRECISION' type='int' description='Number of decimal for coordinates' default='10'/>"
+"</CreationOptionList>");
+        poDriver->SetMetadataItem( GDAL_DS_LAYER_CREATIONOPTIONLIST, "<LayerCreationOptionList/>");
+
         poDriver->pfnOpen = OGRBNADriverOpen;
         poDriver->pfnCreate = OGRBNADriverCreate;
         poDriver->pfnDelete = OGRBNADriverDelete;
