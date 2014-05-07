@@ -134,9 +134,6 @@ class OGRProxiedLayer : public OGRAbstractProxiedLayer
 
     virtual int         TestCapability( const char * );
 
-    /* Deprecated (and un-implemented method) --> we won't decorate it ! */
-    /* virtual const char *GetInfo( const char * ); */
-
     virtual OGRErr      CreateField( OGRFieldDefn *poField,
                                      int bApproxOK = TRUE );
     virtual OGRErr      DeleteField( int iField );

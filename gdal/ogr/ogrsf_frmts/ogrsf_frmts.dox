@@ -2525,29 +2525,6 @@ OGRLayers will return FALSE for any unrecognised capabilities.<p>
 */
 
 /**
- \fn const char *OGRLayer::GetInfo( const char *pszTag );
-
- \brief Fetch metadata from layer.
-
- This method can be used to fetch various kinds of metadata or layer 
- specific information encoded as a string.  It is anticipated that various
- tag values will be defined with well known semantics, while other tags will
- be used for driver/application specific purposes.  
-
- This method is deprecated and will be replaced with a more general 
- metadata model in the future. At this time no drivers return information
- via the GetInfo() call. 
-
- @param pszTag the tag for which information is being requested.
-
- @return the value of the requested tag, or NULL if that tag does not
- have a value, or is unknown.
-
- @deprecated
-
-*/
-
-/**
  \fn OGRErr OGRLayer::SyncToDisk();
 
 \brief Flush pending changes to disk.

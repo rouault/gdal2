@@ -111,8 +111,6 @@ class CPL_DLL OGRLayer : public GDALMajorObject
 
     virtual int         TestCapability( const char * ) = 0;
 
-    virtual const char *GetInfo( const char * );
-
     virtual OGRErr      CreateField( OGRFieldDefn *poField,
                                      int bApproxOK = TRUE );
     virtual OGRErr      DeleteField( int iField );
