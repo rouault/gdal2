@@ -2584,7 +2584,8 @@ GDALOpenShared( const char *pszFilename, GDALAccess eAccess )
 void CPL_STDCALL GDALClose( GDALDatasetH hDS )
 
 {
-    VALIDATE_POINTER0( hDS, "GDALClose" );
+    if( hDS == NULL )
+        return;
 
     GDALDataset *poDS = (GDALDataset *) hDS;
     CPLMutexHolderD( &hDLMutex );
