@@ -35,6 +35,7 @@
 #include "cpl_string.h"
 #include "gdalexif.h"
 #include "memdataset.h"
+#include "gt_wkt_srs_for_gdal.h"
 
 #include <setjmp.h>
 
@@ -134,6 +135,10 @@ void   JPGAddEXIFOverview( GDALDataType eWorkDT,
                                      int, char **,
                                      GDALProgressFunc pfnProgress, 
                                      void * pProgressData ) );
+void   JPGAddGeoTIFFBox( GDALDataset* poSrcDS,
+                         j_compress_ptr cinfo,
+                         void (*p_jpeg_write_m_header) (j_compress_ptr cinfo, int marker, unsigned int datalen),
+                         void (*p_jpeg_write_m_byte) (j_compress_ptr cinfo, int val) );
 
 /************************************************************************/
 /* ==================================================================== */
@@ -217,6 +222,7 @@ protected:
 
     int    bIsSubfile;
     int    bHasTriedLoadWorldFileOrTab;
+    int    ReadGeoTIFFBox();
     void   LoadWorldFileOrTab();
     CPLString osWldFilename;
 
@@ -234,6 +240,7 @@ protected:
                                    int, int *, int, int, int );
 
     virtual CPLErr GetGeoTransform( double * );
+    virtual const char *GetProjectionRef();
 
     virtual int    GetGCPCount();
     virtual const char *GetGCPProjection();
@@ -1852,6 +1859,25 @@ CPLErr JPGDatasetCommon::GetGeoTransform( double * padfTransform )
 }
 
 /************************************************************************/
+/*                          GetProjectionRef()                          */
+/************************************************************************/
+
+const char *JPGDatasetCommon::GetProjectionRef()
+
+{
+    const char* pszPamProjection = GDALPamDataset::GetProjectionRef();
+    if( pszPamProjection && pszPamProjection[0] != '\0' ) 
+        return pszPamProjection;
+
+    LoadWorldFileOrTab();
+
+    if( pszProjection )
+        return pszProjection;
+    else
+        return "";
+}
+
+/************************************************************************/
 /*                            GetGCPCount()                             */
 /************************************************************************/
 
@@ -2364,6 +2390,67 @@ GDALDataset *JPGDataset::Open( const char* pszFilename, char** papszSiblingFiles
 #if !defined(JPGDataset)
 
 /************************************************************************/
+/*                         ReadGeoTIFFBox()                             */
+/************************************************************************/
+
+int JPGDatasetCommon::ReadGeoTIFFBox()
+{
+/* -------------------------------------------------------------------- */
+/*      Search for APP1 chunk.                                          */
+/* -------------------------------------------------------------------- */
+    GByte abyChunkHeader[4 + 10 + 1];
+    int nChunkLoc = 2;
+
+    for( ; TRUE; ) 
+    {
+        if( VSIFSeekL( fpImage, nChunkLoc, SEEK_SET ) != 0 )
+            return FALSE;
+
+        if( VSIFReadL( abyChunkHeader, sizeof(abyChunkHeader), 1, fpImage ) != 1 )
+            return FALSE;
+
+        if( abyChunkHeader[0] != 0xFF 
+            || (abyChunkHeader[1] & 0xf0) != 0xe0 )
+            return FALSE; // Not an APP chunk.
+
+        if( abyChunkHeader[1] == 0xe1
+            && strncmp((const char *) abyChunkHeader + 4,"GeoTIFFBox",10) == 0 )
+        {
+            int nAPPSize = abyChunkHeader[2] * 256 + abyChunkHeader[3];
+            if( nAPPSize <= 11 )
+                return FALSE;
+            int nGeoTIFFBoxSize = nAPPSize - 11;
+
+            GByte* pabyGeoTIFF = (GByte*) CPLMalloc(nGeoTIFFBoxSize);
+            if( VSIFReadL( pabyGeoTIFF, nGeoTIFFBoxSize, 1, fpImage ) != 1 )
+            {
+                CPLFree(pabyGeoTIFF);
+                return FALSE;
+            }
+            int bPixelIsPoint;
+            CPLErr eErr = GTIFWktFromMemBufEx( nGeoTIFFBoxSize, pabyGeoTIFF,
+                                &pszProjection, adfGeoTransform,
+                                &nGCPCount, &pasGCPList,
+                                &bPixelIsPoint );
+            CPLFree(pabyGeoTIFF);
+            if( eErr == CE_None )
+            {
+                GDALMajorObject::SetMetadataItem( GDALMD_AREA_OR_POINT,
+                        (bPixelIsPoint) ? GDALMD_AOP_POINT : GDALMD_AOP_AREA );
+                bGeoTransformValid = !
+                   (adfGeoTransform[0] == 0.0 && adfGeoTransform[1] == 1.0 &&
+                    adfGeoTransform[2] == 0.0 &&
+                    adfGeoTransform[3] == 0.0 && adfGeoTransform[4] == 0.0 &&
+                    adfGeoTransform[5] == 1.0);
+            }
+            return (eErr == CE_None);
+        }
+
+        nChunkLoc += 2 + abyChunkHeader[2] * 256 + abyChunkHeader[3];
+    }
+}
+
+/************************************************************************/
 /*                       LoadWorldFileOrTab()                           */
 /************************************************************************/
 
@@ -2374,6 +2461,12 @@ void JPGDatasetCommon::LoadWorldFileOrTab()
     if (bHasTriedLoadWorldFileOrTab)
         return;
     bHasTriedLoadWorldFileOrTab = TRUE;
+
+    vsi_l_offset nCurOffset = VSIFTellL(fpImage);
+    int bRet = ReadGeoTIFFBox();
+    VSIFSeekL(fpImage, nCurOffset, SEEK_SET);
+    if( bRet )
+        return;
 
     char* pszWldFilename = NULL;
 
@@ -3044,6 +3137,61 @@ void   JPGAddEXIFOverview( GDALDataType eWorkDT,
     }
 }
 
+/************************************************************************/
+/*                          JPGAddGeoTIFFBox()                          */
+/************************************************************************/
+
+void   JPGAddGeoTIFFBox(GDALDataset* poSrcDS,
+                        j_compress_ptr cinfo,
+                         void (*p_jpeg_write_m_header) (j_compress_ptr cinfo, int marker, unsigned int datalen),
+                         void (*p_jpeg_write_m_byte) (j_compress_ptr cinfo, int val) )
+{
+    double adfGeoTransform[6];
+    int bHasGT = (poSrcDS->GetGeoTransform(adfGeoTransform) == CE_None &&
+                  !(adfGeoTransform[0] == 0.0 && adfGeoTransform[1] == 1.0 && adfGeoTransform[2] == 0.0 &&
+                    adfGeoTransform[3] == 0.0 && adfGeoTransform[4] == 0.0 && adfGeoTransform[5] == 1.0));
+    const char* pszProjection = poSrcDS->GetProjectionRef();
+    int nGCPCount = poSrcDS->GetGCPCount();
+    if( nGCPCount != 0 )
+        pszProjection = poSrcDS->GetGCPProjection();
+    if( !bHasGT && (pszProjection == NULL || pszProjection[0] == '\0') &&
+        nGCPCount == 0 )
+        return;
+    const GDAL_GCP* pasGCPList = poSrcDS->GetGCPs();
+    
+    int nGeoTIFFBoxSize = 0;
+    GByte* pabyGeoTIFF = NULL;
+    int bPixelIsPoint = FALSE;
+    if( poSrcDS->GetMetadataItem( GDALMD_AREA_OR_POINT ) != NULL &&
+        EQUAL(poSrcDS->GetMetadataItem( GDALMD_AREA_OR_POINT ), GDALMD_AOP_POINT) )
+        bPixelIsPoint = TRUE;
+    GTIFMemBufFromWktEx( pszProjection, adfGeoTransform,
+                         nGCPCount, pasGCPList,
+                         &nGeoTIFFBoxSize, &pabyGeoTIFF,
+                         bPixelIsPoint );
+    if( nGeoTIFFBoxSize == 0 )
+        return;
+
+    unsigned int nMarkerSize = 10 + 1 + nGeoTIFFBoxSize;
+    p_jpeg_write_m_header( cinfo, JPEG_APP0 + 1, nMarkerSize );
+    p_jpeg_write_m_byte( cinfo, 'G' );
+    p_jpeg_write_m_byte( cinfo, 'e' );
+    p_jpeg_write_m_byte( cinfo, 'o' );
+    p_jpeg_write_m_byte( cinfo, 'T' );
+    p_jpeg_write_m_byte( cinfo, 'I' );
+    p_jpeg_write_m_byte( cinfo, 'F' );
+    p_jpeg_write_m_byte( cinfo, 'F' );
+    p_jpeg_write_m_byte( cinfo, 'B' );
+    p_jpeg_write_m_byte( cinfo, 'o' );
+    p_jpeg_write_m_byte( cinfo, 'x' );
+    p_jpeg_write_m_byte( cinfo, '\0' );
+
+    for(int i=0; i<nGeoTIFFBoxSize; i++)
+        p_jpeg_write_m_byte( cinfo, pabyGeoTIFF[i] );
+
+    CPLFree(pabyGeoTIFF);
+}
+
 #endif // !defined(JPGDataset)
 
 /************************************************************************/
@@ -3250,6 +3398,8 @@ JPGDataset::CreateCopy( const char * pszFilename, GDALDataset *poSrcDS,
 
     jpeg_start_compress( &sCInfo, TRUE );
 
+    JPGAddGeoTIFFBox( poSrcDS, 
+                        &sCInfo, jpeg_write_m_header, jpeg_write_m_byte );
     JPGAddEXIFOverview( eWorkDT, poSrcDS, papszOptions, 
                         &sCInfo, jpeg_write_m_header, jpeg_write_m_byte,
                         CreateCopy ); 
