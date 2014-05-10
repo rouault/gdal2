@@ -109,6 +109,7 @@ ALTERED_DESTROY(OGRGeometryShadow, OGRc, delete_Geometry)
     
 }
 
+%rename (_ReleaseResultSet) ReleaseResultSet;
 %rename (_GetLayerByIndex) GetLayerByIndex;
 %rename (_GetLayerByName) GetLayerByName;
 %rename (_CreateLayer) CreateLayer;
@@ -158,7 +159,7 @@ ALTERED_DESTROY(OGRGeometryShadow, OGRc, delete_Geometry)
         package Geo::OGR::DataSource;
         use Carp;
         use strict;
-        use vars qw /@CAPABILITIES %CAPABILITIES %LAYERS/;
+        use vars qw /@CAPABILITIES %CAPABILITIES %LAYERS %RESULT_SET/;
         @CAPABILITIES = qw/CreateLayer DeleteLayer/;
         for my $s (@CAPABILITIES) {
             my $cap = eval "\$Geo::OGR::ODsC$s";
@@ -192,7 +193,11 @@ ALTERED_DESTROY(OGRGeometryShadow, OGRc, delete_Geometry)
             my $self = shift;
             my $layer = $self->_ExecuteSQL(@_);
             $LAYERS{tied(%$layer)} = $self;
+            $RESULT_SET{tied(%$layer)} = 1;
             return $layer;
+        }
+        sub ReleaseResultSet {
+            # a no-op, _ReleaseResultSet is called from Layer::DESTROY
         }
         sub Layer {
             my($self, $name) = @_;
@@ -306,6 +311,10 @@ ALTERED_DESTROY(OGRGeometryShadow, OGRc, delete_Geometry)
                 return unless $_[0]->isa('HASH');
                 $self = tied(%{$_[0]});
                 return unless defined $self;
+            }
+            if ($Geo::OGR::DataSource::RESULT_SET{$self}) {
+                $Geo::OGR::DataSource::LAYERS{$self}->_ReleaseResultSet($self);
+                delete $Geo::OGR::DataSource::RESULT_SET{$self}
             }
             delete $ITERATORS{$self};
             if (exists $OWNER{$self}) {

@@ -265,6 +265,9 @@ void OGRRegisterAllInternal()
 #ifdef SXF_ENABLED
     RegisterOGRSXF();
 #endif
+#ifdef SELAFIN_ENABLED
+    RegisterOGRSelafin();
+#endif
 
 /* Put TIGER and AVCBIN at end since they need poOpenInfo->GetSiblingFiles() */
 #ifdef TIGER_ENABLED
