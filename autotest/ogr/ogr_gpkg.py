@@ -66,6 +66,11 @@ def ogr_gpkg_1():
     except:
         pass
 
+    # This is to speed-up the runtime of tests on EXT4 filesystems
+    # Do not use this for production environment if you care about data safety
+    # w.r.t system/OS crashes, unless you know what you are doing.
+    gdal.SetConfigOption('OGR_SQLITE_SYNCHRONOUS', 'OFF')
+
     gdaltest.gpkg_ds = gdaltest.gpkg_dr.CreateDataSource( 'tmp/gpkg_test.gpkg' )
 
     if gdaltest.gpkg_ds is not None:
@@ -434,7 +439,7 @@ def ogr_gpkg_10():
 
     gdaltest.gpkg_ds = None
 
-    ret = gdaltest.runexternal(test_cli_utilities.get_test_ogrsf_path() + ' tmp/gpkg_test.gpkg')
+    ret = gdaltest.runexternal(test_cli_utilities.get_test_ogrsf_path() + ' tmp/gpkg_test.gpkg --config OGR_SQLITE_SYNCHRONOUS OFF')
 
     if ret.find('INFO') == -1 or ret.find('ERROR') != -1:
         print(ret)
@@ -463,6 +468,77 @@ def ogr_gpkg_11():
     lyr.SetAttributeFilter('fld_integer = 10')
     if lyr.GetFeatureCount() != 1:
         return 'fail'
+
+    return 'success'
+
+###############################################################################
+# Test SELECT SQL commands
+
+def ogr_gpkg_12():
+
+    if gdaltest.gpkg_dr is None:
+        return 'skip'
+
+    sql_lyr = gdaltest.gpkg_ds.ExecuteSQL('SELECT * FROM tbl_linestring_renamed')
+    if sql_lyr.GetFIDColumn() != 'fid':
+        gdaltest.post_reason('fail')
+        return 'fail'
+    if sql_lyr.GetGeomType() != ogr.wkbLineString:
+        gdaltest.post_reason('fail')
+        return 'fail'
+    if sql_lyr.GetGeometryColumn() != 'geom':
+        gdaltest.post_reason('fail')
+        return 'fail'
+    if sql_lyr.GetSpatialRef().ExportToWkt().find('4326') < 0:
+        gdaltest.post_reason('fail')
+        return 'fail'
+    feat = sql_lyr.GetNextFeature()
+    if feat.GetFID() != 1:
+        gdaltest.post_reason('fail')
+        return 'fail'
+    if sql_lyr.GetFeatureCount() != 11:
+        gdaltest.post_reason('fail')
+        return 'fail'
+    if sql_lyr.GetLayerDefn().GetFieldCount() != 3:
+        gdaltest.post_reason('fail')
+        return 'fail'
+    gdaltest.gpkg_ds.ReleaseResultSet(sql_lyr)
+
+
+    sql_lyr = gdaltest.gpkg_ds.ExecuteSQL('SELECT * FROM tbl_linestring_renamed WHERE 0=1')
+    feat = sql_lyr.GetNextFeature()
+    if feat is not None:
+        gdaltest.post_reason('fail')
+        return 'fail'
+    gdaltest.gpkg_ds.ReleaseResultSet(sql_lyr)
+
+
+    sql_lyr = gdaltest.gpkg_ds.ExecuteSQL('SELECT * FROM tbl_linestring_renamed LIMIT 1')
+    feat = sql_lyr.GetNextFeature()
+    if feat is None:
+        gdaltest.post_reason('fail')
+        return 'fail'
+    feat = sql_lyr.GetNextFeature()
+    if feat is not None:
+        gdaltest.post_reason('fail')
+        return 'fail'
+    if sql_lyr.GetFeatureCount() != 1:
+        gdaltest.post_reason('fail')
+        return 'fail'
+    gdaltest.gpkg_ds.ReleaseResultSet(sql_lyr)
+
+    sql_lyr = gdaltest.gpkg_ds.ExecuteSQL('SELECT sqlite_version()')
+    feat = sql_lyr.GetNextFeature()
+    if feat is None:
+        gdaltest.post_reason('fail')
+        return 'fail'
+    if sql_lyr.GetLayerDefn().GetFieldCount() != 1:
+        gdaltest.post_reason('fail')
+        return 'fail'
+    if sql_lyr.GetLayerDefn().GetGeomFieldCount() != 0:
+        gdaltest.post_reason('fail')
+        return 'fail'
+    gdaltest.gpkg_ds.ReleaseResultSet(sql_lyr)
 
     return 'success'
 
@@ -498,6 +574,7 @@ gdaltest_list = [
     ogr_gpkg_9,
     ogr_gpkg_10,
     ogr_gpkg_11,
+    ogr_gpkg_12,
     ogr_gpkg_cleanup,
 ]
 

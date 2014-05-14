@@ -137,14 +137,13 @@ OGRPGTableLayer::OGRPGTableLayer( OGRPGDataSource *poDSIn,
 
     bUpdateAccess = bUpdate;
 
-    iNextShapeId = 0;
-
     bGeometryInformationSet = FALSE;
 
     bLaunderColumnNames = TRUE;
     bPreservePrecision = TRUE;
     bCopyActive = FALSE;
     bUseCopy = USE_COPY_UNSET;  // unknown
+    bUseCopyByDefault = FALSE;
     bFIDColumnInCopyFields = FALSE;
     bFirstInsertion = TRUE;
 
@@ -202,6 +201,8 @@ OGRPGTableLayer::OGRPGTableLayer( OGRPGDataSource *poDSIn,
     poFeatureDefn = new OGRPGTableFeatureDefn( this, osDefnName );
     SetDescription( poFeatureDefn->GetName() );
     poFeatureDefn->Reference();
+    
+    bAutoFIDOnCreateViaCopy = FALSE;
 }
 
 //************************************************************************/
@@ -211,7 +212,7 @@ OGRPGTableLayer::OGRPGTableLayer( OGRPGDataSource *poDSIn,
 OGRPGTableLayer::~OGRPGTableLayer()
 
 {
-    EndCopy();
+    if( bCopyActive ) EndCopy();
     CPLFree( pszSqlTableName );
     CPLFree( pszTableName );
     CPLFree( pszSqlGeomParentTableName );
@@ -792,7 +793,8 @@ void OGRPGTableLayer::ResetReading()
         return;
     bInResetReading = TRUE;
 
-    bUseCopy = USE_COPY_UNSET;
+    if( bCopyActive ) EndCopy();
+    bUseCopyByDefault = FALSE;
 
     BuildFullQueryStatement();
 
@@ -808,6 +810,8 @@ void OGRPGTableLayer::ResetReading()
 OGRFeature *OGRPGTableLayer::GetNextFeature()
 
 {
+    if( bCopyActive ) EndCopy();
+
     OGRPGGeomFieldDefn* poGeomFieldDefn = NULL;
     if( poFeatureDefn->GetGeomFieldCount() != 0 )
         poGeomFieldDefn = poFeatureDefn->myGetGeomFieldDefn(m_iGeomFieldFilter);
@@ -1018,6 +1022,9 @@ OGRErr OGRPGTableLayer::DeleteFeature( long nFID )
                   "DeleteFeature");
         return OGRERR_FAILURE;
     }
+
+    if( bCopyActive ) EndCopy();
+    bAutoFIDOnCreateViaCopy = FALSE;
 
 /* -------------------------------------------------------------------- */
 /*      We can only delete features if we have a well defined FID       */
@@ -1240,6 +1247,8 @@ OGRErr OGRPGTableLayer::SetFeature( OGRFeature *poFeature )
                   "SetFeature");
         return OGRERR_FAILURE;
     }
+
+    if( bCopyActive ) EndCopy();
 
     if( NULL == poFeature )
     {
@@ -1486,7 +1495,14 @@ OGRErr OGRPGTableLayer::CreateFeature( OGRFeature *poFeature )
             StartCopy(poFeature->GetFID() != OGRNullFID);
         }
 
-        return CreateFeatureViaCopy( poFeature );
+        OGRErr eErr = CreateFeatureViaCopy( poFeature );
+        if( poFeature->GetFID() != OGRNullFID )
+            bAutoFIDOnCreateViaCopy = FALSE;
+        if( eErr == CE_None && bAutoFIDOnCreateViaCopy )
+        {
+            poFeature->SetFID( ++iNextShapeId );
+        }
+        return eErr;
     }
 }
 
@@ -2786,6 +2802,8 @@ OGRFeature *OGRPGTableLayer::GetFeature( long nFeatureId )
 int OGRPGTableLayer::GetFeatureCount( int bForce )
 
 {
+    if( bCopyActive ) EndCopy();
+
     if( TestCapability(OLCFastFeatureCount) == FALSE )
         return OGRPGLayer::GetFeatureCount( bForce );
 
@@ -2982,7 +3000,8 @@ OGRErr OGRPGTableLayer::EndCopy()
 
     OGRPGClearResult( hResult );
 
-    bUseCopy = USE_COPY_UNSET;
+    if( !bUseCopyByDefault )
+        bUseCopy = USE_COPY_UNSET;
 
     return result;
 }
@@ -3133,6 +3152,8 @@ OGRErr OGRPGTableLayer::GetExtent( int iGeomField, OGREnvelope *psExtent, int bF
         }
         return OGRERR_FAILURE;
     }
+
+    if( bCopyActive ) EndCopy();
 
     OGRPGGeomFieldDefn* poGeomFieldDefn =
         poFeatureDefn->myGetGeomFieldDefn(iGeomField);

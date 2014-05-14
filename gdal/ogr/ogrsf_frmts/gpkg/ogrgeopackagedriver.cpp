@@ -164,6 +164,8 @@ void RegisterOGRGeoPackage()
         poDriver->pfnCreate = OGRGeoPackageDriverCreate;
         poDriver->pfnDelete = OGRGeoPackageDriverDelete;
 
+        poDriver->SetMetadataItem( GDAL_DCAP_VIRTUALIO, "YES" );
+
         GetGDALDriverManager()->RegisterDriver( poDriver );
     }
 }

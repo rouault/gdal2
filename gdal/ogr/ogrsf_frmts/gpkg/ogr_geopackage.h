@@ -31,7 +31,7 @@
 #define _OGR_GEOPACKAGE_H_INCLUDED
 
 #include "ogrsf_frmts.h"
-#include "sqlite3.h"
+#include "ogr_sqlite.h"
 
 #define UNDEFINED_SRID 0
 
@@ -39,21 +39,16 @@
 /*                           OGRGeoPackageDataSource                    */
 /************************************************************************/
 
-class OGRGeoPackageDataSource : public OGRDataSource
+class OGRGeoPackageDataSource : public OGRSQLiteBaseDataSource
 {
-    char*               m_pszFileName;
     OGRLayer**          m_papoLayers;
     int                 m_nLayers;
-    int                 m_bUpdate;
     int                 m_bUtf8;
-    sqlite3*            m_poDb;
-    
-    
+
     public:
                             OGRGeoPackageDataSource();
                             ~OGRGeoPackageDataSource();
 
-        virtual const char* GetName() { return m_pszFileName; }
         virtual int         GetLayerCount() { return m_nLayers; }
         int                 Open( const char * pszFilename, int bUpdate );
         int                 Create( const char * pszFilename, char **papszOptions );
@@ -70,11 +65,9 @@ class OGRGeoPackageDataSource : public OGRDataSource
                                         const char *pszDialect );
         virtual void        ReleaseResultSet( OGRLayer * poLayer );
 
-        int                 IsUpdatable() { return m_bUpdate; }
         int                 GetSrsId( const OGRSpatialReference * poSRS );
         const char*         GetSrsName( const OGRSpatialReference * poSRS );
         OGRSpatialReference* GetSpatialRef( int iSrsId );
-        sqlite3*            GetDatabaseHandle();
         virtual int         GetUTF8() { return m_bUtf8; }
         OGRErr              AddColumn( const char * pszTableName, 
                                        const char * pszColumnName, 
@@ -94,30 +87,70 @@ class OGRGeoPackageDataSource : public OGRDataSource
 
 class OGRGeoPackageLayer : public OGRLayer
 {
+  protected:
+    OGRGeoPackageDataSource *m_poDS;
+
+    OGRFeatureDefn*      m_poFeatureDefn;
+    int                  iNextShapeId;
+
+    sqlite3_stmt        *m_poQueryStatement;
+    int                  bDoStep;
+
+    char                *m_pszFidColumn;
+
+    int                 iFIDCol;
+    int                 iGeomCol;
+    int                *panFieldOrdinals;
+
+    void                ClearStatement();
+    virtual OGRErr      ResetStatement() = 0;
+    
+    void                BuildFeatureDefn( const char *pszLayerName,
+                                           sqlite3_stmt *hStmt );
+
+    OGRFeature*         TranslateFeature(sqlite3_stmt* hStmt);
+
+  public:
+
+                        OGRGeoPackageLayer(OGRGeoPackageDataSource* poDS);
+                        ~OGRGeoPackageLayer();
+    /************************************************************************/
+    /* OGR API methods */
+
+    OGRFeature*         GetNextFeature();
+    const char*         GetFIDColumn(); 
+    void                ResetReading();
+    int                 TestCapability( const char * );
+    OGRFeatureDefn*     GetLayerDefn() { return m_poFeatureDefn; }
+};
+
+/************************************************************************/
+/*                        OGRGeoPackageTableLayer                       */
+/************************************************************************/
+
+class OGRGeoPackageTableLayer : public OGRGeoPackageLayer
+{
     char*                       m_pszTableName;
-    char*                       m_pszFidColumn;
     int                         m_iSrs;
-    OGRGeoPackageDataSource*    m_poDS;
     OGREnvelope*                m_poExtent;
     CPLString                   m_soColumns;
     CPLString                   m_soFilter;
     OGRBoolean                  m_bExtentChanged;
-    OGRFeatureDefn*             m_poFeatureDefn;
-    sqlite3_stmt*               m_poQueryStatement;
     sqlite3_stmt*               m_poUpdateStatement;
     sqlite3_stmt*               m_poInsertStatement;
     sqlite3_stmt*               m_poFidStatement;    
     
+    virtual OGRErr      ResetStatement();
+    
     public:
     
-                        OGRGeoPackageLayer( OGRGeoPackageDataSource *poDS,
+                        OGRGeoPackageTableLayer( OGRGeoPackageDataSource *poDS,
                                             const char * pszTableName );
-                        ~OGRGeoPackageLayer();
+                        ~OGRGeoPackageTableLayer();
 
     /************************************************************************/
     /* OGR API methods */
                         
-    OGRFeatureDefn*     GetLayerDefn() { return m_poFeatureDefn; }
     int                 TestCapability( const char * );
     OGRErr              CreateField( OGRFieldDefn *poField, int bApproxOK = TRUE );
     void                ResetReading();
@@ -126,9 +159,7 @@ class OGRGeoPackageLayer : public OGRLayer
     OGRErr              DeleteFeature(long nFID);
     OGRErr              SetAttributeFilter( const char *pszQuery );
     OGRErr              SyncToDisk();
-    OGRFeature*         GetNextFeature();
     OGRFeature*         GetFeature(long nFID);
-    const char*         GetFIDColumn();	
     OGRErr              StartTransaction();
     OGRErr              CommitTransaction();
     OGRErr              RollbackTransaction();
@@ -144,7 +175,6 @@ class OGRGeoPackageLayer : public OGRLayer
     
     private:
     
-    OGRErr              ReadFeature( sqlite3_stmt *poQuery, OGRFeature **ppoFeature );
     OGRErr              UpdateExtent( const OGREnvelope *poExtent );
     OGRErr              SaveExtent();
     OGRErr              BuildColumns();
@@ -157,6 +187,30 @@ class OGRGeoPackageLayer : public OGRLayer
 
 };
 
+/************************************************************************/
+/*                         OGRGeoPackageSelectLayer                     */
+/************************************************************************/
+
+class OGRGeoPackageSelectLayer : public OGRGeoPackageLayer
+{
+    CPLString           osSQLBase;
+
+    int                 bEmptyLayer;
+
+    virtual OGRErr      ResetStatement();
+
+  public:
+                        OGRGeoPackageSelectLayer( OGRGeoPackageDataSource *, 
+                                              CPLString osSQL,
+                                              sqlite3_stmt *,
+                                              int bUseStatementForGetNextFeature,
+                                              int bEmptyLayer );
+
+    virtual void        ResetReading();
+
+    virtual OGRFeature *GetNextFeature();
+    virtual int         GetFeatureCount( int );
+};
 
 
 #endif /* _OGR_GEOPACKAGE_H_INCLUDED */

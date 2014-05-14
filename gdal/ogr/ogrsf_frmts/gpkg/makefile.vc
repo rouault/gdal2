@@ -1,15 +1,15 @@
 
 OBJ	=	ogrgeopackagedriver.obj ogrgeopackagedatasource.obj \
-        ogrgeopackagelayer.obj ogrgeopackageutility.obj
+        ogrgeopackagelayer.obj ogrgeopackagetablelayer.obj ogrgeopackageselectlayer.obj ogrgeopackageutility.obj
 
 GDAL_ROOT	=	..\..\..
 
 !INCLUDE $(GDAL_ROOT)\nmake.opt
 
-EXTRAFLAGS = -I.. -I..\.. $(SQLITE_INC) $(SPATIALITE_412_OR_LATER_EXTRAFLAGS)
+EXTRAFLAGS = -I.. -I..\.. $(SQLITE_INC) -I..\sqlite $(SQLITE_HAS_COLUMN_METADATA_EXTRAFLAGS)
 
-!IFDEF SPATIALITE_412_OR_LATER
-SPATIALITE_412_OR_LATER_EXTRAFLAGS = -DSPATIALITE_412_OR_LATER
+!IFDEF SQLITE_HAS_COLUMN_METADATA
+SQLITE_HAS_COLUMN_METADATA_EXTRAFLAGS = -DSQLITE_HAS_COLUMN_METADATA
 !ENDIF
 
 default:	$(OBJ)
