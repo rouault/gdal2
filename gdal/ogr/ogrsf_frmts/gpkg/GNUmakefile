@@ -19,4 +19,3 @@ clean:
 $(O_OBJ): ogr_geopackage.h ogrgeopackageutility.h
 
 
-

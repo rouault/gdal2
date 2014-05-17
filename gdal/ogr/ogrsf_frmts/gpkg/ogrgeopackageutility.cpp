@@ -174,6 +174,7 @@ int SQLGetInteger(sqlite3 * poDb, const char * pszSQL, OGRErr *err)
     if ( rc != SQLITE_ROW )
     {
         if ( err ) *err = OGRERR_FAILURE;
+        sqlite3_finalize(poStmt);
         return 0;
     }
     
@@ -231,25 +232,23 @@ OGRwkbGeometryType GPkgGeometryTypeToWKB(const char *pszGpkgType, int bHasZ)
 OGRFieldType GPkgFieldToOGR(const char *pszGpkgType)
 {
     /* Integer types */
-    if ( STRNCASECMP("INTEGER", pszGpkgType, 7) == 0 )
+    if ( STRNCASECMP("INT", pszGpkgType, 3) == 0 )
         return OFTInteger;
-    else if ( STRNCASECMP("INT", pszGpkgType, 3) == 0 )
+    else if ( EQUAL("MEDIUMINT", pszGpkgType) )
         return OFTInteger;
-    else if ( STRNCASECMP("MEDIUMINT", pszGpkgType, 9) == 0 )
+    else if ( EQUAL("SMALLINT", pszGpkgType) )
         return OFTInteger;
-    else if ( STRNCASECMP("SMALLINT", pszGpkgType, 8) == 0 )
+    else if ( EQUAL("TINYINT", pszGpkgType) )
         return OFTInteger;
-    else if ( STRNCASECMP("TINYINT", pszGpkgType, 7) == 0 )
-        return OFTInteger;
-    else if ( STRNCASECMP("BOOLEAN", pszGpkgType, 7) == 0 )
+    else if ( EQUAL("BOOLEAN", pszGpkgType) )
         return OFTInteger;
 
     /* Real types */
-    else if ( STRNCASECMP("FLOAT", pszGpkgType, 5) == 0 )
+    else if ( EQUAL("FLOAT", pszGpkgType) )
         return OFTReal;
-    else if ( STRNCASECMP("DOUBLE", pszGpkgType, 6) == 0 )
+    else if ( EQUAL("DOUBLE", pszGpkgType) )
         return OFTReal;
-    else if ( STRNCASECMP("REAL", pszGpkgType, 4) == 0 )
+    else if ( EQUAL("REAL", pszGpkgType) )
         return OFTReal;
         
     /* String/binary types */
@@ -259,9 +258,9 @@ OGRFieldType GPkgFieldToOGR(const char *pszGpkgType)
         return OFTBinary;
         
     /* Date types */
-    else if ( STRNCASECMP("DATE", pszGpkgType, 4) == 0 )
+    else if ( EQUAL("DATE", pszGpkgType) )
         return OFTDate;
-    else if ( STRNCASECMP("DATETIME", pszGpkgType, 8) == 0 )
+    else if ( EQUAL("DATETIME", pszGpkgType) )
         return OFTDateTime;
 
     /* Illegal! */
@@ -498,7 +497,7 @@ OGRErr GPkgHeaderFromWKB(const GByte *pabyGpkg, GPkgHeader *poHeader)
     
     /* Envelope */
     double *padPtr = (double*)(pabyGpkg+8);
-    if ( poHeader->iDims == 2 )
+    if ( poHeader->iDims >= 2 )
     {
         poHeader->MinX = padPtr[0];
         poHeader->MaxX = padPtr[1];
@@ -529,7 +528,7 @@ OGRErr GPkgHeaderFromWKB(const GByte *pabyGpkg, GPkgHeader *poHeader)
     return OGRERR_NONE;
 }
 
-OGRGeometry* GPkgGeometryToOGR(GByte *pabyGpkg, size_t szGpkg, OGRSpatialReference *poSrs)
+OGRGeometry* GPkgGeometryToOGR(const GByte *pabyGpkg, size_t szGpkg, OGRSpatialReference *poSrs)
 {
     CPLAssert( pabyGpkg != NULL );
     
@@ -542,11 +541,11 @@ OGRGeometry* GPkgGeometryToOGR(GByte *pabyGpkg, size_t szGpkg, OGRSpatialReferen
         return NULL;
 
     /* WKB pointer */
-    GByte *pabyWkb = pabyGpkg + oHeader.szHeader;
+    const GByte *pabyWkb = pabyGpkg + oHeader.szHeader;
     size_t szWkb = szGpkg - oHeader.szHeader;
 
     /* Parse WKB */
-    err = OGRGeometryFactory::createFromWkb(pabyWkb, poSrs, &poGeom, szWkb);
+    err = OGRGeometryFactory::createFromWkb((GByte*)pabyWkb, poSrs, &poGeom, szWkb);
     if ( err != OGRERR_NONE )
         return NULL;
 

@@ -318,7 +318,8 @@ def ogr_gpkg_8():
         return 'skip'
 
     srs = osr.SpatialReference()
-    srs.ImportFromEPSG( 4326 )
+    # Test a non-default SRS
+    srs.ImportFromEPSG( 32631 )
 
     lyr = gdaltest.gpkg_ds.CreateLayer( 'tbl_linestring', geom_type = ogr.wkbLineString, srs = srs)
     if lyr is None:
@@ -328,6 +329,9 @@ def ogr_gpkg_8():
     ret = lyr.CreateField(ogr.FieldDefn('fld_integer', ogr.OFTInteger))
     ret = lyr.CreateField(ogr.FieldDefn('fld_string', ogr.OFTString))
     ret = lyr.CreateField(ogr.FieldDefn('fld_real', ogr.OFTReal))
+    ret = lyr.CreateField(ogr.FieldDefn('fld_date', ogr.OFTDate))
+    ret = lyr.CreateField(ogr.FieldDefn('fld_datetime', ogr.OFTDateTime))
+    ret = lyr.CreateField(ogr.FieldDefn('fld_binary', ogr.OFTBinary))
     
     geom = ogr.CreateGeometryFromWkt('LINESTRING(5 5,10 5,10 10,5 10)')
     feat = ogr.Feature(lyr.GetLayerDefn())
@@ -337,6 +341,9 @@ def ogr_gpkg_8():
         feat.SetField('fld_integer', 10 + i)
         feat.SetField('fld_real', 3.14159/(i+1) )
         feat.SetField('fld_string', 'test string %d test' % i)
+        feat.SetField('fld_date', '2014/05/17 ' )
+        feat.SetField('fld_datetime', '2014/05/17  12:34:56' )
+        feat.SetFieldBinaryFromHexString('fld_binary', 'fffe' )
     
         if lyr.CreateFeature(feat) != 0:
             gdaltest.post_reason('cannot create feature %d' % i)
@@ -348,9 +355,20 @@ def ogr_gpkg_8():
         gdaltest.post_reason('cannot insert empty')
         return 'fail'
         
-    feat.SetFID(2)
+    feat.SetFID(6)
     if lyr.SetFeature(feat) != 0:
         gdaltest.post_reason('cannot update with empty')
+        return 'fail'
+
+    gdaltest.gpkg_ds = None
+    gdaltest.gpkg_ds = gdaltest.gpkg_dr.Open( 'tmp/gpkg_test.gpkg', update = 1 )
+    lyr = gdaltest.gpkg_ds.GetLayerByName('tbl_linestring')
+    feat = lyr.GetNextFeature()
+    if feat.GetField(0) != 10 or feat.GetField(1) != 'test string 0 test' or \
+       feat.GetField(2) != 3.14159  or feat.GetField(3) != '2014/05/17' or \
+       feat.GetField(4) != '2014/05/17 12:34:56' or feat.GetField(5) != 'FFFE':
+        gdaltest.post_reason('fail')
+        feat.DumpReadable()
         return 'fail'
 
     lyr = gdaltest.gpkg_ds.CreateLayer( 'tbl_polygon', geom_type = ogr.wkbPolygon, srs = srs)
@@ -426,28 +444,6 @@ def ogr_gpkg_9():
     return 'success'
 
 ###############################################################################
-# Run test_ogrsf
-
-def ogr_gpkg_10():
-
-    if gdaltest.gpkg_dr is None:
-        return 'skip'
-
-    import test_cli_utilities
-    if test_cli_utilities.get_test_ogrsf_path() is None:
-        return 'skip'
-
-    gdaltest.gpkg_ds = None
-
-    ret = gdaltest.runexternal(test_cli_utilities.get_test_ogrsf_path() + ' tmp/gpkg_test.gpkg --config OGR_SQLITE_SYNCHRONOUS OFF')
-
-    if ret.find('INFO') == -1 or ret.find('ERROR') != -1:
-        print(ret)
-        return 'fail'
-
-    return 'success'
-
-###############################################################################
 # Test non-SELECT SQL commands
 
 def ogr_gpkg_11():
@@ -455,6 +451,7 @@ def ogr_gpkg_11():
     if gdaltest.gpkg_dr is None:
         return 'skip'
 
+    gdaltest.gpkg_ds = None
     gdaltest.gpkg_ds = ogr.Open('tmp/gpkg_test.gpkg', update = 1)
     gdaltest.gpkg_ds.ExecuteSQL('CREATE INDEX tbl_linestring_fld_integer_idx ON tbl_linestring(fld_integer)')
     gdaltest.gpkg_ds.ExecuteSQL('ALTER TABLE tbl_linestring RENAME TO tbl_linestring_renamed')
@@ -489,7 +486,7 @@ def ogr_gpkg_12():
     if sql_lyr.GetGeometryColumn() != 'geom':
         gdaltest.post_reason('fail')
         return 'fail'
-    if sql_lyr.GetSpatialRef().ExportToWkt().find('4326') < 0:
+    if sql_lyr.GetSpatialRef().ExportToWkt().find('32631') < 0:
         gdaltest.post_reason('fail')
         return 'fail'
     feat = sql_lyr.GetNextFeature()
@@ -499,7 +496,7 @@ def ogr_gpkg_12():
     if sql_lyr.GetFeatureCount() != 11:
         gdaltest.post_reason('fail')
         return 'fail'
-    if sql_lyr.GetLayerDefn().GetFieldCount() != 3:
+    if sql_lyr.GetLayerDefn().GetFieldCount() != 6:
         gdaltest.post_reason('fail')
         return 'fail'
     gdaltest.gpkg_ds.ReleaseResultSet(sql_lyr)
@@ -512,20 +509,22 @@ def ogr_gpkg_12():
         return 'fail'
     gdaltest.gpkg_ds.ReleaseResultSet(sql_lyr)
 
-
-    sql_lyr = gdaltest.gpkg_ds.ExecuteSQL('SELECT * FROM tbl_linestring_renamed LIMIT 1')
-    feat = sql_lyr.GetNextFeature()
-    if feat is None:
-        gdaltest.post_reason('fail')
-        return 'fail'
-    feat = sql_lyr.GetNextFeature()
-    if feat is not None:
-        gdaltest.post_reason('fail')
-        return 'fail'
-    if sql_lyr.GetFeatureCount() != 1:
-        gdaltest.post_reason('fail')
-        return 'fail'
-    gdaltest.gpkg_ds.ReleaseResultSet(sql_lyr)
+    for sql in [ 'SELECT * FROM tbl_linestring_renamed LIMIT 1',
+                 'SELECT * FROM tbl_linestring_renamed ORDER BY fld_integer LIMIT 1',
+                 'SELECT * FROM tbl_linestring_renamed UNION ALL SELECT * FROM tbl_linestring_renamed ORDER BY fld_integer LIMIT 1' ]:
+        sql_lyr = gdaltest.gpkg_ds.ExecuteSQL(sql)
+        feat = sql_lyr.GetNextFeature()
+        if feat is None:
+            gdaltest.post_reason('fail')
+            return 'fail'
+        feat = sql_lyr.GetNextFeature()
+        if feat is not None:
+            gdaltest.post_reason('fail')
+            return 'fail'
+        if sql_lyr.GetFeatureCount() != 1:
+            gdaltest.post_reason('fail')
+            return 'fail'
+        gdaltest.gpkg_ds.ReleaseResultSet(sql_lyr)
 
     sql_lyr = gdaltest.gpkg_ds.ExecuteSQL('SELECT sqlite_version()')
     feat = sql_lyr.GetNextFeature()
@@ -539,6 +538,256 @@ def ogr_gpkg_12():
         gdaltest.post_reason('fail')
         return 'fail'
     gdaltest.gpkg_ds.ReleaseResultSet(sql_lyr)
+
+    return 'success'
+
+###############################################################################
+# Test non-spatial tables
+
+def ogr_gpkg_13():
+
+    if gdaltest.gpkg_dr is None:
+        return 'skip'
+
+    lyr = gdaltest.gpkg_ds.CreateLayer('non_spatial', geom_type = ogr.wkbNone )
+    feat = ogr.Feature(lyr.GetLayerDefn())
+    lyr.CreateFeature(feat)
+    feat = None
+    lyr.CreateField(ogr.FieldDefn('fld_integer', ogr.OFTInteger))
+    feat = ogr.Feature(lyr.GetLayerDefn())
+    feat.SetField('fld_integer', 1)
+    lyr.CreateFeature(feat)
+    feat = None
+    lyr.ResetReading()
+    feat = lyr.GetNextFeature()
+    if feat.IsFieldSet('fld_integer'):
+        feat.DumpReadable()
+        gdaltest.post_reason('fail')
+        return 'fail'
+    feat = lyr.GetNextFeature()
+    if feat.GetField('fld_integer') != 1:
+        feat.DumpReadable()
+        gdaltest.post_reason('fail')
+        return 'fail'
+
+    gdaltest.gpkg_ds = None
+    gdaltest.gpkg_ds = ogr.Open('tmp/gpkg_test.gpkg', update = 1)
+    if gdaltest.gpkg_ds.GetLayerCount() != 4:
+        gdaltest.post_reason('fail')
+        return 'fail'
+    lyr = gdaltest.gpkg_ds.GetLayer('non_spatial')
+    if lyr.GetGeomType() != ogr.wkbNone:
+        gdaltest.post_reason('fail')
+        return 'fail'
+    feat = lyr.GetNextFeature()
+    if feat.IsFieldSet('fld_integer'):
+        gdaltest.post_reason('fail')
+        return 'fail'
+    feat = lyr.GetNextFeature()
+    if feat.GetField('fld_integer') != 1:
+        feat.DumpReadable()
+        gdaltest.post_reason('fail')
+        return 'fail'
+
+    return 'success'
+
+###############################################################################
+# Add various geometries to test spatial filtering
+
+def ogr_gpkg_14():
+
+    if gdaltest.gpkg_dr is None:
+        return 'skip'
+
+    sr = osr.SpatialReference()
+    sr.ImportFromEPSG(32631)
+
+    lyr = gdaltest.gpkg_ds.CreateLayer('point_no_spi-but-with-dashes', geom_type = ogr.wkbPoint, options = ['SPATIAL_INDEX=NO'], srs = sr )
+    feat = ogr.Feature(lyr.GetLayerDefn())
+    feat.SetGeometry(ogr.CreateGeometryFromWkt('POINT(1000 30000000)'))
+    lyr.CreateFeature(feat)
+    feat = ogr.Feature(lyr.GetLayerDefn())
+    feat.SetGeometry(ogr.CreateGeometryFromWkt('POINT(-1000 30000000)'))
+    lyr.CreateFeature(feat)
+    feat = ogr.Feature(lyr.GetLayerDefn())
+    feat.SetGeometry(ogr.CreateGeometryFromWkt('POINT(1000 -30000000)'))
+    lyr.CreateFeature(feat)
+    feat = ogr.Feature(lyr.GetLayerDefn())
+    feat.SetGeometry(ogr.CreateGeometryFromWkt('POINT(-1000 -30000000)'))
+    lyr.CreateFeature(feat)
+
+    lyr = gdaltest.gpkg_ds.CreateLayer('point-with-spi-and-dashes', geom_type = ogr.wkbPoint )
+    feat = ogr.Feature(lyr.GetLayerDefn())
+    feat.SetGeometry(ogr.CreateGeometryFromWkt('POINT(1000 30000000)'))
+    lyr.CreateFeature(feat)
+    feat = ogr.Feature(lyr.GetLayerDefn())
+    feat.SetGeometry(ogr.CreateGeometryFromWkt('POINT(-1000 30000000)'))
+    lyr.CreateFeature(feat)
+    feat = ogr.Feature(lyr.GetLayerDefn())
+    feat.SetGeometry(ogr.CreateGeometryFromWkt('POINT(1000 -30000000)'))
+    lyr.CreateFeature(feat)
+    feat = ogr.Feature(lyr.GetLayerDefn())
+    feat.SetGeometry(ogr.CreateGeometryFromWkt('POINT(-1000 -30000000)'))
+    lyr.CreateFeature(feat)
+
+    return 'success'
+
+###############################################################################
+# Test SQL functions
+
+def ogr_gpkg_15():
+
+    if gdaltest.gpkg_dr is None:
+        return 'skip'
+
+    sql_lyr = gdaltest.gpkg_ds.ExecuteSQL(
+        'SELECT ST_IsEmpty(geom), ST_SRID(geom), ST_GeometryType(geom), ' + \
+        'ST_MinX(geom), ST_MinY(geom), ST_MaxX(geom), ST_MaxY(geom) FROM \"point_no_spi-but-with-dashes\" WHERE fid = 1')
+    feat = sql_lyr.GetNextFeature()
+    if feat.GetField(0) != 0 or feat.GetField(1) != 32631 or \
+       feat.GetField(2) != 'POINT' or \
+       feat.GetField(3) != 1000 or feat.GetField(4) != 30000000 or \
+       feat.GetField(5) != 1000 or feat.GetField(6) != 30000000:
+        feat.DumpReadable()
+        gdaltest.post_reason('fail')
+        return 'fail'
+    gdaltest.gpkg_ds.ReleaseResultSet(sql_lyr)
+    
+    sql_lyr = gdaltest.gpkg_ds.ExecuteSQL(
+        'SELECT ST_IsEmpty(geom), ST_SRID(geom), ST_GeometryType(geom), ' + \
+        'ST_MinX(geom), ST_MinY(geom), ST_MaxX(geom), ST_MaxY(geom) FROM tbl_linestring_renamed WHERE geom IS NULL')
+    feat = sql_lyr.GetNextFeature()
+    if feat.IsFieldSet(0) or feat.IsFieldSet(1) or feat.IsFieldSet(2) or \
+       feat.IsFieldSet(3) or feat.IsFieldSet(4) or feat.IsFieldSet(5) or feat.IsFieldSet(6):
+        feat.DumpReadable()
+        gdaltest.post_reason('fail')
+        return 'fail'
+    gdaltest.gpkg_ds.ReleaseResultSet(sql_lyr)
+
+    for (expected_type, actual_type, expected_result) in [
+                ('POINT', 'POINT', 1),
+                ('LINESTRING', 'POINT', 0),
+                ('GEOMETRY', 'POINT', 1),
+                ('POINT', 'GEOMETRY', 0),
+                ('GEOMETRYCOLLECTION', 'MULTIPOINT', 1),
+                ('GEOMETRYCOLLECTION', 'POINT', 0) ]:
+        sql_lyr = gdaltest.gpkg_ds.ExecuteSQL("SELECT GPKG_IsAssignable('%s', '%s')" % (expected_type, actual_type))
+        feat = sql_lyr.GetNextFeature()
+        got_result = feat.GetField(0)
+        gdaltest.gpkg_ds.ReleaseResultSet(sql_lyr)
+        if got_result != expected_result:
+            print("expected_type=%s actual_type=%s expected_result=%d got_result=%d" % (expected_type, actual_type, expected_result, got_result))
+            gdaltest.post_reason('fail')
+            return 'fail'
+
+
+    for (sql, expected_result) in [
+            ("SELECT DisableSpatialIndex('point-with-spi-and-dashes', 'geom')", 1),
+            ("SELECT DisableSpatialIndex('point-with-spi-and-dashes', 'geom')", 0),
+            ("SELECT CreateSpatialIndex('point-with-spi-and-dashes', 'geom')", 1),
+            ("SELECT CreateSpatialIndex('point-with-spi-and-dashes', 'geom')", 0),
+            ("SELECT CreateSpatialIndex('point-with-spi-and-dashes', NULL)", 0),
+            ("SELECT CreateSpatialIndex(NULL, 'geom')", 0),
+            ("SELECT CreateSpatialIndex('bla', 'geom')", 0),
+            ("SELECT CreateSpatialIndex('point-with-spi-and-dashes', 'bla')", 0),
+            ("SELECT DisableSpatialIndex('point-with-spi-and-dashes', NULL)", 0),
+            ("SELECT DisableSpatialIndex(NULL, 'geom')", 0),
+            ("SELECT DisableSpatialIndex('bla', 'geom')", 0),
+            ("SELECT DisableSpatialIndex('point-with-spi-and-dashes', 'bla')", 0),
+            ("SELECT CreateSpatialIndex('non_spatial', '')", 0),
+            ]:
+        if expected_result == 0:
+            gdal.PushErrorHandler('CPLQuietErrorHandler')
+        sql_lyr = gdaltest.gpkg_ds.ExecuteSQL(sql)
+        if expected_result == 0:
+            gdal.PopErrorHandler()
+        feat = sql_lyr.GetNextFeature()
+        got_result = feat.GetField(0)
+        gdaltest.gpkg_ds.ReleaseResultSet(sql_lyr)
+        if got_result != expected_result:
+            print(sql)
+            gdaltest.post_reason('fail')
+            return 'fail'
+
+    return 'success'
+
+###############################################################################
+# Test unknown extensions
+
+def ogr_gpkg_16():
+
+    if gdaltest.gpkg_dr is None:
+        return 'skip'
+
+    ds = gdaltest.gpkg_dr.CreateDataSource('/vsimem/ogr_gpk_16.gpkg')
+    lyr = ds.CreateLayer('foo')
+    sql_lyr = ds.ExecuteSQL("INSERT INTO gpkg_extensions ( table_name, column_name, " + \
+        "extension_name, definition, scope ) VALUES ( 'foo', 'geom', 'myext', 'some ext', 'write-only' ) ")
+    ds = None
+    
+    # No warning since we open as read-only
+    ds = ogr.Open('/vsimem/ogr_gpk_16.gpkg')
+    ds = None
+    
+    # Warning since we open as read-write
+    gdal.PushErrorHandler('CPLQuietErrorHandler')
+    ds = ogr.Open('/vsimem/ogr_gpk_16.gpkg', update = 1)
+    gdal.PopErrorHandler()
+    if gdal.GetLastErrorMsg() == '':
+        gdaltest.post_reason('fail : warning expected')
+        return 'fail'
+
+    sql_lyr = ds.ExecuteSQL("UPDATE gpkg_extensions SET scope = 'read-write' WHERE extension_name = 'myext'")
+    ds = None
+
+    # Warning since we open as read-only
+    gdal.PushErrorHandler('CPLQuietErrorHandler')
+    ds = ogr.Open('/vsimem/ogr_gpk_16.gpkg')
+    gdal.PopErrorHandler()
+    if gdal.GetLastErrorMsg() == '':
+        gdaltest.post_reason('fail : warning expected')
+        return 'fail'
+
+    # and also as read-write
+    gdal.PushErrorHandler('CPLQuietErrorHandler')
+    ds = ogr.Open('/vsimem/ogr_gpk_16.gpkg', update = 1)
+    gdal.PopErrorHandler()
+    if gdal.GetLastErrorMsg() == '':
+        gdaltest.post_reason('fail : warning expected')
+        return 'fail'
+    ds = None
+
+    gdal.Unlink('/vsimem/ogr_gpk_16.gpkg')
+
+    return 'success'
+
+###############################################################################
+# Run test_ogrsf
+
+def ogr_gpkg_test_ogrsf():
+
+    if gdaltest.gpkg_dr is None:
+        return 'skip'
+
+    # Do integrity check first
+    sql_lyr = gdaltest.gpkg_ds.ExecuteSQL("PRAGMA integrity_check")
+    feat = sql_lyr.GetNextFeature()
+    if feat.GetField(0) != 'ok':
+        gdaltest.post_reason('integrity check failed')
+        return 'fail'
+    gdaltest.gpkg_ds.ReleaseResultSet(sql_lyr)
+
+    import test_cli_utilities
+    if test_cli_utilities.get_test_ogrsf_path() is None:
+        return 'skip'
+
+    gdaltest.gpkg_ds = None
+    #sys.exit(0)
+    ret = gdaltest.runexternal(test_cli_utilities.get_test_ogrsf_path() + ' tmp/gpkg_test.gpkg --config OGR_SQLITE_SYNCHRONOUS OFF')
+
+    if ret.find('INFO') == -1 or ret.find('ERROR') != -1:
+        print(ret)
+        return 'fail'
 
     return 'success'
 
@@ -572,9 +821,13 @@ gdaltest_list = [
     ogr_gpkg_7,
     ogr_gpkg_8,
     ogr_gpkg_9,
-    ogr_gpkg_10,
     ogr_gpkg_11,
     ogr_gpkg_12,
+    ogr_gpkg_13,
+    ogr_gpkg_14,
+    ogr_gpkg_15,
+    ogr_gpkg_16,
+    ogr_gpkg_test_ogrsf,
     ogr_gpkg_cleanup,
 ]
 

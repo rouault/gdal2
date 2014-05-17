@@ -22,8 +22,9 @@ The GeoPackage standard uses a SQLite database file as a generic container, and 
 
 <ul>
 <li>GeoPackage only supports one geometry column per table.</li>
-<li>This driver does not currently implement the GeoPackage index extension.</li>
-<li>GeoPackage does not currently support non-spatial tables.</li>
+<li>Before GDAL 2.0, the driver did not implement the GeoPackage spatial index extension.</li>
+<li>The GeoPackage specification does not currently support non-spatial tables, but starting with GDAL 2.0,
+the driver allows creating and reading such tables (they are not registered in gpkg_contents).</li>
 </ul>
 
 <h2>SQL</h2>
@@ -32,6 +33,32 @@ The GeoPackage standard uses a SQLite database file as a generic container, and 
   to provide filters in the SQLite dialect, as they will be executed directly
   against the database.
 </p>
+<p>
+  Starting with GDAL 2.0, SQL SELECT statements passed to ExecuteSQL() are
+  also executed directly against the database.
+</p>
+
+<h3>SQL functions</h3>
+
+Starting with GDAL 2.0, the following SQL functions, from the GeoPackage specification, are available :
+<ul>
+<li>ST_MinX(geom <i>Geometry</i>) : returns the minimum X coordinate of the geometry</li>
+<li>ST_MinY(geom <i>Geometry</i>) : returns the minimum Y coordinate of the geometry</li>
+<li>ST_MaxX(geom <i>Geometry</i>) : returns the maximum X coordinate of the geometry</li>
+<li>ST_MaxY(geom <i>Geometry</i>) : returns the maximum Y coordinate of the geometry</li>
+<li>ST_IsEmpty(geom <i>Geometry</i>) : returns 1 is the geometry is empty (but not null), e.g. a POINT EMPTY geometry</li>
+<li>ST_GeometryType(geom <i>Geometry</i>) : returns the geometry type : 'POINT',
+'LINESTRING', 'POLYGON', 'MULTIPOLYGON', 'MULITLINESTRING', 'MULTIPOINT', 'GEOMETRYCOLLECTION'</li>
+<li>ST_SRID(geom <i>Geometry</i>) : returns the SRID of the geometry</li>
+<li>GPKG_IsAssignable(expected_geom_type <i>String</i>, actual_geom_type <i>String</i>) : mainly, needed for the 'Geometry Type Triggers Extension'</li>
+</ul>
+
+The following functions, with identical syntax and semantics as in Spatialite, are also available :
+
+<ul>
+<li>CreateSpatialIndex(table_name <i>String</i>, geom_column_name <i>String</i>) : creates a spatial index (RTree) on the specified table/geometry column</li>
+<li>DisableSpatialIndex(table_name <i>String</i>, geom_column_name <i>String</i>) : disable an existing spatial index (RTree) on the specified table/geometry column</li>
+</ul>
 
 <h2>Creation Issues</h2>
 
@@ -47,10 +74,10 @@ The GeoPackage standard uses a SQLite database file as a generic container, and 
 <h3>Layer Creation Options</h3>
 
 <ul>
-<li><b>GEOMETRY_COLUMN</b>: Column to use for the geometry column.</li>
-<li><b>FID</b>: Column name to use for the OGR FID (primary key in the SQLite database).</li>
-<li><b>OVERWRITE</b>: If set to "YES" will delete any existing layers that have the same name as the layer being created.</li>
-<li><b>SPATIAL_INDEX</b>: [NOT IMPLEMENTED] If set to "YES" will create a spatial index for this layer.</li>
+<li><b>GEOMETRY_COLUMN</b>: Column to use for the geometry column. Default to "geom"</li>
+<li><b>FID</b>: Column name to use for the OGR FID (primary key in the SQLite database). Default to "fid"</li>
+<li><b>OVERWRITE</b>: If set to "YES" will delete any existing layers that have the same name as the layer being created. Default to NO</li>
+<li><b>SPATIAL_INDEX</b>: (GDAL &gt;=2.0) If set to "YES" will create a spatial index for this layer. Default to YES</li>
 
 </ul>
 
