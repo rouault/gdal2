@@ -113,6 +113,9 @@ void CPL_STDCALL GDALDestroyDriver( GDALDriverH hDriver )
  * In some situations, the new dataset can be created in another process through the
  * \ref gdal_api_proxy mechanism.
  *
+ * In GDAL 2, the arguments nXSize, nYSize and nBands can be passed to 0 when
+ * creating a vector-only dataset for a compatible driver.
+ *
  * Equivelent of the C function GDALCreate().
  * 
  * @param pszFilename the name of the dataset to create.  UTF-8 encoded.

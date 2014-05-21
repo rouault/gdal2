@@ -384,10 +384,6 @@ class CPL_DLL GDALDataset : public GDALMajorObject
 
     void ReportError(CPLErr eErrClass, int err_no, const char *fmt, ...)  CPL_PRINT_FUNC_FORMAT (4, 5);
 
-    virtual OGRLayer   *ICreateLayer( const char *pszName, 
-                                     OGRSpatialReference *poSpatialRef = NULL,
-                                     OGRwkbGeometryType eGType = wkbUnknown,
-                                     char ** papszOptions = NULL );
 private:
     void        *m_hMutex;
 
@@ -397,12 +393,12 @@ private:
 
   public:
 
-    virtual int         GetLayerCount() { return 0; }
-    virtual OGRLayer    *GetLayer(int) { return NULL; }
+    virtual int         GetLayerCount();
+    virtual OGRLayer    *GetLayer(int);
     virtual OGRLayer    *GetLayerByName(const char *);
     virtual OGRErr      DeleteLayer(int);
 
-    virtual int         TestCapability( const char * ) { return FALSE; }
+    virtual int         TestCapability( const char * );
 
     virtual OGRLayer   *CreateLayer( const char *pszName, 
                                      OGRSpatialReference *poSpatialRef = NULL,
@@ -430,6 +426,11 @@ private:
     static int          IsGenericSQLDialect(const char* pszDialect);
 
   protected:
+
+    virtual OGRLayer   *ICreateLayer( const char *pszName, 
+                                     OGRSpatialReference *poSpatialRef = NULL,
+                                     OGRwkbGeometryType eGType = wkbUnknown,
+                                     char ** papszOptions = NULL );
 
     OGRErr              ProcessSQLCreateIndex( const char * );
     OGRErr              ProcessSQLDropIndex( const char * );
