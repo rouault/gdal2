@@ -88,7 +88,7 @@ OGRErr OGRGeoPackageTableLayer::UpdateExtent( const OGREnvelope *poExtent )
 //
 OGRErr OGRGeoPackageTableLayer::BuildColumns()
 {
-    if ( ! m_poFeatureDefn || ! m_pszFidColumn )
+    if ( ! m_poFeatureDefn )
     {
         return OGRERR_FAILURE;
     }
@@ -97,7 +97,7 @@ OGRErr OGRGeoPackageTableLayer::BuildColumns()
     panFieldOrdinals = (int *) CPLMalloc( sizeof(int) * m_poFeatureDefn->GetFieldCount() );
 
     /* Always start with a primary key */
-    CPLString soColumns = m_pszFidColumn;
+    CPLString soColumns = m_pszFidColumn ? m_pszFidColumn : "_rowid_";
     iFIDCol = 0;
 
     /* Add a geometry column if there is one (just one) */
@@ -427,6 +427,7 @@ OGRErr OGRGeoPackageTableLayer::ReadTableDefinition(int bIsSpatial)
     OGRBoolean bReadExtent = FALSE;
     sqlite3* poDb = m_poDS->GetDB();
     OGREnvelope oExtent;
+    CPLString osGeomColumnName;
     CPLString osGeomColsType;
     int bHasZ = FALSE;
 
@@ -499,6 +500,9 @@ OGRErr OGRGeoPackageTableLayer::ReadTableDefinition(int bIsSpatial)
             return OGRERR_FAILURE;
         }
 
+        const char* pszGeomColName = SQLResultGetValue(&oResultGeomCols, 1, 0);
+        if( pszGeomColName != NULL )
+            osGeomColumnName = pszGeomColName;
         const char* pszGeomColsType = SQLResultGetValue(&oResultGeomCols, 2, 0);
         if( pszGeomColsType != NULL )
             osGeomColsType = pszGeomColsType;
@@ -544,10 +548,14 @@ OGRErr OGRGeoPackageTableLayer::ReadTableDefinition(int bIsSpatial)
         OGRFieldType oType = GPkgFieldToOGR(pszType);
 
         /* Not a standard field type... */
-        if ( oType > OFTMaxType && osGeomColsType.size() )
+        if ( (oType > OFTMaxType && osGeomColsType.size()) || EQUAL(osGeomColumnName, pszName) )
         {
             /* Maybe it's a geometry type? */
-            OGRwkbGeometryType oGeomType = GPkgGeometryTypeToWKB(pszType, bHasZ);
+            OGRwkbGeometryType oGeomType;
+            if( oType > OFTMaxType )
+                oGeomType = GPkgGeometryTypeToWKB(pszType, bHasZ);
+            else
+                oGeomType = wkbUnknown;
             if ( oGeomType != wkbNone )
             {
                 OGRwkbGeometryType oGeomTypeGeomCols = GPkgGeometryTypeToWKB(osGeomColsType.c_str(), bHasZ);
@@ -596,10 +604,19 @@ OGRErr OGRGeoPackageTableLayer::ReadTableDefinition(int bIsSpatial)
         else
         {
             /* Is this the FID column? */
-            if ( bFid )
+            /* FIXME: add OFTInteger64 when we support it ! */
+            if ( bFid && oType == OFTInteger )
             {
-                bFidFound = TRUE;
-                m_pszFidColumn = CPLStrdup(pszName);
+                if( bFidFound )
+                {
+                    CPLDebug("GPKG", "For table %s, a new FID column has been found (%s). Keeping previous one (%s)",
+                             m_pszTableName, pszName, m_pszFidColumn);
+                }
+                else
+                {
+                    bFidFound = TRUE;
+                    m_pszFidColumn = CPLStrdup(pszName);
+                }
             }
             else
             {
@@ -609,14 +626,11 @@ OGRErr OGRGeoPackageTableLayer::ReadTableDefinition(int bIsSpatial)
         }
     }
 
-    /* Wait, we didn't find a FID? */
-    /* Game over, all valid tables must have a FID */
+    /* Wait, we didn't find a FID? Some operations will not be possible */
     if ( ! bFidFound )
     {
-        CPLError(CE_Failure, CPLE_AppDefined, 
-                 "no primary key defined for table '%s'", m_pszTableName);
-        return OGRERR_FAILURE;
-        
+        CPLDebug("GPKG", 
+                 "no integer primary key defined for table '%s'", m_pszTableName);
     }
 
     if ( bReadExtent )
@@ -802,7 +816,7 @@ OGRErr OGRGeoPackageTableLayer::CreateFeature( OGRFeature *poFeature )
 
 OGRErr OGRGeoPackageTableLayer::SetFeature( OGRFeature *poFeature )
 {
-    if( !m_poDS->GetUpdate() )
+    if( !m_poDS->GetUpdate() || m_pszFidColumn == NULL )
     {
         return OGRERR_FAILURE;
     }
@@ -999,7 +1013,7 @@ OGRFeature* OGRGeoPackageTableLayer::GetNextFeature()
 OGRFeature* OGRGeoPackageTableLayer::GetFeature(long nFID)
 {
     /* No FID, no answer. */
-    if (nFID == OGRNullFID)
+    if (nFID == OGRNullFID || m_pszFidColumn == NULL )
         return NULL;
     
     CreateSpatialIndexIfNecessary();
@@ -1044,7 +1058,7 @@ OGRFeature* OGRGeoPackageTableLayer::GetFeature(long nFID)
 
 OGRErr OGRGeoPackageTableLayer::DeleteFeature(long nFID) 
 {
-    if( !m_poDS->GetUpdate() )
+    if( !m_poDS->GetUpdate() || m_pszFidColumn == NULL )
     {
         return OGRERR_FAILURE;
     }
@@ -1230,6 +1244,9 @@ int OGRGeoPackageTableLayer::CreateSpatialIndex()
     OGRErr err;
 
     bDeferedSpatialIndexCreation = FALSE;
+    
+    if( m_pszFidColumn == NULL )
+        return FALSE;
 
     if( HasSpatialIndex() )
     {
