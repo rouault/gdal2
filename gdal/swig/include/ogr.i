@@ -272,6 +272,7 @@ typedef void retGetPoints;
 %constant char *ODsCCreateLayer        = "CreateLayer";
 %constant char *ODsCDeleteLayer        = "DeleteLayer";
 %constant char *ODsCCreateGeomFieldAfterCreateLayer  = "CreateGeomFieldAfterCreateLayer";
+%constant char *ODsCCurveGeometries    = "CurveGeometries";
 
 %constant char *ODrCCreateDataSource   = "CreateDataSource";
 %constant char *ODrCDeleteDataSource   = "DeleteDataSource";
@@ -303,6 +304,7 @@ typedef int OGRErr;
 #define ODsCCreateLayer        "CreateLayer"
 #define ODsCDeleteLayer        "DeleteLayer"
 #define ODsCCreateGeomFieldAfterCreateLayer   "CreateGeomFieldAfterCreateLayer"
+#define ODsCCurveGeometries    "CurveGeometries"
 
 #define ODrCCreateDataSource   "CreateDataSource"
 #define ODrCDeleteDataSource   "DeleteDataSource"

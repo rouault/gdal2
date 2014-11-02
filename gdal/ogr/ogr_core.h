@@ -554,6 +554,7 @@ int CPL_DLL OGRParseDate( const char *pszInput, OGRField *psOutput,
 #define ODsCCreateLayer        "CreateLayer"
 #define ODsCDeleteLayer        "DeleteLayer"
 #define ODsCCreateGeomFieldAfterCreateLayer   "CreateGeomFieldAfterCreateLayer"
+#define ODsCCurveGeometries    "CurveGeometries"
 
 #define ODrCCreateDataSource   "CreateDataSource"
 #define ODrCDeleteDataSource   "DeleteDataSource"

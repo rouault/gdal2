@@ -136,6 +136,7 @@ OLCCreateGeomField = _ogr.OLCCreateGeomField
 ODsCCreateLayer = _ogr.ODsCCreateLayer
 ODsCDeleteLayer = _ogr.ODsCDeleteLayer
 ODsCCreateGeomFieldAfterCreateLayer = _ogr.ODsCCreateGeomFieldAfterCreateLayer
+ODsCCurveGeometries = _ogr.ODsCCurveGeometries
 ODrCCreateDataSource = _ogr.ODrCCreateDataSource
 ODrCDeleteDataSource = _ogr.ODrCDeleteDataSource
 

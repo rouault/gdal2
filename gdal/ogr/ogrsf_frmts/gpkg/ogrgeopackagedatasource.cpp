@@ -937,6 +937,8 @@ int OGRGeoPackageDataSource::TestCapability( const char * pszCap )
     {
          return bUpdate;
     }
+    else if( EQUAL(pszCap,ODsCCurveGeometries) )
+        return TRUE;
     return FALSE;
 }
 

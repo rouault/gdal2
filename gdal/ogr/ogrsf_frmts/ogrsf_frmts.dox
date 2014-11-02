@@ -470,6 +470,7 @@ can also be used.
   <li> <b>ODsCDeleteLayer</b>: True if this datasource can delete existing layers.<p>
   <li> <b>ODsCCreateGeomFieldAfterCreateLayer</b>: True if the layers of this
         datasource support CreateGeomField() just after layer creation.<p>
+  <li> <b>ODsCCurveGeometries</b>: True if this datasource supports writing curve geometries. (GDAL 2.0)<p>
   <p>
  </ul>
 

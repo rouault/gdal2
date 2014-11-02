@@ -1536,6 +1536,8 @@ int OGRGMLDataSource::TestCapability( const char * pszCap )
         return TRUE;
     else if( EQUAL(pszCap,ODsCCreateGeomFieldAfterCreateLayer) )
         return TRUE;
+    else if( EQUAL(pszCap,ODsCCurveGeometries) )
+        return bIsOutputGML3;
     else
         return FALSE;
 }
