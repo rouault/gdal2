@@ -404,7 +404,7 @@ OGRFeatureDefn *OGROCITableLayer::ReadTableDefinition( const char * pszTable )
                 else if( !EQUAL(pszLayerGType, "COLLECTION") )
                     CPLDebug("OCI", "LAYER_GTYPE = %s", pszLayerGType );
                 if( iDim == 3 )
-                    eGeomType = (OGRwkbGeometryType) (eGeomType | wkb25DBit );
+                    eGeomType = wkbSetZ(eGeomType);
                 poDefn->GetGeomFieldDefn(0)->SetType( eGeomType );
             }
             else

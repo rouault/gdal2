@@ -79,6 +79,7 @@ class OGRPGDumpLayer : public OGRLayer
     int                 nUnknownSRSId;
     int                 nForcedSRSId;
     int                 bCreateSpatialIndexFlag;
+    int                 bPostGIS2;
 
     char              **papszOverrideColumnTypes;
 
@@ -127,6 +128,8 @@ class OGRPGDumpLayer : public OGRLayer
                                 { nForcedSRSId = nForcedSRSIdIn; }
     void                SetCreateSpatialIndexFlag( int bFlag )
                                 { bCreateSpatialIndexFlag = bFlag; }
+    void                SetPostGIS2( int bFlag )
+                                { bPostGIS2 = bFlag; }
     OGRErr              EndCopy();
 };
 

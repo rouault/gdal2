@@ -46,6 +46,7 @@ class OGRGeoPackageDataSource : public OGRSQLiteBaseDataSource
     OGRGeoPackageTableLayer** m_papoLayers;
     int                 m_nLayers;
     int                 m_bUtf8;
+    void                CheckUnknownExtensions();
 
     public:
                             OGRGeoPackageDataSource();
@@ -201,6 +202,8 @@ class OGRGeoPackageTableLayer : public OGRGeoPackageLayer
     virtual CPLString    GetSpatialWhere(int iGeomCol,
                                          OGRGeometry* poFilterGeom);
 
+    int                 HasSpatialIndex();
+
     /************************************************************************/
     /* GPKG methods */
     
@@ -216,7 +219,6 @@ class OGRGeoPackageTableLayer : public OGRGeoPackageLayer
     OGRErr              FeatureBindInsertParameters( OGRFeature *poFeature, sqlite3_stmt *poStmt, int bAddFID );
     OGRErr              FeatureBindParameters( OGRFeature *poFeature, sqlite3_stmt *poStmt, int *pnColCount, int bAddFID );
 
-    int                 HasSpatialIndex();
     void                CheckUnknownExtensions();
 };
 

@@ -70,8 +70,6 @@ class OGRGMLLayer : public OGRLayer
 
     int                 bFaceHoleNegative;
 
-    OGRGeometry        *ConvertGeomToMultiIfNecessary(OGRGeometry* poGeom);
-
   public:
                         OGRGMLLayer( const char * pszName, 
                                      int bWriter,

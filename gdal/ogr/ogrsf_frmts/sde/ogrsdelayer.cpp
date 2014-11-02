@@ -1078,7 +1078,7 @@ OGRErr OGRSDELayer::TranslateOGRGeometry( OGRGeometry *poGeom,
 /* -------------------------------------------------------------------- */    
     int                 b3D = FALSE;
     
-    b3D = poGeom->getGeometryType() & wkb25DBit;
+    b3D = wkbHasZ(poGeom->getGeometryType());
     
 /* -------------------------------------------------------------------- */
 /*      Translate POINT/MULTIPOINT type.                                */

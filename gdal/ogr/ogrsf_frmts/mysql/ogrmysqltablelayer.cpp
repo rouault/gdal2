@@ -362,7 +362,7 @@ OGRFeatureDefn *OGRMySQLTableLayer::ReadTableDefinition( const char *pszTable )
             OGRwkbGeometryType nGeomType = OGRFromOGCGeomType(pszType);
 
             if( papszRow[1] != NULL && atoi(papszRow[1]) == 3 )
-                nGeomType = (OGRwkbGeometryType) (nGeomType | wkb25DBit);
+                nGeomType = wkbSetZ(nGeomType);
 
             poDefn->SetGeomType( nGeomType );
 

@@ -454,6 +454,8 @@ int OGRGeoPackageDataSource::Open(const char * pszFilename, int bUpdateIn )
 
     if ( oResult.nRowCount > 0 )
     {
+        CheckUnknownExtensions();
+
         m_papoLayers = (OGRGeoPackageTableLayer**)CPLMalloc(sizeof(OGRGeoPackageTableLayer*) * oResult.nRowCount);
 
         for ( i = 0; i < oResult.nRowCount; i++ )
@@ -654,7 +656,6 @@ OGRLayer* OGRGeoPackageDataSource::GetLayer( int iLayer )
         return m_papoLayers[iLayer];
 }
 
-
 /************************************************************************/
 /*                          ICreateLayer()                              */
 /* Options:                                                             */
@@ -781,7 +782,7 @@ OGRLayer* OGRGeoPackageDataSource::ICreateLayer( const char * pszLayerName,
     {
         /* Requirement 27: The z value in a gpkg_geometry_columns table row */
         /* SHALL be one of 0 (none), 1 (mandatory), or 2 (optional) */
-        int bGeometryTypeHasZ = (wkb25DBit & eGType) != 0;
+        int bGeometryTypeHasZ = wkbHasZ(eGType);
 
         /* Update gpkg_geometry_columns with the table info */
         pszSQL = sqlite3_mprintf(
@@ -844,6 +845,28 @@ OGRLayer* OGRGeoPackageDataSource::ICreateLayer( const char * pszLayerName,
         poLayer->SetDeferedSpatialIndexCreation(TRUE);
     }
 
+    if( OGR_GT_IsNonLinear( eGType ) )
+    {
+        if( CreateExtensionsTableIfNecessary() != OGRERR_NONE )
+        {
+            delete poLayer;
+            return NULL;
+        }
+            /* Register the table in gpkg_extensions */
+        char* pszSQL = sqlite3_mprintf(
+                    "INSERT INTO gpkg_extensions "
+                    "(table_name,column_name,extension_name,definition,scope) "
+                    "VALUES ('%q', '%q', 'gpkg_geom_%s', 'GeoPackage 1.0 Specification Annex J', 'write-only')",
+                    pszLayerName, pszGeomColumnName, pszGeometryType);
+        err = SQLCommand(GetDB(), pszSQL);
+        sqlite3_free(pszSQL);
+        if ( err != OGRERR_NONE )
+        {
+            delete poLayer;
+            return NULL;
+        }
+    }
+
     m_papoLayers = (OGRGeoPackageTableLayer**)CPLRealloc(m_papoLayers,  sizeof(OGRGeoPackageTableLayer*) * (m_nLayers+1));
     m_papoLayers[m_nLayers++] = poLayer;
     return poLayer;
@@ -865,7 +888,8 @@ int OGRGeoPackageDataSource::DeleteLayer( int iLayer )
 
     CPLDebug( "GPKG", "DeleteLayer(%s)", osLayerName.c_str() );
 
-    m_papoLayers[iLayer]->DropSpatialIndex();
+    if( m_papoLayers[iLayer]->HasSpatialIndex() )
+        m_papoLayers[iLayer]->DropSpatialIndex();
 
     /* Delete the layer object and remove the gap in the layers list */
     delete m_papoLayers[iLayer];
@@ -1134,6 +1158,60 @@ int OGRGeoPackageDataSource::HasExtensionsTable()
 }
 
 /************************************************************************/
+/*                    CheckUnknownExtensions()                          */
+/************************************************************************/
+
+void OGRGeoPackageDataSource::CheckUnknownExtensions()
+{
+    if( !HasExtensionsTable() )
+        return;
+
+    char* pszSQL = sqlite3_mprintf(
+        "SELECT extension_name, definition, scope FROM gpkg_extensions WHERE table_name IS NULL AND extension_name != 'gdal_aspatial'");
+
+    SQLResult oResultTable;
+    OGRErr err = SQLQuery(GetDB(), pszSQL, &oResultTable);
+    sqlite3_free(pszSQL);
+    if ( err == OGRERR_NONE && oResultTable.nRowCount > 0 )
+    {
+        for(int i=0; i<oResultTable.nRowCount;i++)
+        {
+            const char* pszExtName = SQLResultGetValue(&oResultTable, 0, i);
+            const char* pszDefinition = SQLResultGetValue(&oResultTable, 1, i);
+            const char* pszScope = SQLResultGetValue(&oResultTable, 2, i);
+            if( pszExtName == NULL ) pszExtName = "(null)";
+            if( pszDefinition == NULL ) pszDefinition = "(null)";
+            if( pszScope == NULL ) pszScope = "(null)";
+            if( GetUpdate() && EQUAL(pszScope, "write-only") )
+            {
+                CPLError(CE_Warning, CPLE_AppDefined,
+                         "Database relies on the '%s' (%s) extension that should "
+                         "be implemented for safe write-support, but is not currently. "
+                         "Update of that database are strongly discouraged to avoid corruption.",
+                         pszExtName, pszDefinition);
+            }
+            else if( GetUpdate() && EQUAL(pszScope, "read-write") )
+            {
+                CPLError(CE_Warning, CPLE_AppDefined,
+                         "Database relies on the '%s' (%s) extension that should "
+                         "be implemented in order to read/write it safely, but is not currently. "
+                         "Some data may be missing while reading that database, and updates are strongly discouraged.",
+                         pszExtName, pszDefinition);
+            }
+            else if( EQUAL(pszScope, "read-write") )
+            {
+                CPLError(CE_Warning, CPLE_AppDefined,
+                         "Database relies on the '%s' (%s) extension that should "
+                         "be implemented in order to read it safely, but is not currently. "
+                         "Some data may be missing while reading that database.",
+                         pszExtName, pszDefinition);
+            }
+        }
+    }
+    SQLResultFree(&oResultTable);
+}
+
+/************************************************************************/
 /*                         HasGDALAspatialExtension()                       */
 /************************************************************************/
 
@@ -1331,7 +1409,8 @@ void OGRGeoPackageSTGeometryType(sqlite3_context* pContext,
         sqlite3_result_null( pContext );
         return;
     }
-    OGRErr err = OGRReadWKBGeometryType( (GByte*)pabyBLOB + sHeader.szHeader, &eGeometryType, &bIs3D );
+    OGRErr err = OGRReadWKBGeometryType( (GByte*)pabyBLOB + sHeader.szHeader,
+                                         wkbVariantIso, &eGeometryType, &bIs3D );
     if( err != OGRERR_NONE )
         sqlite3_result_null( pContext );
     else
@@ -1356,19 +1435,9 @@ void OGRGeoPackageGPKGIsAssignable(sqlite3_context* pContext,
 
     const char* pszExpected = (const char*)sqlite3_value_text(argv[0]);
     const char* pszActual = (const char*)sqlite3_value_text(argv[1]);
-
-    if( EQUAL(pszExpected, pszActual) ||
-        EQUAL(pszExpected, "GEOMETRY") ||
-        (EQUAL(pszExpected, "GEOMETRYCOLLECTION") &&
-         (EQUAL(pszActual, "MULTIPOINT") ||
-          EQUAL(pszActual, "MULTILINESTRING") ||
-          EQUAL(pszActual, "MULTIPOLYGON"))) )
-    {
-        sqlite3_result_int( pContext, 1 );
-        return;
-    }
-    
-    sqlite3_result_int( pContext, 0 );
+    int bIsAssignable = OGR_GT_IsSubClassOf( OGRFromOGCGeomType(pszActual),
+                                             OGRFromOGCGeomType(pszExpected) );
+    sqlite3_result_int( pContext, bIsAssignable );
 }
 
 /************************************************************************/

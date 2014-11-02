@@ -72,6 +72,7 @@ OGRPGDumpLayer::OGRPGDumpLayer(OGRPGDumpDataSource* poDS,
     nUnknownSRSId = -1;
     nForcedSRSId = -2;
     bCreateSpatialIndexFlag = TRUE;
+    bPostGIS2 = FALSE;
 }
 
 /************************************************************************/
@@ -238,7 +239,8 @@ OGRErr OGRPGDumpLayer::CreateFeatureViaInsert( OGRFeature *poFeature )
 
             if( bWriteAsHex )
             {
-                char* pszHex = OGRGeometryToHexEWKB( poGeom, poGFldDefn->nSRSId );
+                char* pszHex = OGRGeometryToHexEWKB( poGeom, poGFldDefn->nSRSId,
+                                                     bPostGIS2 );
                 osCommand += "'";
                 if (pszHex)
                     osCommand += pszHex;
@@ -328,7 +330,8 @@ OGRErr OGRPGDumpLayer::CreateFeatureViaCopy( OGRFeature *poFeature )
             /*if (bHasWkb)
                 pszGeom = GeometryToBYTEA( poGeometry );
             else*/
-                pszGeom = OGRGeometryToHexEWKB( poGeometry, poGFldDefn->nSRSId );
+                pszGeom = OGRGeometryToHexEWKB( poGeometry, poGFldDefn->nSRSId,
+                                                bPostGIS2 );
         }
     
         if (osCommand.size() > 0)

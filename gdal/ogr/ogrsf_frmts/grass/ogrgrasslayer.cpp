@@ -117,7 +117,7 @@ OGRGRASSLayer::OGRGRASSLayer( int layerIndex,  struct Map_info * map )
     }
 
     if (Vect_is_3d(poMap))
-        poFeatureDefn->SetGeomType ( (OGRwkbGeometryType)(eGeomType | wkb25DBit) );
+        poFeatureDefn->SetGeomType ( wkbSetZ(eGeomType) );
     else
         poFeatureDefn->SetGeomType ( eGeomType );
 

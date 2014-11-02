@@ -141,7 +141,7 @@ static char* d2str(double val)
 
 static void AppendCoordinateList( OGRLineString *poLine, VSILFILE* fp )
 {
-    int         b3D = (poLine->getGeometryType() & wkb25DBit);
+    int         b3D = wkbHasZ(poLine->getGeometryType());
 
     for( int iPoint = 0; iPoint < poLine->getNumPoints(); iPoint++ )
     {

@@ -76,8 +76,18 @@ wkbMultiPoint = _ogr.wkbMultiPoint
 wkbMultiLineString = _ogr.wkbMultiLineString
 wkbMultiPolygon = _ogr.wkbMultiPolygon
 wkbGeometryCollection = _ogr.wkbGeometryCollection
+wkbCircularString = _ogr.wkbCircularString
+wkbCompoundCurve = _ogr.wkbCompoundCurve
+wkbCurvePolygon = _ogr.wkbCurvePolygon
+wkbMultiCurve = _ogr.wkbMultiCurve
+wkbMultiSurface = _ogr.wkbMultiSurface
 wkbNone = _ogr.wkbNone
 wkbLinearRing = _ogr.wkbLinearRing
+wkbCircularStringZ = _ogr.wkbCircularStringZ
+wkbCompoundCurveZ = _ogr.wkbCompoundCurveZ
+wkbCurvePolygonZ = _ogr.wkbCurvePolygonZ
+wkbMultiCurveZ = _ogr.wkbMultiCurveZ
+wkbMultiSurfaceZ = _ogr.wkbMultiSurfaceZ
 wkbPoint25D = _ogr.wkbPoint25D
 wkbLineString25D = _ogr.wkbLineString25D
 wkbPolygon25D = _ogr.wkbPolygon25D
@@ -3861,6 +3871,10 @@ def ForceToMultiPoint(*args):
 def ForceToMultiLineString(*args):
   """ForceToMultiLineString(Geometry geom_in) -> Geometry"""
   return _ogr.ForceToMultiLineString(*args)
+
+def ForceTo(*args):
+  """ForceTo(Geometry geom_in, OGRwkbGeometryType eTargetType, char options = None) -> Geometry"""
+  return _ogr.ForceTo(*args)
 class Geometry(_object):
     """Proxy of C++ OGRGeometryShadow class"""
     __swig_setmethods__ = {}
@@ -3904,6 +3918,10 @@ class Geometry(_object):
         """
         return _ogr.Geometry_ExportToWkt(self, *args)
 
+    def ExportToIsoWkt(self, *args):
+        """ExportToIsoWkt(self) -> OGRErr"""
+        return _ogr.Geometry_ExportToIsoWkt(self, *args)
+
     def ExportToWkb(self, *args, **kwargs):
         """
         ExportToWkb(self, OGRwkbByteOrder byte_order = wkbXDR) -> OGRErr
@@ -3934,6 +3952,10 @@ class Geometry(_object):
         Currently OGRERR_NONE is always returned. 
         """
         return _ogr.Geometry_ExportToWkb(self, *args, **kwargs)
+
+    def ExportToIsoWkb(self, *args, **kwargs):
+        """ExportToIsoWkb(self, OGRwkbByteOrder byte_order = wkbXDR) -> OGRErr"""
+        return _ogr.Geometry_ExportToIsoWkb(self, *args, **kwargs)
 
     def ExportToGML(self, *args, **kwargs):
         """ExportToGML(self, char options = None) -> retStringAndCPLFree"""
@@ -5188,6 +5210,22 @@ class Geometry(_object):
         0 for points, 1 for lines and 2 for surfaces. 
         """
         return _ogr.Geometry_GetDimension(self, *args)
+
+    def HasCurveGeometry(self, *args):
+        """HasCurveGeometry(self, int bLookForCircular = True) -> int"""
+        return _ogr.Geometry_HasCurveGeometry(self, *args)
+
+    def GetLinearGeometry(self, *args, **kwargs):
+        """GetLinearGeometry(self, double dfMaxAngleStepSizeDegrees = 0.0, char options = None) -> Geometry"""
+        return _ogr.Geometry_GetLinearGeometry(self, *args, **kwargs)
+
+    def GetCurveGeometry(self, *args, **kwargs):
+        """GetCurveGeometry(self, char options = None) -> Geometry"""
+        return _ogr.Geometry_GetCurveGeometry(self, *args, **kwargs)
+
+    def Value(self, *args):
+        """Value(self, double dfDistance) -> Geometry"""
+        return _ogr.Geometry_Value(self, *args)
 
     def Destroy(self):
       self.__swig_destroy__(self) 

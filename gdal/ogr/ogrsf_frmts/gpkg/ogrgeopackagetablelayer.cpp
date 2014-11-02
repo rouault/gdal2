@@ -1486,25 +1486,36 @@ int OGRGeoPackageTableLayer::CreateSpatialIndex()
 }
 
 /************************************************************************/
-/*                    CheckUnknownExtensions()                     */
+/*                    CheckUnknownExtensions()                          */
 /************************************************************************/
 
 void OGRGeoPackageTableLayer::CheckUnknownExtensions()
 {
-    if( m_poFeatureDefn->GetGeomFieldCount() == 0 ||
-        !m_poDS->HasExtensionsTable() )
+    if( !m_poDS->HasExtensionsTable() )
         return;
 
     const char* pszT = m_pszTableName;
-    const char* pszC = m_poFeatureDefn->GetGeomFieldDefn(0)->GetNameRef();
 
     /* We have only the SQL functions needed by the 3 following extensions */
     /* anything else will likely cause troubles */
-    char* pszSQL = sqlite3_mprintf(
-                 "SELECT extension_name, definition, scope FROM gpkg_extensions WHERE table_name='%q' "
-                 "AND column_name='%q' AND extension_name NOT IN "
-                 "('gpkg_rtree_index', 'gpkg_geometry_type_trigger', 'gpkg_srs_id_trigger')",
-                 pszT, pszC );
+    char* pszSQL;
+
+    if( m_poFeatureDefn->GetGeomFieldCount() == 0 )
+    {
+        pszSQL = sqlite3_mprintf(
+                    "SELECT extension_name, definition, scope FROM gpkg_extensions WHERE table_name='%q'",
+                    pszT );
+    }
+    else
+    {
+        pszSQL = sqlite3_mprintf(
+                    "SELECT extension_name, definition, scope FROM gpkg_extensions WHERE table_name='%q' "
+                    "AND column_name='%q' AND extension_name NOT LIKE 'gpkg_geom_%s' AND extension_name NOT IN "
+                    "('gpkg_rtree_index', 'gpkg_geometry_type_trigger', 'gpkg_srs_id_trigger')",
+                    pszT,
+                    m_poFeatureDefn->GetGeomFieldDefn(0)->GetNameRef(),
+                    OGRToOGCGeomType(m_poFeatureDefn->GetGeomFieldDefn(0)->GetType()) );
+    }
     SQLResult oResultTable;
     OGRErr err = SQLQuery(m_poDS->GetDB(), pszSQL, &oResultTable);
     sqlite3_free(pszSQL);
