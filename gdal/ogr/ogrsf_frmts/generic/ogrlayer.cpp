@@ -1734,8 +1734,15 @@ const char* OGR_L_GetName( OGRLayerH hLayer )
 
 OGRwkbGeometryType OGRLayer::GetGeomType()
 {
-    return GetLayerDefn()->GetGeomType();
+    OGRFeatureDefn* poLayerDefn = GetLayerDefn();
+    if( poLayerDefn == NULL )
+    {
+        CPLDebug("OGR", "GetLayerType() returns NULL !");
+        return wkbUnknown;
+    }
+    return poLayerDefn->GetGeomType();
 }
+
 /************************************************************************/
 /*                         OGR_L_GetGeomType()                          */
 /************************************************************************/
