@@ -796,10 +796,10 @@ OGRFeature *OGRShapeLayer::GetFeature( long nFeatureId )
 }
 
 /************************************************************************/
-/*                             SetFeature()                             */
+/*                             ISetFeature()                             */
 /************************************************************************/
 
-OGRErr OGRShapeLayer::SetFeature( OGRFeature *poFeature )
+OGRErr OGRShapeLayer::ISetFeature( OGRFeature *poFeature )
 
 {
     if (!TouchLayer())
@@ -907,10 +907,10 @@ OGRErr OGRShapeLayer::DeleteFeature( long nFID )
 }
 
 /************************************************************************/
-/*                           CreateFeature()                            */
+/*                           ICreateFeature()                            */
 /************************************************************************/
 
-OGRErr OGRShapeLayer::CreateFeature( OGRFeature *poFeature )
+OGRErr OGRShapeLayer::ICreateFeature( OGRFeature *poFeature )
 
 {
     OGRErr eErr;

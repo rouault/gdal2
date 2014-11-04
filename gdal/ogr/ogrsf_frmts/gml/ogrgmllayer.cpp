@@ -572,10 +572,10 @@ static void GMLWriteField(OGRGMLDataSource* poDS,
 }
 
 /************************************************************************/
-/*                           CreateFeature()                            */
+/*                           ICreateFeature()                            */
 /************************************************************************/
 
-OGRErr OGRGMLLayer::CreateFeature( OGRFeature *poFeature )
+OGRErr OGRGMLLayer::ICreateFeature( OGRFeature *poFeature )
 
 {
     int bIsGML3Output = poDS->IsGML3Output();
@@ -883,6 +883,9 @@ int OGRGMLLayer::TestCapability( const char * pszCap )
 
     else if( EQUAL(pszCap,OLCStringsAsUTF8) )
         return TRUE;
+
+    else if( EQUAL(pszCap,OLCCurveGeometries) )
+        return poDS->IsGML3Output();
 
     else 
         return FALSE;

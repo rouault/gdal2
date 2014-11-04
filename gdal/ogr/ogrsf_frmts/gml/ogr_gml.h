@@ -83,7 +83,7 @@ class OGRGMLLayer : public OGRLayer
     int                 GetFeatureCount( int bForce = TRUE );
     OGRErr              GetExtent(OGREnvelope *psExtent, int bForce = TRUE);
 
-    OGRErr              CreateFeature( OGRFeature *poFeature );
+    OGRErr              ICreateFeature( OGRFeature *poFeature );
     
     OGRFeatureDefn *    GetLayerDefn() { return poFeatureDefn; }
 

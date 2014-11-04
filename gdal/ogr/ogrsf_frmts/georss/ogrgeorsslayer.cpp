@@ -1117,10 +1117,10 @@ static void OGRGeoRSSLayerWriteSimpleElement(VSILFILE* fp,
 }
 
 /************************************************************************/
-/*                           CreateFeature()                            */
+/*                           ICreateFeature()                            */
 /************************************************************************/
 
-OGRErr OGRGeoRSSLayer::CreateFeature( OGRFeature *poFeature )
+OGRErr OGRGeoRSSLayer::ICreateFeature( OGRFeature *poFeature )
 
 {
     VSILFILE* fp = poDS->GetOutputFP();

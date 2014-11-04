@@ -104,7 +104,7 @@ class OGRPGDumpLayer : public OGRLayer
     virtual void        ResetReading()  { }
     virtual int         TestCapability( const char * );
     
-    virtual OGRErr      CreateFeature( OGRFeature *poFeature );
+    virtual OGRErr      ICreateFeature( OGRFeature *poFeature );
     virtual OGRErr      CreateFeatureViaInsert( OGRFeature *poFeature );
     virtual OGRErr      CreateFeatureViaCopy( OGRFeature *poFeature );
 

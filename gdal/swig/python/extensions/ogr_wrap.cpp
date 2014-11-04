@@ -20603,6 +20603,62 @@ fail:
 }
 
 
+SWIGINTERN PyObject *_wrap_SetNonLinearGeometriesEnabledFlag(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  int arg1 ;
+  int val1 ;
+  int ecode1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SetNonLinearGeometriesEnabledFlag",&obj0)) SWIG_fail;
+  ecode1 = SWIG_AsVal_int(obj0, &val1);
+  if (!SWIG_IsOK(ecode1)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode1), "in method '" "SetNonLinearGeometriesEnabledFlag" "', argument " "1"" of type '" "int""'");
+  } 
+  arg1 = static_cast< int >(val1);
+  {
+    if ( bUseExceptions ) {
+      CPLErrorReset();
+    }
+    OGRSetNonLinearGeometriesEnabledFlag(arg1);
+    if ( bUseExceptions ) {
+      CPLErr eclass = CPLGetLastErrorType();
+      if ( eclass == CE_Failure || eclass == CE_Fatal ) {
+        SWIG_exception( SWIG_RuntimeError, CPLGetLastErrorMsg() );
+      }
+    }
+  }
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_GetNonLinearGeometriesEnabledFlag(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  int result;
+  
+  if (!PyArg_ParseTuple(args,(char *)":GetNonLinearGeometriesEnabledFlag")) SWIG_fail;
+  {
+    if ( bUseExceptions ) {
+      CPLErrorReset();
+    }
+    result = (int)OGRGetNonLinearGeometriesEnabledFlag();
+    if ( bUseExceptions ) {
+      CPLErr eclass = CPLGetLastErrorType();
+      if ( eclass == CE_Failure || eclass == CE_Fatal ) {
+        SWIG_exception( SWIG_RuntimeError, CPLGetLastErrorMsg() );
+      }
+    }
+  }
+  resultobj = SWIG_From_int(static_cast< int >(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
 SWIGINTERN PyObject *_wrap_GetOpenDS(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   int arg1 ;
@@ -24895,6 +24951,8 @@ static PyMethodDef SwigMethods[] = {
 	 { (char *)"RegisterAll", _wrap_RegisterAll, METH_VARARGS, (char *)"RegisterAll()"},
 	 { (char *)"GeometryTypeToName", _wrap_GeometryTypeToName, METH_VARARGS, (char *)"GeometryTypeToName(OGRwkbGeometryType eType) -> char"},
 	 { (char *)"GetFieldTypeName", _wrap_GetFieldTypeName, METH_VARARGS, (char *)"GetFieldTypeName(OGRFieldType type) -> char"},
+	 { (char *)"SetNonLinearGeometriesEnabledFlag", _wrap_SetNonLinearGeometriesEnabledFlag, METH_VARARGS, (char *)"SetNonLinearGeometriesEnabledFlag(int bFlag)"},
+	 { (char *)"GetNonLinearGeometriesEnabledFlag", _wrap_GetNonLinearGeometriesEnabledFlag, METH_VARARGS, (char *)"GetNonLinearGeometriesEnabledFlag() -> int"},
 	 { (char *)"GetOpenDS", _wrap_GetOpenDS, METH_VARARGS, (char *)"GetOpenDS(int ds_number) -> DataSource"},
 	 { (char *)"Open", (PyCFunction) _wrap_Open, METH_VARARGS | METH_KEYWORDS, (char *)"Open(char utf8_path, int update = 0) -> DataSource"},
 	 { (char *)"OpenShared", (PyCFunction) _wrap_OpenShared, METH_VARARGS | METH_KEYWORDS, (char *)"OpenShared(char utf8_path, int update = 0) -> DataSource"},
@@ -25668,6 +25726,7 @@ SWIG_init(void) {
   SWIG_Python_SetConstant(d, "OLCStringsAsUTF8",SWIG_FromCharPtr("StringsAsUTF8"));
   SWIG_Python_SetConstant(d, "OLCIgnoreFields",SWIG_FromCharPtr("IgnoreFields"));
   SWIG_Python_SetConstant(d, "OLCCreateGeomField",SWIG_FromCharPtr("CreateGeomField"));
+  SWIG_Python_SetConstant(d, "OLCCurveGeometries",SWIG_FromCharPtr("CurveGeometries"));
   SWIG_Python_SetConstant(d, "ODsCCreateLayer",SWIG_FromCharPtr("CreateLayer"));
   SWIG_Python_SetConstant(d, "ODsCDeleteLayer",SWIG_FromCharPtr("DeleteLayer"));
   SWIG_Python_SetConstant(d, "ODsCCreateGeomFieldAfterCreateLayer",SWIG_FromCharPtr("CreateGeomFieldAfterCreateLayer"));

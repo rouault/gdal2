@@ -700,10 +700,10 @@ void OGRGFTTableLayer::CreateTableIfNecessary()
 }
 
 /************************************************************************/
-/*                           CreateFeature()                            */
+/*                           ICreateFeature()                            */
 /************************************************************************/
 
-OGRErr OGRGFTTableLayer::CreateFeature( OGRFeature *poFeature )
+OGRErr OGRGFTTableLayer::ICreateFeature( OGRFeature *poFeature )
 
 {
     if (!poDS->IsReadWrite())
@@ -885,10 +885,10 @@ OGRErr OGRGFTTableLayer::CreateFeature( OGRFeature *poFeature )
 }
 
 /************************************************************************/
-/*                           SetFeature()                               */
+/*                           ISetFeature()                               */
 /************************************************************************/
 
-OGRErr      OGRGFTTableLayer::SetFeature( OGRFeature *poFeature )
+OGRErr      OGRGFTTableLayer::ISetFeature( OGRFeature *poFeature )
 {
     GetLayerDefn();
 

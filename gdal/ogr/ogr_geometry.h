@@ -98,6 +98,7 @@ typedef OGRCurvePolygon* (*OGRSurfaceCasterToCurvePolygon)(OGRSurface*);
  * (working draft) ISO SQL/MM Part 3 (ISO/IEC 13249-3)</a> curve geometries :
  * CIRCULARSTRING (OGRCircularString), COMPOUNDCURVE (OGRCompoundCurve),
  * CURVEPOLYGON (OGRCurvePolygon), MULTICURVE (OGRMultiCurve) and MULTISURFACE (OGRMultiSurface).
+ *
  */
  
 class CPL_DLL OGRGeometry

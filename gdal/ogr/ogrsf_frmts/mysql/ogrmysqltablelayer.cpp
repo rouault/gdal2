@@ -605,14 +605,14 @@ int OGRMySQLTableLayer::TestCapability( const char * pszCap )
 }
 
 /************************************************************************/
-/*                             SetFeature()                             */
+/*                             ISetFeature()                             */
 /*                                                                      */
 /*      SetFeature() is implemented by dropping the old copy of the     */
 /*      feature in question (if there is one) and then creating a       */
 /*      new one with the provided feature id.                           */
 /************************************************************************/
 
-OGRErr OGRMySQLTableLayer::SetFeature( OGRFeature *poFeature )
+OGRErr OGRMySQLTableLayer::ISetFeature( OGRFeature *poFeature )
 
 {
     OGRErr eErr;
@@ -682,10 +682,10 @@ OGRErr OGRMySQLTableLayer::DeleteFeature( long nFID )
 
 
 /************************************************************************/
-/*                       CreateFeature()                                */
+/*                       ICreateFeature()                                */
 /************************************************************************/
 
-OGRErr OGRMySQLTableLayer::CreateFeature( OGRFeature *poFeature )
+OGRErr OGRMySQLTableLayer::ICreateFeature( OGRFeature *poFeature )
 
 {
     MYSQL_RES           *hResult=NULL;

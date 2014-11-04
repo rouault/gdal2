@@ -282,10 +282,10 @@ OGRErr OGRCARTODBTableLayer::CreateField( OGRFieldDefn *poFieldIn,
 }
 
 /************************************************************************/
-/*                           CreateFeature()                            */
+/*                           ICreateFeature()                            */
 /************************************************************************/
 
-OGRErr OGRCARTODBTableLayer::CreateFeature( OGRFeature *poFeature )
+OGRErr OGRCARTODBTableLayer::ICreateFeature( OGRFeature *poFeature )
 
 {
     int i;
@@ -507,10 +507,10 @@ OGRErr OGRCARTODBTableLayer::CreateFeature( OGRFeature *poFeature )
 }
 
 /************************************************************************/
-/*                            SetFeature()                              */
+/*                            ISetFeature()                              */
 /************************************************************************/
 
-OGRErr OGRCARTODBTableLayer::SetFeature( OGRFeature *poFeature )
+OGRErr OGRCARTODBTableLayer::ISetFeature( OGRFeature *poFeature )
 
 {
     int i;

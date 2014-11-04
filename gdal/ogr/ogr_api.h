@@ -233,6 +233,9 @@ OGRErr CPL_DLL OGRSetGenerate_DB2_V72_BYTE_ORDER(
 
 int CPL_DLL OGRGetGenerate_DB2_V72_BYTE_ORDER(void);
 
+void CPL_DLL OGRSetNonLinearGeometriesEnabledFlag(int bFlag);
+int CPL_DLL OGRGetNonLinearGeometriesEnabledFlag();
+
 /* -------------------------------------------------------------------- */
 /*      Feature related (ogr_feature.h)                                 */
 /* -------------------------------------------------------------------- */

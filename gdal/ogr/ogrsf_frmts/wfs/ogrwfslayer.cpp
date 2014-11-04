@@ -1642,10 +1642,10 @@ CPLString OGRWFSLayer::GetPostHeader()
 }
 
 /************************************************************************/
-/*                          CreateFeature()                             */
+/*                          ICreateFeature()                             */
 /************************************************************************/
 
-OGRErr OGRWFSLayer::CreateFeature( OGRFeature *poFeature )
+OGRErr OGRWFSLayer::ICreateFeature( OGRFeature *poFeature )
 {
     if (!TestCapability(OLCSequentialWrite))
     {
@@ -1894,10 +1894,10 @@ OGRErr OGRWFSLayer::CreateFeature( OGRFeature *poFeature )
 
 
 /************************************************************************/
-/*                             SetFeature()                             */
+/*                             ISetFeature()                             */
 /************************************************************************/
 
-OGRErr OGRWFSLayer::SetFeature( OGRFeature *poFeature )
+OGRErr OGRWFSLayer::ISetFeature( OGRFeature *poFeature )
 {
     if (!TestCapability(OLCRandomWrite))
     {

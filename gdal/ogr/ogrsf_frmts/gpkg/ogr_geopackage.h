@@ -155,6 +155,7 @@ class OGRGeoPackageTableLayer : public OGRGeoPackageLayer
     int                         bDeferedSpatialIndexCreation;
     int                         m_bHasSpatialIndex;
     int                         bDropRTreeTable;
+    int                         m_anHasGeometryExtension[wkbMultiSurface+1];
 
     virtual OGRErr      ResetStatement();
     
@@ -172,8 +173,8 @@ class OGRGeoPackageTableLayer : public OGRGeoPackageLayer
     int                 TestCapability( const char * );
     OGRErr              CreateField( OGRFieldDefn *poField, int bApproxOK = TRUE );
     void                ResetReading();
-	OGRErr				CreateFeature( OGRFeature *poFeater );
-    OGRErr              SetFeature( OGRFeature *poFeature );
+	OGRErr              ICreateFeature( OGRFeature *poFeater );
+    OGRErr              ISetFeature( OGRFeature *poFeature );
     OGRErr              DeleteFeature(long nFID);
     virtual void        SetSpatialFilter( OGRGeometry * );
     OGRErr              SetAttributeFilter( const char *pszQuery );
@@ -203,6 +204,7 @@ class OGRGeoPackageTableLayer : public OGRGeoPackageLayer
                                          OGRGeometry* poFilterGeom);
 
     int                 HasSpatialIndex();
+    int                 CreateGeometryExtensionIfNecessary(OGRwkbGeometryType eGType);
 
     /************************************************************************/
     /* GPKG methods */

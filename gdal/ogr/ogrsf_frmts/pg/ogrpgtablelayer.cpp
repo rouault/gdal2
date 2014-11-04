@@ -1262,12 +1262,12 @@ void OGRPGTableLayer::AppendFieldValue(PGconn *hPGConn, CPLString& osCommand,
 }
 
 /************************************************************************/
-/*                             SetFeature()                             */
+/*                             ISetFeature()                             */
 /*                                                                      */
 /*      SetFeature() is implemented by an UPDATE SQL command            */
 /************************************************************************/
 
-OGRErr OGRPGTableLayer::SetFeature( OGRFeature *poFeature )
+OGRErr OGRPGTableLayer::ISetFeature( OGRFeature *poFeature )
 
 {
     PGconn              *hPGConn = poDS->GetPGConn();
@@ -1481,10 +1481,10 @@ OGRErr OGRPGTableLayer::SetFeature( OGRFeature *poFeature )
 }
 
 /************************************************************************/
-/*                           CreateFeature()                            */
+/*                           ICreateFeature()                            */
 /************************************************************************/
 
-OGRErr OGRPGTableLayer::CreateFeature( OGRFeature *poFeature )
+OGRErr OGRPGTableLayer::ICreateFeature( OGRFeature *poFeature )
 {
     GetLayerDefn()->GetFieldCount();
 
@@ -2268,6 +2268,9 @@ int OGRPGTableLayer::TestCapability( const char * pszCap )
     }
 
     else if( EQUAL(pszCap,OLCStringsAsUTF8) )
+        return TRUE;
+
+    else if( EQUAL(pszCap,OLCCurveGeometries) )
         return TRUE;
 
     else

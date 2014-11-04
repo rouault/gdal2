@@ -268,6 +268,7 @@ typedef void retGetPoints;
 %constant char *OLCStringsAsUTF8       = "StringsAsUTF8";
 %constant char *OLCIgnoreFields        = "IgnoreFields";
 %constant char *OLCCreateGeomField     = "CreateGeomField";
+%constant char *OLCCurveGeometries     = "CurveGeometries";
 
 %constant char *ODsCCreateLayer        = "CreateLayer";
 %constant char *ODsCDeleteLayer        = "DeleteLayer";
@@ -300,6 +301,7 @@ typedef int OGRErr;
 #define OLCFastSetNextByIndex  "FastSetNextByIndex"
 #define OLCStringsAsUTF8       "StringsAsUTF8"
 #define OLCCreateGeomField     "CreateGeomField"
+#define OLCCurveGeometries     "CurveGeometries"
 
 #define ODsCCreateLayer        "CreateLayer"
 #define ODsCDeleteLayer        "DeleteLayer"
@@ -2610,6 +2612,12 @@ const char *OGRGeometryTypeToName( OGRwkbGeometryType eType );
 
 %rename (GetFieldTypeName) OGR_GetFieldTypeName;
 const char * OGR_GetFieldTypeName(OGRFieldType type);
+
+%rename (SetNonLinearGeometriesEnabledFlag) OGRSetNonLinearGeometriesEnabledFlag;
+void OGRSetNonLinearGeometriesEnabledFlag( int bFlag );
+
+%rename (GetNonLinearGeometriesEnabledFlag) OGRGetNonLinearGeometriesEnabledFlag;
+int OGRGetNonLinearGeometriesEnabledFlag(void);
 
 %inline %{
   OGRDataSourceShadow* GetOpenDS(int ds_number) {

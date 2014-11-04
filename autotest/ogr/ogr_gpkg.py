@@ -865,7 +865,7 @@ def ogr_gpkg_17():
     return 'success'
 
 ###############################################################################
-# Run geometry type extension
+# Test geometry type extension
 
 def ogr_gpkg_18():
 
@@ -903,6 +903,39 @@ def ogr_gpkg_18():
     ds = None
 
     gdal.Unlink('/vsimem/ogr_gpkg_18.gpkg')
+    
+    # Also test with a wkbUnknown layer and add curve geometries afterwards
+    ds = gdaltest.gpkg_dr.CreateDataSource('/vsimem/ogr_gpkg_18.gpkg')
+    lyr = ds.CreateLayer('test')
+    f = ogr.Feature(lyr.GetLayerDefn())
+    f.SetGeometry(ogr.CreateGeometryFromWkt('CIRCULARSTRING(0 0,1 0,0 0)'))
+    lyr.CreateFeature(f)
+    f = None
+
+    sql_lyr = ds.ExecuteSQL("SELECT * FROM gpkg_extensions WHERE table_name = 'test' AND extension_name = 'gpkg_geom_CIRCULARSTRING'")
+    if sql_lyr.GetFeatureCount() != 1:
+        gdaltest.post_reason('fail')
+        return 'fail'
+    ds.ReleaseResultSet(sql_lyr)
+
+    ds = None
+    
+    ds = ogr.Open('/vsimem/ogr_gpkg_18.gpkg')
+    if gdal.GetLastErrorMsg() != '':
+        gdaltest.post_reason('fail : warning NOT expected')
+        return 'fail'
+
+    lyr = ds.GetLayer(0)
+    f = lyr.GetNextFeature()
+    g = f.GetGeometryRef()
+    if g.GetGeometryType() != ogr.wkbCircularString:
+        gdaltest.post_reason('fail')
+        return 'fail'
+
+    ds = None
+
+    gdal.Unlink('/vsimem/ogr_gpkg_18.gpkg')
+    
     return 'success'
 
 ###############################################################################

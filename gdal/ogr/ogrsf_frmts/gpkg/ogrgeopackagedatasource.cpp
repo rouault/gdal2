@@ -846,26 +846,7 @@ OGRLayer* OGRGeoPackageDataSource::ICreateLayer( const char * pszLayerName,
     }
 
     if( OGR_GT_IsNonLinear( eGType ) )
-    {
-        if( CreateExtensionsTableIfNecessary() != OGRERR_NONE )
-        {
-            delete poLayer;
-            return NULL;
-        }
-            /* Register the table in gpkg_extensions */
-        char* pszSQL = sqlite3_mprintf(
-                    "INSERT INTO gpkg_extensions "
-                    "(table_name,column_name,extension_name,definition,scope) "
-                    "VALUES ('%q', '%q', 'gpkg_geom_%s', 'GeoPackage 1.0 Specification Annex J', 'write-only')",
-                    pszLayerName, pszGeomColumnName, pszGeometryType);
-        err = SQLCommand(GetDB(), pszSQL);
-        sqlite3_free(pszSQL);
-        if ( err != OGRERR_NONE )
-        {
-            delete poLayer;
-            return NULL;
-        }
-    }
+        poLayer->CreateGeometryExtensionIfNecessary(eGType);
 
     m_papoLayers = (OGRGeoPackageTableLayer**)CPLRealloc(m_papoLayers,  sizeof(OGRGeoPackageTableLayer*) * (m_nLayers+1));
     m_papoLayers[m_nLayers++] = poLayer;

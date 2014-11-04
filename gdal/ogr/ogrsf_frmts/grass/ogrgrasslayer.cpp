@@ -991,17 +991,17 @@ bool OGRGRASSLayer::SetAttributes ( OGRFeature *poFeature, dbTable *table )
 }
 
 /************************************************************************/
-/*                             SetFeature()                             */
+/*                             ISetFeature()                             */
 /************************************************************************/
-OGRErr OGRGRASSLayer::SetFeature( OGRFeature *poFeature )
+OGRErr OGRGRASSLayer::ISetFeature( OGRFeature *poFeature )
 {
     return OGRERR_FAILURE;
 }
 
 /************************************************************************/
-/*                           CreateFeature()                            */
+/*                           ICreateFeature()                            */
 /************************************************************************/
-OGRErr OGRGRASSLayer::CreateFeature( OGRFeature *poFeature )
+OGRErr OGRGRASSLayer::ICreateFeature( OGRFeature *poFeature )
 {
     return OGRERR_FAILURE;
 }

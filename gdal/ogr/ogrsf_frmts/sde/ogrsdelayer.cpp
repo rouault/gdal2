@@ -2406,9 +2406,9 @@ OGRErr OGRSDELayer::CreateField( OGRFieldDefn *poFieldIn, int bApproxOK )
 
 
 /************************************************************************/
-/*                           SetFeature()                               */
+/*                           ISetFeature()                               */
 /************************************************************************/
-OGRErr OGRSDELayer::SetFeature( OGRFeature *poFeature )
+OGRErr OGRSDELayer::ISetFeature( OGRFeature *poFeature )
 
 {
     LONG                nSDEErr;
@@ -2444,9 +2444,9 @@ OGRErr OGRSDELayer::SetFeature( OGRFeature *poFeature )
 }
 
 /************************************************************************/
-/*                           CreateFeature()                            */
+/*                           ICreateFeature()                            */
 /************************************************************************/
-OGRErr OGRSDELayer::CreateFeature( OGRFeature *poFeature )
+OGRErr OGRSDELayer::ICreateFeature( OGRFeature *poFeature )
 
 {
     LONG                nSDEErr;

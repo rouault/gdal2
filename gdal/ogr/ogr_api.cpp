@@ -33,6 +33,8 @@
 #include "ogr_api.h"
 #include "cpl_error.h"
 
+static int bNonLinearGeometriesEnabled = TRUE;
+
 /************************************************************************/
 /*                        OGR_G_GetPointCount()                         */
 /************************************************************************/
@@ -1158,4 +1160,54 @@ OGRGeometryH OGR_G_Value( OGRGeometryH hGeom, double dfDistance )
     {
         return NULL;
     }
+}
+
+/************************************************************************/
+/*                 OGRSetNonLinearGeometriesEnabledFlag()               */
+/************************************************************************/
+
+/**
+ * \brief Set flag to enable/disable returning non-linear geometries in the C API.
+ *
+ * This flag has only an effect on the OGR_F_GetGeometryRef(), OGR_F_GetGeomFieldRef(),
+ * OGR_L_GetGeomType(), OGR_GFld_GetType() and OGR_FD_GetGeomType() C API, and
+ * corresponding methods in the SWIG bindings. It is meant as making it simple
+ * for applications using the OGR C API not to have to deal with non-linear geometries,
+ * even if such geometries might be returned by drivers. In which case, they
+ * will be transformed into their closest linear geometry, by doing linear
+ * approximation, with OGR_G_ForceTo().
+ *
+ * Libraries should generally *not* use that method, since that could interfere
+ * with other libraries or applications.
+ *
+ * Note that it *does* not affect the behaviour of the C++ API.
+ *
+ * @param bFlag TRUE if non-linear geometries might be returned (default value).
+ *              FALSE to ask for non-linear geometries to be approximated as linear geometries.
+ *
+ * @return a point or NULL.
+ *
+ * @since GDAL 2.0
+ */
+
+void OGRSetNonLinearGeometriesEnabledFlag(int bFlag)
+{
+    bNonLinearGeometriesEnabled = bFlag;
+}
+
+/************************************************************************/
+/*                 OGRGetNonLinearGeometriesEnabledFlag()               */
+/************************************************************************/
+
+/**
+ * \brief Get flag to enable/disable returning non-linear geometries in the C API.
+ *
+ * return TRUE if non-linear geometries might be returned (default value is TRUE)
+ *
+ * @since GDAL 2.0
+ * @see OGRSetNonLinearGeometriesEnabledFlag()
+ */
+int OGRGetNonLinearGeometriesEnabledFlag(void)
+{
+    return bNonLinearGeometriesEnabled;
 }

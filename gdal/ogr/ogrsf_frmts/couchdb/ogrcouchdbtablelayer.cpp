@@ -1232,10 +1232,10 @@ int OGRCouchDBTableLayer::GetMaximumId()
 }
 
 /************************************************************************/
-/*                           CreateFeature()                            */
+/*                           ICreateFeature()                            */
 /************************************************************************/
 
-OGRErr OGRCouchDBTableLayer::CreateFeature( OGRFeature *poFeature )
+OGRErr OGRCouchDBTableLayer::ICreateFeature( OGRFeature *poFeature )
 
 {
     GetLayerDefn();
@@ -1371,10 +1371,10 @@ OGRErr OGRCouchDBTableLayer::CreateFeature( OGRFeature *poFeature )
 }
 
 /************************************************************************/
-/*                           SetFeature()                               */
+/*                           ISetFeature()                               */
 /************************************************************************/
 
-OGRErr      OGRCouchDBTableLayer::SetFeature( OGRFeature *poFeature )
+OGRErr      OGRCouchDBTableLayer::ISetFeature( OGRFeature *poFeature )
 {
     GetLayerDefn();
 

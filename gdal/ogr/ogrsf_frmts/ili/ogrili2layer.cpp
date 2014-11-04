@@ -71,10 +71,10 @@ OGRILI2Layer::~OGRILI2Layer()
 
 
 /************************************************************************/
-/*                             SetFeature()                             */
+/*                             ISetFeature()                             */
 /************************************************************************/
 
-OGRErr OGRILI2Layer::SetFeature (OGRFeature *poFeature)
+OGRErr OGRILI2Layer::ISetFeature (OGRFeature *poFeature)
 {
     listFeature.push_back(poFeature);
     return OGRERR_NONE;
@@ -268,10 +268,10 @@ static int OGR2ILIGeometryAppend( OGRGeometry *poGeometry, VSILFILE* fp, const c
 }
 
 /************************************************************************/
-/*                           CreateFeature()                            */
+/*                           ICreateFeature()                            */
 /************************************************************************/
 
-OGRErr OGRILI2Layer::CreateFeature( OGRFeature *poFeature ) {
+OGRErr OGRILI2Layer::ICreateFeature( OGRFeature *poFeature ) {
     static char         szTempBuffer[80];
     const char* tid;
     int iField = 0;

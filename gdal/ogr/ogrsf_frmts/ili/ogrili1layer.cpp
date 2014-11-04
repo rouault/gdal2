@@ -287,10 +287,10 @@ int OGRILI1Layer::GeometryAppend( OGRGeometry *poGeometry )
 }
 
 /************************************************************************/
-/*                           CreateFeature()                            */
+/*                           ICreateFeature()                            */
 /************************************************************************/
 
-OGRErr OGRILI1Layer::CreateFeature( OGRFeature *poFeature ) {
+OGRErr OGRILI1Layer::ICreateFeature( OGRFeature *poFeature ) {
     static long tid = -1; //system generated TID (must be unique within table)
     VSIFPrintf( poDS->GetTransferFile(), "OBJE" );
 

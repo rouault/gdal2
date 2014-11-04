@@ -314,9 +314,9 @@ public:
 
     virtual OGRErr      SetAttributeFilter( const char * );
 
-    virtual OGRErr      SetFeature( OGRFeature *poFeature );
+    virtual OGRErr      ISetFeature( OGRFeature *poFeature );
     virtual OGRErr      DeleteFeature( long nFID );
-    virtual OGRErr      CreateFeature( OGRFeature *poFeature );
+    virtual OGRErr      ICreateFeature( OGRFeature *poFeature );
 
     virtual OGRErr      CreateField( OGRFieldDefn *poField,
                                      int bApproxOK = TRUE );

@@ -133,6 +133,7 @@ OLCFastSetNextByIndex = _ogr.OLCFastSetNextByIndex
 OLCStringsAsUTF8 = _ogr.OLCStringsAsUTF8
 OLCIgnoreFields = _ogr.OLCIgnoreFields
 OLCCreateGeomField = _ogr.OLCCreateGeomField
+OLCCurveGeometries = _ogr.OLCCurveGeometries
 ODsCCreateLayer = _ogr.ODsCCreateLayer
 ODsCDeleteLayer = _ogr.ODsCDeleteLayer
 ODsCCreateGeomFieldAfterCreateLayer = _ogr.ODsCCreateGeomFieldAfterCreateLayer
@@ -5283,6 +5284,14 @@ def GeometryTypeToName(*args):
 def GetFieldTypeName(*args):
   """GetFieldTypeName(OGRFieldType type) -> char"""
   return _ogr.GetFieldTypeName(*args)
+
+def SetNonLinearGeometriesEnabledFlag(*args):
+  """SetNonLinearGeometriesEnabledFlag(int bFlag)"""
+  return _ogr.SetNonLinearGeometriesEnabledFlag(*args)
+
+def GetNonLinearGeometriesEnabledFlag(*args):
+  """GetNonLinearGeometriesEnabledFlag() -> int"""
+  return _ogr.GetNonLinearGeometriesEnabledFlag(*args)
 
 def GetOpenDS(*args):
   """GetOpenDS(int ds_number) -> DataSource"""
