@@ -3106,6 +3106,166 @@ def ogr_geom_getcurvegeometry():
     return 'success'
 
 ###############################################################################
+# Test OGR_GT_ functions
+
+def ogr_geom_gt_functions():
+
+    # GT_HasZ
+    tuples = [ (ogr.wkbPoint, 0),
+               (ogr.wkbPoint25D, 1),
+               (ogr.wkbCircularString, 0),
+               (ogr.wkbCircularStringZ, 1) ]
+    for (gt, res) in tuples:
+        if ogr.GT_HasZ(gt) != res:
+            gdaltest.post_reason('fail')
+            print(gt)
+            return 'fail'
+
+    # GT_SetZ
+    tuples = [ (ogr.wkbPoint, ogr.wkbPoint25D),
+               (ogr.wkbPoint25D, ogr.wkbPoint25D),
+               (ogr.wkbCircularString, ogr.wkbCircularStringZ),
+               (ogr.wkbCircularStringZ, ogr.wkbCircularStringZ) ]
+    for (gt, res) in tuples:
+        if ogr.GT_SetZ(gt) != res:
+            gdaltest.post_reason('fail')
+            print(gt)
+            return 'fail'
+
+    # OGR_GT_SetModifier
+    tuples = [ (ogr.wkbPoint, 1, ogr.wkbPoint25D),
+               (ogr.wkbPoint25D, 1, ogr.wkbPoint25D),
+               (ogr.wkbCircularString, 1, ogr.wkbCircularStringZ),
+               (ogr.wkbCircularStringZ, 1, ogr.wkbCircularStringZ),
+               (ogr.wkbPoint, 0, ogr.wkbPoint),
+               (ogr.wkbPoint25D, 0, ogr.wkbPoint),
+               (ogr.wkbCircularString, 0, ogr.wkbCircularString),
+               (ogr.wkbCircularStringZ, 0, ogr.wkbCircularString)]
+    for (gt, mod, res) in tuples:
+        if ogr.GT_SetModifier(gt, mod) != res:
+            gdaltest.post_reason('fail')
+            print(gt)
+            return 'fail'
+
+    # GT_Flatten
+    tuples = [ (ogr.wkbPoint, ogr.wkbPoint),
+               (ogr.wkbPoint25D, ogr.wkbPoint),
+               (ogr.wkbCircularString, ogr.wkbCircularString),
+               (ogr.wkbCircularStringZ, ogr.wkbCircularString)]
+    for (gt, res) in tuples:
+        if ogr.GT_Flatten(gt) != res:
+            gdaltest.post_reason('fail')
+            print(gt)
+            return 'fail'
+
+    # GT_IsSubClassOf
+    tuples = [ (ogr.wkbPoint, ogr.wkbPoint, 1),
+               (ogr.wkbPoint25D, ogr.wkbPoint, 1),
+               (ogr.wkbPoint, ogr.wkbUnknown, 1),
+               (ogr.wkbPoint, ogr.wkbLineString, 0),
+               (ogr.wkbPolygon, ogr.wkbCurvePolygon, 1),
+               (ogr.wkbMultiSurface, ogr.wkbGeometryCollection, 1),
+               (ogr.wkbMultiPolygon, ogr.wkbMultiSurface, 1),
+               (ogr.wkbMultiLineString, ogr.wkbMultiCurve, 1),
+               (ogr.wkbUnknown, ogr.wkbUnknown, 1),
+               (ogr.wkbUnknown, ogr.wkbPoint, 0),
+               ]
+    for (gt, gt2, res) in tuples:
+        if ogr.GT_IsSubClassOf(gt, gt2) != res:
+            gdaltest.post_reason('fail')
+            print(gt)
+            print(gt2)
+            return 'fail'
+
+    # GT_IsCurve
+    tuples = [ (ogr.wkbPoint, 0),
+               (ogr.wkbCircularString, 1),
+               (ogr.wkbCircularStringZ, 1),
+               (ogr.wkbLineString, 1),
+               (ogr.wkbCompoundCurve, 1),
+               (ogr.wkbCurvePolygon, 0) ]
+    for (gt, res) in tuples:
+        if ogr.GT_IsCurve(gt) != res:
+            gdaltest.post_reason('fail')
+            print(gt)
+            return 'fail'
+
+    # GT_IsSurface
+    tuples = [ (ogr.wkbPoint, 0),
+               (ogr.wkbCircularString, 0),
+               (ogr.wkbCurvePolygon, 1),
+               (ogr.wkbPolygon, 1) ]
+    for (gt, res) in tuples:
+        if ogr.GT_IsSurface(gt) != res:
+            gdaltest.post_reason('fail')
+            print(gt)
+            return 'fail'
+
+    # GT_GetCollection
+    tuples = [ (ogr.wkbPoint, ogr.wkbMultiPoint),
+               (ogr.wkbCircularString, ogr.wkbMultiCurve),
+               (ogr.wkbCompoundCurve, ogr.wkbMultiCurve),
+               (ogr.wkbCurvePolygon, ogr.wkbMultiSurface),
+               (ogr.wkbLineString, ogr.wkbMultiLineString),
+               (ogr.wkbPolygon, ogr.wkbMultiPolygon) ]
+    for (gt, res) in tuples:
+        if ogr.GT_GetCollection(gt) != res:
+            gdaltest.post_reason('fail')
+            print(gt)
+            return 'fail'
+
+    # GT_IsNonLinear
+    tuples = [ (ogr.wkbPoint, 0),
+               (ogr.wkbCircularString, 1),
+               (ogr.wkbCompoundCurve, 1),
+               (ogr.wkbCurvePolygon, 1),
+               (ogr.wkbMultiCurve, 1),
+               (ogr.wkbMultiSurface, 1),
+               (ogr.wkbLineString, 0),
+               (ogr.wkbPolygon, 0) ]
+    for (gt, res) in tuples:
+        if ogr.GT_IsNonLinear(gt) != res:
+            gdaltest.post_reason('fail')
+            print(gt)
+            return 'fail'
+
+    # GT_GetCurve
+    tuples = [ (ogr.wkbPoint, ogr.wkbPoint),
+               (ogr.wkbCircularString, ogr.wkbCircularString),
+               (ogr.wkbCompoundCurve, ogr.wkbCompoundCurve),
+               (ogr.wkbCurvePolygon, ogr.wkbCurvePolygon),
+               (ogr.wkbLineString, ogr.wkbCompoundCurve),
+               (ogr.wkbPolygon, ogr.wkbCurvePolygon),
+               (ogr.wkbMultiLineString, ogr.wkbMultiCurve),
+               (ogr.wkbMultiPolygon, ogr.wkbMultiSurface),
+               (ogr.wkbMultiCurve, ogr.wkbMultiCurve),
+               (ogr.wkbMultiSurface, ogr.wkbMultiSurface) ]
+    for (gt, res) in tuples:
+        if ogr.GT_GetCurve(gt) != res:
+            gdaltest.post_reason('fail')
+            print(gt)
+            return 'fail'
+
+    # GT_GetLinear
+    tuples = [ (ogr.wkbPoint, ogr.wkbPoint),
+               (ogr.wkbCircularString, ogr.wkbLineString),
+               (ogr.wkbCompoundCurve, ogr.wkbLineString),
+               (ogr.wkbCurvePolygon, ogr.wkbPolygon),
+               (ogr.wkbLineString, ogr.wkbLineString),
+               (ogr.wkbPolygon, ogr.wkbPolygon),
+               (ogr.wkbMultiLineString, ogr.wkbMultiLineString),
+               (ogr.wkbMultiPolygon, ogr.wkbMultiPolygon),
+               (ogr.wkbMultiCurve, ogr.wkbMultiLineString),
+               (ogr.wkbMultiSurface, ogr.wkbMultiPolygon) ]
+    for (gt, res) in tuples:
+        if ogr.GT_GetLinear(gt) != res:
+            gdaltest.post_reason('fail')
+            print(gt)
+            return 'fail'
+
+    return 'success'
+
+###############################################################################
 # cleanup
 
 def ogr_geom_cleanup():
@@ -3153,6 +3313,7 @@ gdaltest_list = [
     ogr_geom_multicurve,
     ogr_geom_multisurface,
     ogr_geom_getcurvegeometry,
+    ogr_geom_gt_functions,
     ogr_geom_cleanup ]
 
 if __name__ == '__main__':

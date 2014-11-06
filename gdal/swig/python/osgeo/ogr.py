@@ -152,6 +152,81 @@ def UseExceptions(*args):
 def DontUseExceptions(*args):
   """DontUseExceptions()"""
   return _ogr.DontUseExceptions(*args)
+# Backup original dictionnary before doing anything else
+_initial_dict = globals().copy()
+
+@property
+def wkb25Bit(module):
+    import warnings
+    warnings.warn("ogr.wkb25DBit deprecated: use ogr.GT_Flatten(), ogr.GT_HasZ() or ogr.GT_SetZ() instead", DeprecationWarning)
+    return module._initial_dict['wkb25DBit']
+
+@property
+def wkb25DBit(module):
+    import warnings
+    warnings.warn("ogr.wkb25DBit deprecated: use ogr.GT_Flatten(), ogr.GT_HasZ() or ogr.GT_SetZ() instead", DeprecationWarning)
+    return module._initial_dict['wkb25DBit']
+
+# Inspired from http://www.dr-josiah.com/2013/12/properties-on-python-modules.html
+class _Module(object):
+    def __init__(self):
+        self.__dict__ = globals()
+        self._initial_dict = _initial_dict
+
+        # Transfer properties from the object to the Class
+        for k, v in list(self.__dict__.items()):
+            if isinstance(v, property):
+                setattr(self.__class__, k, v)
+                #del self.__dict__[k]
+
+        # Replace original module by our object
+        import sys
+        self._original_module = sys.modules[self.__name__]
+        sys.modules[self.__name__] = self
+
+# Custom help() replacement to display the help of the original module
+# instead of the one of our instance object
+class _MyHelper(object):
+
+    def __init__(self, module):
+        self.module = module
+        self.original_help = help
+
+        # Replace builtin help by ours
+        try:
+            import __builtin__ as builtins # Python 2
+        except ImportError:
+            import builtins # Python 3
+        builtins.help = self
+
+    def __repr__(self):
+        return self.original_help.__repr__()
+
+    def __call__(self, *args, **kwds):
+
+        if args == (self.module,):
+            import sys
+
+            # Restore original module before calling help() otherwise
+            # we don't get methods or classes mentionned
+            sys.modules[self.module.__name__] = self.module._original_module
+
+            ret = self.original_help(self.module._original_module, **kwds)
+
+            # Reinstall our module
+            sys.modules[self.module.__name__] = self.module
+
+            return ret
+        elif args == (self,):
+            return self.original_help(self.original_help, **kwds)
+        else:
+            return self.original_help(*args, **kwds)
+
+_MyHelper(_Module())
+del _MyHelper
+del _Module
+
+
 import osr
 import gdal
 class StyleTable(_object):
@@ -5284,6 +5359,50 @@ def GeometryTypeToName(*args):
 def GetFieldTypeName(*args):
   """GetFieldTypeName(OGRFieldType type) -> char"""
   return _ogr.GetFieldTypeName(*args)
+
+def GT_Flatten(*args):
+  """GT_Flatten(OGRwkbGeometryType eType) -> OGRwkbGeometryType"""
+  return _ogr.GT_Flatten(*args)
+
+def GT_SetZ(*args):
+  """GT_SetZ(OGRwkbGeometryType eType) -> OGRwkbGeometryType"""
+  return _ogr.GT_SetZ(*args)
+
+def GT_SetModifier(*args):
+  """GT_SetModifier(OGRwkbGeometryType eType, int bSetZ, int bSetM = True) -> OGRwkbGeometryType"""
+  return _ogr.GT_SetModifier(*args)
+
+def GT_HasZ(*args):
+  """GT_HasZ(OGRwkbGeometryType eType) -> int"""
+  return _ogr.GT_HasZ(*args)
+
+def GT_IsSubClassOf(*args):
+  """GT_IsSubClassOf(OGRwkbGeometryType eType, OGRwkbGeometryType eSuperType) -> int"""
+  return _ogr.GT_IsSubClassOf(*args)
+
+def GT_IsCurve(*args):
+  """GT_IsCurve(OGRwkbGeometryType arg0) -> int"""
+  return _ogr.GT_IsCurve(*args)
+
+def GT_IsSurface(*args):
+  """GT_IsSurface(OGRwkbGeometryType arg0) -> int"""
+  return _ogr.GT_IsSurface(*args)
+
+def GT_IsNonLinear(*args):
+  """GT_IsNonLinear(OGRwkbGeometryType arg0) -> int"""
+  return _ogr.GT_IsNonLinear(*args)
+
+def GT_GetCollection(*args):
+  """GT_GetCollection(OGRwkbGeometryType eType) -> OGRwkbGeometryType"""
+  return _ogr.GT_GetCollection(*args)
+
+def GT_GetCurve(*args):
+  """GT_GetCurve(OGRwkbGeometryType eType) -> OGRwkbGeometryType"""
+  return _ogr.GT_GetCurve(*args)
+
+def GT_GetLinear(*args):
+  """GT_GetLinear(OGRwkbGeometryType eType) -> OGRwkbGeometryType"""
+  return _ogr.GT_GetLinear(*args)
 
 def SetNonLinearGeometriesEnabledFlag(*args):
   """SetNonLinearGeometriesEnabledFlag(int bFlag)"""

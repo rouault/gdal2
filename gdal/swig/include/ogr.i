@@ -2613,6 +2613,40 @@ const char *OGRGeometryTypeToName( OGRwkbGeometryType eType );
 %rename (GetFieldTypeName) OGR_GetFieldTypeName;
 const char * OGR_GetFieldTypeName(OGRFieldType type);
 
+%rename (GT_Flatten) OGR_GT_Flatten;
+OGRwkbGeometryType OGR_GT_Flatten( OGRwkbGeometryType eType );
+
+%rename (GT_SetZ) OGR_GT_SetZ;
+OGRwkbGeometryType OGR_GT_SetZ( OGRwkbGeometryType eType );
+
+%rename (GT_SetModifier) OGR_GT_SetModifier;
+OGRwkbGeometryType OGR_GT_SetModifier( OGRwkbGeometryType eType, int bSetZ, int bSetM = FALSE );
+
+%rename (GT_HasZ) OGR_GT_HasZ;
+int                OGR_GT_HasZ( OGRwkbGeometryType eType );
+
+%rename (GT_IsSubClassOf) OGR_GT_IsSubClassOf;
+int                OGR_GT_IsSubClassOf( OGRwkbGeometryType eType,
+                                                OGRwkbGeometryType eSuperType );
+
+%rename (GT_IsCurve) OGR_GT_IsCurve;
+int                OGR_GT_IsCurve( OGRwkbGeometryType );
+
+%rename (GT_IsSurface) OGR_GT_IsSurface;
+int                OGR_GT_IsSurface( OGRwkbGeometryType );
+
+%rename (GT_IsNonLinear) OGR_GT_IsNonLinear;
+int                OGR_GT_IsNonLinear( OGRwkbGeometryType );
+
+%rename (GT_GetCollection) OGR_GT_GetCollection;
+OGRwkbGeometryType OGR_GT_GetCollection( OGRwkbGeometryType eType );
+
+%rename (GT_GetCurve) OGR_GT_GetCurve;
+OGRwkbGeometryType OGR_GT_GetCurve( OGRwkbGeometryType eType );
+
+%rename (GT_GetLinear) OGR_GT_GetLinear;
+OGRwkbGeometryType OGR_GT_GetLinear( OGRwkbGeometryType eType );
+
 %rename (SetNonLinearGeometriesEnabledFlag) OGRSetNonLinearGeometriesEnabledFlag;
 void OGRSetNonLinearGeometriesEnabledFlag( int bFlag );
 

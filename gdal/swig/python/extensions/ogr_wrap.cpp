@@ -20603,6 +20603,398 @@ fail:
 }
 
 
+SWIGINTERN PyObject *_wrap_GT_Flatten(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  OGRwkbGeometryType arg1 ;
+  int val1 ;
+  int ecode1 = 0 ;
+  PyObject * obj0 = 0 ;
+  OGRwkbGeometryType result;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:GT_Flatten",&obj0)) SWIG_fail;
+  ecode1 = SWIG_AsVal_int(obj0, &val1);
+  if (!SWIG_IsOK(ecode1)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode1), "in method '" "GT_Flatten" "', argument " "1"" of type '" "OGRwkbGeometryType""'");
+  } 
+  arg1 = static_cast< OGRwkbGeometryType >(val1);
+  {
+    if ( bUseExceptions ) {
+      CPLErrorReset();
+    }
+    result = (OGRwkbGeometryType)OGR_GT_Flatten(arg1);
+    if ( bUseExceptions ) {
+      CPLErr eclass = CPLGetLastErrorType();
+      if ( eclass == CE_Failure || eclass == CE_Fatal ) {
+        SWIG_exception( SWIG_RuntimeError, CPLGetLastErrorMsg() );
+      }
+    }
+  }
+  resultobj = SWIG_From_int(static_cast< int >(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_GT_SetZ(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  OGRwkbGeometryType arg1 ;
+  int val1 ;
+  int ecode1 = 0 ;
+  PyObject * obj0 = 0 ;
+  OGRwkbGeometryType result;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:GT_SetZ",&obj0)) SWIG_fail;
+  ecode1 = SWIG_AsVal_int(obj0, &val1);
+  if (!SWIG_IsOK(ecode1)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode1), "in method '" "GT_SetZ" "', argument " "1"" of type '" "OGRwkbGeometryType""'");
+  } 
+  arg1 = static_cast< OGRwkbGeometryType >(val1);
+  {
+    if ( bUseExceptions ) {
+      CPLErrorReset();
+    }
+    result = (OGRwkbGeometryType)OGR_GT_SetZ(arg1);
+    if ( bUseExceptions ) {
+      CPLErr eclass = CPLGetLastErrorType();
+      if ( eclass == CE_Failure || eclass == CE_Fatal ) {
+        SWIG_exception( SWIG_RuntimeError, CPLGetLastErrorMsg() );
+      }
+    }
+  }
+  resultobj = SWIG_From_int(static_cast< int >(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_GT_SetModifier(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  OGRwkbGeometryType arg1 ;
+  int arg2 ;
+  int arg3 = (int) FALSE ;
+  int val1 ;
+  int ecode1 = 0 ;
+  int val2 ;
+  int ecode2 = 0 ;
+  int val3 ;
+  int ecode3 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  PyObject * obj2 = 0 ;
+  OGRwkbGeometryType result;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO|O:GT_SetModifier",&obj0,&obj1,&obj2)) SWIG_fail;
+  ecode1 = SWIG_AsVal_int(obj0, &val1);
+  if (!SWIG_IsOK(ecode1)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode1), "in method '" "GT_SetModifier" "', argument " "1"" of type '" "OGRwkbGeometryType""'");
+  } 
+  arg1 = static_cast< OGRwkbGeometryType >(val1);
+  ecode2 = SWIG_AsVal_int(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "GT_SetModifier" "', argument " "2"" of type '" "int""'");
+  } 
+  arg2 = static_cast< int >(val2);
+  if (obj2) {
+    ecode3 = SWIG_AsVal_int(obj2, &val3);
+    if (!SWIG_IsOK(ecode3)) {
+      SWIG_exception_fail(SWIG_ArgError(ecode3), "in method '" "GT_SetModifier" "', argument " "3"" of type '" "int""'");
+    } 
+    arg3 = static_cast< int >(val3);
+  }
+  {
+    if ( bUseExceptions ) {
+      CPLErrorReset();
+    }
+    result = (OGRwkbGeometryType)OGR_GT_SetModifier(arg1,arg2,arg3);
+    if ( bUseExceptions ) {
+      CPLErr eclass = CPLGetLastErrorType();
+      if ( eclass == CE_Failure || eclass == CE_Fatal ) {
+        SWIG_exception( SWIG_RuntimeError, CPLGetLastErrorMsg() );
+      }
+    }
+  }
+  resultobj = SWIG_From_int(static_cast< int >(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_GT_HasZ(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  OGRwkbGeometryType arg1 ;
+  int val1 ;
+  int ecode1 = 0 ;
+  PyObject * obj0 = 0 ;
+  int result;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:GT_HasZ",&obj0)) SWIG_fail;
+  ecode1 = SWIG_AsVal_int(obj0, &val1);
+  if (!SWIG_IsOK(ecode1)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode1), "in method '" "GT_HasZ" "', argument " "1"" of type '" "OGRwkbGeometryType""'");
+  } 
+  arg1 = static_cast< OGRwkbGeometryType >(val1);
+  {
+    if ( bUseExceptions ) {
+      CPLErrorReset();
+    }
+    result = (int)OGR_GT_HasZ(arg1);
+    if ( bUseExceptions ) {
+      CPLErr eclass = CPLGetLastErrorType();
+      if ( eclass == CE_Failure || eclass == CE_Fatal ) {
+        SWIG_exception( SWIG_RuntimeError, CPLGetLastErrorMsg() );
+      }
+    }
+  }
+  resultobj = SWIG_From_int(static_cast< int >(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_GT_IsSubClassOf(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  OGRwkbGeometryType arg1 ;
+  OGRwkbGeometryType arg2 ;
+  int val1 ;
+  int ecode1 = 0 ;
+  int val2 ;
+  int ecode2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  int result;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:GT_IsSubClassOf",&obj0,&obj1)) SWIG_fail;
+  ecode1 = SWIG_AsVal_int(obj0, &val1);
+  if (!SWIG_IsOK(ecode1)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode1), "in method '" "GT_IsSubClassOf" "', argument " "1"" of type '" "OGRwkbGeometryType""'");
+  } 
+  arg1 = static_cast< OGRwkbGeometryType >(val1);
+  ecode2 = SWIG_AsVal_int(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "GT_IsSubClassOf" "', argument " "2"" of type '" "OGRwkbGeometryType""'");
+  } 
+  arg2 = static_cast< OGRwkbGeometryType >(val2);
+  {
+    if ( bUseExceptions ) {
+      CPLErrorReset();
+    }
+    result = (int)OGR_GT_IsSubClassOf(arg1,arg2);
+    if ( bUseExceptions ) {
+      CPLErr eclass = CPLGetLastErrorType();
+      if ( eclass == CE_Failure || eclass == CE_Fatal ) {
+        SWIG_exception( SWIG_RuntimeError, CPLGetLastErrorMsg() );
+      }
+    }
+  }
+  resultobj = SWIG_From_int(static_cast< int >(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_GT_IsCurve(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  OGRwkbGeometryType arg1 ;
+  int val1 ;
+  int ecode1 = 0 ;
+  PyObject * obj0 = 0 ;
+  int result;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:GT_IsCurve",&obj0)) SWIG_fail;
+  ecode1 = SWIG_AsVal_int(obj0, &val1);
+  if (!SWIG_IsOK(ecode1)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode1), "in method '" "GT_IsCurve" "', argument " "1"" of type '" "OGRwkbGeometryType""'");
+  } 
+  arg1 = static_cast< OGRwkbGeometryType >(val1);
+  {
+    if ( bUseExceptions ) {
+      CPLErrorReset();
+    }
+    result = (int)OGR_GT_IsCurve(arg1);
+    if ( bUseExceptions ) {
+      CPLErr eclass = CPLGetLastErrorType();
+      if ( eclass == CE_Failure || eclass == CE_Fatal ) {
+        SWIG_exception( SWIG_RuntimeError, CPLGetLastErrorMsg() );
+      }
+    }
+  }
+  resultobj = SWIG_From_int(static_cast< int >(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_GT_IsSurface(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  OGRwkbGeometryType arg1 ;
+  int val1 ;
+  int ecode1 = 0 ;
+  PyObject * obj0 = 0 ;
+  int result;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:GT_IsSurface",&obj0)) SWIG_fail;
+  ecode1 = SWIG_AsVal_int(obj0, &val1);
+  if (!SWIG_IsOK(ecode1)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode1), "in method '" "GT_IsSurface" "', argument " "1"" of type '" "OGRwkbGeometryType""'");
+  } 
+  arg1 = static_cast< OGRwkbGeometryType >(val1);
+  {
+    if ( bUseExceptions ) {
+      CPLErrorReset();
+    }
+    result = (int)OGR_GT_IsSurface(arg1);
+    if ( bUseExceptions ) {
+      CPLErr eclass = CPLGetLastErrorType();
+      if ( eclass == CE_Failure || eclass == CE_Fatal ) {
+        SWIG_exception( SWIG_RuntimeError, CPLGetLastErrorMsg() );
+      }
+    }
+  }
+  resultobj = SWIG_From_int(static_cast< int >(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_GT_IsNonLinear(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  OGRwkbGeometryType arg1 ;
+  int val1 ;
+  int ecode1 = 0 ;
+  PyObject * obj0 = 0 ;
+  int result;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:GT_IsNonLinear",&obj0)) SWIG_fail;
+  ecode1 = SWIG_AsVal_int(obj0, &val1);
+  if (!SWIG_IsOK(ecode1)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode1), "in method '" "GT_IsNonLinear" "', argument " "1"" of type '" "OGRwkbGeometryType""'");
+  } 
+  arg1 = static_cast< OGRwkbGeometryType >(val1);
+  {
+    if ( bUseExceptions ) {
+      CPLErrorReset();
+    }
+    result = (int)OGR_GT_IsNonLinear(arg1);
+    if ( bUseExceptions ) {
+      CPLErr eclass = CPLGetLastErrorType();
+      if ( eclass == CE_Failure || eclass == CE_Fatal ) {
+        SWIG_exception( SWIG_RuntimeError, CPLGetLastErrorMsg() );
+      }
+    }
+  }
+  resultobj = SWIG_From_int(static_cast< int >(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_GT_GetCollection(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  OGRwkbGeometryType arg1 ;
+  int val1 ;
+  int ecode1 = 0 ;
+  PyObject * obj0 = 0 ;
+  OGRwkbGeometryType result;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:GT_GetCollection",&obj0)) SWIG_fail;
+  ecode1 = SWIG_AsVal_int(obj0, &val1);
+  if (!SWIG_IsOK(ecode1)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode1), "in method '" "GT_GetCollection" "', argument " "1"" of type '" "OGRwkbGeometryType""'");
+  } 
+  arg1 = static_cast< OGRwkbGeometryType >(val1);
+  {
+    if ( bUseExceptions ) {
+      CPLErrorReset();
+    }
+    result = (OGRwkbGeometryType)OGR_GT_GetCollection(arg1);
+    if ( bUseExceptions ) {
+      CPLErr eclass = CPLGetLastErrorType();
+      if ( eclass == CE_Failure || eclass == CE_Fatal ) {
+        SWIG_exception( SWIG_RuntimeError, CPLGetLastErrorMsg() );
+      }
+    }
+  }
+  resultobj = SWIG_From_int(static_cast< int >(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_GT_GetCurve(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  OGRwkbGeometryType arg1 ;
+  int val1 ;
+  int ecode1 = 0 ;
+  PyObject * obj0 = 0 ;
+  OGRwkbGeometryType result;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:GT_GetCurve",&obj0)) SWIG_fail;
+  ecode1 = SWIG_AsVal_int(obj0, &val1);
+  if (!SWIG_IsOK(ecode1)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode1), "in method '" "GT_GetCurve" "', argument " "1"" of type '" "OGRwkbGeometryType""'");
+  } 
+  arg1 = static_cast< OGRwkbGeometryType >(val1);
+  {
+    if ( bUseExceptions ) {
+      CPLErrorReset();
+    }
+    result = (OGRwkbGeometryType)OGR_GT_GetCurve(arg1);
+    if ( bUseExceptions ) {
+      CPLErr eclass = CPLGetLastErrorType();
+      if ( eclass == CE_Failure || eclass == CE_Fatal ) {
+        SWIG_exception( SWIG_RuntimeError, CPLGetLastErrorMsg() );
+      }
+    }
+  }
+  resultobj = SWIG_From_int(static_cast< int >(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_GT_GetLinear(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  OGRwkbGeometryType arg1 ;
+  int val1 ;
+  int ecode1 = 0 ;
+  PyObject * obj0 = 0 ;
+  OGRwkbGeometryType result;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:GT_GetLinear",&obj0)) SWIG_fail;
+  ecode1 = SWIG_AsVal_int(obj0, &val1);
+  if (!SWIG_IsOK(ecode1)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode1), "in method '" "GT_GetLinear" "', argument " "1"" of type '" "OGRwkbGeometryType""'");
+  } 
+  arg1 = static_cast< OGRwkbGeometryType >(val1);
+  {
+    if ( bUseExceptions ) {
+      CPLErrorReset();
+    }
+    result = (OGRwkbGeometryType)OGR_GT_GetLinear(arg1);
+    if ( bUseExceptions ) {
+      CPLErr eclass = CPLGetLastErrorType();
+      if ( eclass == CE_Failure || eclass == CE_Fatal ) {
+        SWIG_exception( SWIG_RuntimeError, CPLGetLastErrorMsg() );
+      }
+    }
+  }
+  resultobj = SWIG_From_int(static_cast< int >(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
 SWIGINTERN PyObject *_wrap_SetNonLinearGeometriesEnabledFlag(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   int arg1 ;
@@ -24951,6 +25343,17 @@ static PyMethodDef SwigMethods[] = {
 	 { (char *)"RegisterAll", _wrap_RegisterAll, METH_VARARGS, (char *)"RegisterAll()"},
 	 { (char *)"GeometryTypeToName", _wrap_GeometryTypeToName, METH_VARARGS, (char *)"GeometryTypeToName(OGRwkbGeometryType eType) -> char"},
 	 { (char *)"GetFieldTypeName", _wrap_GetFieldTypeName, METH_VARARGS, (char *)"GetFieldTypeName(OGRFieldType type) -> char"},
+	 { (char *)"GT_Flatten", _wrap_GT_Flatten, METH_VARARGS, (char *)"GT_Flatten(OGRwkbGeometryType eType) -> OGRwkbGeometryType"},
+	 { (char *)"GT_SetZ", _wrap_GT_SetZ, METH_VARARGS, (char *)"GT_SetZ(OGRwkbGeometryType eType) -> OGRwkbGeometryType"},
+	 { (char *)"GT_SetModifier", _wrap_GT_SetModifier, METH_VARARGS, (char *)"GT_SetModifier(OGRwkbGeometryType eType, int bSetZ, int bSetM = True) -> OGRwkbGeometryType"},
+	 { (char *)"GT_HasZ", _wrap_GT_HasZ, METH_VARARGS, (char *)"GT_HasZ(OGRwkbGeometryType eType) -> int"},
+	 { (char *)"GT_IsSubClassOf", _wrap_GT_IsSubClassOf, METH_VARARGS, (char *)"GT_IsSubClassOf(OGRwkbGeometryType eType, OGRwkbGeometryType eSuperType) -> int"},
+	 { (char *)"GT_IsCurve", _wrap_GT_IsCurve, METH_VARARGS, (char *)"GT_IsCurve(OGRwkbGeometryType arg0) -> int"},
+	 { (char *)"GT_IsSurface", _wrap_GT_IsSurface, METH_VARARGS, (char *)"GT_IsSurface(OGRwkbGeometryType arg0) -> int"},
+	 { (char *)"GT_IsNonLinear", _wrap_GT_IsNonLinear, METH_VARARGS, (char *)"GT_IsNonLinear(OGRwkbGeometryType arg0) -> int"},
+	 { (char *)"GT_GetCollection", _wrap_GT_GetCollection, METH_VARARGS, (char *)"GT_GetCollection(OGRwkbGeometryType eType) -> OGRwkbGeometryType"},
+	 { (char *)"GT_GetCurve", _wrap_GT_GetCurve, METH_VARARGS, (char *)"GT_GetCurve(OGRwkbGeometryType eType) -> OGRwkbGeometryType"},
+	 { (char *)"GT_GetLinear", _wrap_GT_GetLinear, METH_VARARGS, (char *)"GT_GetLinear(OGRwkbGeometryType eType) -> OGRwkbGeometryType"},
 	 { (char *)"SetNonLinearGeometriesEnabledFlag", _wrap_SetNonLinearGeometriesEnabledFlag, METH_VARARGS, (char *)"SetNonLinearGeometriesEnabledFlag(int bFlag)"},
 	 { (char *)"GetNonLinearGeometriesEnabledFlag", _wrap_GetNonLinearGeometriesEnabledFlag, METH_VARARGS, (char *)"GetNonLinearGeometriesEnabledFlag() -> int"},
 	 { (char *)"GetOpenDS", _wrap_GetOpenDS, METH_VARARGS, (char *)"GetOpenDS(int ds_number) -> DataSource"},
