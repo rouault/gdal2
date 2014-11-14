@@ -335,11 +335,15 @@ class OGRSQLiteTableLayer : public OGRSQLiteLayer
 
     sqlite3_stmt       *hInsertStmt;
     CPLString           osLastInsertStmt;
+    int                 bHasDefaultValue;
 
     OGRSQLiteGeomFormat eGeomFormat;
     char                *pszGeomCol;
     int                 nSRSId;
     OGRSpatialReference *poSRS;
+
+    std::vector< std::pair<CPLString,CPLString> > aosDisabledTriggers;
+    int                 bHasCheckedTriggers;
 
     void                ClearInsertStmt();
 

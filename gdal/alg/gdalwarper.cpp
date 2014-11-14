@@ -1213,7 +1213,7 @@ GDALWarpOptions * CPL_STDCALL GDALDeserializeWarpOptions( CPLXMLNode *psTree )
 /*      Warp memory limit.                                              */
 /* -------------------------------------------------------------------- */
     psWO->dfWarpMemoryLimit = 
-        atof(CPLGetXMLValue(psTree,"WarpMemoryLimit","0.0"));
+        CPLAtof(CPLGetXMLValue(psTree,"WarpMemoryLimit","0.0"));
 
 /* -------------------------------------------------------------------- */
 /*      resample algorithm                                              */
@@ -1368,7 +1368,7 @@ GDALWarpOptions * CPL_STDCALL GDALDeserializeWarpOptions( CPLXMLNode *psTree )
                 psWO->padfSrcNoDataReal = 
                     (double *) CPLCalloc(sizeof(double),psWO->nBandCount);
 
-            psWO->padfSrcNoDataReal[iBand] = CPLAtofM(pszValue);
+            psWO->padfSrcNoDataReal[iBand] = CPLAtof(pszValue);
         }
         
         pszValue = CPLGetXMLValue(psBand,"SrcNoDataImag",NULL);
@@ -1378,7 +1378,7 @@ GDALWarpOptions * CPL_STDCALL GDALDeserializeWarpOptions( CPLXMLNode *psTree )
                 psWO->padfSrcNoDataImag = 
                     (double *) CPLCalloc(sizeof(double),psWO->nBandCount);
 
-            psWO->padfSrcNoDataImag[iBand] = CPLAtofM(pszValue);
+            psWO->padfSrcNoDataImag[iBand] = CPLAtof(pszValue);
         }
         
 /* -------------------------------------------------------------------- */
@@ -1391,7 +1391,7 @@ GDALWarpOptions * CPL_STDCALL GDALDeserializeWarpOptions( CPLXMLNode *psTree )
                 psWO->padfDstNoDataReal = 
                     (double *) CPLCalloc(sizeof(double),psWO->nBandCount);
 
-            psWO->padfDstNoDataReal[iBand] = CPLAtofM(pszValue);
+            psWO->padfDstNoDataReal[iBand] = CPLAtof(pszValue);
         }
         
         pszValue = CPLGetXMLValue(psBand,"DstNoDataImag",NULL);
@@ -1401,7 +1401,7 @@ GDALWarpOptions * CPL_STDCALL GDALDeserializeWarpOptions( CPLXMLNode *psTree )
                 psWO->padfDstNoDataImag = 
                     (double *) CPLCalloc(sizeof(double),psWO->nBandCount);
 
-            psWO->padfDstNoDataImag[iBand] = CPLAtofM(pszValue);
+            psWO->padfDstNoDataImag[iBand] = CPLAtof(pszValue);
         }
         
         iBand++;
@@ -1426,7 +1426,7 @@ GDALWarpOptions * CPL_STDCALL GDALDeserializeWarpOptions( CPLXMLNode *psTree )
     }
 
     psWO->dfCutlineBlendDist =
-        atof( CPLGetXMLValue( psTree, "CutlineBlendDist", "0" ) );
+        CPLAtof( CPLGetXMLValue( psTree, "CutlineBlendDist", "0" ) );
 
 /* -------------------------------------------------------------------- */
 /*      Transformation.                                                 */

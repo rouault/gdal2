@@ -267,10 +267,7 @@ void OGRDXFLayer::PrepareLineStyle( OGRFeature *poFeature )
     if( dfWeight > 0.0 )
     {
         char szBuffer[64];
-        snprintf(szBuffer, sizeof(szBuffer), "%.2g", dfWeight);
-        char* pszComma = strchr(szBuffer, ',');
-        if (pszComma)
-            *pszComma = '.';
+        CPLsnprintf(szBuffer, sizeof(szBuffer), "%.2g", dfWeight);
         osStyle += CPLString().Printf( ",w:%sg", szBuffer );
     }
 
@@ -528,25 +525,18 @@ OGRFeature *OGRDXFLayer::TranslateMTEXT()
 /* -------------------------------------------------------------------- */
     CPLString osStyle;
     char szBuffer[64];
-    char* pszComma;
 
     osStyle.Printf("LABEL(f:\"Arial\",t:\"%s\"",osText.c_str());
 
     if( dfAngle != 0.0 )
     {
-        snprintf(szBuffer, sizeof(szBuffer), "%.3g", dfAngle);
-        pszComma = strchr(szBuffer, ',');
-        if (pszComma)
-            *pszComma = '.';
+        CPLsnprintf(szBuffer, sizeof(szBuffer), "%.3g", dfAngle);
         osStyle += CPLString().Printf(",a:%s", szBuffer);
     }
 
     if( dfHeight != 0.0 )
     {
-        snprintf(szBuffer, sizeof(szBuffer), "%.3g", dfHeight);
-        pszComma = strchr(szBuffer, ',');
-        if (pszComma)
-            *pszComma = '.';
+        CPLsnprintf(szBuffer, sizeof(szBuffer), "%.3g", dfHeight);
         osStyle += CPLString().Printf(",s:%sg", szBuffer);
     }
 
@@ -698,25 +688,18 @@ OGRFeature *OGRDXFLayer::TranslateTEXT()
 /* -------------------------------------------------------------------- */
     CPLString osStyle;
     char szBuffer[64];
-    char* pszComma;
 
     osStyle.Printf("LABEL(f:\"Arial\",t:\"%s\"",osText.c_str());
 
     if( dfAngle != 0.0 )
     {
-        snprintf(szBuffer, sizeof(szBuffer), "%.3g", dfAngle);
-        pszComma = strchr(szBuffer, ',');
-        if (pszComma)
-            *pszComma = '.';
+        CPLsnprintf(szBuffer, sizeof(szBuffer), "%.3g", dfAngle);
         osStyle += CPLString().Printf(",a:%s", szBuffer);
     }
 
     if( dfHeight != 0.0 )
     {
-        snprintf(szBuffer, sizeof(szBuffer), "%.3g", dfHeight);
-        pszComma = strchr(szBuffer, ',');
-        if (pszComma)
-            *pszComma = '.';
+        CPLsnprintf(szBuffer, sizeof(szBuffer), "%.3g", dfHeight);
         osStyle += CPLString().Printf(",s:%sg", szBuffer);
     }
 

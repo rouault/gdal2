@@ -49,7 +49,7 @@ CPL_CVSID("$Id$");
 void OGRPrintDouble( char * pszStrBuf, double dfValue )
 
 {
-    sprintf( pszStrBuf, "%.16g", dfValue );
+    CPLsprintf( pszStrBuf, "%.16g", dfValue );
 
     int nLen = strlen(pszStrBuf);
 
@@ -59,7 +59,7 @@ void OGRPrintDouble( char * pszStrBuf, double dfValue )
         && (strcmp(pszStrBuf+nLen-6,"999999") == 0
             || strcmp(pszStrBuf+nLen-6,"000001") == 0) )
     {
-        sprintf( pszStrBuf, "%.15g", dfValue );
+        CPLsprintf( pszStrBuf, "%.15g", dfValue );
     }
 
     // force to user periods regardless of locale.
@@ -5693,6 +5693,34 @@ OGRErr OSRSetWagner( OGRSpatialReferenceH hSRS,
 
     return ((OGRSpatialReference *) hSRS)->SetWagner( 
         nVariation, dfCenterLat, dfFalseEasting, dfFalseNorthing );
+}
+
+/************************************************************************/
+/*                            SetQSC()                     */
+/************************************************************************/
+
+OGRErr OGRSpatialReference::SetQSC( double dfCenterLat, double dfCenterLong )
+
+{
+    SetProjection( SRS_PT_QSC );
+    SetNormProjParm( SRS_PP_LATITUDE_OF_ORIGIN, dfCenterLat );
+    SetNormProjParm( SRS_PP_CENTRAL_MERIDIAN, dfCenterLong );
+
+    return OGRERR_NONE;
+}
+
+/************************************************************************/
+/*                           OSRSetQSC()                   */
+/************************************************************************/
+
+OGRErr OSRSetQSC( OGRSpatialReferenceH hSRS,
+                       double dfCenterLat, double dfCenterLong )
+
+{
+    VALIDATE_POINTER1( hSRS, "OSRSetQSC", CE_Failure );
+
+    return ((OGRSpatialReference *) hSRS)->SetQSC(
+        dfCenterLat, dfCenterLong );
 }
 
 /************************************************************************/

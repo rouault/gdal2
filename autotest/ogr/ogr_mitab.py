@@ -644,16 +644,52 @@ def ogr_mitab_20():
         return 'skip'
 
     # Pass i==0: without MITAB_BOUNDS_FILE
-    # Pass i==1: with MITAB_BOUNDS_FILE : first load
-    # Pass i==2: with MITAB_BOUNDS_FILE : should use already loaded file
+    # Pass i==1: with MITAB_BOUNDS_FILE and French bounds : first load
+    # Pass i==2: with MITAB_BOUNDS_FILE and French bounds : should use already loaded file
     # Pass i==3: without MITAB_BOUNDS_FILE : should unload the file
     # Pass i==4: use BOUNDS layer creation option
-    for i in range(5):
-        if i == 1 or i == 2:
+    # Pass i==5: with MITAB_BOUNDS_FILE and European bounds
+    for i in range(6):
+        if i == 1 or i == 2 or i == 5:
             gdal.SetConfigOption('MITAB_BOUNDS_FILE', 'data/mitab_bounds.txt')
         ds = ogr.GetDriverByName('MapInfo File').CreateDataSource('/vsimem/ogr_mitab_20.tab')
         sr = osr.SpatialReference()
-        sr.ImportFromEPSG(2154)
+        if i == 1 or i == 2:
+            sr.SetFromUserInput("""PROJCS["RGF93 / Lambert-93",
+    GEOGCS["RGF93",
+        DATUM["Reseau_Geodesique_Francais_1993",
+            SPHEROID["GRS 80",6378137,298.257222101],
+            TOWGS84[0,0,0,0,0,0,0]],
+        PRIMEM["Greenwich",0],
+        UNIT["degree",0.0174532925199433]],
+    PROJECTION["Lambert_Conformal_Conic_2SP"],
+    PARAMETER["standard_parallel_1",49.00000000002],
+    PARAMETER["standard_parallel_2",44],
+    PARAMETER["latitude_of_origin",46.5],
+    PARAMETER["central_meridian",3],
+    PARAMETER["false_easting",700000],
+    PARAMETER["false_northing",6600000],
+    UNIT["Meter",1.0],
+    AUTHORITY["EPSG","2154"]]""")
+        elif i == 5:
+            sr.SetFromUserInput("""PROJCS["RGF93 / Lambert-93",
+    GEOGCS["RGF93",
+        DATUM["Reseau_Geodesique_Francais_1993",
+            SPHEROID["GRS 80",6378137,298.257222101],
+            TOWGS84[0,0,0,0,0,0,0]],
+        PRIMEM["Greenwich",0],
+        UNIT["degree",0.0174532925199433]],
+    PROJECTION["Lambert_Conformal_Conic_2SP"],
+    PARAMETER["standard_parallel_1",49.00000000001],
+    PARAMETER["standard_parallel_2",44],
+    PARAMETER["latitude_of_origin",46.5],
+    PARAMETER["central_meridian",3],
+    PARAMETER["false_easting",700000],
+    PARAMETER["false_northing",6600000],
+    UNIT["Meter",1.0],
+    AUTHORITY["EPSG","2154"]]""")
+        else:
+            sr.ImportFromEPSG(2154)
         if i == 4:
             lyr = ds.CreateLayer('test', srs = sr, options = ['BOUNDS=75000,6000000,1275000,7200000'])
         else:
@@ -1466,6 +1502,136 @@ def ogr_mitab_32():
     return 'success'
 
 ###############################################################################
+# Test opening and modifying a file created with MapInfo that consists of
+# a single object block, without index block
+
+def ogr_mitab_33():
+
+    for update in (0,1):
+        ds = ogr.Open('data/single_point_mapinfo.tab', update = update)
+        lyr = ds.GetLayer(0)
+        if lyr.GetFeatureCount() != 1:
+            print(update)
+            gdaltest.post_reason('fail')
+            return 'fail'
+        f = lyr.GetNextFeature()
+        if f.GetField('toto') != '':
+            print(update)
+            gdaltest.post_reason('fail')
+            return 'fail'
+    ds = None
+
+    # Test adding a new object
+    shutil.copy('data/single_point_mapinfo.tab', 'tmp')
+    shutil.copy('data/single_point_mapinfo.dat', 'tmp')
+    shutil.copy('data/single_point_mapinfo.id', 'tmp')
+    shutil.copy('data/single_point_mapinfo.map', 'tmp')
+    
+    ds = ogr.Open('tmp/single_point_mapinfo.tab', update = 1)
+    lyr = ds.GetLayer(0)
+    f = ogr.Feature(lyr.GetLayerDefn())
+    f.SetGeometryDirectly(ogr.CreateGeometryFromWkt('POINT(1363180 7509810)'))
+    lyr.CreateFeature(f)
+    f = None
+    ds = None
+
+    ds = ogr.Open('tmp/single_point_mapinfo.tab')
+    lyr = ds.GetLayer(0)
+    if lyr.GetFeatureCount() != 2:
+        gdaltest.post_reason('fail')
+        return 'fail'
+    f = lyr.GetNextFeature()
+    if f is None:
+        gdaltest.post_reason('fail')
+        return 'fail'
+    f = lyr.GetNextFeature()
+    if f is None:
+        gdaltest.post_reason('fail')
+        return 'fail'
+    ds = None
+
+    # Test replacing the existing object
+    shutil.copy('data/single_point_mapinfo.tab', 'tmp')
+    shutil.copy('data/single_point_mapinfo.dat', 'tmp')
+    shutil.copy('data/single_point_mapinfo.id', 'tmp')
+    shutil.copy('data/single_point_mapinfo.map', 'tmp')
+    
+    ds = ogr.Open('tmp/single_point_mapinfo.tab', update = 1)
+    lyr = ds.GetLayer(0)
+    f = ogr.Feature(lyr.GetLayerDefn())
+    f.SetFID(1)
+    f.SetGeometryDirectly(ogr.CreateGeometryFromWkt('POINT(1363180 7509810)'))
+    lyr.SetFeature(f)
+    f = None
+    ds = None
+
+    ds = ogr.Open('tmp/single_point_mapinfo.tab')
+    lyr = ds.GetLayer(0)
+    if lyr.GetFeatureCount() != 1:
+        gdaltest.post_reason('fail')
+        return 'fail'
+    f = lyr.GetNextFeature()
+    if f is None:
+        gdaltest.post_reason('fail')
+        return 'fail'
+    ds = None
+
+    ogr.GetDriverByName('MapInfo File').DeleteDataSource('tmp/single_point_mapinfo.tab')
+
+    return 'success'
+
+###############################################################################
+# Test updating a line that spans over several coordinate blocks
+
+def ogr_mitab_34():
+    
+    filename = '/vsimem/ogr_mitab_34.tab'
+    ds = ogr.GetDriverByName('MapInfo File').CreateDataSource(filename)
+    lyr = ds.CreateLayer('ogr_mitab_34', options = ['BOUNDS=-1000,0,1000,3000'])
+    lyr.CreateField(ogr.FieldDefn('dummy', ogr.OFTString))
+    geom = ogr.Geometry(ogr.wkbLineString)
+    for i in range(1000):
+        geom.AddPoint_2D(i, i)
+    for j in range(2):
+        f = ogr.Feature(lyr.GetLayerDefn())
+        f.SetGeometry(geom)
+        lyr.CreateFeature(f)
+        f = None
+    ds = None
+
+    ds = ogr.Open(filename, update = 1)
+    lyr = ds.GetLayer(0)
+    f = lyr.GetNextFeature()
+    lyr.GetNextFeature() # seek to another object
+    geom = f.GetGeometryRef()
+    geom.SetPoint_2D(0, -1000, 3000)
+    lyr.SetFeature(f)
+    ds = None
+    
+    ds = ogr.Open(filename)
+    lyr = ds.GetLayer(0)
+    f = lyr.GetNextFeature()
+    geom = f.GetGeometryRef()
+    if abs(geom.GetX(0) - -1000) > 1e-2 or abs(geom.GetY(0) - 3000) > 1e-2:
+        gdaltest.post_reason('fail')
+        return 'fail'
+    for i in range(999):
+        if abs(geom.GetX(i+1) - (i+1)) > 1e-2 or abs(geom.GetY(i+1) - (i+1)) > 1e-2:
+            gdaltest.post_reason('fail')
+            return 'fail'
+    f = lyr.GetNextFeature()
+    geom = f.GetGeometryRef()
+    for i in range(1000):
+        if abs(geom.GetX(i) - (i)) > 1e-2 or abs(geom.GetY(i) - (i)) > 1e-2:
+            gdaltest.post_reason('fail')
+            return 'fail'
+    ds = None
+
+    ogr.GetDriverByName('MapInfo File').DeleteDataSource(filename)
+
+    return 'success'
+
+###############################################################################
 #
 
 def ogr_mitab_cleanup():
@@ -1512,6 +1678,8 @@ gdaltest_list = [
     ogr_mitab_30,
     ogr_mitab_31,
     ogr_mitab_32,
+    ogr_mitab_33,
+    ogr_mitab_34,
     ogr_mitab_cleanup
     ]
 

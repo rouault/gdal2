@@ -324,25 +324,18 @@ the approach is as above in all these cases.
 
     CPLString osStyle;
     char szBuffer[64];
-    char* pszComma;
 
     osStyle.Printf("LABEL(f:\"Arial\",t:\"%s\",p:5",osText.c_str());
 
     if( dfAngle != 0.0 )
     {
-        snprintf(szBuffer, sizeof(szBuffer), "%.3g", dfAngle);
-        pszComma = strchr(szBuffer, ',');
-        if (pszComma)
-            *pszComma = '.';
+        CPLsnprintf(szBuffer, sizeof(szBuffer), "%.3g", dfAngle);
         osStyle += CPLString().Printf(",a:%s", szBuffer);
     }
 
     if( dfHeight != 0.0 )
     {
-        snprintf(szBuffer, sizeof(szBuffer), "%.3g", dfHeight);
-        pszComma = strchr(szBuffer, ',');
-        if (pszComma)
-            *pszComma = '.';
+        CPLsnprintf(szBuffer, sizeof(szBuffer), "%.3g", dfHeight);
         osStyle += CPLString().Printf(",s:%sg", szBuffer);
     }
 
@@ -376,9 +369,6 @@ void OGRDXFLayer::FormatDimension( CPLString &osText, double dfValue )
     // for example.  
 
     sprintf(szFormat, "%%.%df", nPrecision );
-    snprintf(szBuffer, sizeof(szBuffer), szFormat, dfValue);
-    char* pszComma = strchr(szBuffer, ',');
-    if (pszComma)
-        *pszComma = '.';
+    CPLsnprintf(szBuffer, sizeof(szBuffer), szFormat, dfValue);
     osText = szBuffer;
 }

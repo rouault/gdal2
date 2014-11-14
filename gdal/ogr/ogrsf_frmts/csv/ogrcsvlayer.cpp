@@ -1214,10 +1214,10 @@ OGRFeature * OGRCSVLayer::GetNextUnfilteredFeature()
          papszTokens[iNfdcLongitudeS][0] != 0 &&
          papszTokens[iNfdcLatitudeS][0] != 0)
     {
-        double dfLon = atof(papszTokens[iNfdcLongitudeS]) / 3600;
+        double dfLon = CPLAtof(papszTokens[iNfdcLongitudeS]) / 3600;
         if (strchr(papszTokens[iNfdcLongitudeS], 'W'))
             dfLon *= -1;
-        double dfLat = atof(papszTokens[iNfdcLatitudeS]) / 3600;
+        double dfLat = CPLAtof(papszTokens[iNfdcLatitudeS]) / 3600;
         if (strchr(papszTokens[iNfdcLatitudeS], 'S'))
             dfLat *= -1;
         if( !(poFeatureDefn->GetGeomFieldDefn(0)->IsIgnored()) )
@@ -1240,8 +1240,8 @@ OGRFeature * OGRCSVLayer::GetNextUnfilteredFeature()
             papszTokens[iLatitudeField][0] != '0' ||
             papszTokens[iLatitudeField][1] != '\0')
         {
-            double dfLon = atof(papszTokens[iLongitudeField]);
-            double dfLat = atof(papszTokens[iLatitudeField]);
+            double dfLon = CPLAtof(papszTokens[iLongitudeField]);
+            double dfLat = CPLAtof(papszTokens[iLatitudeField]);
             if( !(poFeatureDefn->GetGeomFieldDefn(0)->IsIgnored()) )
                 poFeature->SetGeometryDirectly( new OGRPoint(dfLon, dfLat) );
         }
@@ -1736,10 +1736,6 @@ OGRErr OGRCSVLayer::ICreateFeature( OGRFeature *poNewFeature )
         else if (poFeatureDefn->GetFieldDefn(iField)->GetType() == OFTReal)
         {
             pszEscaped = CPLStrdup(poNewFeature->GetFieldAsString(iField));
-            /* Use point as decimal separator */
-            char* pszComma = strchr(pszEscaped, ',');
-            if (pszComma)
-                *pszComma = '.';
         }
         else
         {

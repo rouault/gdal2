@@ -1200,7 +1200,7 @@ GDALCreateGenImgProjTransformer2( GDALDatasetH hSrcDS, GDALDatasetH hDstDS,
     pszValue = CSLFetchNameValue( papszOptions, "REFINE_TOLERANCE" );
     if( pszValue )
     {
-        dfTolerance = atof(pszValue);
+        dfTolerance = CPLAtof(pszValue);
         bRefine = TRUE;
     }
 
@@ -1984,7 +1984,7 @@ GDALSerializeGenImgProjTransformer( void *pTransformArg )
 /* -------------------------------------------------------------------- */
     else
     {
-        sprintf( szWork, "%.18g,%.18g,%.18g,%.18g,%.18g,%.18g",
+        CPLsprintf( szWork, "%.18g,%.18g,%.18g,%.18g,%.18g,%.18g",
                  psInfo->adfSrcGeoTransform[0],
                  psInfo->adfSrcGeoTransform[1],
                  psInfo->adfSrcGeoTransform[2],
@@ -1993,7 +1993,7 @@ GDALSerializeGenImgProjTransformer( void *pTransformArg )
                  psInfo->adfSrcGeoTransform[5] );
         CPLCreateXMLElementAndValue( psTree, "SrcGeoTransform", szWork );
         
-        sprintf( szWork, "%.18g,%.18g,%.18g,%.18g,%.18g,%.18g",
+        CPLsprintf( szWork, "%.18g,%.18g,%.18g,%.18g,%.18g,%.18g",
                  psInfo->adfSrcInvGeoTransform[0],
                  psInfo->adfSrcInvGeoTransform[1],
                  psInfo->adfSrcInvGeoTransform[2],
@@ -2059,7 +2059,7 @@ GDALSerializeGenImgProjTransformer( void *pTransformArg )
 /* -------------------------------------------------------------------- */
     else
     {
-        sprintf( szWork, "%.18g,%.18g,%.18g,%.18g,%.18g,%.18g",
+        CPLsprintf( szWork, "%.18g,%.18g,%.18g,%.18g,%.18g,%.18g",
                  psInfo->adfDstGeoTransform[0],
                  psInfo->adfDstGeoTransform[1],
                  psInfo->adfDstGeoTransform[2],
@@ -2068,7 +2068,7 @@ GDALSerializeGenImgProjTransformer( void *pTransformArg )
                  psInfo->adfDstGeoTransform[5] );
         CPLCreateXMLElementAndValue( psTree, "DstGeoTransform", szWork );
         
-        sprintf( szWork, "%.18g,%.18g,%.18g,%.18g,%.18g,%.18g",
+        CPLsprintf( szWork, "%.18g,%.18g,%.18g,%.18g,%.18g,%.18g",
                  psInfo->adfDstInvGeoTransform[0],
                  psInfo->adfDstInvGeoTransform[1],
                  psInfo->adfDstInvGeoTransform[2],
@@ -2099,6 +2099,22 @@ GDALSerializeGenImgProjTransformer( void *pTransformArg )
 }
 
 /************************************************************************/
+/*                    GDALDeserializeGeoTransform()                     */
+/************************************************************************/
+
+static void GDALDeserializeGeoTransform(const char* pszGT,
+                                        double adfGeoTransform[6])
+{
+    CPLsscanf( pszGT, "%lf,%lf,%lf,%lf,%lf,%lf", 
+               adfGeoTransform + 0,
+               adfGeoTransform + 1,
+               adfGeoTransform + 2,
+               adfGeoTransform + 3,
+               adfGeoTransform + 4,
+               adfGeoTransform + 5 );
+}
+
+/************************************************************************/
 /*                GDALDeserializeGenImgProjTransformer()                */
 /************************************************************************/
 
@@ -2118,26 +2134,13 @@ void *GDALDeserializeGenImgProjTransformer( CPLXMLNode *psTree )
 /* -------------------------------------------------------------------- */
     if( CPLGetXMLNode( psTree, "SrcGeoTransform" ) != NULL )
     {
-        sscanf( CPLGetXMLValue( psTree, "SrcGeoTransform", "" ), 
-                "%lg,%lg,%lg,%lg,%lg,%lg", 
-                psInfo->adfSrcGeoTransform + 0,
-                psInfo->adfSrcGeoTransform + 1,
-                psInfo->adfSrcGeoTransform + 2,
-                psInfo->adfSrcGeoTransform + 3,
-                psInfo->adfSrcGeoTransform + 4,
-                psInfo->adfSrcGeoTransform + 5 );
+        GDALDeserializeGeoTransform( CPLGetXMLValue( psTree, "SrcGeoTransform", "" ), 
+                                     psInfo->adfSrcGeoTransform );
 
         if( CPLGetXMLNode( psTree, "SrcInvGeoTransform" ) != NULL )
         {
-            sscanf( CPLGetXMLValue( psTree, "SrcInvGeoTransform", "" ), 
-                    "%lg,%lg,%lg,%lg,%lg,%lg", 
-                    psInfo->adfSrcInvGeoTransform + 0,
-                    psInfo->adfSrcInvGeoTransform + 1,
-                    psInfo->adfSrcInvGeoTransform + 2,
-                    psInfo->adfSrcInvGeoTransform + 3,
-                    psInfo->adfSrcInvGeoTransform + 4,
-                    psInfo->adfSrcInvGeoTransform + 5 );
-            
+            GDALDeserializeGeoTransform( CPLGetXMLValue( psTree, "SrcInvGeoTransform", "" ), 
+                                     psInfo->adfSrcInvGeoTransform );
         }
         else
         {
@@ -2214,26 +2217,13 @@ void *GDALDeserializeGenImgProjTransformer( CPLXMLNode *psTree )
 /* -------------------------------------------------------------------- */
     if( CPLGetXMLNode( psTree, "DstGeoTransform" ) != NULL )
     {
-        sscanf( CPLGetXMLValue( psTree, "DstGeoTransform", "" ), 
-                "%lg,%lg,%lg,%lg,%lg,%lg", 
-                psInfo->adfDstGeoTransform + 0,
-                psInfo->adfDstGeoTransform + 1,
-                psInfo->adfDstGeoTransform + 2,
-                psInfo->adfDstGeoTransform + 3,
-                psInfo->adfDstGeoTransform + 4,
-                psInfo->adfDstGeoTransform + 5 );
+        GDALDeserializeGeoTransform( CPLGetXMLValue( psTree, "DstGeoTransform", "" ), 
+                                     psInfo->adfDstGeoTransform );
 
         if( CPLGetXMLNode( psTree, "DstInvGeoTransform" ) != NULL )
         {
-            sscanf( CPLGetXMLValue( psTree, "DstInvGeoTransform", "" ), 
-                    "%lg,%lg,%lg,%lg,%lg,%lg", 
-                    psInfo->adfDstInvGeoTransform + 0,
-                    psInfo->adfDstInvGeoTransform + 1,
-                    psInfo->adfDstInvGeoTransform + 2,
-                    psInfo->adfDstInvGeoTransform + 3,
-                    psInfo->adfDstInvGeoTransform + 4,
-                    psInfo->adfDstInvGeoTransform + 5 );
-            
+            GDALDeserializeGeoTransform( CPLGetXMLValue( psTree, "DstInvGeoTransform", "" ), 
+                                        psInfo->adfDstInvGeoTransform );
         }
         else
         {
@@ -2801,7 +2791,7 @@ static void *
 GDALDeserializeApproxTransformer( CPLXMLNode *psTree )
 
 {
-    double dfMaxError = atof(CPLGetXMLValue( psTree, "MaxError",  "0.25" ));
+    double dfMaxError = CPLAtof(CPLGetXMLValue( psTree, "MaxError",  "0.25" ));
     CPLXMLNode *psContainer;
     GDALTransformerFunc pfnBaseTransform = NULL;
     void *pBaseCBData = NULL;

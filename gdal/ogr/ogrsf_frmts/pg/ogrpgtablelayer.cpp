@@ -753,7 +753,6 @@ void OGRPGTableLayer::BuildWhere()
     {
         char szBox3D_1[128];
         char szBox3D_2[128];
-        char* pszComma;
         OGREnvelope  sEnvelope;
 
         m_poFilterGeom->getEnvelope( &sEnvelope );
@@ -768,12 +767,8 @@ void OGRPGTableLayer::BuildWhere()
             if( sEnvelope.MaxY > 90.0 )
                 sEnvelope.MaxY = 90.0;
         }
-        snprintf(szBox3D_1, sizeof(szBox3D_1), "%.18g %.18g", sEnvelope.MinX, sEnvelope.MinY);
-        while((pszComma = strchr(szBox3D_1, ',')) != NULL)
-            *pszComma = '.';
-        snprintf(szBox3D_2, sizeof(szBox3D_2), "%.18g %.18g", sEnvelope.MaxX, sEnvelope.MaxY);
-        while((pszComma = strchr(szBox3D_2, ',')) != NULL)
-            *pszComma = '.';
+        CPLsnprintf(szBox3D_1, sizeof(szBox3D_1), "%.18g %.18g", sEnvelope.MinX, sEnvelope.MinY);
+        CPLsnprintf(szBox3D_2, sizeof(szBox3D_2), "%.18g %.18g", sEnvelope.MaxX, sEnvelope.MaxY);
         osWHERE.Printf("WHERE %s && %s('BOX3D(%s, %s)'::box3d,%d) ",
                        OGRPGEscapeColumnName(poGeomFieldDefn->GetNameRef()).c_str(),
                        (poDS->sPostGISVersion.nMajor >= 2) ? "ST_SetSRID" : "SetSRID",
@@ -1175,11 +1170,7 @@ void OGRPGTableLayer::AppendFieldValue(PGconn *hPGConn, CPLString& osCommand,
             else if( CPLIsInf(padfItems[j]) )
                 sprintf( pszNeedToFree+nOff, (padfItems[j] > 0) ? "Infinity" : "-Infinity" );
             else
-                sprintf( pszNeedToFree+nOff, "%.16g", padfItems[j] );
-
-            char* pszComma = strchr(pszNeedToFree+nOff, ',');
-            if (pszComma)
-                *pszComma = '.';
+                CPLsprintf( pszNeedToFree+nOff, "%.16g", padfItems[j] );
         }
         strcat( pszNeedToFree+nOff, "}'" );
 
@@ -1236,9 +1227,6 @@ void OGRPGTableLayer::AppendFieldValue(PGconn *hPGConn, CPLString& osCommand,
     }
     else if ( nOGRFieldType == OFTReal )
     {
-        char* pszComma = strchr((char*)pszStrValue, ',');
-        if (pszComma)
-            *pszComma = '.';
         //Check for special values. They need to be quoted.
         double dfVal = poFeature->GetFieldAsDouble(i);
         if( CPLIsNan(dfVal) )
@@ -2069,11 +2057,8 @@ OGRErr OGRPGTableLayer::CreateFeatureViaCopy( OGRFeature *poFeature )
                 else if( CPLIsInf(padfItems[j]) )
                     sprintf( pszNeedToFree+nOff, (padfItems[j] > 0) ? "Infinity" : "-Infinity" );
                 else
-                    sprintf( pszNeedToFree+nOff, "%.16g", padfItems[j] );
+                    CPLsprintf( pszNeedToFree+nOff, "%.16g", padfItems[j] );
 
-                char* pszComma = strchr(pszNeedToFree+nOff, ',');
-                if (pszComma)
-                    *pszComma = '.';
             }
             strcat( pszNeedToFree+nOff, "}" );
             pszStrValue = pszNeedToFree;
@@ -2101,9 +2086,6 @@ OGRErr OGRPGTableLayer::CreateFeatureViaCopy( OGRFeature *poFeature )
 
         else if( nOGRFieldType == OFTReal )
         {
-            char* pszComma = strchr((char*)pszStrValue, ',');
-            if (pszComma)
-                *pszComma = '.';
             //Check for special values. They need to be quoted.
             double dfVal = poFeature->GetFieldAsDouble(i);
             if( CPLIsNan(dfVal) )

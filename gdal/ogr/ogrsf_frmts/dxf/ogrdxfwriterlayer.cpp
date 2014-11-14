@@ -189,10 +189,7 @@ int OGRDXFWriterLayer::WriteValue( int nCode, double dfValue )
 {
     char szLinePair[64];
 
-    snprintf(szLinePair, sizeof(szLinePair), "%3d\n%.15g\n", nCode, dfValue );
-    char* pszComma = strchr(szLinePair, ',');
-    if (pszComma)
-        *pszComma = '.';
+    CPLsnprintf(szLinePair, sizeof(szLinePair), "%3d\n%.15g\n", nCode, dfValue );
     size_t nLen = strlen(szLinePair);
 
     return VSIFWriteL( szLinePair, 
@@ -568,7 +565,7 @@ OGRDXFWriterLayer::PrepareLineTypeDefinition( CPL_UNUSED OGRFeature *poFeature,
         
         osDef += osDXFEntry;
 
-        dfTotalLength += atof(osAmount);
+        dfTotalLength += CPLAtof(osAmount);
     }
 
 /* -------------------------------------------------------------------- */

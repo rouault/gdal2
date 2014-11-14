@@ -794,7 +794,7 @@ OGRErr OGRGMLLayer::ICreateFeature( OGRFeature *poFeature )
                 for(int i = 0; i < nCount; i++)
                 {
                     char szBuffer[80];
-                    snprintf( szBuffer, sizeof(szBuffer), "%.15g", padfVals[i]);
+                    CPLsnprintf( szBuffer, sizeof(szBuffer), "%.15g", padfVals[i]);
                     /* Use point as decimal separator */
                     char* pszComma = strchr(szBuffer, ',');
                     if (pszComma)

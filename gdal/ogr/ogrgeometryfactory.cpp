@@ -2660,7 +2660,7 @@ OGRGeometry* OGRGeometryFactory::transformWithOptions( const OGRGeometry* poSrcG
 
 static double OGRGF_GetDefaultStepSize()
 {
-    return atof(CPLGetConfigOption("OGR_ARC_STEPSIZE","4"));
+    return CPLAtofM(CPLGetConfigOption("OGR_ARC_STEPSIZE","4"));
 }
 
 /************************************************************************/

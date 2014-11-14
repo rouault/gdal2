@@ -435,7 +435,7 @@ OGRErr OGRPGDumpLayer::CreateFeatureViaCopy( OGRFeature *poFeature )
                 else if( CPLIsInf(padfItems[j]) )
                     sprintf( pszNeedToFree+nOff, (padfItems[j] > 0) ? "Infinity" : "-Infinity" );
                 else
-                    sprintf( pszNeedToFree+nOff, "%.16g", padfItems[j] );
+                    CPLsprintf( pszNeedToFree+nOff, "%.16g", padfItems[j] );
 
             }
             strcat( pszNeedToFree+nOff, "}" );
@@ -464,9 +464,6 @@ OGRErr OGRPGDumpLayer::CreateFeatureViaCopy( OGRFeature *poFeature )
 
         else if( nOGRFieldType == OFTReal )
         {
-            char* pszComma = strchr((char*)pszStrValue, ',');
-            if (pszComma)
-                *pszComma = '.';
             //Check for special values. They need to be quoted.
             double dfVal = poFeature->GetFieldAsDouble(i);
             if( CPLIsNan(dfVal) )
@@ -846,7 +843,7 @@ void OGRPGDumpLayer::AppendFieldValue(CPLString& osCommand,
             else if( CPLIsInf(padfItems[j]) )
                 sprintf( pszNeedToFree+nOff, (padfItems[j] > 0) ? "Infinity" : "-Infinity" );
             else
-                sprintf( pszNeedToFree+nOff, "%.16g", padfItems[j] );
+                CPLsprintf( pszNeedToFree+nOff, "%.16g", padfItems[j] );
 
         }
         strcat( pszNeedToFree+nOff, "}'" );
@@ -901,9 +898,6 @@ void OGRPGDumpLayer::AppendFieldValue(CPLString& osCommand,
     }
     else if ( nOGRFieldType == OFTReal )
     {
-        char* pszComma = strchr((char*)pszStrValue, ',');
-        if (pszComma)
-            *pszComma = '.';
         //Check for special values. They need to be quoted.
         double dfVal = poFeature->GetFieldAsDouble(i);
         if( CPLIsNan(dfVal) )

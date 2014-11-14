@@ -313,10 +313,7 @@ static int WriteValue( VSILFILE *fp, int nCode, double dfValue )
 {
     char szLinePair[64];
 
-    snprintf(szLinePair, sizeof(szLinePair), "%3d\n%.15g\n", nCode, dfValue );
-    char* pszComma = strchr(szLinePair, ',');
-    if (pszComma)
-        *pszComma = '.';
+    CPLsnprintf(szLinePair, sizeof(szLinePair), "%3d\n%.15g\n", nCode, dfValue );
     size_t nLen = strlen(szLinePair);
     if( VSIFWriteL( szLinePair, 1, nLen, fp ) != nLen )
     {

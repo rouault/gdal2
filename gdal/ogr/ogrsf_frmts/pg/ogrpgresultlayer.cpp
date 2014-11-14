@@ -286,7 +286,6 @@ void OGRPGResultLayer::SetSpatialFilter( int iGeomField, OGRGeometry * poGeomIn 
             {
                 char szBox3D_1[128];
                 char szBox3D_2[128];
-                char* pszComma;
                 OGREnvelope  sEnvelope;
 
                 m_poFilterGeom->getEnvelope( &sEnvelope );
@@ -301,12 +300,8 @@ void OGRPGResultLayer::SetSpatialFilter( int iGeomField, OGRGeometry * poGeomIn 
                     if( sEnvelope.MaxY > 90.0 )
                         sEnvelope.MaxY = 90.0;
                 }
-                snprintf(szBox3D_1, sizeof(szBox3D_1), "%.18g %.18g", sEnvelope.MinX, sEnvelope.MinY);
-                while((pszComma = strchr(szBox3D_1, ',')) != NULL)
-                    *pszComma = '.';
-                snprintf(szBox3D_2, sizeof(szBox3D_2), "%.18g %.18g", sEnvelope.MaxX, sEnvelope.MaxY);
-                while((pszComma = strchr(szBox3D_2, ',')) != NULL)
-                    *pszComma = '.';
+                CPLsnprintf(szBox3D_1, sizeof(szBox3D_1), "%.18g %.18g", sEnvelope.MinX, sEnvelope.MinY);
+                CPLsnprintf(szBox3D_2, sizeof(szBox3D_2), "%.18g %.18g", sEnvelope.MaxX, sEnvelope.MaxY);
                 osWHERE.Printf("WHERE %s && %s('BOX3D(%s, %s)'::box3d,%d) ",
                                OGRPGEscapeColumnName(poGeomFieldDefn->GetNameRef()).c_str(),
                                (poDS->sPostGISVersion.nMajor >= 2) ? "ST_SetSRID" : "SetSRID",
