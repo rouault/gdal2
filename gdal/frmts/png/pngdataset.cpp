@@ -1663,7 +1663,7 @@ PNGDataset::CreateCopy( const char * pszFilename, GDALDataset *poSrcDS,
                                      pabyScanline + iBand*nWordSize, 
                                      nXSize, 1, eType,
                                      nBands * nWordSize, 
-                                     nBands * nXSize * nWordSize );
+                                     nBands * nXSize * nWordSize, NULL );
         }
 
 #ifdef CPL_LSB

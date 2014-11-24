@@ -58,6 +58,7 @@ static void Usage(const char* pszErrorMsg = NULL, int bShort = TRUE)
             "             CInt16/CInt32/CFloat32/CFloat64}] [-strict]\n"
             "       [-of format] [-b band] [-mask band] [-expand {gray|rgb|rgba}]\n"
             "       [-outsize xsize[%%] ysize[%%]]\n"
+            "       [-r {nearest,bilinear,cubic,cubicspline,lanczos,average,mode}]\n"
             "       [-unscale] [-scale[_bn] [src_min src_max [dst_min dst_max]]]* [-exponent[_bn] exp_val]*\n"
             "       [-srcwin xoff yoff xsize ysize] [-projwin ulx uly lrx lry] [-epo] [-eco]\n"
             "       [-a_srs srs_def] [-a_ullr ulx uly lrx lry] [-a_nodata value]\n"
@@ -321,6 +322,7 @@ static int ProxyMain( int argc, char ** argv )
     int                 bErrorOnCompletelyOutside = FALSE;
     int                 bNoRAT = FALSE;
     char              **papszOpenOptions = NULL;
+    const char         *pszResampling = NULL;
 
     anSrcWin[0] = 0;
     anSrcWin[1] = 0;
@@ -720,6 +722,11 @@ static int ProxyMain( int argc, char ** argv )
             papszOpenOptions = CSLAddString( papszOpenOptions,
                                                 argv[++i] );
         }
+        else if( EQUAL(argv[i],"-r") )
+        {
+            CHECK_HAS_ENOUGH_ADDITIONAL_ARGS(1);
+            pszResampling = argv[++i];
+        }  
         else if( argv[i][0] == '-' )
         {
             Usage(CPLSPrintf("Unknown option name '%s'", argv[i]));
@@ -1493,16 +1500,10 @@ static int ProxyMain( int argc, char ** argv )
 /*      Create a simple or complex data source depending on the         */
 /*      translation type required.                                      */
 /* -------------------------------------------------------------------- */
+        VRTSimpleSource* poSimpleSource;
         if( bUnscale || bScale || (nRGBExpand != 0 && i < nRGBExpand) )
         {
             VRTComplexSource* poSource = new VRTComplexSource();
-            poVRTBand->ConfigureSource( poSource,
-                                        poSrcBand,
-                                        FALSE,
-                                        anSrcWin[0], anSrcWin[1],
-                                        anSrcWin[2], anSrcWin[3],
-                                        anDstWin[0], anDstWin[1],
-                                        anDstWin[2], anDstWin[3] );
 
         /* -------------------------------------------------------------------- */
         /*      Set complex parameters.                                         */
@@ -1523,14 +1524,21 @@ static int ProxyMain( int argc, char ** argv )
 
             poSource->SetColorTableComponent(nComponent);
 
-            poVRTBand->AddSource( poSource );
+            poSimpleSource = poSource;
         }
         else
-            poVRTBand->AddSimpleSource( poSrcBand,
-                                        anSrcWin[0], anSrcWin[1],
-                                        anSrcWin[2], anSrcWin[3],
-                                        anDstWin[0], anDstWin[1],
-                                        anDstWin[2], anDstWin[3] );
+            poSimpleSource = new VRTSimpleSource();
+
+        poSimpleSource->SetResampling(pszResampling);
+        poVRTBand->ConfigureSource( poSimpleSource,
+                                    poSrcBand,
+                                    FALSE,
+                                    anSrcWin[0], anSrcWin[1],
+                                    anSrcWin[2], anSrcWin[3],
+                                    anDstWin[0], anDstWin[1],
+                                    anDstWin[2], anDstWin[3] );
+
+        poVRTBand->AddSource( poSimpleSource );
 
 /* -------------------------------------------------------------------- */
 /*      In case of color table translate, we only set the color         */
