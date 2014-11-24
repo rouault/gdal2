@@ -57,7 +57,7 @@ static void Usage(const char* pszErrorMsg = NULL, int bShort = TRUE)
             "       [-ot {Byte/Int16/UInt16/UInt32/Int32/Float32/Float64/\n"
             "             CInt16/CInt32/CFloat32/CFloat64}] [-strict]\n"
             "       [-of format] [-b band] [-mask band] [-expand {gray|rgb|rgba}]\n"
-            "       [-outsize xsize[%%] ysize[%%]]\n"
+            "       [-outsize xsize[%%] ysize[%%]] [-tr xres yres]\n"
             "       [-r {nearest,bilinear,cubic,cubicspline,lanczos,average,mode}]\n"
             "       [-unscale] [-scale[_bn] [src_min src_max [dst_min dst_max]]]* [-exponent[_bn] exp_val]*\n"
             "       [-srcwin xoff yoff xsize ysize] [-projwin ulx uly lrx lry] [-epo] [-eco]\n"
@@ -323,6 +323,7 @@ static int ProxyMain( int argc, char ** argv )
     int                 bNoRAT = FALSE;
     char              **papszOpenOptions = NULL;
     const char         *pszResampling = NULL;
+    double              dfXRes = 0.0, dfYRes = 0.0;
 
     anSrcWin[0] = 0;
     anSrcWin[1] = 0;
@@ -637,7 +638,18 @@ static int ProxyMain( int argc, char ** argv )
             CHECK_HAS_ENOUGH_ADDITIONAL_ARGS(2);
             pszOXSize = argv[++i];
             pszOYSize = argv[++i];
-        }   
+        }
+        
+        else if( EQUAL(argv[i],"-tr") )
+        {
+            CHECK_HAS_ENOUGH_ADDITIONAL_ARGS(2);
+            dfXRes = CPLAtofM(argv[++i]);
+            dfYRes = fabs(CPLAtofM(argv[++i]));
+            if( dfXRes == 0 || dfYRes == 0 )
+            {
+                Usage("Wrong value for -tr parameters.");
+            }
+        }
 
         else if( EQUAL(argv[i],"-srcwin") )
         {
@@ -769,6 +781,18 @@ static int ProxyMain( int argc, char ** argv )
 
     if (!bQuiet && !bFormatExplicitelySet)
         CheckExtensionConsistency(pszDest, pszFormat);
+/* -------------------------------------------------------------------- */
+/*      Check that incompatible options are not used                    */
+/* -------------------------------------------------------------------- */
+
+    if( pszOXSize != NULL && (dfXRes != 0 && dfYRes != 0) )
+    {
+        Usage("-outsize and -tr options cannot be used at the same time.");
+    }
+    if( bGotBounds &&  (dfXRes != 0 && dfYRes != 0) )
+    {
+        Usage("-a_ullr and -tr options cannot be used at the same time.");
+    }
 
 /* -------------------------------------------------------------------- */
 /*      Attempt to open source file.                                    */
@@ -1056,7 +1080,7 @@ static int ProxyMain( int argc, char ** argv )
            anSrcWin[0] == 0 && anSrcWin[1] == 0
         && anSrcWin[2] == GDALGetRasterXSize(hDataset)
         && anSrcWin[3] == GDALGetRasterYSize(hDataset)
-        && pszOXSize == NULL && pszOYSize == NULL );
+        && pszOXSize == NULL && pszOYSize == NULL && dfXRes == 0.0 );
 
     if( eOutputType == GDT_Unknown 
         && nScaleRepeat == 0 && nExponentRepeat == 0 && !bUnscale
@@ -1095,7 +1119,24 @@ static int ProxyMain( int argc, char ** argv )
 /* -------------------------------------------------------------------- */
 /*      Establish some parameters.                                      */
 /* -------------------------------------------------------------------- */
-    if( pszOXSize == NULL )
+    if( dfXRes != 0.0 )
+    {
+        if( !(GDALGetGeoTransform( hDataset, adfGeoTransform ) == CE_None &&
+              nGCPCount == 0 &&
+              adfGeoTransform[2] == 0.0 && adfGeoTransform[4] == 0.0) )
+        {
+            fprintf( stderr, 
+                     "The -tr option was used, but there's no geotransform or it is\n"
+                     "rotated.  This configuration is not supported.\n" );
+            GDALClose( hDataset );
+            CPLFree( panBandList );
+            GDALDestroyDriverManager();
+            exit( 1 );
+        }
+        nOXSize = int(anSrcWin[2] / dfXRes * adfGeoTransform[1] + 0.5);
+        nOYSize = int(anSrcWin[3] / dfYRes * fabs(adfGeoTransform[5]) + 0.5);
+    }
+    else if( pszOXSize == NULL )
     {
         nOXSize = anSrcWin[2];
         nOYSize = anSrcWin[3];
@@ -1106,6 +1147,15 @@ static int ProxyMain( int argc, char ** argv )
                           ? CPLAtofM(pszOXSize)/100*anSrcWin[2] : atoi(pszOXSize)));
         nOYSize = (int) ((pszOYSize[strlen(pszOYSize)-1]=='%' 
                           ? CPLAtofM(pszOYSize)/100*anSrcWin[3] : atoi(pszOYSize)));
+    }
+
+    if( nOXSize == 0 || nOYSize == 0 )
+    {
+        fprintf(stderr, "Attempt to create %dx%d dataset is illegal.\n", nOXSize, nOYSize);
+        GDALClose( hDataset );
+        CPLFree( panBandList );
+        GDALDestroyDriverManager();
+        exit( 1 );
     }
 
 /* ==================================================================== */
@@ -1157,6 +1207,12 @@ static int ProxyMain( int argc, char ** argv )
         adfGeoTransform[4] *= anSrcWin[2] / (double) nOXSize;
         adfGeoTransform[5] *= anSrcWin[3] / (double) nOYSize;
         
+        if( dfXRes != 0.0 )
+        {
+            adfGeoTransform[1] = dfXRes;
+            adfGeoTransform[5] = (adfGeoTransform[5] > 0) ? dfYRes : -dfYRes;
+        }
+
         poVDS->SetGeoTransform( adfGeoTransform );
     }
 

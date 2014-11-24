@@ -838,6 +838,29 @@ def test_gdal_translate_29():
     return 'success'
 
 ###############################################################################
+# Test -tr option
+
+def test_gdal_translate_30():
+    if test_cli_utilities.get_gdal_translate_path() is None:
+        return 'skip'
+
+    gdaltest.runexternal(test_cli_utilities.get_gdal_translate_path() + ' -tr 30 30 ../gcore/data/byte.tif tmp/test_gdal_translate_30.tif')
+
+    ds = gdal.Open('tmp/test_gdal_translate_30.tif')
+    if ds is None:
+        return 'fail'
+
+    cs = ds.GetRasterBand(1).Checksum()
+    if cs != 18784:
+        print(cs)
+        gdaltest.post_reason('Bad checksum')
+        return 'fail'
+
+    ds = None
+
+    return 'success'
+
+###############################################################################
 # Cleanup
 
 def test_gdal_translate_cleanup():
@@ -932,6 +955,10 @@ def test_gdal_translate_cleanup():
         os.remove('tmp/test_gdal_translate_29.vrt')
     except:
         pass
+    try:
+        os.remove('tmp/test_gdal_translate_30.tif')
+    except:
+        pass
     return 'success'
 
 gdaltest_list = [
@@ -964,6 +991,7 @@ gdaltest_list = [
     test_gdal_translate_27,
     test_gdal_translate_28,
     test_gdal_translate_29,
+    test_gdal_translate_30,
     test_gdal_translate_cleanup
     ]
 
