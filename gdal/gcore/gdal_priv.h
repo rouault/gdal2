@@ -261,6 +261,12 @@ class OGRStyleTable;
 typedef void signature_changed;
 #endif
 
+#ifdef GDAL_COMPILATION
+#define OPTIONAL_OUTSIDE_GDAL(val)
+#else
+#define OPTIONAL_OUTSIDE_GDAL(val) = val
+#endif
+
 //! A set of associated raster bands, usually from one file.
 
 class CPL_DLL GDALDataset : public GDALMajorObject
@@ -383,7 +389,7 @@ class CPL_DLL GDALDataset : public GDALMajorObject
     CPLErr      RasterIO( GDALRWFlag, int, int, int, int,
                           void *, int, int, GDALDataType,
                           int, int *, GSpacing, GSpacing, GSpacing,
-                          GDALRasterIOExtraArg* psExtraArg );
+                          GDALRasterIOExtraArg* psExtraArg OPTIONAL_OUTSIDE_GDAL(NULL) );
 
     int           Reference();
     int           Dereference();
@@ -641,7 +647,7 @@ class CPL_DLL GDALRasterBand : public GDALMajorObject
     
     CPLErr      RasterIO( GDALRWFlag, int, int, int, int,
                           void *, int, int, GDALDataType,
-                          GSpacing, GSpacing, GDALRasterIOExtraArg* psExtraArg );
+                          GSpacing, GSpacing, GDALRasterIOExtraArg* psExtraArg OPTIONAL_OUTSIDE_GDAL(NULL) );
     CPLErr      ReadBlock( int, int, void * );
 
     CPLErr      WriteBlock( int, int, void * );
