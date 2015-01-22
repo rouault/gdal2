@@ -110,10 +110,10 @@ OGRFeature *OGRILI2Layer::GetNextFeature()
 }
 
 /************************************************************************/
-/*                          GetFeatureCount()                           */
+/*                          GetFeatureCount64()                           */
 /************************************************************************/
 
-int OGRILI2Layer::GetFeatureCount( int bForce )
+GIntBig OGRILI2Layer::GetFeatureCount64( int bForce )
 {
     if (m_poFilterGeom == NULL && m_poAttrQuery == NULL)
     {
@@ -121,7 +121,7 @@ int OGRILI2Layer::GetFeatureCount( int bForce )
     }
     else
     {
-        return OGRLayer::GetFeatureCount(bForce);
+        return OGRLayer::GetFeatureCount64(bForce);
     }
 }
 
@@ -282,7 +282,7 @@ OGRErr OGRILI2Layer::ICreateFeature( OGRFeature *poFeature ) {
     }
     else
     {
-        sprintf( szTempBuffer, "%ld", poFeature->GetFID() );
+        sprintf( szTempBuffer, CPL_FRMT_GIB, poFeature->GetFID64() );
         tid = szTempBuffer;
     }
 

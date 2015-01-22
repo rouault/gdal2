@@ -67,7 +67,7 @@ OGRTigerLayer::OGRTigerLayer( OGRTigerDataSource *poDSIn,
         for( int iModule = 0; iModule < poDS->GetModuleCount(); iModule++ )
         {
             if( poReader->SetModule( poDS->GetModule(iModule) ) )
-                panModuleFCount[iModule] = poReader->GetFeatureCount();
+                panModuleFCount[iModule] = poReader->GetFeatureCount64();
             else
                 panModuleFCount[iModule] = 0;
 
@@ -118,7 +118,7 @@ void OGRTigerLayer::ResetReading()
 /*                             GetFeature()                             */
 /************************************************************************/
 
-OGRFeature *OGRTigerLayer::GetFeature( long nFeatureId )
+OGRFeature *OGRTigerLayer::GetFeature( GIntBig nFeatureId )
 
 {
     if( nFeatureId < 1 || nFeatureId > nFeatureCount )
@@ -264,14 +264,14 @@ OGRErr OGRTigerLayer::ICreateFeature( OGRFeature *poFeature )
 }
 
 /************************************************************************/
-/*                          GetFeatureCount()                           */
+/*                          GetFeatureCount64()                           */
 /************************************************************************/
 
-int OGRTigerLayer::GetFeatureCount( int bForce )
+GIntBig OGRTigerLayer::GetFeatureCount64( int bForce )
 
 {
     if( m_poFilterGeom == NULL && m_poAttrQuery == NULL )
         return nFeatureCount;
     else
-        return OGRLayer::GetFeatureCount( bForce );
+        return OGRLayer::GetFeatureCount64( bForce );
 }

@@ -128,24 +128,24 @@ OGRGeometry *OGRVFKLayer::CreateGeometry(IVFKFeature * poVfkFeature)
 /*!
   \brief Get feature count
 
-  This method overwrites OGRLayer::GetFeatureCount(),
+  This method overwrites OGRLayer::GetFeatureCount64(),
 
   \param bForce skip (return -1)
 
   \return number of features
 */
-int OGRVFKLayer::GetFeatureCount(CPL_UNUSED int bForce)
+GIntBig OGRVFKLayer::GetFeatureCount64(CPL_UNUSED int bForce)
 {
     int nfeatures;
 
     /* note that 'nfeatures' is 0 when data are not read from DB */
-    nfeatures = poDataBlock->GetFeatureCount();
+    nfeatures = poDataBlock->GetFeatureCount64();
     if (m_poFilterGeom || m_poAttrQuery || nfeatures < 1) {
         /* force real feature count */
-        nfeatures = OGRLayer::GetFeatureCount();
+        nfeatures = OGRLayer::GetFeatureCount64();
     }
 
-    CPLDebug("OGR-VFK", "OGRVFKLayer::GetFeatureCount(): name=%s -> n=%d",
+    CPLDebug("OGR-VFK", "OGRVFKLayer::GetFeatureCount64(): name=%s -> n=%d",
              GetName(), nfeatures);
 
     return nfeatures;
@@ -197,7 +197,7 @@ OGRFeature *OGRVFKLayer::GetNextFeature()
 
   \return pointer to OGRFeature or NULL not found
 */
-OGRFeature *OGRVFKLayer::GetFeature(long nFID)
+OGRFeature *OGRVFKLayer::GetFeature(GIntBig nFID)
 {
     IVFKFeature *poVFKFeature;
 
@@ -206,8 +206,8 @@ OGRFeature *OGRVFKLayer::GetFeature(long nFID)
     if (!poVFKFeature)
         return NULL;
 
-    CPLAssert(nFID == poVFKFeature->GetFID());
-    CPLDebug("OGR-VFK", "OGRVFKLayer::GetFeature(): name=%s fid=%ld", GetName(), nFID);
+    CPLAssert(nFID == poVFKFeature->GetFID64());
+    CPLDebug("OGR-VFK", "OGRVFKLayer::GetFeature(): name=%s fid=" CPL_FRMT_GIB, GetName(), nFID);
     
     return GetFeature(poVFKFeature);
 }
@@ -237,7 +237,7 @@ OGRFeature *OGRVFKLayer::GetFeature(IVFKFeature *poVFKFeature)
     
     /* convert the whole feature into an OGRFeature */
     OGRFeature *poOGRFeature = new OGRFeature(GetLayerDefn());
-    poOGRFeature->SetFID(poVFKFeature->GetFID());
+    poOGRFeature->SetFID(poVFKFeature->GetFID64());
     // poOGRFeature->SetFID(++m_iNextFeature);
     
     poVFKFeature->LoadProperties(poOGRFeature);

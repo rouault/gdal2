@@ -423,7 +423,7 @@ TABFeature* IMapInfoFile::CreateTABFeature(OGRFeature *poFeature)
         poTABFeature->SetField(i,poFeature->GetRawFieldRef( i ));
     }
     
-    poTABFeature->SetFID(poFeature->GetFID());
+    poTABFeature->SetFID(poFeature->GetFID64());
     
     return poTABFeature;
 }
@@ -445,7 +445,7 @@ OGRErr     IMapInfoFile::ICreateFeature(OGRFeature *poFeature)
 
     eErr = CreateFeature(poTABFeature);
     if( eErr == OGRERR_NONE )
-        poFeature->SetFID(poTABFeature->GetFID());
+        poFeature->SetFID(poTABFeature->GetFID64());
 
     delete poTABFeature;
     
@@ -459,7 +459,7 @@ OGRErr     IMapInfoFile::ICreateFeature(OGRFeature *poFeature)
  * to get the wanted (nFeatureId) feature, a NULL value will be 
  * returned on error.
  **********************************************************************/
-OGRFeature *IMapInfoFile::GetFeature(long nFeatureId)
+OGRFeature *IMapInfoFile::GetFeature(GIntBig nFeatureId)
 {
     OGRFeature *poFeatureRef;
     

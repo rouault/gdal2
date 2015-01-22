@@ -3478,6 +3478,8 @@ int OGROSMDataSource::ParseConf()
                  OGRFieldType eType = OFTString;
                 if( EQUAL(pszType, "Integer") )
                     eType = OFTInteger;
+                else if( EQUAL(pszType, "Integer64") )
+                    eType = OFTInteger64;
                 else if( EQUAL(pszType, "Real") )
                     eType = OFTReal;
                 else if( EQUAL(pszType, "String") )
@@ -4044,13 +4046,13 @@ class OGROSMResultLayerDecorator : public OGRLayerDecorator
                                         osDSName(osDSName),
                                         osInterestLayers(osInterestLayers) {}
 
-        virtual int         GetFeatureCount( int bForce = TRUE )
+        virtual GIntBig     GetFeatureCount64( int bForce = TRUE )
         {
-            /* When we run GetFeatureCount() with SQLite SQL dialect, */
+            /* When we run GetFeatureCount64() with SQLite SQL dialect, */
             /* the OSM dataset will be re-opened. Make sure that it is */
             /* re-opened with the same interest layers */
             AddInterestLayersForDSName(osDSName, osInterestLayers);
-            return OGRLayerDecorator::GetFeatureCount(bForce);
+            return OGRLayerDecorator::GetFeatureCount64(bForce);
         }
 };
 

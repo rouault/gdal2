@@ -215,10 +215,10 @@ OGRFeature *OGRKMLLayer::GetNextFeature()
 }
 
 /************************************************************************/
-/*                          GetFeatureCount()                           */
+/*                          GetFeatureCount64()                           */
 /************************************************************************/
 
-int OGRKMLLayer::GetFeatureCount(
+GIntBig OGRKMLLayer::GetFeatureCount64(
 #ifndef HAVE_EXPAT
 CPL_UNUSED
 #endif
@@ -238,7 +238,7 @@ CPL_UNUSED
         }
     }
     else
-        return OGRLayer::GetFeatureCount(bForce);
+        return OGRLayer::GetFeatureCount64(bForce);
 #endif
 
     return nCount;
@@ -356,7 +356,7 @@ OGRErr OGRKMLLayer::ICreateFeature( OGRFeature* poFeature )
 
     VSIFPrintfL( fp, "  <Placemark>\n" );
 
-    if( poFeature->GetFID() == OGRNullFID )
+    if( poFeature->GetFID64() == OGRNullFID )
         poFeature->SetFID( iNextKMLId_++ );
 
     // Find and write the name element
@@ -590,7 +590,7 @@ int OGRKMLLayer::TestCapability( const char * pszCap )
 //            || m_poAttrQuery != NULL )
             return FALSE;
 
-//        return poFClass->GetFeatureCount() != -1;
+//        return poFClass->GetFeatureCount64() != -1;
     }
 
     else if (EQUAL(pszCap, OLCStringsAsUTF8))

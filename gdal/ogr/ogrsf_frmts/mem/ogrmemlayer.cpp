@@ -74,12 +74,12 @@ OGRMemLayer::~OGRMemLayer()
 {
     if( m_nFeaturesRead > 0 && poFeatureDefn != NULL )
     {
-        CPLDebug( "Mem", "%d features read on layer '%s'.",
-                  (int) m_nFeaturesRead, 
+        CPLDebug( "Mem", CPL_FRMT_GIB " features read on layer '%s'.",
+                  m_nFeaturesRead, 
                   poFeatureDefn->GetName() );
     }
 
-    for( int i = 0; i < nMaxFeatureCount; i++ )
+    for( GIntBig i = 0; i < nMaxFeatureCount; i++ )
     {
         if( papoFeatures[i] != NULL )
             delete papoFeatures[i];
@@ -131,7 +131,7 @@ OGRFeature *OGRMemLayer::GetNextFeature()
 /*                           SetNextByIndex()                           */
 /************************************************************************/
 
-OGRErr OGRMemLayer::SetNextByIndex( long nIndex )
+OGRErr OGRMemLayer::SetNextByIndex( GIntBig nIndex )
 
 {
     if( m_poFilterGeom != NULL || m_poAttrQuery != NULL || bHasHoles )
@@ -149,7 +149,7 @@ OGRErr OGRMemLayer::SetNextByIndex( long nIndex )
 /*                             GetFeature()                             */
 /************************************************************************/
 
-OGRFeature *OGRMemLayer::GetFeature( long nFeatureId )
+OGRFeature *OGRMemLayer::GetFeature( GIntBig nFeatureId )
 
 {
     if( nFeatureId < 0 || nFeatureId >= nMaxFeatureCount )
@@ -173,30 +173,37 @@ OGRErr OGRMemLayer::ISetFeature( OGRFeature *poFeature )
     if( poFeature == NULL )
         return OGRERR_FAILURE;
 
-    if( poFeature->GetFID() == OGRNullFID )
+    if( poFeature->GetFID64() == OGRNullFID )
     {
         while( iNextCreateFID < nMaxFeatureCount 
                && papoFeatures[iNextCreateFID] != NULL )
             iNextCreateFID++;
         poFeature->SetFID( iNextCreateFID++ );
     }
-    else if ( poFeature->GetFID() < OGRNullFID )
+    else if ( poFeature->GetFID64() < OGRNullFID )
     {
         CPLError(CE_Failure, CPLE_NotSupported,
                  "negative FID are not supported");
         return OGRERR_FAILURE;
     }
 
-    if( poFeature->GetFID() >= nMaxFeatureCount )
+    if( poFeature->GetFID64() >= nMaxFeatureCount )
     {
-        int nNewCount = MAX(2*nMaxFeatureCount+10, poFeature->GetFID() + 1 );
+        GIntBig nNewCount = MAX(2*nMaxFeatureCount+10, poFeature->GetFID64() + 1 );
+        if( (GIntBig)(size_t)(sizeof(OGRFeature *) * nNewCount) !=
+                                (GIntBig)sizeof(OGRFeature *) * nNewCount )
+        {
+            CPLError(CE_Failure, CPLE_OutOfMemory,
+                     "Cannot allocate array of " CPL_FRMT_GIB " elements", nNewCount);
+            return OGRERR_FAILURE;
+        }
 
         OGRFeature** papoNewFeatures = (OGRFeature **) 
-            VSIRealloc( papoFeatures, sizeof(OGRFeature *) * nNewCount);
+            VSIRealloc( papoFeatures, (size_t)(sizeof(OGRFeature *) * nNewCount) );
         if (papoNewFeatures == NULL)
         {
             CPLError(CE_Failure, CPLE_OutOfMemory,
-                     "Cannot allocate array of %d elements", nNewCount);
+                     "Cannot allocate array of " CPL_FRMT_GIB " elements", nNewCount);
             return OGRERR_FAILURE;
         }
         papoFeatures = papoNewFeatures;
@@ -205,18 +212,18 @@ OGRErr OGRMemLayer::ISetFeature( OGRFeature *poFeature )
         nMaxFeatureCount = nNewCount;
     }
 
-    if( papoFeatures[poFeature->GetFID()] != NULL )
+    if( papoFeatures[poFeature->GetFID64()] != NULL )
     {
-        delete papoFeatures[poFeature->GetFID()];
-        papoFeatures[poFeature->GetFID()] = NULL;
+        delete papoFeatures[poFeature->GetFID64()];
+        papoFeatures[poFeature->GetFID64()] = NULL;
         nFeatureCount--;
     }
 
-    papoFeatures[poFeature->GetFID()] = poFeature->Clone();
+    papoFeatures[poFeature->GetFID64()] = poFeature->Clone();
     int i;
     for(i = 0; i < poFeatureDefn->GetGeomFieldCount(); i ++)
     {
-        OGRGeometry* poGeom = papoFeatures[poFeature->GetFID()]->GetGeomFieldRef(i);
+        OGRGeometry* poGeom = papoFeatures[poFeature->GetFID64()]->GetGeomFieldRef(i);
         if( poGeom != NULL && poGeom->getSpatialReference() == NULL )
         {
             poGeom->assignSpatialReference(
@@ -238,19 +245,19 @@ OGRErr OGRMemLayer::ICreateFeature( OGRFeature *poFeature )
     if (!bUpdatable)
         return OGRERR_FAILURE;
 
-    if( poFeature->GetFID() != OGRNullFID &&
-        poFeature->GetFID() != iNextCreateFID )
+    if( poFeature->GetFID64() != OGRNullFID &&
+        poFeature->GetFID64() != iNextCreateFID )
         bHasHoles = TRUE;
 
-    if( poFeature->GetFID() != OGRNullFID 
-        && poFeature->GetFID() >= 0
-        && poFeature->GetFID() < nMaxFeatureCount )
+    if( poFeature->GetFID64() != OGRNullFID 
+        && poFeature->GetFID64() >= 0
+        && poFeature->GetFID64() < nMaxFeatureCount )
     {
-        if( papoFeatures[poFeature->GetFID()] != NULL )
+        if( papoFeatures[poFeature->GetFID64()] != NULL )
             poFeature->SetFID( OGRNullFID );
     }
 
-    if( poFeature->GetFID() > 10000000 )
+    if( poFeature->GetFID64() > 10000000 )
         poFeature->SetFID( OGRNullFID );
 
     return SetFeature( poFeature );
@@ -260,7 +267,7 @@ OGRErr OGRMemLayer::ICreateFeature( OGRFeature *poFeature )
 /*                           DeleteFeature()                            */
 /************************************************************************/
 
-OGRErr OGRMemLayer::DeleteFeature( long nFID )
+OGRErr OGRMemLayer::DeleteFeature( GIntBig nFID )
 
 {
     if (!bUpdatable)
@@ -283,7 +290,7 @@ OGRErr OGRMemLayer::DeleteFeature( long nFID )
 }
 
 /************************************************************************/
-/*                          GetFeatureCount()                           */
+/*                          GetFeatureCount64()                           */
 /*                                                                      */
 /*      If a spatial filter is in effect, we turn control over to       */
 /*      the generic counter.  Otherwise we return the total count.      */
@@ -291,11 +298,11 @@ OGRErr OGRMemLayer::DeleteFeature( long nFID )
 /*      way of counting features matching a spatial query.              */
 /************************************************************************/
 
-int OGRMemLayer::GetFeatureCount( int bForce )
+GIntBig OGRMemLayer::GetFeatureCount64( int bForce )
 
 {
     if( m_poFilterGeom != NULL || m_poAttrQuery != NULL )
-        return OGRLayer::GetFeatureCount( bForce );
+        return OGRLayer::GetFeatureCount64( bForce );
     else
         return nFeatureCount;
 }
@@ -365,7 +372,7 @@ OGRErr OGRMemLayer::CreateField( OGRFieldDefn *poField,
 /*      Add field definition and setup remap definition.                */
 /* -------------------------------------------------------------------- */
     int  *panRemap;
-    int   i;
+    GIntBig   i;
 
     poFeatureDefn->AddFieldDefn( poField );
 
@@ -413,7 +420,7 @@ OGRErr OGRMemLayer::DeleteField( int iField )
 /*      Update all the internal features.  Hopefully there aren't any   */
 /*      external features referring to our OGRFeatureDefn!              */
 /* -------------------------------------------------------------------- */
-    for( int i = 0; i < nMaxFeatureCount; i++ )
+    for( GIntBig i = 0; i < nMaxFeatureCount; i++ )
     {
         if( papoFeatures[i] == NULL )
             continue;
@@ -458,7 +465,7 @@ OGRErr OGRMemLayer::ReorderFields( int* panMap )
 /*      Remap all the internal features.  Hopefully there aren't any    */
 /*      external features referring to our OGRFeatureDefn!              */
 /* -------------------------------------------------------------------- */
-    for( int i = 0; i < nMaxFeatureCount; i++ )
+    for( GIntBig i = 0; i < nMaxFeatureCount; i++ )
     {
         if( papoFeatures[i] != NULL )
             papoFeatures[i]->RemapFields( NULL, panMap );
@@ -497,6 +504,25 @@ OGRErr OGRMemLayer::AlterFieldDefn( int iField, OGRFieldDefn* poNewFieldDefn, in
         {
             /* do nothing on features */
         }
+        else if (poNewFieldDefn->GetType() == OFTInteger64 &&
+                 poFieldDefn->GetType() == OFTInteger)
+        {
+    /* -------------------------------------------------------------------- */
+    /*      Update all the internal features.  Hopefully there aren't any   */
+    /*      external features referring to our OGRFeatureDefn!              */
+    /* -------------------------------------------------------------------- */
+            for( GIntBig i = 0; i < nMaxFeatureCount; i++ )
+            {
+                if( papoFeatures[i] == NULL )
+                    continue;
+
+                OGRField* poFieldRaw = papoFeatures[i]->GetRawFieldRef(iField);
+                if( papoFeatures[i]->IsFieldSet(iField) )
+                {
+                    poFieldRaw->Integer64 = poFieldRaw->Integer;
+                }
+            }
+        }
         else if (poNewFieldDefn->GetType() == OFTReal &&
                  poFieldDefn->GetType() == OFTInteger)
         {
@@ -504,7 +530,7 @@ OGRErr OGRMemLayer::AlterFieldDefn( int iField, OGRFieldDefn* poNewFieldDefn, in
     /*      Update all the internal features.  Hopefully there aren't any   */
     /*      external features referring to our OGRFeatureDefn!              */
     /* -------------------------------------------------------------------- */
-            for( int i = 0; i < nMaxFeatureCount; i++ )
+            for( GIntBig i = 0; i < nMaxFeatureCount; i++ )
             {
                 if( papoFeatures[i] == NULL )
                     continue;
@@ -513,6 +539,44 @@ OGRErr OGRMemLayer::AlterFieldDefn( int iField, OGRFieldDefn* poNewFieldDefn, in
                 if( papoFeatures[i]->IsFieldSet(iField) )
                 {
                     poFieldRaw->Real = poFieldRaw->Integer;
+                }
+            }
+        }
+        else if (poNewFieldDefn->GetType() == OFTReal &&
+                 poFieldDefn->GetType() == OFTInteger64)
+        {
+    /* -------------------------------------------------------------------- */
+    /*      Update all the internal features.  Hopefully there aren't any   */
+    /*      external features referring to our OGRFeatureDefn!              */
+    /* -------------------------------------------------------------------- */
+            for( GIntBig i = 0; i < nMaxFeatureCount; i++ )
+            {
+                if( papoFeatures[i] == NULL )
+                    continue;
+
+                OGRField* poFieldRaw = papoFeatures[i]->GetRawFieldRef(iField);
+                if( papoFeatures[i]->IsFieldSet(iField) )
+                {
+                    poFieldRaw->Real = poFieldRaw->Integer64;
+                }
+            }
+        }
+        else if (poNewFieldDefn->GetType() == OFTReal &&
+                 poFieldDefn->GetType() == OFTInteger64)
+        {
+    /* -------------------------------------------------------------------- */
+    /*      Update all the internal features.  Hopefully there aren't any   */
+    /*      external features referring to our OGRFeatureDefn!              */
+    /* -------------------------------------------------------------------- */
+            for( GIntBig i = 0; i < nMaxFeatureCount; i++ )
+            {
+                if( papoFeatures[i] == NULL )
+                    continue;
+
+                OGRField* poFieldRaw = papoFeatures[i]->GetRawFieldRef(iField);
+                if( papoFeatures[i]->IsFieldSet(iField) )
+                {
+                    poFieldRaw->Real = poFieldRaw->Integer64;
                 }
             }
         }
@@ -529,7 +593,7 @@ OGRErr OGRMemLayer::AlterFieldDefn( int iField, OGRFieldDefn* poNewFieldDefn, in
     /*      Update all the internal features.  Hopefully there aren't any   */
     /*      external features referring to our OGRFeatureDefn!              */
     /* -------------------------------------------------------------------- */
-            for( int i = 0; i < nMaxFeatureCount; i++ )
+            for( GIntBig i = 0; i < nMaxFeatureCount; i++ )
             {
                 if( papoFeatures[i] == NULL )
                     continue;
@@ -588,7 +652,7 @@ OGRErr OGRMemLayer::CreateGeomField( OGRGeomFieldDefn *poGeomField,
 /*      Add field definition and setup remap definition.                */
 /* -------------------------------------------------------------------- */
     int  *panRemap;
-    int   i;
+    GIntBig   i;
 
     poFeatureDefn->AddGeomFieldDefn( poGeomField );
 

@@ -1318,8 +1318,8 @@ SWIGINTERN OGRErr OGRLayerShadow_SyncToDisk(OGRLayerShadow *self){
 SWIGINTERN OGRFeatureDefnShadow *OGRLayerShadow_GetLayerDefn(OGRLayerShadow *self){
     return (OGRFeatureDefnShadow*) OGR_L_GetLayerDefn(self);
   }
-SWIGINTERN int OGRLayerShadow_GetFeatureCount(OGRLayerShadow *self,int force=1){
-    return OGR_L_GetFeatureCount(self, force);
+SWIGINTERN int OGRLayerShadow_GetFeatureCount64(OGRLayerShadow *self,int force=1){
+    return OGR_L_GetFeatureCount64(self, force);
   }
 
   zval *
@@ -1489,8 +1489,8 @@ SWIGINTERN bool OGRFeatureShadow_IsFieldSet__SWIG_1(OGRFeatureShadow *self,char 
 SWIGINTERN int OGRFeatureShadow_GetFieldIndex(OGRFeatureShadow *self,char const *name){
       return OGR_F_GetFieldIndex(self, name);
   }
-SWIGINTERN int OGRFeatureShadow_GetFID(OGRFeatureShadow *self){
-    return OGR_F_GetFID(self);
+SWIGINTERN int OGRFeatureShadow_GetFID64(OGRFeatureShadow *self){
+    return OGR_F_GetFID64(self);
   }
 SWIGINTERN OGRErr OGRFeatureShadow_SetFID(OGRFeatureShadow *self,int fid){
     return OGR_F_SetFID(self, fid);
@@ -3794,7 +3794,7 @@ fail:
 }
 
 
-ZEND_NAMED_FUNCTION(_wrap_Layer_GetFeatureCount) {
+ZEND_NAMED_FUNCTION(_wrap_Layer_GetFeatureCount64) {
   OGRLayerShadow *arg1 = (OGRLayerShadow *) 0 ;
   int arg2 = (int) 1 ;
   zval **args[2];
@@ -3809,7 +3809,7 @@ ZEND_NAMED_FUNCTION(_wrap_Layer_GetFeatureCount) {
   
   {
     if(SWIG_ConvertPtr(*args[0], (void **) &arg1, SWIGTYPE_p_OGRLayerShadow, 0) < 0) {
-      SWIG_PHP_Error(E_ERROR, "Type error in argument 1 of Layer_GetFeatureCount. Expected SWIGTYPE_p_OGRLayerShadow");
+      SWIG_PHP_Error(E_ERROR, "Type error in argument 1 of Layer_GetFeatureCount64. Expected SWIGTYPE_p_OGRLayerShadow");
     }
   }
   if(!arg1) SWIG_PHP_Error(E_ERROR, "this pointer is NULL");
@@ -3820,7 +3820,7 @@ ZEND_NAMED_FUNCTION(_wrap_Layer_GetFeatureCount) {
     /*@SWIG@*/;
     
   }
-  result = (int)OGRLayerShadow_GetFeatureCount(arg1,arg2);
+  result = (int)OGRLayerShadow_GetFeatureCount64(arg1,arg2);
   {
     ZVAL_LONG(return_value,result);
   }
@@ -5304,7 +5304,7 @@ ZEND_NAMED_FUNCTION(_wrap_Feature_GetFID) {
     }
   }
   if(!arg1) SWIG_PHP_Error(E_ERROR, "this pointer is NULL");
-  result = (int)OGRFeatureShadow_GetFID(arg1);
+  result = (int)OGRFeatureShadow_GetFID64(arg1);
   {
     ZVAL_LONG(return_value,result);
   }
@@ -10560,7 +10560,7 @@ static zend_function_entry ogr_functions[] = {
  SWIG_ZEND_NAMED_FE(layer_deletefeature,_wrap_Layer_DeleteFeature,NULL)
  SWIG_ZEND_NAMED_FE(layer_synctodisk,_wrap_Layer_SyncToDisk,NULL)
  SWIG_ZEND_NAMED_FE(layer_getlayerdefn,_wrap_Layer_GetLayerDefn,NULL)
- SWIG_ZEND_NAMED_FE(layer_getfeaturecount,_wrap_Layer_GetFeatureCount,NULL)
+ SWIG_ZEND_NAMED_FE(layer_getfeaturecount,_wrap_Layer_GetFeatureCount64,NULL)
  SWIG_ZEND_NAMED_FE(layer_getextent,_wrap_Layer_GetExtent,NULL)
  SWIG_ZEND_NAMED_FE(layer_testcapability,_wrap_Layer_TestCapability,NULL)
  SWIG_ZEND_NAMED_FE(layer_createfield,_wrap_Layer_CreateField,NULL)

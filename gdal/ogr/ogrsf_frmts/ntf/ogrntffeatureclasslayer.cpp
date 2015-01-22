@@ -115,7 +115,7 @@ void OGRNTFFeatureClassLayer::ResetReading()
 OGRFeature *OGRNTFFeatureClassLayer::GetNextFeature()
 
 {
-    if( iCurrentFC >= GetFeatureCount() )
+    if( iCurrentFC >= GetFeatureCount64() )
         return NULL;
 
     return GetFeature( (long) iCurrentFC++ );
@@ -125,7 +125,7 @@ OGRFeature *OGRNTFFeatureClassLayer::GetNextFeature()
 /*                             GetFeature()                             */
 /************************************************************************/
 
-OGRFeature *OGRNTFFeatureClassLayer::GetFeature( long nFeatureId )
+OGRFeature *OGRNTFFeatureClassLayer::GetFeature( GIntBig nFeatureId )
 
 {
     char        *pszFCName, *pszFCId;
@@ -148,7 +148,7 @@ OGRFeature *OGRNTFFeatureClassLayer::GetFeature( long nFeatureId )
 }
 
 /************************************************************************/
-/*                          GetFeatureCount()                           */
+/*                          GetFeatureCount64()                           */
 /*                                                                      */
 /*      If a spatial filter is in effect, we turn control over to       */
 /*      the generic counter.  Otherwise we return the total count.      */
@@ -156,7 +156,7 @@ OGRFeature *OGRNTFFeatureClassLayer::GetFeature( long nFeatureId )
 /*      way of counting features matching a spatial query.              */
 /************************************************************************/
 
-int OGRNTFFeatureClassLayer::GetFeatureCount( CPL_UNUSED int bForce )
+GIntBig OGRNTFFeatureClassLayer::GetFeatureCount64( CPL_UNUSED int bForce )
 {
     return poDS->GetFCCount();
 }

@@ -1340,14 +1340,14 @@ int GMLReader::PrescanForSchema( int bGetExtents, int bAnalyzeSRSPerFeature )
         GMLFeatureClass *poClass = poFeature->GetClass();
 
         if (poLastClass != NULL && poClass != poLastClass &&
-            poClass->GetFeatureCount() != -1)
+            poClass->GetFeatureCount64() != -1)
             m_bSequentialLayers = FALSE;
         poLastClass = poClass;
 
-        if( poClass->GetFeatureCount() == -1 )
+        if( poClass->GetFeatureCount64() == -1 )
             poClass->SetFeatureCount( 1 );
         else
-            poClass->SetFeatureCount( poClass->GetFeatureCount() + 1 );
+            poClass->SetFeatureCount( poClass->GetFeatureCount64() + 1 );
 
         const CPLXMLNode* const * papsGeometry = poFeature->GetGeometryList();
         if( papsGeometry != NULL && papsGeometry[0] != NULL )
@@ -1383,7 +1383,7 @@ int GMLReader::PrescanForSchema( int bGetExtents, int bAnalyzeSRSPerFeature )
                 }
 
                 // Merge geometry type into layer.
-                if( poClass->GetFeatureCount() == 1 && eGType == wkbUnknown )
+                if( poClass->GetFeatureCount64() == 1 && eGType == wkbUnknown )
                     eGType = wkbNone;
 
                 poClass->GetGeometryProperty(0)->SetType( 

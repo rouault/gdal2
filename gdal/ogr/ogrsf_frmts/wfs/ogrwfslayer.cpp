@@ -342,12 +342,16 @@ OGRFeatureDefn* OGRWFSLayer::BuildLayerDefnFromFeatureClass(GMLFeatureClass* poC
             eFType = OFTString;
         else if( poProperty->GetType() == GMLPT_Integer )
             eFType = OFTInteger;
+        else if( poProperty->GetType() == GMLPT_Integer64 )
+            eFType = OFTInteger64;
         else if( poProperty->GetType() == GMLPT_Real )
             eFType = OFTReal;
         else if( poProperty->GetType() == GMLPT_StringList )
             eFType = OFTStringList;
         else if( poProperty->GetType() == GMLPT_IntegerList )
             eFType = OFTIntegerList;
+        else if( poProperty->GetType() == GMLPT_Integer64List )
+            eFType = OFTInteger64List;
         else if( poProperty->GetType() == GMLPT_RealList )
             eFType = OFTRealList;
         else
@@ -1167,7 +1171,7 @@ OGRFeature *OGRWFSLayer::GetNextFeature()
             poNewFeature->SetStyleString(poSrcFeature->GetStyleString());
             poNewFeature->SetGeometryDirectly(poSrcFeature->StealGeometry());
         }
-        poNewFeature->SetFID(poSrcFeature->GetFID());
+        poNewFeature->SetFID(poSrcFeature->GetFID64());
         poGeom = poNewFeature->GetGeometryRef();
 
         /* FIXME? I don't really know what we should do with WFS 1.1.0 */
@@ -1319,7 +1323,7 @@ int OGRWFSLayer::TestCapability( const char * pszCap )
 /*                  ExecuteGetFeatureResultTypeHits()                   */
 /************************************************************************/
 
-int OGRWFSLayer::ExecuteGetFeatureResultTypeHits()
+GIntBig OGRWFSLayer::ExecuteGetFeatureResultTypeHits()
 {
     char* pabyData = NULL;
     CPLString osURL = MakeGetFeatureURL(0, TRUE);
@@ -1436,16 +1440,17 @@ int OGRWFSLayer::ExecuteGetFeatureResultTypeHits()
         return -1;
     }
 
-    int nFeatures = atoi(pszValue);
+    GIntBig nFeatures = CPLAtoGIntBig(pszValue);
     /* Hum, http://deegree3-testing.deegree.org:80/deegree-inspire-node/services?MAXFEATURES=10&SERVICE=WFS&VERSION=1.1.0&REQUEST=GetFeature&TYPENAME=ad:Address&OUTPUTFORMAT=text/xml;%20subtype=gml/3.2.1&RESULTTYPE=hits */
     /* returns more than MAXFEATURES features... So truncate to MAXFEATURES */
     CPLString osMaxFeatures = CPLURLGetValue(osURL, atoi(poDS->GetVersion()) >= 2 ? "COUNT" : "MAXFEATURES");
     if (osMaxFeatures.size() != 0)
     {
-        int nMaxFeatures = atoi(osMaxFeatures);
+        GIntBig nMaxFeatures = CPLAtoGIntBig(osMaxFeatures);
         if (nFeatures > nMaxFeatures)
         {
-            CPLDebug("WFS", "Truncating result from %d to %d", nFeatures, nMaxFeatures);
+            CPLDebug("WFS", "Truncating result from " CPL_FRMT_GIB " to " CPL_FRMT_GIB,
+                     nFeatures, nMaxFeatures);
             nFeatures = nMaxFeatures;
         }
     }
@@ -1462,7 +1467,7 @@ int OGRWFSLayer::ExecuteGetFeatureResultTypeHits()
 
 int OGRWFSLayer::CanRunGetFeatureCountAndGetExtentTogether()
 {
-    /* In some cases, we can evaluate the result of GetFeatureCount() */
+    /* In some cases, we can evaluate the result of GetFeatureCount64() */
     /* and GetExtent() with the same data */
     CPLString osRequestURL = MakeGetFeatureURL(0, FALSE);
     return( !bHasExtents && nFeatures < 0 &&
@@ -1473,16 +1478,16 @@ int OGRWFSLayer::CanRunGetFeatureCountAndGetExtentTogether()
 }
 
 /************************************************************************/
-/*                           GetFeatureCount()                          */
+/*                           GetFeatureCount64()                          */
 /************************************************************************/
 
-int OGRWFSLayer::GetFeatureCount( int bForce )
+GIntBig OGRWFSLayer::GetFeatureCount64( int bForce )
 {
     if (nFeatures >= 0)
         return nFeatures;
 
     if (TestCapability(OLCFastFeatureCount))
-        return poBaseLayer->GetFeatureCount(bForce);
+        return poBaseLayer->GetFeatureCount64(bForce);
 
     if ((m_poAttrQuery == NULL || osWFSWhere.size() != 0) &&
          poDS->GetFeatureSupportHits())
@@ -1504,10 +1509,10 @@ int OGRWFSLayer::GetFeatureCount( int bForce )
         ResetReading();
 
         if (TestCapability(OLCFastFeatureCount))
-            return poBaseLayer->GetFeatureCount(bForce);
+            return poBaseLayer->GetFeatureCount64(bForce);
     }
 
-    /* In some cases, we can evaluate the result of GetFeatureCount() */
+    /* In some cases, we can evaluate the result of GetFeatureCount64() */
     /* and GetExtent() with the same data */
     if( CanRunGetFeatureCountAndGetExtentTogether() )
     {
@@ -1516,7 +1521,7 @@ int OGRWFSLayer::GetFeatureCount( int bForce )
     }
 
     if( nFeatures < 0 )
-        nFeatures = OGRLayer::GetFeatureCount(bForce);
+        nFeatures = OGRLayer::GetFeatureCount64(bForce);
 
     return nFeatures;
 }
@@ -1565,7 +1570,7 @@ OGRErr OGRWFSLayer::GetExtent(OGREnvelope *psExtent, int bForce)
     if (TestCapability(OLCFastGetExtent))
         return poBaseLayer->GetExtent(psExtent, bForce);
 
-    /* In some cases, we can evaluate the result of GetFeatureCount() */
+    /* In some cases, we can evaluate the result of GetFeatureCount64() */
     /* and GetExtent() with the same data */
     if( CanRunGetFeatureCountAndGetExtentTogether() )
     {
@@ -1726,6 +1731,8 @@ OGRErr OGRWFSLayer::ICreateFeature( OGRFeature *poFeature )
             osPost += ">";
             if (poFDefn->GetType() == OFTInteger)
                 osPost += CPLSPrintf("%d", poFeature->GetFieldAsInteger(i));
+            else if (poFDefn->GetType() == OFTInteger64)
+                osPost += CPLSPrintf(CPL_FRMT_GIB, poFeature->GetFieldAsInteger64(i));
             else if (poFDefn->GetType() == OFTReal)
                 osPost += CPLSPrintf("%.16g", poFeature->GetFieldAsDouble(i));
             else
@@ -1867,15 +1874,11 @@ OGRErr OGRWFSLayer::ICreateFeature( OGRFeature *poFeature )
     if (strncmp(pszFID, pszShortName, strlen(pszShortName)) == 0 &&
         pszFID[strlen(pszShortName)] == '.')
     {
-        int nFID = atoi(pszFID + strlen(pszShortName) + 1);
-        char szTemp[12];
-        sprintf(szTemp, "%d", nFID);
-        /* Check that it fits on a int32 */
-        if (strcmp(szTemp, pszFID + strlen(pszShortName) + 1) == 0)
-            poFeature->SetFID(nFID);
+        GIntBig nFID = CPLAtoGIntBig(pszFID + strlen(pszShortName) + 1);
+        poFeature->SetFID(nFID);
     }
 
-    CPLDebug("WFS", "Got FID = %ld", poFeature->GetFID());
+    CPLDebug("WFS", "Got FID = " CPL_FRMT_GIB, poFeature->GetFID64());
 
     CPLDestroyXMLNode( psXML );
     CPLHTTPDestroyResult(psResult);
@@ -1972,6 +1975,8 @@ OGRErr OGRWFSLayer::ISetFeature( OGRFeature *poFeature )
             osPost += "      <wfs:Value>";
             if (poFDefn->GetType() == OFTInteger)
                 osPost += CPLSPrintf("%d", poFeature->GetFieldAsInteger(i));
+            else if (poFDefn->GetType() == OFTInteger64)
+                osPost += CPLSPrintf(CPL_FRMT_GIB, poFeature->GetFieldAsInteger64(i));
             else if (poFDefn->GetType() == OFTReal)
                 osPost += CPLSPrintf("%.16g", poFeature->GetFieldAsDouble(i));
             else
@@ -2079,7 +2084,7 @@ OGRErr OGRWFSLayer::ISetFeature( OGRFeature *poFeature )
 /*                               GetFeature()                           */
 /************************************************************************/
 
-OGRFeature* OGRWFSLayer::GetFeature(long nFID)
+OGRFeature* OGRWFSLayer::GetFeature(GIntBig nFID)
 {
     GetLayerDefn();
     if (poBaseLayer == NULL && poFeatureDefn->GetFieldIndex("gml_id") == 0)
@@ -2087,7 +2092,7 @@ OGRFeature* OGRWFSLayer::GetFeature(long nFID)
         /* This is lovely hackish. We assume that then gml_id will be */
         /* layer_name.number. This is actually what we can observe with */
         /* GeoServer and TinyOWS */
-        CPLString osVal = CPLSPrintf("gml_id = '%s.%ld'", GetShortName(), nFID);
+        CPLString osVal = CPLSPrintf("gml_id = '%s." CPL_FRMT_GIB "'", GetShortName(), nFID);
         CPLString osOldSQLWhere(osSQLWhere);
         SetAttributeFilter(osVal);
         OGRFeature* poFeature = GetNextFeature();
@@ -2216,7 +2221,7 @@ OGRErr OGRWFSLayer::DeleteFromFilter( CPLString osOGCFilter )
 /*                            DeleteFeature()                           */
 /************************************************************************/
 
-OGRErr OGRWFSLayer::DeleteFeature( long nFID )
+OGRErr OGRWFSLayer::DeleteFeature( GIntBig nFID )
 {
     if (!TestCapability(OLCDeleteFeature))
     {
@@ -2240,7 +2245,7 @@ OGRErr OGRWFSLayer::DeleteFeature( long nFID )
     if (poFeature == NULL)
     {
         CPLError(CE_Failure, CPLE_AppDefined,
-                 "Cannot find feature %ld", nFID);
+                 "Cannot find feature " CPL_FRMT_GIB, nFID);
         return OGRERR_FAILURE;
     }
 

@@ -1136,7 +1136,7 @@ static int DissolveLayer( OGRDataSource *poSrcDS,
 //             
 //             CPLError( CE_Failure, CPLE_AppDefined,
 //                       "Unable to translate feature %d from layer %s.\n",
-//                       poFeature->GetFID(), poFDefn->GetName() );
+//                       poFeature->GetFID64(), poFDefn->GetName() );
 //             
 //             OGRFeature::DestroyFeature( poFeature );
 //             OGRFeature::DestroyFeature( poDstFeature );
@@ -1144,7 +1144,7 @@ static int DissolveLayer( OGRDataSource *poSrcDS,
 //         }
 // 
 //         if( bPreserveFID )
-//             poDstFeature->SetFID( poFeature->GetFID() );
+//             poDstFeature->SetFID( poFeature->GetFID64() );
 //         
 //         if( poCT && poDstFeature->GetGeometryRef() != NULL )
 //         {
@@ -1155,7 +1155,7 @@ static int DissolveLayer( OGRDataSource *poSrcDS,
 //                     poDstLayer->CommitTransaction();
 // 
 //                 printf( "Failed to transform feature %d.\n", 
-//                         (int) poFeature->GetFID() );
+//                         (int) poFeature->GetFID64() );
 //                 if( !bSkipFailures )
 //                 {
 //                     OGRFeature::DestroyFeature( poFeature );

@@ -583,7 +583,7 @@ int TABFeature::WriteRecordToDATFile(TABDATFile *poDATFile,
         {
             CPLAssert( poDATFile->GetFieldType(iField) == TABFInteger 
                        && iField == 0 );
-            nStatus = poDATFile->WriteIntegerField( GetFID(), poINDFile, 0 );
+            nStatus = poDATFile->WriteIntegerField( GetFID64(), poINDFile, 0 );
             continue;
         }
 

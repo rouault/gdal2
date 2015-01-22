@@ -165,14 +165,14 @@ int OGR_L_GetRefCount( OGRLayerH hLayer )
 }
 
 /************************************************************************/
-/*                          GetFeatureCount()                           */
+/*                         GetFeatureCount64()                          */
 /************************************************************************/
 
-int OGRLayer::GetFeatureCount( int bForce )
+GIntBig OGRLayer::GetFeatureCount64( int bForce )
 
 {
     OGRFeature     *poFeature;
-    int            nFeatureCount = 0;
+    GIntBig         nFeatureCount = 0;
 
     if( !bForce )
         return -1;
@@ -189,6 +189,24 @@ int OGRLayer::GetFeatureCount( int bForce )
 }
 
 /************************************************************************/
+/*                         GetFeatureCount()                            */
+/************************************************************************/
+
+int OGRLayer::GetFeatureCount( int bForce )
+
+{
+    GIntBig nVal = GetFeatureCount64(bForce);
+    if( (GIntBig)(int)nVal != nVal )
+    {
+        CPLError(CE_Warning, CPLE_AppDefined,
+                 "Result of GetFeatureCount() does not fit on 32 bit integer. "
+                 "Use GetFeatureCount64() instead");
+        nVal = INT_MAX;
+    }
+    return (int)nVal;
+}
+
+/************************************************************************/
 /*                       OGR_L_GetFeatureCount()                        */
 /************************************************************************/
 
@@ -202,7 +220,32 @@ int OGR_L_GetFeatureCount( OGRLayerH hLayer, int bForce )
         OGRAPISpy_L_GetFeatureCount(hLayer, bForce);
 #endif
 
-    return ((OGRLayer *) hLayer)->GetFeatureCount(bForce);
+    GIntBig nVal = ((OGRLayer *) hLayer)->GetFeatureCount64(bForce);
+    if( (GIntBig)(int)nVal != nVal )
+    {
+        CPLError(CE_Warning, CPLE_AppDefined,
+                 "Result of GetFeatureCount() does not fit on 32 bit integer. "
+                 "Use OGR_L_GetFeatureCount64() instead");
+        nVal = INT_MAX;
+    }
+    return (int)nVal;
+}
+
+/************************************************************************/
+/*                      OGR_L_GetFeatureCount64()                       */
+/************************************************************************/
+
+GIntBig OGR_L_GetFeatureCount64( OGRLayerH hLayer, int bForce )
+
+{
+    VALIDATE_POINTER1( hLayer, "OGR_L_GetFeatureCount64", 0 );
+
+#ifdef OGRAPISPY_ENABLED
+    if( bOGRAPISpyEnabled )
+        OGRAPISpy_L_GetFeatureCount64(hLayer, bForce);
+#endif
+
+    return ((OGRLayer *) hLayer)->GetFeatureCount64(bForce);
 }
 
 /************************************************************************/
@@ -443,7 +486,7 @@ OGRErr OGR_L_SetAttributeFilter( OGRLayerH hLayer, const char *pszQuery )
 /*                             GetFeature()                             */
 /************************************************************************/
 
-OGRFeature *OGRLayer::GetFeature( long nFID )
+OGRFeature *OGRLayer::GetFeature( GIntBig nFID )
 
 {
     OGRFeature *poFeature;
@@ -459,7 +502,7 @@ OGRFeature *OGRLayer::GetFeature( long nFID )
     ResetReading();
     while( (poFeature = GetNextFeature()) != NULL )
     {
-        if( poFeature->GetFID() == nFID )
+        if( poFeature->GetFID64() == nFID )
             break;
         else
             delete poFeature;
@@ -478,7 +521,7 @@ OGRFeature *OGRLayer::GetFeature( long nFID )
 /*                          OGR_L_GetFeature()                          */
 /************************************************************************/
 
-OGRFeatureH OGR_L_GetFeature( OGRLayerH hLayer, long nFeatureId )
+OGRFeatureH OGR_L_GetFeature( OGRLayerH hLayer, GIntBig nFeatureId )
 
 {
     VALIDATE_POINTER1( hLayer, "OGR_L_GetFeature", NULL );
@@ -495,7 +538,7 @@ OGRFeatureH OGR_L_GetFeature( OGRLayerH hLayer, long nFeatureId )
 /*                           SetNextByIndex()                           */
 /************************************************************************/
 
-OGRErr OGRLayer::SetNextByIndex( long nIndex )
+OGRErr OGRLayer::SetNextByIndex( GIntBig nIndex )
 
 {
     OGRFeature *poFeature;
@@ -520,7 +563,7 @@ OGRErr OGRLayer::SetNextByIndex( long nIndex )
 /*                        OGR_L_SetNextByIndex()                        */
 /************************************************************************/
 
-OGRErr OGR_L_SetNextByIndex( OGRLayerH hLayer, long nIndex )
+OGRErr OGR_L_SetNextByIndex( OGRLayerH hLayer, GIntBig nIndex )
 
 {
     VALIDATE_POINTER1( hLayer, "OGR_L_SetNextByIndex", OGRERR_INVALID_HANDLE );
@@ -1529,7 +1572,7 @@ OGRErr OGR_L_SyncToDisk( OGRLayerH hLayer )
 /*                           DeleteFeature()                            */
 /************************************************************************/
 
-OGRErr OGRLayer::DeleteFeature( CPL_UNUSED long nFID )
+OGRErr OGRLayer::DeleteFeature( CPL_UNUSED GIntBig nFID )
 {
     return OGRERR_UNSUPPORTED_OPERATION;
 }
@@ -1538,7 +1581,7 @@ OGRErr OGRLayer::DeleteFeature( CPL_UNUSED long nFID )
 /*                        OGR_L_DeleteFeature()                         */
 /************************************************************************/
 
-OGRErr OGR_L_DeleteFeature( OGRLayerH hLayer, long nFID )
+OGRErr OGR_L_DeleteFeature( OGRLayerH hLayer, GIntBig nFID )
 
 {
     VALIDATE_POINTER1( hLayer, "OGR_L_DeleteFeature", OGRERR_INVALID_HANDLE );
@@ -2028,7 +2071,7 @@ OGRErr OGRLayer::Intersection( OGRLayer *pLayerMethod,
     int *mapMethod = NULL;
     OGREnvelope sEnvelopeMethod;
     GBool bEnvelopeSet;
-    double progress_max = GetFeatureCount(0);
+    double progress_max = GetFeatureCount64(0);
     double progress_counter = 0;
     double progress_ticker = 0;
     int bSkipFailures = CSLTestBoolean(CSLFetchNameValueDef(papszOptions, "SKIP_FAILURES", "NO"));
@@ -2293,7 +2336,7 @@ OGRErr OGRLayer::Union( OGRLayer *pLayerMethod,
     OGRGeometry *pGeometryInputFilter = NULL;
     int *mapInput = NULL;
     int *mapMethod = NULL;
-    double progress_max = GetFeatureCount(0) + pLayerMethod->GetFeatureCount(0);
+    double progress_max = GetFeatureCount64(0) + pLayerMethod->GetFeatureCount64(0);
     double progress_counter = 0;
     double progress_ticker = 0;
     int bSkipFailures = CSLTestBoolean(CSLFetchNameValueDef(papszOptions, "SKIP_FAILURES", "NO"));
@@ -2637,7 +2680,7 @@ OGRErr OGRLayer::SymDifference( OGRLayer *pLayerMethod,
     OGRGeometry *pGeometryInputFilter = NULL;
     int *mapInput = NULL;
     int *mapMethod = NULL;
-    double progress_max = GetFeatureCount(0) + pLayerMethod->GetFeatureCount(0);
+    double progress_max = GetFeatureCount64(0) + pLayerMethod->GetFeatureCount64(0);
     double progress_counter = 0;
     double progress_ticker = 0;
     int bSkipFailures = CSLTestBoolean(CSLFetchNameValueDef(papszOptions, "SKIP_FAILURES", "NO"));
@@ -2947,7 +2990,7 @@ OGRErr OGRLayer::Identity( OGRLayer *pLayerMethod,
     OGRGeometry *pGeometryMethodFilter = NULL;
     int *mapInput = NULL;
     int *mapMethod = NULL;
-    double progress_max = GetFeatureCount(0);
+    double progress_max = GetFeatureCount64(0);
     double progress_counter = 0;
     double progress_ticker = 0;
     int bSkipFailures = CSLTestBoolean(CSLFetchNameValueDef(papszOptions, "SKIP_FAILURES", "NO"));
@@ -3221,7 +3264,7 @@ OGRErr OGRLayer::Update( OGRLayer *pLayerMethod,
     OGRGeometry *pGeometryMethodFilter = NULL;
     int *mapInput = NULL;
     int *mapMethod = NULL;
-    double progress_max = GetFeatureCount(0) + pLayerMethod->GetFeatureCount(0);
+    double progress_max = GetFeatureCount64(0) + pLayerMethod->GetFeatureCount64(0);
     double progress_counter = 0;
     double progress_ticker = 0;
     int bSkipFailures = CSLTestBoolean(CSLFetchNameValueDef(papszOptions, "SKIP_FAILURES", "NO"));
@@ -3494,7 +3537,7 @@ OGRErr OGRLayer::Clip( OGRLayer *pLayerMethod,
     OGRFeatureDefn *poDefnResult = NULL;
     OGRGeometry *pGeometryMethodFilter = NULL;
     int *mapInput = NULL;
-    double progress_max = GetFeatureCount(0);
+    double progress_max = GetFeatureCount64(0);
     double progress_counter = 0;
     double progress_ticker = 0;
     int bSkipFailures = CSLTestBoolean(CSLFetchNameValueDef(papszOptions, "SKIP_FAILURES", "NO"));
@@ -3730,7 +3773,7 @@ OGRErr OGRLayer::Erase( OGRLayer *pLayerMethod,
     OGRFeatureDefn *poDefnResult = NULL;
     OGRGeometry *pGeometryMethodFilter = NULL;
     int *mapInput = NULL;
-    double progress_max = GetFeatureCount(0);
+    double progress_max = GetFeatureCount64(0);
     double progress_counter = 0;
     double progress_ticker = 0;
     int bSkipFailures = CSLTestBoolean(CSLFetchNameValueDef(papszOptions, "SKIP_FAILURES", "NO"));

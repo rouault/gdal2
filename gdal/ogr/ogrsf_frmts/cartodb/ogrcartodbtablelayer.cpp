@@ -253,6 +253,14 @@ static const char* OGRCARTODBGetPGFieldType( OGRFieldDefn* poFieldDefn )
                 pszFieldType = "INTEGER";
             break;
         }
+        case OFTInteger64:
+        {
+            if( poFieldDefn->GetSubType() == OFSTBoolean )
+                pszFieldType = "BOOLEAN";
+            else
+                pszFieldType = "INT8";
+            break;
+        }
         case OFTReal:
             pszFieldType = "FLOAT8";
             break;
@@ -398,7 +406,7 @@ OGRErr OGRCARTODBTableLayer::ICreateFeature( OGRFeature *poFeature )
     }
     
     if( !bHasUserFieldMatchingFID &&
-        osFIDColName.size() && (poFeature->GetFID() != OGRNullFID || nNextFID >= 0) )
+        osFIDColName.size() && (poFeature->GetFID64() != OGRNullFID || nNextFID >= 0) )
     {
         if( bMustComma )
             osSQL += ", ";
@@ -435,7 +443,8 @@ OGRErr OGRCARTODBTableLayer::ICreateFeature( OGRFeature *poFeature )
                 osSQL += OGRCARTODBEscapeLiteral(poFeature->GetFieldAsString(i));
                 osSQL += "'";
             }
-            else if( eType == OFTInteger && poFeatureDefn->GetFieldDefn(i)->GetSubType() == OFSTBoolean )
+            else if( (eType == OFTInteger || eType == OFTInteger64) &&
+                     poFeatureDefn->GetFieldDefn(i)->GetSubType() == OFSTBoolean )
             {
                 osSQL += poFeature->GetFieldAsInteger(i) ? "'t'" : "'f'";
             }
@@ -487,7 +496,7 @@ OGRErr OGRCARTODBTableLayer::ICreateFeature( OGRFeature *poFeature )
 
                 if( bHasJustGotNextFID )
                 {
-                    osSQL += CPLSPrintf("%ld", nNextFID);
+                    osSQL += CPLSPrintf(CPL_FRMT_GIB, nNextFID);
                 }
                 else
                 {
@@ -497,14 +506,14 @@ OGRErr OGRCARTODBTableLayer::ICreateFeature( OGRFeature *poFeature )
                 poFeature->SetFID(nNextFID);
                 nNextFID ++;
             }
-            else if( osFIDColName.size() && poFeature->GetFID() != OGRNullFID )
+            else if( osFIDColName.size() && poFeature->GetFID64() != OGRNullFID )
             {
                 if( bMustComma )
                     osSQL += ", ";
                 else
                     bMustComma = TRUE;
 
-                osSQL += CPLSPrintf("%ld", poFeature->GetFID());
+                osSQL += CPLSPrintf(CPL_FRMT_GIB, poFeature->GetFID64());
             }
         }
 
@@ -586,7 +595,7 @@ OGRErr OGRCARTODBTableLayer::ISetFeature( OGRFeature *poFeature )
         return OGRERR_FAILURE;
     }
 
-    if (poFeature->GetFID() == OGRNullFID)
+    if (poFeature->GetFID64() == OGRNullFID)
     {
         CPLError( CE_Failure, CPLE_AppDefined,
                   "FID required on features given to SetFeature()." );
@@ -619,7 +628,8 @@ OGRErr OGRCARTODBTableLayer::ISetFeature( OGRFeature *poFeature )
                 osSQL += OGRCARTODBEscapeLiteral(poFeature->GetFieldAsString(i));
                 osSQL += "'";
             }
-            else if( eType == OFTInteger && poFeatureDefn->GetFieldDefn(i)->GetSubType() == OFSTBoolean )
+            else if( (eType == OFTInteger || eType == OFTInteger64) &&
+                poFeatureDefn->GetFieldDefn(i)->GetSubType() == OFSTBoolean )
             {
                 osSQL += poFeature->GetFieldAsInteger(i) ? "'t'" : "'f'";
             }
@@ -658,9 +668,9 @@ OGRErr OGRCARTODBTableLayer::ISetFeature( OGRFeature *poFeature )
         }
     }
 
-    osSQL += CPLSPrintf(" WHERE %s = %ld",
+    osSQL += CPLSPrintf(" WHERE %s = " CPL_FRMT_GIB,
                     OGRCARTODBEscapeIdentifier(osFIDColName).c_str(),
-                    poFeature->GetFID());
+                    poFeature->GetFID64());
     
     if( bInTransaction )
     {
@@ -692,7 +702,7 @@ OGRErr OGRCARTODBTableLayer::ISetFeature( OGRFeature *poFeature )
 /*                          DeleteFeature()                             */
 /************************************************************************/
 
-OGRErr OGRCARTODBTableLayer::DeleteFeature( long nFID )
+OGRErr OGRCARTODBTableLayer::DeleteFeature( GIntBig nFID )
 
 {
 
@@ -712,7 +722,7 @@ OGRErr OGRCARTODBTableLayer::DeleteFeature( long nFID )
         return OGRERR_FAILURE;
     
     CPLString osSQL;
-    osSQL.Printf("DELETE FROM %s WHERE %s = %ld",
+    osSQL.Printf("DELETE FROM %s WHERE %s = " CPL_FRMT_GIB,
                     OGRCARTODBEscapeIdentifier(osName).c_str(),
                     OGRCARTODBEscapeIdentifier(osFIDColName).c_str(),
                     nFID);
@@ -839,7 +849,7 @@ void OGRCARTODBTableLayer::BuildWhere()
 /*                              GetFeature()                            */
 /************************************************************************/
 
-OGRFeature* OGRCARTODBTableLayer::GetFeature( long nFeatureId )
+OGRFeature* OGRCARTODBTableLayer::GetFeature( GIntBig nFeatureId )
 {
 
     if( bDifferedCreation && RunDifferedCreationIfNecessary() != OGRERR_NONE )
@@ -850,7 +860,7 @@ OGRFeature* OGRCARTODBTableLayer::GetFeature( long nFeatureId )
     if( osFIDColName.size() == 0 )
         return OGRCARTODBLayer::GetFeature(nFeatureId);
 
-    CPLString osSQL(CPLSPrintf("SELECT * FROM %s WHERE %s = %ld",
+    CPLString osSQL(CPLSPrintf("SELECT * FROM %s WHERE %s = " CPL_FRMT_GIB,
                                OGRCARTODBEscapeIdentifier(osName).c_str(),
                                OGRCARTODBEscapeIdentifier(osFIDColName).c_str(),
                                nFeatureId));
@@ -871,10 +881,10 @@ OGRFeature* OGRCARTODBTableLayer::GetFeature( long nFeatureId )
 }
 
 /************************************************************************/
-/*                          GetFeatureCount()                           */
+/*                          GetFeatureCount64()                           */
 /************************************************************************/
 
-int OGRCARTODBTableLayer::GetFeatureCount(int bForce)
+GIntBig OGRCARTODBTableLayer::GetFeatureCount64(int bForce)
 {
 
     if( bDifferedCreation && RunDifferedCreationIfNecessary() != OGRERR_NONE )
@@ -896,17 +906,17 @@ int OGRCARTODBTableLayer::GetFeatureCount(int bForce)
     {
         if( poObj != NULL )
             json_object_put(poObj);
-        return OGRCARTODBLayer::GetFeatureCount(bForce);
+        return OGRCARTODBLayer::GetFeatureCount64(bForce);
     }
 
     json_object* poCount = json_object_object_get(poRowObj, "count");
     if( poCount == NULL || json_object_get_type(poCount) != json_type_int )
     {
         json_object_put(poObj);
-        return OGRCARTODBLayer::GetFeatureCount(bForce);
+        return OGRCARTODBLayer::GetFeatureCount64(bForce);
     }
 
-    int nRet = (int)json_object_get_int64(poCount);
+    GIntBig nRet = (GIntBig)json_object_get_int64(poCount);
 
     json_object_put(poObj);
 

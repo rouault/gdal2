@@ -116,7 +116,7 @@ void OGRAVCBinLayer::ResetReading()
 /*                             GetFeature()                             */
 /************************************************************************/
 
-OGRFeature *OGRAVCBinLayer::GetFeature( long nFID )
+OGRFeature *OGRAVCBinLayer::GetFeature( GIntBig nFID )
 
 {
 /* -------------------------------------------------------------------- */
@@ -206,7 +206,7 @@ OGRFeature *OGRAVCBinLayer::GetNextFeature()
     OGRFeature *poFeature = GetFeature( -3 );
 
     // Skip universe polygon.
-    if( poFeature != NULL && poFeature->GetFID() == 1 
+    if( poFeature != NULL && poFeature->GetFID64() == 1 
         && psSection->eType == AVCFilePAL )
     {
         OGRFeature::DestroyFeature( poFeature );
@@ -424,7 +424,7 @@ int OGRAVCBinLayer::AppendTableFields( OGRFeature *poFeature )
     void *hRecord;
 
     if( nTableAttrIndex == -1 )
-        nRecordId = poFeature->GetFID();
+        nRecordId = poFeature->GetFID64();
     else
         nRecordId = poFeature->GetFieldAsInteger( nTableAttrIndex );
 

@@ -251,7 +251,7 @@ OGRFeature * OGRPCIDSKLayer::GetNextUnfilteredFeature()
 /*                             GetFeature()                             */
 /************************************************************************/
 
-OGRFeature *OGRPCIDSKLayer::GetFeature( long nFID )
+OGRFeature *OGRPCIDSKLayer::GetFeature( GIntBig nFID )
 
 {
 /* -------------------------------------------------------------------- */
@@ -467,14 +467,14 @@ int OGRPCIDSKLayer::TestCapability( const char * pszCap )
 }
 
 /************************************************************************/
-/*                          GetFeatureCount()                           */
+/*                         GetFeatureCount64()                          */
 /************************************************************************/
 
-int OGRPCIDSKLayer::GetFeatureCount( int bForce )
+GIntBig OGRPCIDSKLayer::GetFeatureCount64( int bForce )
 
 {
     if( m_poFilterGeom != NULL || m_poAttrQuery != NULL )
-        return OGRLayer::GetFeatureCount( bForce );
+        return OGRLayer::GetFeatureCount64( bForce );
     else
     {
         try {
@@ -560,7 +560,7 @@ OGRErr OGRPCIDSKLayer::GetExtent (OGREnvelope *psExtent, int bForce)
 /*                           DeleteFeature()                            */
 /************************************************************************/
 
-OGRErr OGRPCIDSKLayer::DeleteFeature( long nFID )
+OGRErr OGRPCIDSKLayer::DeleteFeature( GIntBig nFID )
 
 {
     try {
@@ -597,7 +597,7 @@ OGRErr OGRPCIDSKLayer::ICreateFeature( OGRFeature *poFeature )
     try {
 
         PCIDSK::ShapeId id = poVecSeg->CreateShape( 
-            (PCIDSK::ShapeId) poFeature->GetFID() );
+            (PCIDSK::ShapeId) poFeature->GetFID64() );
 
         poFeature->SetFID( (long) id );
 
@@ -628,7 +628,7 @@ OGRErr OGRPCIDSKLayer::ICreateFeature( OGRFeature *poFeature )
 OGRErr OGRPCIDSKLayer::ISetFeature( OGRFeature *poFeature )
 
 {
-    PCIDSK::ShapeId id = (PCIDSK::ShapeId) poFeature->GetFID();
+    PCIDSK::ShapeId id = (PCIDSK::ShapeId) poFeature->GetFID64();
     
 /* -------------------------------------------------------------------- */
 /*      Translate attribute fields.                                     */

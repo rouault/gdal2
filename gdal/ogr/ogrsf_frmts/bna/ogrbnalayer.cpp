@@ -322,7 +322,7 @@ OGRErr OGRBNALayer::ICreateFeature( OGRFeature *poFeature )
         return OGRERR_FAILURE;
     }
     
-    if( poFeature->GetFID() == OGRNullFID )
+    if( poFeature->GetFID64() == OGRNullFID )
         poFeature->SetFID( nFeatures++ );
     
     VSILFILE* fp = poDS->GetOutputFP();
@@ -833,7 +833,7 @@ void OGRBNALayer::FastParseUntil ( int interestFID)
 /*                           GetFeature()                               */
 /************************************************************************/
 
-OGRFeature *  OGRBNALayer::GetFeature( long nFID )
+OGRFeature *  OGRBNALayer::GetFeature( GIntBig nFID )
 {
     OGRFeature  *poFeature;
     BNARecord* record;

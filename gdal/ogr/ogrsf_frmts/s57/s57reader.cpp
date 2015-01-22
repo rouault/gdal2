@@ -325,7 +325,7 @@ OGRFeature *S57Reader::NextPendingMultiPoint()
     OGRMultiPoint *poMPGeom = (OGRMultiPoint *) poMultiPoint->GetGeometryRef();
     OGRPoint    *poSrcPoint;
 
-    poPoint->SetFID( poMultiPoint->GetFID() );
+    poPoint->SetFID( poMultiPoint->GetFID64() );
     
     for( int i = 0; i < poDefn->GetFieldCount(); i++ )
     {

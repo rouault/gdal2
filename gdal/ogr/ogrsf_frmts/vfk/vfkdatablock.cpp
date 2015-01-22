@@ -191,7 +191,7 @@ int IVFKDataBlock::AddProperty(const char *pszName, const char *pszType)
   
   \return number of features
 */
-int IVFKDataBlock::GetFeatureCount()
+GIntBig IVFKDataBlock::GetFeatureCount64()
 {
     if (m_nFeatureCount < 0) {
         m_poReader->ReadDataRecords(this); /* read VFK data records */
@@ -403,7 +403,7 @@ IVFKFeature *IVFKDataBlock::GetFeatureByIndex(int iIndex) const
 
   \return pointer to feature definition or NULL on failure (not found)
 */
-IVFKFeature *IVFKDataBlock::GetFeature(long nFID)
+IVFKFeature *IVFKDataBlock::GetFeature(GIntBig nFID)
 {
     if (m_nFeatureCount < 0) {
         m_poReader->ReadDataRecords(this);
@@ -719,7 +719,7 @@ VFKFeatureList VFKDataBlock::GetFeatures(int idx1, int idx2, GUIntBig value)
 
   \return number of features or -1 on error
 */
-int VFKDataBlock::GetFeatureCount(const char *pszName, const char *pszValue)
+GIntBig VFKDataBlock::GetFeatureCount64(const char *pszName, const char *pszValue)
 {
     int nfeatures, propIdx;
     VFKFeature *poVFKFeature;
@@ -729,7 +729,7 @@ int VFKDataBlock::GetFeatureCount(const char *pszName, const char *pszValue)
         return -1;
     
     nfeatures = 0;
-    for (int i = 0; i < ((IVFKDataBlock *) this)->GetFeatureCount(); i++) {
+    for (int i = 0; i < ((IVFKDataBlock *) this)->GetFeatureCount64(); i++) {
         poVFKFeature = (VFKFeature *) ((IVFKDataBlock *) this)->GetFeature(i);
         if (!poVFKFeature)
             return -1;
@@ -763,7 +763,7 @@ int VFKDataBlock::LoadGeometryPoint()
         return nInvalid;
     }
     
-    for (int j = 0; j < ((IVFKDataBlock *) this)->GetFeatureCount(); j++) {
+    for (int j = 0; j < ((IVFKDataBlock *) this)->GetFeatureCount64(); j++) {
         poFeature = (VFKFeature *) GetFeatureByIndex(j);
         x = -1.0 * poFeature->GetProperty(i_idxY)->GetValueD();
         y = -1.0 * poFeature->GetProperty(i_idxX)->GetValueD();
@@ -811,7 +811,7 @@ int VFKDataBlock::LoadGeometryLineStringSBP()
         return nInvalid;
     }
     
-    for (int j = 0; j < ((IVFKDataBlock *) this)->GetFeatureCount(); j++) {
+    for (int j = 0; j < ((IVFKDataBlock *) this)->GetFeatureCount64(); j++) {
         poFeature = (VFKFeature *) GetFeatureByIndex(j);
         CPLAssert(NULL != poFeature);
         
@@ -885,7 +885,7 @@ int VFKDataBlock::LoadGeometryLineStringHP()
     }
     
     poLineList = poDataBlockLines->GetFeatures(idxPCB, 1); /* reduce to first segment */
-    for (int i = 0; i < ((IVFKDataBlock *) this)->GetFeatureCount(); i++) {
+    for (int i = 0; i < ((IVFKDataBlock *) this)->GetFeatureCount64(); i++) {
         poFeature = (VFKFeature *) GetFeatureByIndex(i);
         CPLAssert(NULL != poFeature);
         id = strtoul(poFeature->GetProperty(idxId)->GetValueS(), NULL, 0);
@@ -970,7 +970,7 @@ int VFKDataBlock::LoadGeometryPolygon()
         }
     }
     
-    for (int i = 0; i < ((IVFKDataBlock *) this)->GetFeatureCount(); i++) {
+    for (int i = 0; i < ((IVFKDataBlock *) this)->GetFeatureCount64(); i++) {
         poFeature = (VFKFeature *) GetFeatureByIndex(i);
         CPLAssert(NULL != poFeature);
         id = strtoul(poFeature->GetProperty(idxId)->GetValueS(), NULL, 0);

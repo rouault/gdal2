@@ -296,15 +296,15 @@ void OGRMySQLResultLayer::ResetReading()
 }
 
 /************************************************************************/
-/*                          GetFeatureCount()                           */
+/*                          GetFeatureCount64()                           */
 /************************************************************************/
 
-int OGRMySQLResultLayer::GetFeatureCount( int bForce )
+GIntBig OGRMySQLResultLayer::GetFeatureCount64( int bForce )
 
 {
     // I wonder if we could do anything smart here...
     // ... not till MySQL grows up (HB)
-    return OGRMySQLLayer::GetFeatureCount( bForce );
+    return OGRMySQLLayer::GetFeatureCount64( bForce );
 }
 
 /************************************************************************/

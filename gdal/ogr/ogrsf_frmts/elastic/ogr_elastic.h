@@ -66,7 +66,7 @@ public:
 
     int TestCapability(const char *);
 
-    int GetFeatureCount(int bForce);
+    GIntBig GetFeatureCount64(int bForce);
 
     void PushIndex();
     CPLString BuildMap();

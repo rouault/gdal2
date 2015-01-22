@@ -133,7 +133,7 @@ OGRFeature *OGREDIGEOLayer::GetNextRawFeature()
 /*                            GetFeature()                              */
 /************************************************************************/
 
-OGRFeature * OGREDIGEOLayer::GetFeature(long nFID)
+OGRFeature * OGREDIGEOLayer::GetFeature(GIntBig nFID)
 {
     if (nFID >= 0 && nFID < (int)aosFeatures.size())
         return aosFeatures[nFID]->Clone();
@@ -179,13 +179,13 @@ OGRErr OGREDIGEOLayer::GetExtent(OGREnvelope *psExtent, int bForce)
 }
 
 /************************************************************************/
-/*                          GetFeatureCount()                           */
+/*                          GetFeatureCount64()                           */
 /************************************************************************/
 
-int OGREDIGEOLayer::GetFeatureCount( int bForce )
+GIntBig OGREDIGEOLayer::GetFeatureCount64( int bForce )
 {
     if (m_poFilterGeom != NULL || m_poAttrQuery != NULL)
-        return OGRLayer::GetFeatureCount(bForce);
+        return OGRLayer::GetFeatureCount64(bForce);
 
     return (int)aosFeatures.size();
 }

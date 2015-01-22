@@ -100,11 +100,12 @@ void OGRAPISpy_DS_CreateLayer( OGRDataSourceH hDS,
 void OGRAPISpy_DS_DeleteLayer( OGRDataSourceH hDS, int iLayer, OGRErr eErr );
 
 void OGRAPISpy_L_GetFeatureCount( OGRLayerH hLayer, int bForce );
+void OGRAPISpy_L_GetFeatureCount64( OGRLayerH hLayer, int bForce );
 void OGRAPISpy_L_GetExtent( OGRLayerH hLayer, int bForce );
 void OGRAPISpy_L_GetExtentEx( OGRLayerH hLayer, int iGeomField, int bForce );
 void OGRAPISpy_L_SetAttributeFilter( OGRLayerH hLayer, const char* pszFilter );
-void OGRAPISpy_L_GetFeature( OGRLayerH hLayer, long nFeatureId );
-void OGRAPISpy_L_SetNextByIndex( OGRLayerH hLayer, long nIndex );
+void OGRAPISpy_L_GetFeature( OGRLayerH hLayer, GIntBig nFeatureId );
+void OGRAPISpy_L_SetNextByIndex( OGRLayerH hLayer, GIntBig nIndex );
 void OGRAPISpy_L_GetNextFeature( OGRLayerH hLayer );
 void OGRAPISpy_L_SetFeature( OGRLayerH hLayer, OGRFeatureH hFeat );
 void OGRAPISpy_L_CreateFeature( OGRLayerH hLayer, OGRFeatureH hFeat );
@@ -139,7 +140,7 @@ void OGRAPISpy_L_SetSpatialFilterRectEx( OGRLayerH hLayer, int iGeomField,
                                          double dfMaxX, double dfMaxY);
 void OGRAPISpy_L_ResetReading( OGRLayerH hLayer );
 void OGRAPISpy_L_SyncToDisk( OGRLayerH hLayer );
-void OGRAPISpy_L_DeleteFeature( OGRLayerH hLayer, long nFID );
+void OGRAPISpy_L_DeleteFeature( OGRLayerH hLayer, GIntBig nFID );
 void OGRAPISpy_L_GetFIDColumn( OGRLayerH hLayer );
 void OGRAPISpy_L_GetGeometryColumn( OGRLayerH hLayer );
 void OGRAPISpy_L_GetName( OGRLayerH hLayer );

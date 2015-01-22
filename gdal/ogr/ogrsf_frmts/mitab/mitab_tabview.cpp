@@ -99,7 +99,7 @@
  * Fixed compile warnings
  *
  * Revision 1.2  1999/12/14 04:04:10  daniel
- * Added bforceFlags to GetBounds() and GetFeatureCountByType()
+ * Added bforceFlags to GetBounds() and GetFeatureCount64ByType()
  *
  * Revision 1.1  1999/12/14 02:10:32  daniel
  * Initial revision
@@ -151,11 +151,11 @@ TABView::~TABView()
 }
 
 
-int TABView::GetFeatureCount (int bForce)
+GIntBig TABView::GetFeatureCount64 (int bForce)
 {
 
     if (m_nMainTableIndex != -1)
-        return m_papoTABFiles[m_nMainTableIndex]->GetFeatureCount( bForce );
+        return m_papoTABFiles[m_nMainTableIndex]->GetFeatureCount64( bForce );
 
     return 0;
 }
@@ -1118,7 +1118,7 @@ OGRErr TABView::GetExtent (OGREnvelope *psExtent, int bForce)
 }
 
 /**********************************************************************
- *                   TABView::GetFeatureCountByType()
+ *                   TABView::GetFeatureCount64ByType()
  *
  * Return number of features of each type.
  *
@@ -2071,7 +2071,7 @@ int TABRelation::WriteFeature(TABFeature *poFeature, int nFeatureId /*=-1*/)
     poMainFeature->SetField(m_nMainFieldNo, nRecordNo);
 
     if (m_poMainTable->CreateFeature(poMainFeature) != OGRERR_NONE)
-        nFeatureId = poMainFeature->GetFID();
+        nFeatureId = poMainFeature->GetFID64();
     else
         nFeatureId = -1;
 

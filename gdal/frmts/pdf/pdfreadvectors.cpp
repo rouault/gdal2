@@ -76,7 +76,7 @@ int PDFDataset::OpenVectorLayers(GDALPDFDictionary* poPageDict)
     int bEmptyDS = TRUE;
     for(int i=0;i<nLayers;i++)
     {
-        if (papoLayers[i]->GetFeatureCount() != 0)
+        if (papoLayers[i]->GetFeatureCount64() != 0)
         {
             bEmptyDS = FALSE;
             break;
@@ -1648,7 +1648,7 @@ void PDFDataset::ExploreContentsNonStructured(GDALPDFObject* poContents,
     int i = 0;
     while(i < nLayers)
     {
-        if (papoLayers[i]->GetFeatureCount() == 0)
+        if (papoLayers[i]->GetFeatureCount64() == 0)
         {
             delete papoLayers[i];
             if (i < nLayers - 1)

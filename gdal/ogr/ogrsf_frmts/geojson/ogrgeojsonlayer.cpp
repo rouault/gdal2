@@ -89,15 +89,15 @@ OGRFeatureDefn* OGRGeoJSONLayer::GetLayerDefn()
 }
 
 /************************************************************************/
-/*                           GetFeatureCount                            */
+/*                           GetFeatureCount64                            */
 /************************************************************************/
 
-int OGRGeoJSONLayer::GetFeatureCount( int bForce )
+GIntBig OGRGeoJSONLayer::GetFeatureCount64( int bForce )
 {
     if (m_poFilterGeom == NULL && m_poAttrQuery == NULL)
         return static_cast<int>( seqFeatures_.size() );
     else
-        return OGRLayer::GetFeatureCount(bForce);
+        return OGRLayer::GetFeatureCount64(bForce);
 }
 
 /************************************************************************/
@@ -188,7 +188,7 @@ void OGRGeoJSONLayer::AddFeature( OGRFeature* poFeature )
     poNewFeature = poFeature->Clone();
 
 
-    if( -1 == poNewFeature->GetFID() )
+    if( -1 == poNewFeature->GetFID64() )
     {
         int nFID = static_cast<int>(seqFeatures_.size());
         poNewFeature->SetFID( nFID );
@@ -200,6 +200,10 @@ void OGRGeoJSONLayer::AddFeature( OGRFeature* poFeature )
             poNewFeature->SetField( nField, nFID );
         }
     }
+    
+        
+    if( (GIntBig)(int)poNewFeature->GetFID64() != poNewFeature->GetFID64() )
+        SetMetadataItem(OLMD_FID64, "YES");
 
     seqFeatures_.push_back( poNewFeature );
 }

@@ -741,7 +741,7 @@ by the OGRSFDriverManager.
  if it is expensive.
 
  @return feature count, -1 if count not known. 
-
+ @deprecated Use GetFeatureCount64() instead
 */
 
 /**
@@ -767,6 +767,61 @@ by the OGRSFDriverManager.
  if it is expensive.
 
  @return feature count, -1 if count not known. 
+ @deprecated Use OGR_L_GetFeatureCount64() instead
+
+*/
+
+/**
+
+ \fn GIntBig OGRLayer::GetFeatureCount64( int bForce = TRUE );
+
+ \brief Fetch the feature count in this layer. 
+
+ Returns the number of features in the layer.  For dynamic databases the
+ count may not be exact.  If bForce is FALSE, and it would be expensive
+ to establish the feature count a value of -1 may be returned indicating
+ that the count isn't know.  If bForce is TRUE some implementations will
+ actually scan the entire layer once to count objects. 
+
+ The returned count takes the spatial filter into account. 
+
+ Note that some implementations of this method may alter the read cursor
+ of the layer.
+
+ This method is the same as the C function OGR_L_GetFeatureCount64().
+
+ @param bForce Flag indicating whether the count should be computed even
+ if it is expensive.
+
+ @return feature count, -1 if count not known. 
+ @since GDAL 2.0
+
+*/
+
+/**
+ \fn GIntBig OGR_L_GetFeatureCount64( OGRLayerH hLayer, int bForce );
+
+ \brief Fetch the feature count in this layer. 
+
+ Returns the number of features in the layer.  For dynamic databases the
+ count may not be exact.  If bForce is FALSE, and it would be expensive
+ to establish the feature count a value of -1 may be returned indicating
+ that the count isn't know.  If bForce is TRUE some implementations will
+ actually scan the entire layer once to count objects. 
+
+ The returned count takes the spatial filter into account. 
+
+ Note that some implementations of this method may alter the read cursor
+ of the layer.
+
+ This function is the same as the CPP OGRLayer::GetFeatureCount64().
+
+ @param hLayer handle to the layer that owned the features.
+ @param bForce Flag indicating whether the count should be computed even
+ if it is expensive.
+
+ @return feature count, -1 if count not known. 
+ @since GDAL 2.0
 
 */
 
@@ -1385,7 +1440,7 @@ by the OGRSFDriverManager.
 
 /**
 
- \fn OGRFeature *OGRLayer::GetFeature( long nFID );
+ \fn OGRFeature *OGRLayer::GetFeature( GIntBig nFID );
 
  \brief Fetch a feature by its identifier.
 
@@ -1419,7 +1474,7 @@ by the OGRSFDriverManager.
 
 /**
 
- \fn OGRFeatureH OGR_L_GetFeature( OGRLayerH hLayer, long nFeatureId );
+ \fn OGRFeatureH OGR_L_GetFeature( OGRLayerH hLayer, GIntBig nFeatureId );
 
  \brief Fetch a feature by its identifier.
 
@@ -1538,7 +1593,7 @@ by the OGRSFDriverManager.
 
 /**
 
- \fn OGRErr OGRLayer::DeleteFeature( long nFID );
+ \fn OGRErr OGRLayer::DeleteFeature( GIntBig nFID );
 
  \brief Delete feature from layer.
 
@@ -1558,7 +1613,7 @@ by the OGRSFDriverManager.
 
 /**
 
- \fn OGRErr OGR_L_DeleteFeature( OGRLayerH hLayer, long nFID );
+ \fn OGRErr OGR_L_DeleteFeature( OGRLayerH hLayer, GIntBig nFID );
 
  \brief Delete feature from layer.
 
@@ -1816,7 +1871,7 @@ error code.
 */
 
 /**
- \fn OGRErr OGRLayer::SetNextByIndex( long nIndex );
+ \fn OGRErr OGRLayer::SetNextByIndex( GIntBig nIndex );
 
  \brief Move read cursor to the nIndex'th feature in the current resultset. 
 
@@ -1844,7 +1899,7 @@ error code.
 
 
 /**
- \fn OGRErr OGR_L_SetNextByIndex( OGRLayerH hLayer, long nIndex );
+ \fn OGRErr OGR_L_SetNextByIndex( OGRLayerH hLayer, GIntBig nIndex );
 
  \brief Move read cursor to the nIndex'th feature in the current resultset. 
 

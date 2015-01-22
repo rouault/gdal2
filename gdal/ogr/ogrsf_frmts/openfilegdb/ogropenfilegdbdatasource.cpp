@@ -153,7 +153,7 @@ int OGROpenFileGDBDataSource::Open( const char* pszFilename )
             const char* pszTablX = CPLResetExtension(m_pszName, "gdbtablx");
             if( !FileExists(pszTablX) &&
                 poLayer->GetLayerDefn()->GetFieldCount() == 0 &&
-                poLayer->GetFeatureCount() == 0 )
+                poLayer->GetFeatureCount64() == 0 )
             {
                 delete poLayer;
                 return FALSE;
@@ -652,13 +652,13 @@ class OGROpenFileGDBSimpleSQLLayer: public OGRLayer
 
        virtual void        ResetReading();
        virtual OGRFeature* GetNextFeature();
-       virtual OGRFeature* GetFeature( long nFeatureId );
+       virtual OGRFeature* GetFeature( GIntBig nFeatureId );
        virtual OGRFeatureDefn* GetLayerDefn() { return poFeatureDefn; }
        virtual int         TestCapability( const char * );
        virtual const char* GetFIDColumn() { return poBaseLayer->GetFIDColumn(); }
        virtual OGRErr      GetExtent( OGREnvelope *psExtent, int bForce )
                             { return poBaseLayer->GetExtent(psExtent, bForce); }
-       virtual int         GetFeatureCount(int bForce);
+       virtual GIntBig     GetFeatureCount64(int bForce);
 };
 
 /***********************************************************************/
@@ -733,7 +733,7 @@ void OGROpenFileGDBSimpleSQLLayer::ResetReading()
 /*                          GetFeature()                               */
 /***********************************************************************/
 
-OGRFeature* OGROpenFileGDBSimpleSQLLayer::GetFeature( long nFeatureId )
+OGRFeature* OGROpenFileGDBSimpleSQLLayer::GetFeature( GIntBig nFeatureId )
 {
     OGRFeature* poSrcFeature = poBaseLayer->GetFeature(nFeatureId);
     if( poSrcFeature == NULL )
@@ -745,7 +745,7 @@ OGRFeature* OGROpenFileGDBSimpleSQLLayer::GetFeature( long nFeatureId )
     {
         OGRFeature* poFeature = new OGRFeature(poFeatureDefn);
         poFeature->SetFrom(poSrcFeature);
-        poFeature->SetFID(poSrcFeature->GetFID());
+        poFeature->SetFID(poSrcFeature->GetFID64());
         delete poSrcFeature;
         return poFeature;
     }
@@ -779,10 +779,10 @@ OGRFeature* OGROpenFileGDBSimpleSQLLayer::GetNextFeature()
 }
 
 /***********************************************************************/
-/*                         GetFeatureCount()                           */
+/*                         GetFeatureCount64()                           */
 /***********************************************************************/
 
-int OGROpenFileGDBSimpleSQLLayer::GetFeatureCount( int bForce )
+GIntBig OGROpenFileGDBSimpleSQLLayer::GetFeatureCount64( int bForce )
 {
 
     /* No filter */
@@ -791,7 +791,7 @@ int OGROpenFileGDBSimpleSQLLayer::GetFeatureCount( int bForce )
         return poIter->GetRowCount();
     }
 
-    return OGRLayer::GetFeatureCount(bForce);
+    return OGRLayer::GetFeatureCount64(bForce);
 }
 
 /***********************************************************************/
@@ -1122,7 +1122,7 @@ OGRLayer* OGROpenFileGDBDataSource::ExecuteSQL( const char *pszSQLCommand,
 
                     /* Check that they are no NULL values */
                     if( oSelect.where_expr == NULL &&
-                        poIter->GetRowCount() != poLayer->GetFeatureCount(FALSE) )
+                        poIter->GetRowCount() != poLayer->GetFeatureCount64(FALSE) )
                     {
                         delete poIter;
                         poIter = NULL;

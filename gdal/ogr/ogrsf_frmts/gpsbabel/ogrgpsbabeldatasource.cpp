@@ -319,27 +319,27 @@ int OGRGPSBabelDataSource::Open( const char * pszDatasourceName,
             if (bWaypoints)
             {
                 poLayer = poGPXDS->GetLayerByName("waypoints");
-                if (poLayer != NULL && poLayer->GetFeatureCount() != 0)
+                if (poLayer != NULL && poLayer->GetFeatureCount64() != 0)
                     apoLayers[nLayers++] = poLayer;
             }
 
             if (bRoutes)
             {
                 poLayer = poGPXDS->GetLayerByName("routes");
-                if (poLayer != NULL && poLayer->GetFeatureCount() != 0)
+                if (poLayer != NULL && poLayer->GetFeatureCount64() != 0)
                     apoLayers[nLayers++] = poLayer;
                 poLayer = poGPXDS->GetLayerByName("route_points");
-                if (poLayer != NULL && poLayer->GetFeatureCount() != 0)
+                if (poLayer != NULL && poLayer->GetFeatureCount64() != 0)
                     apoLayers[nLayers++] = poLayer;
             }
 
             if (bTracks)
             {
                 poLayer = poGPXDS->GetLayerByName("tracks");
-                if (poLayer != NULL && poLayer->GetFeatureCount() != 0)
+                if (poLayer != NULL && poLayer->GetFeatureCount64() != 0)
                     apoLayers[nLayers++] = poLayer;
                 poLayer = poGPXDS->GetLayerByName("track_points");
-                if (poLayer != NULL && poLayer->GetFeatureCount() != 0)
+                if (poLayer != NULL && poLayer->GetFeatureCount64() != 0)
                     apoLayers[nLayers++] = poLayer;
             }
         }

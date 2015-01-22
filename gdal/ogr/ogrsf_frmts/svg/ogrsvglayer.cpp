@@ -833,10 +833,10 @@ OGRwkbGeometryType OGRSVGLayer::GetGeomType()
 /*                           GetGeomType()                              */
 /************************************************************************/
 
-int OGRSVGLayer::GetFeatureCount( int bForce )
+GIntBig OGRSVGLayer::GetFeatureCount64( int bForce )
 {
     if (m_poAttrQuery != NULL || m_poFilterGeom != NULL)
-        return OGRLayer::GetFeatureCount(bForce);
+        return OGRLayer::GetFeatureCount64(bForce);
 
     GetLayerDefn();
 

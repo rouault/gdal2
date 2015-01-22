@@ -853,7 +853,7 @@ OGRErr OGRSDELayer::TranslateOGRRecord( OGRFeature *poFeature,
             
             return OGRERR_FAILURE;
         }
-        else if( poFeature->GetFID() == OGRNullFID )
+        else if( poFeature->GetFID64() == OGRNullFID )
         {
             CPLError( CE_Failure, CPLE_AppDefined,
                       "Cannot update feature: Feature has a NULL Feature ID" );
@@ -866,7 +866,7 @@ OGRErr OGRSDELayer::TranslateOGRRecord( OGRFeature *poFeature,
         
         // Build WHERE clause
         pszWhere = CPLSPrintf( "%s = %ld", osFIDColumnName.c_str(),
-                                           poFeature->GetFID() );
+                                           poFeature->GetFID64() );
         
         nSDEErr = SE_stream_update_table( hStream, poFeatureDefn->GetName(),
                                           nSpecialCols + nAttributeCols,
@@ -893,7 +893,7 @@ OGRErr OGRSDELayer::TranslateOGRRecord( OGRFeature *poFeature,
     {
         LONG            nFID;
         
-        nFID = poFeature->GetFID();
+        nFID = poFeature->GetFID64();
         if( nFID == OGRNullFID )
         {
             nFID = iNextFIDToWrite++;
@@ -2064,7 +2064,7 @@ OGRFeature *OGRSDELayer::GetNextFeature()
 /*                             GetFeature()                             */
 /************************************************************************/
 
-OGRFeature *OGRSDELayer::GetFeature( long nFeatureId )
+OGRFeature *OGRSDELayer::GetFeature( GIntBig nFeatureId )
 
 {
     int nSDEErr;
@@ -2178,7 +2178,7 @@ OGRErr OGRSDELayer::ResetStream()
 }
 
 /************************************************************************/
-/*                          GetFeatureCount()                           */
+/*                          GetFeatureCount64()                           */
 /*                                                                      */
 /*      Issue a special "counter only" query that will just fetch       */
 /*      objectids, and count the result set.  This will inherently      */
@@ -2187,7 +2187,7 @@ OGRErr OGRSDELayer::ResetStream()
 /*      operator in the database.                                       */
 /************************************************************************/
 
-int OGRSDELayer::GetFeatureCount( int bForce )
+GIntBig OGRSDELayer::GetFeatureCount64( int bForce )
 
 {
 /* -------------------------------------------------------------------- */
@@ -2504,7 +2504,7 @@ OGRErr OGRSDELayer::ICreateFeature( OGRFeature *poFeature )
 /************************************************************************/
 /*                           DeleteFeature()                            */
 /************************************************************************/
-OGRErr OGRSDELayer::DeleteFeature( long nFID )
+OGRErr OGRSDELayer::DeleteFeature( GIntBig nFID )
 
 {
     LONG                nSDEErr;

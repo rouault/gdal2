@@ -564,7 +564,7 @@ void OGRIdrisiLayer::ReadAVLLine(OGRFeature* poFeature)
     if (CSLCount(papszTokens) == poFeatureDefn->GetFieldCount())
     {
         int nID = atoi(papszTokens[0]);
-        if (nID == poFeature->GetFID())
+        if (nID == poFeature->GetFID64())
         {
             int i;
             for(i=1;i<poFeatureDefn->GetFieldCount();i++)
@@ -606,13 +606,13 @@ OGRErr OGRIdrisiLayer::GetExtent(OGREnvelope *psExtent, int bForce)
 }
 
 /************************************************************************/
-/*                          GetFeatureCount()                           */
+/*                          GetFeatureCount64()                           */
 /************************************************************************/
 
-int OGRIdrisiLayer::GetFeatureCount( int bForce )
+GIntBig OGRIdrisiLayer::GetFeatureCount64( int bForce )
 {
     if (nTotalFeatures > 0 && m_poFilterGeom == NULL && m_poAttrQuery == NULL)
         return nTotalFeatures;
 
-    return OGRLayer::GetFeatureCount(bForce);
+    return OGRLayer::GetFeatureCount64(bForce);
 }

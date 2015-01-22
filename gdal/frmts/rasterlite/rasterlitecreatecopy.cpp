@@ -657,7 +657,7 @@ RasterliteCreateCopy( const char * pszFilename, GDALDataset *poSrcDS,
             
             OGR_L_CreateFeature(hRasterLayer, hFeat);
             /* Query raster ID to set it as the ID of the associated metadata */
-            int nRasterID = (int)OGR_F_GetFID(hFeat);
+            int nRasterID = (int)OGR_F_GetFID64(hFeat);
             
             OGR_F_Destroy(hFeat);
             

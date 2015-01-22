@@ -670,7 +670,7 @@ int OGR2SQLITEDealWithSpatialColumn(OGRLayer* poLayer,
         {
             poGeom->getEnvelope(&sEnvelope);
             sqlite3_bind_int64(hStmt, 1,
-                                (sqlite3_int64) poFeature->GetFID() );
+                                (sqlite3_int64) poFeature->GetFID64() );
             sqlite3_bind_double(hStmt, 2, sEnvelope.MinX);
             sqlite3_bind_double(hStmt, 3, sEnvelope.MaxX);
             sqlite3_bind_double(hStmt, 4, sEnvelope.MinY);

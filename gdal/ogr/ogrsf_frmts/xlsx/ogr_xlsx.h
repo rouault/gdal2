@@ -75,11 +75,11 @@ class OGRXLSXLayer : public OGRMemLayer
 
     /* For external usage. Mess with FID */
     virtual OGRFeature *        GetNextFeature();
-    virtual OGRFeature         *GetFeature( long nFeatureId );
+    virtual OGRFeature         *GetFeature( GIntBig nFeatureId );
     virtual OGRErr              ISetFeature( OGRFeature *poFeature );
-    virtual OGRErr              DeleteFeature( long nFID );
+    virtual OGRErr              DeleteFeature( GIntBig nFID );
 
-    virtual OGRErr      SetNextByIndex( long nIndex )
+    virtual OGRErr      SetNextByIndex( GIntBig nIndex )
     { Init(); return OGRMemLayer::SetNextByIndex(nIndex); }
 
     OGRErr              ICreateFeature( OGRFeature *poFeature )
@@ -88,8 +88,8 @@ class OGRXLSXLayer : public OGRMemLayer
     OGRFeatureDefn *    GetLayerDefn()
     { Init(); return OGRMemLayer::GetLayerDefn(); }
 
-    int                 GetFeatureCount( int bForce )
-    { Init(); return OGRMemLayer::GetFeatureCount(bForce); }
+    GIntBig                 GetFeatureCount64( int bForce )
+    { Init(); return OGRMemLayer::GetFeatureCount64(bForce); }
 
     virtual OGRErr      CreateField( OGRFieldDefn *poField,
                                      int bApproxOK = TRUE )

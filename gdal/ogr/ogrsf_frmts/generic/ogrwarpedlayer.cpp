@@ -171,7 +171,7 @@ OGRFeature *OGRWarpedLayer::SrcFeatureToWarpedFeature(OGRFeature* poSrcFeature)
 {
     OGRFeature* poFeature = new OGRFeature(GetLayerDefn());
     poFeature->SetFrom(poSrcFeature);
-    poFeature->SetFID(poSrcFeature->GetFID());
+    poFeature->SetFID(poSrcFeature->GetFID64());
 
     OGRGeometry* poGeom = poFeature->GetGeomFieldRef(m_iGeomField);
     if( poGeom == NULL )
@@ -194,7 +194,7 @@ OGRFeature *OGRWarpedLayer::WarpedFeatureToSrcFeature(OGRFeature* poFeature)
 {
     OGRFeature* poSrcFeature = new OGRFeature(m_poDecoratedLayer->GetLayerDefn());
     poSrcFeature->SetFrom(poFeature);
-    poSrcFeature->SetFID(poFeature->GetFID());
+    poSrcFeature->SetFID(poFeature->GetFID64());
 
     OGRGeometry* poGeom = poSrcFeature->GetGeomFieldRef(m_iGeomField);
     if( poGeom != NULL )
@@ -245,7 +245,7 @@ OGRFeature *OGRWarpedLayer::GetNextFeature()
 /*                             GetFeature()                             */
 /************************************************************************/
 
-OGRFeature *OGRWarpedLayer::GetFeature( long nFID )
+OGRFeature *OGRWarpedLayer::GetFeature( GIntBig nFID )
 {
     OGRFeature* poFeature = m_poDecoratedLayer->GetFeature(nFID);
     if( poFeature != NULL )
@@ -326,15 +326,15 @@ OGRSpatialReference *OGRWarpedLayer::GetSpatialRef()
 }
 
 /************************************************************************/
-/*                           GetFeatureCount()                          */
+/*                           GetFeatureCount64()                          */
 /************************************************************************/
 
-int OGRWarpedLayer::GetFeatureCount( int bForce )
+GIntBig OGRWarpedLayer::GetFeatureCount64( int bForce )
 {
     if( m_poFilterGeom == NULL )
-        return m_poDecoratedLayer->GetFeatureCount(bForce);
+        return m_poDecoratedLayer->GetFeatureCount64(bForce);
 
-    return OGRLayer::GetFeatureCount(bForce);
+    return OGRLayer::GetFeatureCount64(bForce);
 }
 
 /************************************************************************/

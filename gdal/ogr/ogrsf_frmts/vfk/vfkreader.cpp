@@ -313,7 +313,7 @@ int VFKReader::ReadDataRecords(IVFKDataBlock *poDataBlock)
                 }
                 
                 poNewFeature = new VFKFeature(poDataBlockCurrent,
-                                              poDataBlockCurrent->GetFeatureCount() + 1);
+                                              poDataBlockCurrent->GetFeatureCount64() + 1);
                 if (poNewFeature->SetProperties(pszLine)) {
                     if (AddFeature(poDataBlockCurrent, poNewFeature) != OGRERR_NONE) {
                         CPLDebug("OGR-VFK", 

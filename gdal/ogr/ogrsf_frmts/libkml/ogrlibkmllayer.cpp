@@ -565,7 +565,7 @@ OGRErr OGRLIBKMLLayer::ICreateFeature (
     }
     else
     {
-        if( poOgrFeat->GetFID() < 0 )
+        if( poOgrFeat->GetFID64() < 0 )
         {
             static int bAlreadyWarned = FALSE;
             if( !bAlreadyWarned )
@@ -577,8 +577,8 @@ OGRErr OGRLIBKMLLayer::ICreateFeature (
         }
         else
         {
-            const char* pszId = CPLSPrintf("%s.%ld",
-                    OGRLIBKMLGetSanitizedNCName(GetName()).c_str(), poOgrFeat->GetFID());
+            const char* pszId = CPLSPrintf("%s." CPL_FRMT_GIB,
+                    OGRLIBKMLGetSanitizedNCName(GetName()).c_str(), poOgrFeat->GetFID64());
             poOgrFeat->SetFID(nFeatures);
             poKmlFeature->set_id(pszId);
         }
@@ -607,7 +607,7 @@ OGRErr OGRLIBKMLLayer::ISetFeature ( OGRFeature * poOgrFeat )
 {
     if( !bUpdate || m_poKmlUpdate == NULL )
         return OGRERR_UNSUPPORTED_OPERATION;
-    if( poOgrFeat->GetFID() == OGRNullFID )
+    if( poOgrFeat->GetFID64() == OGRNullFID )
         return OGRERR_FAILURE;
 
     FeaturePtr poKmlFeature =
@@ -619,8 +619,8 @@ OGRErr OGRLIBKMLLayer::ISetFeature ( OGRFeature * poOgrFeat )
     poChange->add_object(poKmlFeature);
     m_poKmlUpdate->add_updateoperation(poChange);
     
-    const char* pszId = CPLSPrintf("%s.%ld",
-                    OGRLIBKMLGetSanitizedNCName(GetName()).c_str(), poOgrFeat->GetFID());
+    const char* pszId = CPLSPrintf("%s." CPL_FRMT_GIB,
+                    OGRLIBKMLGetSanitizedNCName(GetName()).c_str(), poOgrFeat->GetFID64());
     poKmlFeature->set_targetid(pszId);
 
     /***** mark the layer as updated *****/
@@ -641,7 +641,7 @@ OGRErr OGRLIBKMLLayer::ISetFeature ( OGRFeature * poOgrFeat )
 
 ******************************************************************************/
 
-OGRErr OGRLIBKMLLayer::DeleteFeature( long nFID )
+OGRErr OGRLIBKMLLayer::DeleteFeature( GIntBig nFID )
 {
     if( !bUpdate || m_poKmlUpdate == NULL )
         return OGRERR_UNSUPPORTED_OPERATION;
@@ -652,7 +652,7 @@ OGRErr OGRLIBKMLLayer::DeleteFeature( long nFID )
     PlacemarkPtr poKmlPlacemark = poKmlFactory->CreatePlacemark();
     poDelete->add_feature(poKmlPlacemark);
     
-    const char* pszId = CPLSPrintf("%s.%ld",
+    const char* pszId = CPLSPrintf("%s." CPL_FRMT_GIB,
                     OGRLIBKMLGetSanitizedNCName(GetName()).c_str(), nFID);
     poKmlPlacemark->set_targetid(pszId);
 
@@ -676,14 +676,14 @@ OGRErr OGRLIBKMLLayer::DeleteFeature( long nFID )
                 
 ******************************************************************************/
 
-int OGRLIBKMLLayer::GetFeatureCount (
+GIntBig OGRLIBKMLLayer::GetFeatureCount64 (
                                      int bForce )
 {
 
 
     int i = 0; 
     if (m_poFilterGeom != NULL || m_poAttrQuery != NULL ) {
-        i = OGRLayer::GetFeatureCount( bForce );
+        i = OGRLayer::GetFeatureCount64( bForce );
     }
 
     else if( m_poKmlLayer != NULL ) {

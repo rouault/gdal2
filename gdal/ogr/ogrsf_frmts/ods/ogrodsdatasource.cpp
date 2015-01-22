@@ -105,7 +105,7 @@ OGRFeature* OGRODSLayer::GetNextFeature()
 {
     OGRFeature* poFeature = OGRMemLayer::GetNextFeature();
     if (poFeature)
-        poFeature->SetFID(poFeature->GetFID() + 1 + bHasHeaderLine);
+        poFeature->SetFID(poFeature->GetFID64() + 1 + bHasHeaderLine);
     return poFeature;
 }
 
@@ -113,7 +113,7 @@ OGRFeature* OGRODSLayer::GetNextFeature()
 /*                           GetFeature()                               */
 /************************************************************************/
 
-OGRFeature* OGRODSLayer::GetFeature( long nFeatureId )
+OGRFeature* OGRODSLayer::GetFeature( GIntBig nFeatureId )
 {
     OGRFeature* poFeature = OGRMemLayer::GetFeature(nFeatureId - (1 + bHasHeaderLine));
     if (poFeature)
@@ -130,7 +130,7 @@ OGRErr OGRODSLayer::ISetFeature( OGRFeature *poFeature )
     if (poFeature == NULL)
         return OGRMemLayer::ISetFeature(poFeature);
 
-    long nFID = poFeature->GetFID();
+    long nFID = poFeature->GetFID64();
     if (nFID != OGRNullFID)
         poFeature->SetFID(nFID - (1 + bHasHeaderLine));
     SetUpdated(); 
@@ -143,7 +143,7 @@ OGRErr OGRODSLayer::ISetFeature( OGRFeature *poFeature )
 /*                          DeleteFeature()                             */
 /************************************************************************/
 
-OGRErr OGRODSLayer::DeleteFeature( long nFID )
+OGRErr OGRODSLayer::DeleteFeature( GIntBig nFID )
 {
     SetUpdated();
     return OGRMemLayer::DeleteFeature(nFID - (1 + bHasHeaderLine));
@@ -428,7 +428,13 @@ OGRFieldType OGRODSDataSource::GetOGRFieldType(const char* pszValue,
              strcmp(pszValueType, "currency") == 0)
     {
         if (CPLGetValueType(pszValue) == CPL_VALUE_INTEGER)
-            return OFTInteger;
+        {
+            GIntBig nVal = CPLAtoGIntBig(pszValue);
+            if( (GIntBig)(int)nVal != nVal )
+                return OFTInteger64;
+            else
+                return OFTInteger;
+        }
         else
             return OFTReal;
     }
@@ -887,9 +893,13 @@ void OGRODSDataSource::endElementRow(CPL_UNUSED const char *pszName)
                         {
                             /* ok */
                         }
-                        else if (eFieldType == OFTReal && eValType == OFTInteger)
+                        else if (eFieldType == OFTReal && (eValType == OFTInteger || eValType == OFTInteger64))
                         {
                            /* ok */;
+                        }
+                        else if (eFieldType == OFTInteger64 && eValType == OFTInteger )
+                        {
+                            /* ok */;
                         }
                         else if (eFieldType != OFTString && eValType != eFieldType)
                         {
@@ -898,9 +908,11 @@ void OGRODSDataSource::endElementRow(CPL_UNUSED const char *pszName)
                             if ((eFieldType == OFTDate || eFieldType == OFTTime) &&
                                    eValType == OFTDateTime)
                                 oNewFieldDefn.SetType(OFTDateTime);
-                            else if (eFieldType == OFTInteger &&
+                            else if ((eFieldType == OFTInteger || eFieldType == OFTInteger64) &&
                                      eValType == OFTReal)
                                 oNewFieldDefn.SetType(OFTReal);
+                            else if( eFieldType == OFTInteger && eValType == OFTInteger64 )
+                                oNewFieldDefn.SetType(OFTInteger64);
                             else
                                 oNewFieldDefn.SetType(OFTString);
                             poCurLayer->AlterFieldDefn(i, &oNewFieldDefn,
@@ -1428,6 +1440,12 @@ static void WriteLayer(VSILFILE* fp, OGRLayer* poLayer)
                                 "office:value=\"%d\"/>\n",
                                 poFeature->GetFieldAsInteger(j));
                 }
+                else if (eType == OFTInteger64)
+                {
+                    VSIFPrintfL(fp, "<table:table-cell office:value-type=\"float\" "
+                                "office:value=\"" CPL_FRMT_GIB "\"/>\n",
+                                poFeature->GetFieldAsInteger64(j));
+                }
                 else if (eType == OFTDateTime)
                 {
                     int nYear, nMonth, nDay, nHour, nMinute, nSecond, nTZFlag;
@@ -1724,7 +1742,7 @@ void OGRODSDataSource::FlushCache()
 int ODSCellEvaluator::EvaluateRange(int nRow1, int nCol1, int nRow2, int nCol2,
                                     std::vector<ods_formula_node>& aoOutValues)
 {
-    if (nRow1 < 0 || nRow1 >= poLayer->GetFeatureCount(FALSE) ||
+    if (nRow1 < 0 || nRow1 >= poLayer->GetFeatureCount64(FALSE) ||
         nCol1 < 0 || nCol1 >= poLayer->GetLayerDefn()->GetFieldCount())
     {
         CPLError(CE_Failure, CPLE_AppDefined,
@@ -1732,7 +1750,7 @@ int ODSCellEvaluator::EvaluateRange(int nRow1, int nCol1, int nRow2, int nCol2,
         return FALSE;
     }
 
-    if (nRow2 < 0 || nRow2 >= poLayer->GetFeatureCount(FALSE) ||
+    if (nRow2 < 0 || nRow2 >= poLayer->GetFeatureCount64(FALSE) ||
         nCol2 < 0 || nCol2 >= poLayer->GetLayerDefn()->GetFieldCount())
     {
         CPLError(CE_Failure, CPLE_AppDefined,

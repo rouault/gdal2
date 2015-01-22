@@ -204,7 +204,7 @@ OGRNASLayer *OGRNASDataSource::TranslateNASSchema( GMLFeatureClass *poClass )
     {
         eGType = (OGRwkbGeometryType) poClass->GetGeometryProperty(0)->GetType();
 
-        if( poClass->GetFeatureCount() == 0 )
+        if( poClass->GetFeatureCount64() == 0 )
             eGType = wkbUnknown;
     }
 

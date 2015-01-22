@@ -254,19 +254,19 @@ OGRFeature *OGRNASLayer::GetNextFeature()
 }
 
 /************************************************************************/
-/*                          GetFeatureCount()                           */
+/*                          GetFeatureCount64()                           */
 /************************************************************************/
 
-int OGRNASLayer::GetFeatureCount( int bForce )
+GIntBig OGRNASLayer::GetFeatureCount64( int bForce )
 
 {
     if( poFClass == NULL )
         return 0;
 
     if( m_poFilterGeom != NULL || m_poAttrQuery != NULL )
-        return OGRLayer::GetFeatureCount( bForce );
+        return OGRLayer::GetFeatureCount64( bForce );
     else
-        return poFClass->GetFeatureCount();
+        return poFClass->GetFeatureCount64();
 }
 
 /************************************************************************/
@@ -316,7 +316,7 @@ int OGRNASLayer::TestCapability( const char * pszCap )
             || m_poAttrQuery != NULL )
             return FALSE;
 
-        return poFClass->GetFeatureCount() != -1;
+        return poFClass->GetFeatureCount64() != -1;
     }
 
     else if( EQUAL(pszCap,OLCStringsAsUTF8) )

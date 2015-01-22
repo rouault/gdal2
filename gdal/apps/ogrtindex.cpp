@@ -255,7 +255,7 @@ int main( int nArgc, char ** papszArgv )
     char** existingLayersTab = NULL;
     OGRSpatialReference* alreadyExistingSpatialRef = NULL;
     int alreadyExistingSpatialRefValid = FALSE;
-    nExistingLayers = poDstLayer->GetFeatureCount();
+    nExistingLayers = poDstLayer->GetFeatureCount64();
     if (nExistingLayers)
     {
         int i;

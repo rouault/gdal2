@@ -143,7 +143,7 @@ OGRFeature *OGRILI1Layer::GetFeatureRef( long nFID )
     ResetReading();
     while( (poFeature = GetNextFeatureRef()) != NULL )
     {
-        if( poFeature->GetFID() == nFID )
+        if( poFeature->GetFID64() == nFID )
             return poFeature;
     }
 
@@ -151,10 +151,10 @@ OGRFeature *OGRILI1Layer::GetFeatureRef( long nFID )
 }
 
 /************************************************************************/
-/*                          GetFeatureCount()                           */
+/*                          GetFeatureCount64()                           */
 /************************************************************************/
 
-int OGRILI1Layer::GetFeatureCount( int bForce )
+GIntBig OGRILI1Layer::GetFeatureCount64( int bForce )
 {
     if (m_poFilterGeom == NULL && m_poAttrQuery == NULL &&
         1 /*poAreaLineLayer == NULL*/)
@@ -163,7 +163,7 @@ int OGRILI1Layer::GetFeatureCount( int bForce )
     }
     else
     {
-        return OGRLayer::GetFeatureCount(bForce);
+        return OGRLayer::GetFeatureCount64(bForce);
     }
 }
 
@@ -297,8 +297,8 @@ OGRErr OGRILI1Layer::ICreateFeature( OGRFeature *poFeature ) {
     if ( poFeatureDefn->GetFieldCount() && !EQUAL(poFeatureDefn->GetFieldDefn(0)->GetNameRef(), "TID") )
     {
         //Input is not generated from an Interlis 1 source
-        if (poFeature->GetFID() != OGRNullFID)
-            tid = poFeature->GetFID();
+        if (poFeature->GetFID64() != OGRNullFID)
+            tid = poFeature->GetFID64();
         else
             ++tid;
         VSIFPrintf( poDS->GetTransferFile(), " %ld", tid );
@@ -427,7 +427,7 @@ void OGRILI1Layer::JoinSurfaceLayer( OGRILI1Layer* poSurfacePolyLayer, int nSurf
     CPLDebug( "OGR_ILI", "Joining surface layer %s with geometries", GetLayerDefn()->GetName());
     poSurfacePolyLayer->ResetReading();
     while (OGRFeature *polyfeature = poSurfacePolyLayer->GetNextFeatureRef()) {
-        long reftid = polyfeature->GetFID();
+        long reftid = polyfeature->GetFID64();
         OGRFeature *feature = GetFeatureRef(reftid);
         if (feature) {
             feature->SetGeomField(nSurfaceFieldIndex, polyfeature->GetGeomFieldRef(0));
@@ -508,9 +508,9 @@ void OGRILI1Layer::PolygonizeAreaLayer( OGRILI1Layer* poAreaLineLayer, int nArea
     poAreaLineLayer = 0;
     OGRMultiPolygon* polys = Polygonize( gc , false);
     CPLDebug( "OGR_ILI", "Resulting polygons: %d", polys->getNumGeometries());
-    if (polys->getNumGeometries() != GetFeatureCount())
+    if (polys->getNumGeometries() != GetFeatureCount64())
     {
-        CPLDebug( "OGR_ILI", "Feature count of layer %s: %d", GetLayerDefn()->GetName(), GetFeatureCount());
+        CPLDebug( "OGR_ILI", "Feature count of layer %s: " CPL_FRMT_GIB, GetLayerDefn()->GetName(), GetFeatureCount64());
         CPLDebug( "OGR_ILI", "Polygonizing again with crossing line fix");
         delete polys;
         polys = Polygonize( gc, true ); //try again with crossing line fix

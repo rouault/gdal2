@@ -316,7 +316,7 @@ void OGRIDBTableLayer::ResetReading()
 /*                             GetFeature()                             */
 /************************************************************************/
 
-OGRFeature *OGRIDBTableLayer::GetFeature( long nFeatureId )
+OGRFeature *OGRIDBTableLayer::GetFeature( GIntBig nFeatureId )
 
 {
     if( pszFIDColumn == NULL )
@@ -413,7 +413,7 @@ int OGRIDBTableLayer::TestCapability( const char * pszCap )
 }
 
 /************************************************************************/
-/*                          GetFeatureCount()                           */
+/*                          GetFeatureCount64()                           */
 /*                                                                      */
 /*      If a spatial filter is in effect, we turn control over to       */
 /*      the generic counter.  Otherwise we return the total count.      */
@@ -421,10 +421,10 @@ int OGRIDBTableLayer::TestCapability( const char * pszCap )
 /*      way of counting features matching a spatial query.              */
 /************************************************************************/
 
-int OGRIDBTableLayer::GetFeatureCount( int bForce )
+GIntBig OGRIDBTableLayer::GetFeatureCount64( int bForce )
 
 {
-    return OGRIDBLayer::GetFeatureCount( bForce );
+    return OGRIDBLayer::GetFeatureCount64( bForce );
 }
 
 /************************************************************************/
@@ -501,7 +501,7 @@ OGRErr OGRIDBTableLayer::ISetFeature( OGRFeature *poFeature )
         return eErr;
     }
 
-    if( poFeature->GetFID() == OGRNullFID )
+    if( poFeature->GetFID64() == OGRNullFID )
     {
         CPLError( CE_Failure, CPLE_AppDefined,
                   "FID required on features given to SetFeature()." );
@@ -571,7 +571,7 @@ OGRErr OGRIDBTableLayer::ISetFeature( OGRFeature *poFeature )
                   poFeatureDefn->GetName(),
                   osFields.c_str(),
                   pszFIDColumn,
-                  poFeature->GetFID() );
+                  poFeature->GetFID64() );
 
     if ( ! oQuery.Prepare( osSql.c_str() ) )
     {
@@ -715,7 +715,7 @@ OGRErr OGRIDBTableLayer::ISetFeature( OGRFeature *poFeature )
         return eErr;
     }
 
-    if( poFeature->GetFID() == OGRNullFID )
+    if( poFeature->GetFID64() == OGRNullFID )
     {
         CPLError( CE_Failure, CPLE_AppDefined,
                   "FID required on features given to SetFeature()." );
@@ -844,7 +844,7 @@ OGRErr OGRIDBTableLayer::ISetFeature( OGRFeature *poFeature )
                   poFeatureDefn->GetName(),
                   osFields.c_str(),
                   pszFIDColumn,
-                  poFeature->GetFID() );
+                  poFeature->GetFID64() );
 
     if ( ! oQuery.Prepare( osSql.c_str() ) )
     {
@@ -881,7 +881,7 @@ OGRErr OGRIDBTableLayer::ICreateFeature( OGRFeature *poFeature )
         return eErr;
     }
 
-    if( poFeature->GetFID() != OGRNullFID && pszFIDColumn == NULL )
+    if( poFeature->GetFID64() != OGRNullFID && pszFIDColumn == NULL )
     {
         CPLError( CE_Failure, CPLE_AppDefined,
                   "FID ignored on feature given to CreateFeature(). Unknown FID column." );

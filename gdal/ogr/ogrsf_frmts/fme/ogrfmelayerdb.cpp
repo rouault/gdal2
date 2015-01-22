@@ -428,10 +428,10 @@ int OGRFMELayerDB::CreateReader()
 }
 
 /************************************************************************/
-/*                          GetFeatureCount()                           */
+/*                          GetFeatureCount64()                           */
 /************************************************************************/
 
-int OGRFMELayerDB::GetFeatureCount( int bForce )
+GIntBig OGRFMELayerDB::GetFeatureCount64( int bForce )
 
 {
     /*
@@ -439,5 +439,5 @@ int OGRFMELayerDB::GetFeatureCount( int bForce )
     ** without having to convert to OGRFeatures.  Optimization deferred.
     */
 
-    return OGRLayer::GetFeatureCount( bForce );
+    return OGRLayer::GetFeatureCount64( bForce );
 }

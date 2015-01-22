@@ -257,6 +257,27 @@ const char* OGRSQLiteTableLayer::GetName()
 }
 
 /************************************************************************/
+/*                             GetMetadata()                            */
+/************************************************************************/
+
+char** OGRSQLiteTableLayer::GetMetadata( const char * pszDomain )
+{
+    EstablishFeatureDefn();
+    return OGRSQLiteLayer::GetMetadata(pszDomain);
+}
+
+/************************************************************************/
+/*                           GetMetadataItem()                          */
+/************************************************************************/
+
+const char * OGRSQLiteTableLayer::GetMetadataItem( const char * pszName,
+                                                   const char * pszDomain )
+{
+    EstablishFeatureDefn();
+    return OGRSQLiteLayer::GetMetadataItem(pszName, pszDomain);
+}
+
+/************************************************************************/
 /*                         EstablishFeatureDefn()                       */
 /************************************************************************/
 
@@ -274,6 +295,7 @@ CPLErr OGRSQLiteTableLayer::EstablishFeatureDefn()
     char **papszResult;
     int nRowCount, nColCount;
     char *pszErrMsg = NULL;
+    /*  #|name|type|nullable|default|pk */
     char* pszSQL3 = sqlite3_mprintf("PRAGMA table_info('%q')", pszTableName);
     rc = sqlite3_get_table( hDB, pszSQL3, &papszResult, &nRowCount,
                             &nColCount, &pszErrMsg );
@@ -288,7 +310,8 @@ CPLErr OGRSQLiteTableLayer::EstablishFeatureDefn()
         {
             for(int i=0;i<nRowCount;i++)
             {
-                if( papszResult[(i+1)*6+4] != NULL )
+                const char* pszDefault = papszResult[(i+1)*6+4];
+                if( pszDefault != NULL )
                     bHasDefaultValue = TRUE;
             }
         }
@@ -341,6 +364,26 @@ CPLErr OGRSQLiteTableLayer::EstablishFeatureDefn()
     BuildFeatureDefn( osLayerName, hColStmt, pszGeomCol, poDS->GetGeomColsForTable(pszTableName) );
     sqlite3_finalize( hColStmt );
 
+/* -------------------------------------------------------------------- */
+/*      Find if the FID holds 64bit values                              */
+/* -------------------------------------------------------------------- */
+    pszSQL = CPLSPrintf("SELECT MAX(%s) FROM '%s'",
+                        OGRSQLiteEscape(pszFIDColumn).c_str(),
+                        pszEscapedTableName);
+    hColStmt = NULL;
+    rc = sqlite3_prepare( hDB, pszSQL, strlen(pszSQL), &hColStmt, NULL ); 
+    if( rc == SQLITE_OK )
+    {
+        rc = sqlite3_step( hColStmt );
+        if( rc == SQLITE_ROW )
+        {
+            GIntBig nMaxId = sqlite3_column_int64( hColStmt, 0 );
+            if( nMaxId > INT_MAX )
+                SetMetadataItem(OLMD_FID64, "YES");
+        }
+    }
+    sqlite3_finalize( hColStmt );
+        
 /* -------------------------------------------------------------------- */
 /*      Set the properties of the geometry column.                      */
 /* -------------------------------------------------------------------- */
@@ -519,7 +562,7 @@ OGRFeature *OGRSQLiteTableLayer::GetNextFeature()
 /*                             GetFeature()                             */
 /************************************************************************/
 
-OGRFeature *OGRSQLiteTableLayer::GetFeature( long nFeatureId )
+OGRFeature *OGRSQLiteTableLayer::GetFeature( GIntBig nFeatureId )
 
 {
     if (HasLayerDefnError())
@@ -542,7 +585,7 @@ OGRFeature *OGRSQLiteTableLayer::GetFeature( long nFeatureId )
 
     iNextShapeId = nFeatureId;
 
-    osSQL.Printf( "SELECT _rowid_, * FROM '%s' WHERE \"%s\" = %ld",
+    osSQL.Printf( "SELECT _rowid_, * FROM '%s' WHERE \"%s\" = " CPL_FRMT_GIB,
                   pszEscapedTableName, 
                   OGRSQLiteEscape(pszFIDColumn).c_str(), nFeatureId );
 
@@ -775,17 +818,17 @@ int OGRSQLiteTableLayer::TestCapability( const char * pszCap )
 }
 
 /************************************************************************/
-/*                          GetFeatureCount()                           */
+/*                          GetFeatureCount64()                           */
 /************************************************************************/
 
-int OGRSQLiteTableLayer::GetFeatureCount( int bForce )
+GIntBig OGRSQLiteTableLayer::GetFeatureCount64( int bForce )
 
 {
     if (HasLayerDefnError())
         return 0;
 
     if( !TestCapability(OLCFastFeatureCount) )
-        return OGRSQLiteLayer::GetFeatureCount( bForce );
+        return OGRSQLiteLayer::GetFeatureCount64( bForce );
 
     if (nFeatureCount >= 0 && m_poFilterGeom == NULL &&
         osQuery.size() == 0 )
@@ -825,7 +868,7 @@ int OGRSQLiteTableLayer::GetFeatureCount( int bForce )
 /* -------------------------------------------------------------------- */
     char **papszResult, *pszErrMsg;
     int nRowCount, nColCount;
-    int nResult = -1;
+    GIntBig nResult = -1;
 
     if( sqlite3_get_table( poDS->GetDB(), pszSQL, &papszResult, 
                            &nRowCount, &nColCount, &pszErrMsg ) != SQLITE_OK )
@@ -833,7 +876,7 @@ int OGRSQLiteTableLayer::GetFeatureCount( int bForce )
 
     if( nRowCount == 1 && nColCount == 1 )
     {
-        nResult = atoi(papszResult[1]);
+        nResult = CPLAtoGIntBig(papszResult[1]);
 
         if( m_poFilterGeom == NULL && osQuery.size() == 0 )
         {
@@ -940,6 +983,8 @@ CPLString OGRSQLiteFieldDefnToSQliteFieldDefn( OGRFieldDefn* poFieldDefn,
             else
                 return "INTEGER";
             break;
+        case OFTInteger64:
+            return "BIGINT";
         case OFTReal:
             if (bSQLiteDialectInternalUse && poFieldDefn->GetSubType() == OFSTFloat32) 
                 return "FLOAT_FLOAT32";
@@ -961,6 +1006,12 @@ CPLString OGRSQLiteFieldDefnToSQliteFieldDefn( OGRFieldDefn* poFieldDefn,
         case OFTIntegerList:
             if (bSQLiteDialectInternalUse )
                 return "INTEGERLIST";
+            else
+                return "VARCHAR";
+            break;
+        case OFTInteger64List:
+            if (bSQLiteDialectInternalUse )
+                return "INTEGER64LIST";
             else
                 return "VARCHAR";
             break;
@@ -1822,6 +1873,13 @@ OGRErr OGRSQLiteTableLayer::BindValues( OGRFeature *poFeature,
                     rc = sqlite3_bind_int(hStmt, nBindField++, nFieldVal);
                     break;
                 }
+                
+                case OFTInteger64:
+                {
+                    GIntBig nFieldVal = poFeature->GetFieldAsInteger64( iField );
+                    rc = sqlite3_bind_int64(hStmt, nBindField++, nFieldVal);
+                    break;
+                }
 
                 case OFTReal:
                 {
@@ -1955,7 +2013,7 @@ OGRErr OGRSQLiteTableLayer::ISetFeature( OGRFeature *poFeature )
         return OGRERR_FAILURE;
     }
     
-    if( poFeature->GetFID() == OGRNullFID )
+    if( poFeature->GetFID64() == OGRNullFID )
     {
         CPLError( CE_Failure, CPLE_AppDefined, 
                   "SetFeature() with unset FID fails." );
@@ -2020,7 +2078,7 @@ OGRErr OGRSQLiteTableLayer::ISetFeature( OGRFeature *poFeature )
 /* -------------------------------------------------------------------- */
     osCommand += " WHERE \"";
     osCommand += OGRSQLiteEscapeName(pszFIDColumn);
-    osCommand += CPLSPrintf("\" = %ld", poFeature->GetFID());
+    osCommand += CPLSPrintf("\" = " CPL_FRMT_GIB, poFeature->GetFID64());
 
 /* -------------------------------------------------------------------- */
 /*      Prepare the statement.                                          */
@@ -2256,7 +2314,7 @@ OGRErr OGRSQLiteTableLayer::ICreateFeature( OGRFeature *poFeature )
     }
 
     int bReuseStmt = FALSE;
-    if( hInsertStmt == NULL || poFeature->GetFID() != OGRNullFID || bHasDefaultValue )
+    if( hInsertStmt == NULL || poFeature->GetFID64() != OGRNullFID || bHasDefaultValue )
     {
         CPLString      osValues;
 
@@ -2269,13 +2327,13 @@ OGRErr OGRSQLiteTableLayer::ICreateFeature( OGRFeature *poFeature )
 /*      Add FID if we have a cleartext FID column.                      */
 /* -------------------------------------------------------------------- */
         if( pszFIDColumn != NULL // && !EQUAL(pszFIDColumn,"OGC_FID") 
-            && poFeature->GetFID() != OGRNullFID )
+            && poFeature->GetFID64() != OGRNullFID )
         {
             osCommand += "\"";
             osCommand += OGRSQLiteEscapeName(pszFIDColumn);
             osCommand += "\"";
 
-            osValues += CPLSPrintf( "%ld", poFeature->GetFID() );
+            osValues += CPLSPrintf( CPL_FRMT_GIB, poFeature->GetFID64() );
             bNeedComma = TRUE;
         }
 
@@ -2353,7 +2411,7 @@ OGRErr OGRSQLiteTableLayer::ICreateFeature( OGRFeature *poFeature )
     #endif
 
         ClearInsertStmt();
-        if( poFeature->GetFID() == OGRNullFID )
+        if( poFeature->GetFID64() == OGRNullFID )
             osLastInsertStmt = osCommand;
 
 #ifdef HAVE_SQLITE3_PREPARE_V2
@@ -2402,7 +2460,7 @@ OGRErr OGRSQLiteTableLayer::ICreateFeature( OGRFeature *poFeature )
     const sqlite_int64 nFID = sqlite3_last_insert_rowid( hDB );
     if(nFID > 0)
     {
-        poFeature->SetFID( (long)nFID ); /* Possible truncation if nFID is 64bit */
+        poFeature->SetFID( nFID );
     }
 
     sqlite3_reset( hInsertStmt );
@@ -2429,7 +2487,7 @@ OGRErr OGRSQLiteTableLayer::ICreateFeature( OGRFeature *poFeature )
 /*                           DeleteFeature()                            */
 /************************************************************************/
 
-OGRErr OGRSQLiteTableLayer::DeleteFeature( long nFID )
+OGRErr OGRSQLiteTableLayer::DeleteFeature( GIntBig nFID )
 
 {
     CPLString      osSQL;
@@ -2456,7 +2514,7 @@ OGRErr OGRSQLiteTableLayer::DeleteFeature( long nFID )
 
     ResetReading();
 
-    osSQL.Printf( "DELETE FROM '%s' WHERE \"%s\" = %ld",
+    osSQL.Printf( "DELETE FROM '%s' WHERE \"%s\" = " CPL_FRMT_GIB,
                   pszEscapedTableName,
                   OGRSQLiteEscapeName(pszFIDColumn).c_str(), nFID );
 
@@ -2650,7 +2708,7 @@ void OGRSQLiteTableLayer::LoadStatisticsSpatialite4DB()
 
             if( pszRowCount != NULL )
             {
-                nFeatureCount = (GIntBig) CPLScanUIntBig( pszRowCount, 32 );
+                nFeatureCount = CPLAtoGIntBig( pszRowCount );
                 if( nFeatureCount == 0)
                 {
                     nFeatureCount = -1;
@@ -2762,7 +2820,7 @@ void OGRSQLiteTableLayer::LoadStatistics()
 
             if( pszRowCount != NULL )
             {
-                nFeatureCount = (GIntBig) CPLScanUIntBig( pszRowCount, 32 );
+                nFeatureCount = CPLAtoGIntBig( pszRowCount );
                 CPLDebug("SQLite", "Layer %s feature count : " CPL_FRMT_GIB,
                             pszTableName, nFeatureCount);
             }

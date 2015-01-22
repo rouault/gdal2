@@ -205,7 +205,7 @@ void OGRGeomediaTableLayer::ResetReading()
 /*                             GetFeature()                             */
 /************************************************************************/
 
-OGRFeature *OGRGeomediaTableLayer::GetFeature( long nFeatureId )
+OGRFeature *OGRGeomediaTableLayer::GetFeature( GIntBig nFeatureId )
 
 {
     if( pszFIDColumn == NULL )
@@ -218,7 +218,7 @@ OGRFeature *OGRGeomediaTableLayer::GetFeature( long nFeatureId )
     poStmt = new CPLODBCStatement( poDS->GetSession() );
     poStmt->Append( "SELECT * FROM " );
     poStmt->Append( poFeatureDefn->GetName() );
-    poStmt->Appendf( " WHERE %s = %ld", pszFIDColumn, nFeatureId );
+    poStmt->Appendf( " WHERE %s = " CPL_FRMT_GIB, pszFIDColumn, nFeatureId );
 
     if( !poStmt->ExecuteSQL() )
     {
@@ -272,7 +272,7 @@ int OGRGeomediaTableLayer::TestCapability( const char * pszCap )
 }
 
 /************************************************************************/
-/*                          GetFeatureCount()                           */
+/*                          GetFeatureCount64()                           */
 /*                                                                      */
 /*      If a spatial filter is in effect, we turn control over to       */
 /*      the generic counter.  Otherwise we return the total count.      */
@@ -280,11 +280,11 @@ int OGRGeomediaTableLayer::TestCapability( const char * pszCap )
 /*      way of counting features matching a spatial query.              */
 /************************************************************************/
 
-int OGRGeomediaTableLayer::GetFeatureCount( int bForce )
+GIntBig OGRGeomediaTableLayer::GetFeatureCount64( int bForce )
 
 {
     if( m_poFilterGeom != NULL )
-        return OGRGeomediaLayer::GetFeatureCount( bForce );
+        return OGRGeomediaLayer::GetFeatureCount64( bForce );
 
     CPLODBCStatement oStmt( poDS->GetSession() );
     oStmt.Append( "SELECT COUNT(*) FROM " );
@@ -296,9 +296,9 @@ int OGRGeomediaTableLayer::GetFeatureCount( int bForce )
     if( !oStmt.ExecuteSQL() || !oStmt.Fetch() )
     {
         CPLError( CE_Failure, CPLE_AppDefined, 
-                  "GetFeatureCount() failed on query %s.\n%s",
+                  "GetFeatureCount64() failed on query %s.\n%s",
                   oStmt.GetCommand(), poDS->GetSession()->GetLastError() );
-        return OGRGeomediaLayer::GetFeatureCount(bForce);
+        return OGRGeomediaLayer::GetFeatureCount64(bForce);
     }
 
     return atoi(oStmt.GetColData(0));

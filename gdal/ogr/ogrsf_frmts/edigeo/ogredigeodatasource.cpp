@@ -1475,7 +1475,7 @@ void OGREDIGEODataSource::ReadEDIGEO()
 /* -------------------------------------------------------------------- */
     for(i=0;i<nLayers;/*nothing*/)
     {
-        if (papoLayers[i]->GetFeatureCount(TRUE) == 0)
+        if (papoLayers[i]->GetFeatureCount64(TRUE) == 0)
         {
             delete papoLayers[i];
             if (i < nLayers - 1)

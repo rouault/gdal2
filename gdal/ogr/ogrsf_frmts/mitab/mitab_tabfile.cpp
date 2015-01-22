@@ -159,13 +159,14 @@ TABFile::~TABFile()
 
 
 /************************************************************************/
-/*                          GetFeatureCount()                           */
+/*                         GetFeatureCount64()                          */
 /************************************************************************/
-int TABFile::GetFeatureCount (int bForce)
+
+GIntBig TABFile::GetFeatureCount64 (int bForce)
 {
     
     if( m_poFilterGeom != NULL || m_poAttrQuery != NULL || bForce)
-        return OGRLayer::GetFeatureCount( bForce );
+        return OGRLayer::GetFeatureCount64( bForce );
     else
         return m_nLastFeatureId;
 }
@@ -1412,7 +1413,7 @@ TABFeature *TABFile::GetFeatureRef(int nFeatureId)
  *
  * Standard OGR DeleteFeature implementation.
  **********************************************************************/
-OGRErr TABFile::DeleteFeature(long nFeatureId)
+OGRErr TABFile::DeleteFeature(GIntBig nFeatureId)
 {
     CPLErrorReset();
 
@@ -1441,7 +1442,7 @@ OGRErr TABFile::DeleteFeature(long nFeatureId)
         m_poDATFile->GetRecordBlock(nFeatureId) == NULL )
     {
         CPLError(CE_Failure, CPLE_IllegalArg,
-                 "DeleteFeature() failed: invalid feature id %ld", 
+                 "DeleteFeature() failed: invalid feature id " CPL_FRMT_GIB, 
                  nFeatureId);
         return OGRERR_FAILURE;
     }
@@ -1493,9 +1494,9 @@ int TABFile::WriteFeature(TABFeature *poFeature)
     }
 
     int nFeatureId;
-    if ( poFeature->GetFID() >= 0 )
+    if ( poFeature->GetFID64() >= 0 )
     {
-        nFeatureId = poFeature->GetFID();
+        nFeatureId = poFeature->GetFID64();
     }
     else if (m_nLastFeatureId < 1)
     {
@@ -1626,7 +1627,7 @@ OGRErr TABFile::CreateFeature(TABFeature *poFeature)
         return OGRERR_FAILURE;
     }
 
-    long nFeatureId = poFeature->GetFID();
+    long nFeatureId = poFeature->GetFID64();
     if (nFeatureId != OGRNullFID )
     {
         if (nFeatureId <= 0 || nFeatureId > m_nLastFeatureId )
@@ -1680,7 +1681,7 @@ OGRErr TABFile::ISetFeature( OGRFeature *poFeature )
         return OGRERR_FAILURE;
     }
     
-    long nFeatureId = poFeature->GetFID();
+    long nFeatureId = poFeature->GetFID64();
     if (nFeatureId == OGRNullFID )
     {
         CPLError(CE_Failure, CPLE_NotSupported,

@@ -253,7 +253,7 @@ void OGRWalkTableLayer::ResetReading()
 /*                             GetFeature()                             */
 /************************************************************************/
 
-OGRFeature *OGRWalkTableLayer::GetFeature( long nFeatureId )
+OGRFeature *OGRWalkTableLayer::GetFeature( GIntBig nFeatureId )
 
 {
     if( pszFIDColumn == NULL )
@@ -267,7 +267,7 @@ OGRFeature *OGRWalkTableLayer::GetFeature( long nFeatureId )
     poStmt->Append( "SELECT * FROM " );
     poStmt->Append( poFeatureDefn->GetName() );
     poStmt->Append( "Features" );
-    poStmt->Appendf( " WHERE %s = %ld", pszFIDColumn, nFeatureId );
+    poStmt->Appendf( " WHERE %s = " CPL_FRMT_GIB, pszFIDColumn, nFeatureId );
 
     if( !poStmt->ExecuteSQL() )
     {
@@ -318,7 +318,7 @@ int OGRWalkTableLayer::TestCapability( const char * pszCap )
 }
 
 /************************************************************************/
-/*                          GetFeatureCount()                           */
+/*                          GetFeatureCount64()                           */
 /*                                                                      */
 /*      If a spatial filter is in effect, we turn control over to       */
 /*      the generic counter.  Otherwise we return the total count.      */
@@ -326,11 +326,11 @@ int OGRWalkTableLayer::TestCapability( const char * pszCap )
 /*      way of counting features matching a spatial query.              */
 /************************************************************************/
 
-int OGRWalkTableLayer::GetFeatureCount( int bForce )
+GIntBig OGRWalkTableLayer::GetFeatureCount64( int bForce )
 
 {
     if( m_poFilterGeom != NULL )
-        return OGRWalkLayer::GetFeatureCount( bForce );
+        return OGRWalkLayer::GetFeatureCount64( bForce );
 
     CPLODBCStatement oStmt( poDS->GetSession() );
     oStmt.Append( "SELECT COUNT(*) FROM " );
@@ -343,9 +343,9 @@ int OGRWalkTableLayer::GetFeatureCount( int bForce )
     if( !oStmt.ExecuteSQL() || !oStmt.Fetch() )
     {
         CPLError( CE_Failure, CPLE_AppDefined, 
-                  "GetFeatureCount() failed on query %s.\n%s",
+                  "GetFeatureCount64() failed on query %s.\n%s",
                   oStmt.GetCommand(), poDS->GetSession()->GetLastError() );
-        return OGRWalkLayer::GetFeatureCount(bForce);
+        return OGRWalkLayer::GetFeatureCount64(bForce);
     }
 
     return atoi(oStmt.GetColData(0));

@@ -287,10 +287,10 @@ int VFKReaderSQLite::ReadDataRecords(IVFKDataBlock *poDataBlock)
                 int nFeatDB;
 
                 nFeatDB = sqlite3_column_int(hStmt, 0);
-                if (nFeatDB > 0 && nFeatDB != poDataBlockCurrent->GetFeatureCount())
+                if (nFeatDB > 0 && nFeatDB != poDataBlockCurrent->GetFeatureCount64())
                     CPLError(CE_Failure, CPLE_AppDefined, 
-                             "%s: Invalid number of features %d (should be %d)",
-                             pszName, poDataBlockCurrent->GetFeatureCount(), nFeatDB);
+                             "%s: Invalid number of features " CPL_FRMT_GIB " (should be %d)",
+                             pszName, poDataBlockCurrent->GetFeatureCount64(), nFeatDB);
             }
             sqlite3_finalize(hStmt);
         }
@@ -622,7 +622,7 @@ OGRErr VFKReaderSQLite::AddFeature(IVFKDataBlock *poDataBlock, VFKFeature *poFea
         }
         osCommand += osValue;
     }
-    osValue.Printf(",%lu", poFeature->GetFID());
+    osValue.Printf("," CPL_FRMT_GIB, poFeature->GetFID64());
     if (poDataBlock->GetGeometryType() != wkbNone) {
 	osValue += ",NULL";
     }
@@ -640,7 +640,7 @@ OGRErr VFKReaderSQLite::AddFeature(IVFKDataBlock *poDataBlock, VFKFeature *poFea
     }
         
     poNewFeature = new VFKFeatureSQLite(poDataBlock, poDataBlock->GetRecordCount(RecordValid) + 1,
-                                        poFeature->GetFID());
+                                        poFeature->GetFID64());
     poDataBlock->AddFeature(poNewFeature);
     
     return OGRERR_NONE;

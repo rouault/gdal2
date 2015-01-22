@@ -88,12 +88,12 @@ OGRFeature *OGRLayerDecorator::GetNextFeature()
     return m_poDecoratedLayer->GetNextFeature();
 }
 
-OGRErr      OGRLayerDecorator::SetNextByIndex( long nIndex )
+OGRErr      OGRLayerDecorator::SetNextByIndex( GIntBig nIndex )
 {
     return m_poDecoratedLayer->SetNextByIndex(nIndex);
 }
 
-OGRFeature *OGRLayerDecorator::GetFeature( long nFID )
+OGRFeature *OGRLayerDecorator::GetFeature( GIntBig nFID )
 {
     return m_poDecoratedLayer->GetFeature(nFID);
 }
@@ -108,7 +108,7 @@ OGRErr      OGRLayerDecorator::ICreateFeature( OGRFeature *poFeature )
     return m_poDecoratedLayer->CreateFeature(poFeature);
 }
 
-OGRErr      OGRLayerDecorator::DeleteFeature( long nFID )
+OGRErr      OGRLayerDecorator::DeleteFeature( GIntBig nFID )
 {
     return m_poDecoratedLayer->DeleteFeature(nFID);
 }
@@ -133,9 +133,9 @@ OGRSpatialReference *OGRLayerDecorator::GetSpatialRef()
     return m_poDecoratedLayer->GetSpatialRef();
 }
 
-int         OGRLayerDecorator::GetFeatureCount( int bForce )
+GIntBig         OGRLayerDecorator::GetFeatureCount64( int bForce )
 {
-    return m_poDecoratedLayer->GetFeatureCount(bForce);
+    return m_poDecoratedLayer->GetFeatureCount64(bForce);
 }
 
 OGRErr      OGRLayerDecorator::GetExtent(OGREnvelope *psExtent, int bForce)

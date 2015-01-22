@@ -144,7 +144,7 @@ OGRFeature *OGRCouchDBLayer::GetNextRawFeature()
         return NULL;
 
     OGRFeature* poFeature = TranslateFeature(aoFeatures[nNextInSeq - nOffset]);
-    if (poFeature != NULL && poFeature->GetFID() == OGRNullFID)
+    if (poFeature != NULL && poFeature->GetFID64() == OGRNullFID)
         poFeature->SetFID(nNextInSeq);
 
     nNextInSeq ++;
@@ -156,7 +156,7 @@ OGRFeature *OGRCouchDBLayer::GetNextRawFeature()
 /*                          SetNextByIndex()                            */
 /************************************************************************/
 
-OGRErr OGRCouchDBLayer::SetNextByIndex( long nIndex )
+OGRErr OGRCouchDBLayer::SetNextByIndex( GIntBig nIndex )
 {
     if (nIndex < 0)
         return OGRERR_FAILURE;

@@ -179,9 +179,9 @@ OGRFeature *OGRGeoconceptLayer::GetNextFeature()
     }
 
     CPLDebug( "GEOCONCEPT",
-              "FID : %ld\n"
+              "FID : " CPL_FRMT_GIB "\n"
               "%s  : %s",
-              poFeature? poFeature->GetFID():-1L,
+              poFeature? poFeature->GetFID64():-1L,
               poFeature && poFeature->GetFieldCount()>0? poFeature->GetFieldDefnRef(0)->GetNameRef():"-",
               poFeature && poFeature->GetFieldCount()>0? poFeature->GetFieldAsString(0):"");
 
@@ -341,7 +341,7 @@ OGRErr OGRGeoconceptLayer::ICreateFeature( OGRFeature* poFeature )
 
     /* 1st feature, let's write header : */
     if( GetGCMode_GCIO(GetSubTypeGCHandle_GCIO(_gcFeature)) == vWriteAccess_GCIO &&
-        GetFeatureCount(TRUE) == 0 )
+        GetFeatureCount64(TRUE) == 0 )
       if( WriteHeader_GCIO(GetSubTypeGCHandle_GCIO(_gcFeature))==NULL )
       {
         return OGRERR_FAILURE;
@@ -352,7 +352,7 @@ OGRErr OGRGeoconceptLayer::ICreateFeature( OGRFeature* poFeature )
       for( iGeom= 0; iGeom<nbGeom; iGeom++ )
       {
         nextField= StartWritingFeature_GCIO(_gcFeature,
-                                            isSingle? poFeature->GetFID():OGRNullFID);
+                                            isSingle? poFeature->GetFID64():OGRNullFID);
         while (nextField!=WRITECOMPLETED_GCIO)
         {
           if( nextField==WRITEERROR_GCIO )
@@ -427,17 +427,17 @@ OGRSpatialReference *OGRGeoconceptLayer::GetSpatialRef()
 }
 
 /************************************************************************/
-/*                          GetFeatureCount()                           */
+/*                          GetFeatureCount64()                           */
 /*                                                                      */
 /*      If a spatial filter is in effect, we turn control over to       */
 /*      the generic counter.  Otherwise we return the total count.      */
 /************************************************************************/
 
-int OGRGeoconceptLayer::GetFeatureCount( int bForce )
+GIntBig OGRGeoconceptLayer::GetFeatureCount64( int bForce )
 
 {
     if( m_poFilterGeom != NULL || m_poAttrQuery != NULL )
-        return OGRLayer::GetFeatureCount( bForce );
+        return OGRLayer::GetFeatureCount64( bForce );
     else
         return GetSubTypeNbFeatures_GCIO(_gcFeature);
 }
@@ -524,7 +524,7 @@ OGRErr OGRGeoconceptLayer::CreateField( OGRFieldDefn *poField,
 
       if( !(theField= FindFeatureField_GCIO(_gcFeature,pszName)) )
       {
-        if( GetFeatureCount(TRUE) > 0 )
+        if( GetFeatureCount64(TRUE) > 0 )
         {
           CPLError( CE_Failure, CPLE_NotSupported,
                     "Can't create field '%s' on existing Geoconcept layer '%s.%s'.\n",

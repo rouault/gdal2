@@ -135,7 +135,7 @@ void OGRAVCE00Layer::ResetReading()
 /*                             GetFeature()                             */
 /************************************************************************/
 
-OGRFeature *OGRAVCE00Layer::GetFeature( long nFID )
+OGRFeature *OGRAVCE00Layer::GetFeature( GIntBig nFID )
 
 {
 /* -------------------------------------------------------------------- */
@@ -241,7 +241,7 @@ OGRFeature *OGRAVCE00Layer::GetNextFeature()
     OGRFeature *poFeature = GetFeature( -3 );
 
     // Skip universe polygon.
-    if( poFeature != NULL && poFeature->GetFID() == 1 
+    if( poFeature != NULL && poFeature->GetFID64() == 1 
         && psSection->eType == AVCFilePAL )
     {
         OGRFeature::DestroyFeature( poFeature );
@@ -491,7 +491,7 @@ int OGRAVCE00Layer::AppendTableFields( OGRFeature *poFeature )
     void *hRecord;
 
     if( nTableAttrIndex == -1 )
-        nRecordId = poFeature->GetFID();
+        nRecordId = poFeature->GetFID64();
     else
         nRecordId = poFeature->GetFieldAsInteger( nTableAttrIndex );
 
@@ -522,16 +522,16 @@ int OGRAVCE00Layer::AppendTableFields( OGRFeature *poFeature )
 }
 
 
-int OGRAVCE00Layer::GetFeatureCount(int bForce)
+GIntBig OGRAVCE00Layer::GetFeatureCount64(int bForce)
 {
     if (m_poAttrQuery != NULL || m_poFilterGeom != NULL)
-        return OGRAVCLayer::GetFeatureCount(bForce);
+        return OGRAVCLayer::GetFeatureCount64(bForce);
 
     if (bForce && nFeatureCount < 0)
     {
         if (psSection->nFeatureCount < 0)
         {
-            nFeatureCount = OGRLayer::GetFeatureCount(bForce);
+            nFeatureCount = OGRLayer::GetFeatureCount64(bForce);
         }
         else
         {

@@ -2200,10 +2200,10 @@ int OGRGeoRSSLayer::TestCapability( const char * pszCap )
 }
 
 /************************************************************************/
-/*                          GetFeatureCount()                           */
+/*                          GetFeatureCount64()                           */
 /************************************************************************/
 
-int OGRGeoRSSLayer::GetFeatureCount( int bForce )
+GIntBig OGRGeoRSSLayer::GetFeatureCount64( int bForce )
 
 {
     if (bWriteMode)
@@ -2217,7 +2217,7 @@ int OGRGeoRSSLayer::GetFeatureCount( int bForce )
         LoadSchema();
 
     if( m_poFilterGeom != NULL || m_poAttrQuery != NULL )
-        return OGRLayer::GetFeatureCount( bForce );
+        return OGRLayer::GetFeatureCount64( bForce );
     else
         return nTotalFeatureCount;
 }

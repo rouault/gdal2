@@ -310,7 +310,7 @@ int TABSeamless::OpenForRead(const char *pszFname,
     /* Set the number of bits required to encode features for this index
      * table. (Based of the number of features)
      */
-    int s=0, numFeatures = m_poIndexTable->GetFeatureCount(FALSE);
+    int s=0, numFeatures = m_poIndexTable->GetFeatureCount64(FALSE);
     do s++, numFeatures>>=1; while(numFeatures);
     m_nIndexTableFIDBits= s+1;
 
@@ -388,7 +388,7 @@ int TABSeamless::OpenBaseTable(TABFeature *poIndexFeature,
      * Fetch table id.  We actually use the index feature's ids as the
      * base table ids.
      *----------------------------------------------------------------*/
-    int nTableId = poIndexFeature->GetFID();
+    int nTableId = poIndexFeature->GetFID64();
 
     if (m_nCurBaseTableId == nTableId && m_poCurBaseTable != NULL)
     {
@@ -439,7 +439,7 @@ int TABSeamless::OpenBaseTable(TABFeature *poIndexFeature,
      * encode and extract feature ID.
      */
     int s=0, nCurBaseTableFIDBits = 0,
-        numFeatures = m_poCurBaseTable->GetFeatureCount(FALSE);
+        numFeatures = m_poCurBaseTable->GetFeatureCount64(FALSE);
     do s++, numFeatures>>=1; while(numFeatures);
     nCurBaseTableFIDBits = s;
 
@@ -789,7 +789,7 @@ OGRErr TABSeamless::GetExtent (OGREnvelope *psExtent, int bForce)
 }
 
 /**********************************************************************
- *                   TABSeamless::GetFeatureCountByType()
+ *                   TABSeamless::GetFeatureCount64ByType()
  *
  * Return number of features of each type.
  *
@@ -814,14 +814,14 @@ int TABSeamless::GetFeatureCountByType(CPL_UNUSED int &numPoints,
     return -1;
 }
 
-int TABSeamless::GetFeatureCount(int bForce)
+GIntBig TABSeamless::GetFeatureCount64(int bForce)
 {
     /*-----------------------------------------------------------------
      * __TODO__  This should be implemented to return -1 if force=false,
      * or scan all the base tables if force=true
      *----------------------------------------------------------------*/
 
-    return OGRLayer::GetFeatureCount(bForce);
+    return OGRLayer::GetFeatureCount64(bForce);
 }
 
 

@@ -65,7 +65,7 @@ private:
     void                ResetReading();
     OGRFeature *        GetNextFeature();
 
-    int                 GetFeatureCount( int bForce = TRUE );
+    GIntBig             GetFeatureCount64( int bForce = TRUE );
 
     OGRErr              ICreateFeature( OGRFeature *poFeature );
     

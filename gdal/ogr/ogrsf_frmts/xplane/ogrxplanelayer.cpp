@@ -225,7 +225,7 @@ OGRFeature *OGRXPlaneLayer::GetNextFeature()
 /*                           GetFeature()                               */
 /************************************************************************/
 
-OGRFeature *  OGRXPlaneLayer::GetFeature( long nFID )
+OGRFeature *  OGRXPlaneLayer::GetFeature( GIntBig nFID )
 {
     if (poReader)
         return OGRLayer::GetFeature(nFID);
@@ -243,10 +243,10 @@ OGRFeature *  OGRXPlaneLayer::GetFeature( long nFID )
 }
 
 /************************************************************************/
-/*                      GetFeatureCount()                               */
+/*                      GetFeatureCount64()                               */
 /************************************************************************/
 
-int  OGRXPlaneLayer::GetFeatureCount( int bForce )
+GIntBig  OGRXPlaneLayer::GetFeatureCount64( int bForce )
 {
     if (poReader == NULL && m_poFilterGeom == NULL && m_poAttrQuery == NULL)
     {
@@ -254,7 +254,7 @@ int  OGRXPlaneLayer::GetFeatureCount( int bForce )
         return nFeatureArraySize;
     }
     else
-        return OGRLayer::GetFeatureCount( bForce ) ;
+        return OGRLayer::GetFeatureCount64( bForce ) ;
 }
 
 
@@ -262,7 +262,7 @@ int  OGRXPlaneLayer::GetFeatureCount( int bForce )
 /*                           SetNextByIndex()                           */
 /************************************************************************/
 
-OGRErr OGRXPlaneLayer::SetNextByIndex( long nIndex )
+OGRErr OGRXPlaneLayer::SetNextByIndex( GIntBig nIndex )
 {
     if (poReader == NULL && m_poFilterGeom == NULL && m_poAttrQuery == NULL)
     {

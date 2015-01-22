@@ -234,7 +234,7 @@ void OGRDGNLayer::ResetReading()
 /*                             GetFeature()                             */
 /************************************************************************/
 
-OGRFeature *OGRDGNLayer::GetFeature( long nFeatureId )
+OGRFeature *OGRDGNLayer::GetFeature( GIntBig nFeatureId )
 
 {
     OGRFeature *poFeature;
@@ -253,7 +253,7 @@ OGRFeature *OGRDGNLayer::GetFeature( long nFeatureId )
     if( poFeature == NULL )
         return NULL;
 
-    if( poFeature->GetFID() != nFeatureId )
+    if( poFeature->GetFID64() != nFeatureId )
     {
         delete poFeature;
         return NULL;
@@ -749,10 +749,10 @@ int OGRDGNLayer::TestCapability( const char * pszCap )
 }
 
 /************************************************************************/
-/*                          GetFeatureCount()                           */
+/*                          GetFeatureCount64()                           */
 /************************************************************************/
 
-int OGRDGNLayer::GetFeatureCount( int bForce )
+GIntBig OGRDGNLayer::GetFeatureCount64( int bForce )
 
 {
 /* -------------------------------------------------------------------- */
@@ -760,7 +760,7 @@ int OGRDGNLayer::GetFeatureCount( int bForce )
 /*      normally.                                                       */
 /* -------------------------------------------------------------------- */
     if( m_poFilterGeom != NULL || m_poAttrQuery != NULL )
-        return OGRLayer::GetFeatureCount( bForce );
+        return OGRLayer::GetFeatureCount64( bForce );
 
 /* -------------------------------------------------------------------- */
 /*      Otherwise scan the index.                                       */

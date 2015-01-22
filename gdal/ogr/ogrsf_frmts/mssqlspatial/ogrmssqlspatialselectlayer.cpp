@@ -186,7 +186,7 @@ void OGRMSSQLSpatialSelectLayer::ResetReading()
 /*                             GetFeature()                             */
 /************************************************************************/
 
-OGRFeature *OGRMSSQLSpatialSelectLayer::GetFeature( long nFeatureId )
+OGRFeature *OGRMSSQLSpatialSelectLayer::GetFeature( GIntBig nFeatureId )
 
 {
     return OGRMSSQLSpatialLayer::GetFeature( nFeatureId );
@@ -216,7 +216,7 @@ OGRErr OGRMSSQLSpatialSelectLayer::GetExtent(OGREnvelope *, int )
 }
 
 /************************************************************************/
-/*                          GetFeatureCount()                           */
+/*                          GetFeatureCount64()                           */
 /*                                                                      */
 /*      If a spatial filter is in effect, we turn control over to       */
 /*      the generic counter.  Otherwise we return the total count.      */
@@ -224,8 +224,8 @@ OGRErr OGRMSSQLSpatialSelectLayer::GetExtent(OGREnvelope *, int )
 /*      way of counting features matching a spatial query.              */
 /************************************************************************/
 
-int OGRMSSQLSpatialSelectLayer::GetFeatureCount( int bForce )
+GIntBig OGRMSSQLSpatialSelectLayer::GetFeatureCount64( int bForce )
 
 {
-    return OGRMSSQLSpatialLayer::GetFeatureCount( bForce );
+    return OGRMSSQLSpatialLayer::GetFeatureCount64( bForce );
 }

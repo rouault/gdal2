@@ -146,14 +146,14 @@ void OGRPGResultLayer::ResetReading()
 }
 
 /************************************************************************/
-/*                          GetFeatureCount()                           */
+/*                          GetFeatureCount64()                           */
 /************************************************************************/
 
-int OGRPGResultLayer::GetFeatureCount( int bForce )
+GIntBig OGRPGResultLayer::GetFeatureCount64( int bForce )
 
 {
     if( TestCapability(OLCFastFeatureCount) == FALSE )
-        return OGRPGLayer::GetFeatureCount( bForce );
+        return OGRPGLayer::GetFeatureCount64( bForce );
 
     PGconn              *hPGConn = poDS->GetPGConn();
     PGresult            *hResult = NULL;

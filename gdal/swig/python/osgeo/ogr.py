@@ -107,6 +107,8 @@ OFTBinary = _ogr.OFTBinary
 OFTDate = _ogr.OFTDate
 OFTTime = _ogr.OFTTime
 OFTDateTime = _ogr.OFTDateTime
+OFTInteger64 = _ogr.OFTInteger64
+OFTInteger64List = _ogr.OFTInteger64List
 OFSTNone = _ogr.OFSTNone
 OFSTBoolean = _ogr.OFSTBoolean
 OFSTInt16 = _ogr.OFSTInt16
@@ -144,6 +146,7 @@ ODsCCreateGeomFieldAfterCreateLayer = _ogr.ODsCCreateGeomFieldAfterCreateLayer
 ODsCCurveGeometries = _ogr.ODsCCurveGeometries
 ODrCCreateDataSource = _ogr.ODrCCreateDataSource
 ODrCDeleteDataSource = _ogr.ODrCDeleteDataSource
+OLMD_FID64 = _ogr.OLMD_FID64
 
 def GetUseExceptions(*args):
   """GetUseExceptions() -> int"""
@@ -1245,7 +1248,7 @@ class Layer(gdal.MajorObject):
 
     def GetFeature(self, *args):
         """
-        GetFeature(self, long fid) -> Feature
+        GetFeature(self, GIntBig fid) -> Feature
 
         OGRFeatureH
         OGR_L_GetFeature(OGRLayerH hLayer, long nFeatureId)
@@ -1318,7 +1321,7 @@ class Layer(gdal.MajorObject):
 
     def SetNextByIndex(self, *args):
         """
-        SetNextByIndex(self, long new_index) -> OGRErr
+        SetNextByIndex(self, GIntBig new_index) -> OGRErr
 
         OGRErr
         OGR_L_SetNextByIndex(OGRLayerH hLayer, long nIndex)
@@ -1413,7 +1416,7 @@ class Layer(gdal.MajorObject):
 
     def DeleteFeature(self, *args):
         """
-        DeleteFeature(self, long fid) -> OGRErr
+        DeleteFeature(self, GIntBig fid) -> OGRErr
 
         OGRErr
         OGR_L_DeleteFeature(OGRLayerH hDS, long nFID)
@@ -1498,7 +1501,7 @@ class Layer(gdal.MajorObject):
 
     def GetFeatureCount(self, *args, **kwargs):
         """
-        GetFeatureCount(self, int force = 1) -> int
+        GetFeatureCount(self, int force = 1) -> GIntBig
 
         int
         OGR_L_GetFeatureCount(OGRLayerH hLayer, int bForce)
@@ -2485,6 +2488,13 @@ class Feature(_object):
         """
         return _ogr.Feature_GetFieldAsInteger(self, *args)
 
+    def GetFieldAsInteger64(self, *args):
+        """
+        GetFieldAsInteger64(self, int id) -> GIntBig
+        GetFieldAsInteger64(self, char name) -> GIntBig
+        """
+        return _ogr.Feature_GetFieldAsInteger64(self, *args)
+
     def GetFieldAsDouble(self, *args):
         """
         GetFieldAsDouble(self, int id) -> double
@@ -2585,6 +2595,10 @@ class Feature(_object):
         the returned pointer may be NULL or non-NULL. 
         """
         return _ogr.Feature_GetFieldAsIntegerList(self, *args)
+
+    def GetFieldAsInteger64List(self, *args):
+        """GetFieldAsInteger64List(self, int id)"""
+        return _ogr.Feature_GetFieldAsInteger64List(self, *args)
 
     def GetFieldAsDoubleList(self, *args):
         """
@@ -2728,7 +2742,7 @@ class Feature(_object):
 
     def GetFID(self, *args):
         """
-        GetFID(self) -> int
+        GetFID(self) -> GIntBig
 
         long OGR_F_GetFID(OGRFeatureH hFeat)
 
@@ -2748,7 +2762,7 @@ class Feature(_object):
 
     def SetFID(self, *args):
         """
-        SetFID(self, int fid) -> OGRErr
+        SetFID(self, GIntBig fid) -> OGRErr
 
         OGRErr OGR_F_SetFID(OGRFeatureH hFeat,
         long nFID)
@@ -2819,12 +2833,14 @@ class Feature(_object):
         """
         return _ogr.Feature_UnsetField(self, *args)
 
+    def SetFieldInteger64(self, *args):
+        """SetFieldInteger64(self, int id, GIntBig value)"""
+        return _ogr.Feature_SetFieldInteger64(self, *args)
+
     def SetField(self, *args):
         """
         SetField(self, int id, char value)
         SetField(self, char name, char value)
-        SetField(self, int id, int value)
-        SetField(self, char name, int value)
         SetField(self, int id, double value)
         SetField(self, char name, double value)
         SetField(self, int id, int year, int month, int day, int hour, int minute, 
@@ -2860,6 +2876,10 @@ class Feature(_object):
         panValues:  the values to assign. 
         """
         return _ogr.Feature_SetFieldIntegerList(self, *args)
+
+    def SetFieldInteger64List(self, *args):
+        """SetFieldInteger64List(self, int id, int nList)"""
+        return _ogr.Feature_SetFieldInteger64List(self, *args)
 
     def SetFieldDoubleList(self, *args):
         """
@@ -3172,12 +3192,16 @@ class Feature(_object):
         fld_type = self.GetFieldType(fld_index)
         if fld_type == OFTInteger:
             return self.GetFieldAsInteger(fld_index)
+        if fld_type == OFTInteger64:
+            return self.GetFieldAsInteger64(fld_index)
         if fld_type == OFTReal:
             return self.GetFieldAsDouble(fld_index)
         if fld_type == OFTStringList:
             return self.GetFieldAsStringList(fld_index)
         if fld_type == OFTIntegerList:
             return self.GetFieldAsIntegerList(fld_index)
+        if fld_type == OFTInteger64List:
+            return self.GetFieldAsInteger64List(fld_index)
         if fld_type == OFTRealList:
             return self.GetFieldAsDoubleList(fld_index)
         ## if fld_type == OFTDateTime or fld_type == OFTDate or fld_type == OFTTime:
@@ -3200,6 +3224,13 @@ class Feature(_object):
         SetField(self, char name, int year, int month, int day, int hour, 
             int minute, int second, int tzflag)
         """
+
+        if len(args) == 2 and str(type(args[1])) == "<type 'int'>":
+            fld_index = args[0]
+            if isinstance(fld_index, str):
+                fld_index = self.GetFieldIndex(fld_index)
+            return _ogr.Feature_SetFieldInteger64(self, fld_index, args[1])
+
 
         if len(args) == 2 and str(type(args[1])) == "<type 'unicode'>":
             fld_index = args[0]
@@ -3224,7 +3255,7 @@ class Feature(_object):
                 self.UnsetField( fld_index )
                 return
             if isinstance(value[0],int):
-                self.SetFieldIntegerList(fld_index,value)
+                self.SetFieldInteger64List(fld_index,value)
                 return
             elif isinstance(value[0],float):
                 self.SetFieldDoubleList(fld_index,value)

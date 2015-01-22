@@ -634,7 +634,7 @@ void OGRMSSQLSpatialTableLayer::ResetReading()
 /*                             GetFeature()                             */
 /************************************************************************/
 
-OGRFeature *OGRMSSQLSpatialTableLayer::GetFeature( long nFeatureId )
+OGRFeature *OGRMSSQLSpatialTableLayer::GetFeature( GIntBig nFeatureId )
 
 {
     if( pszFIDColumn == NULL )
@@ -646,7 +646,7 @@ OGRFeature *OGRMSSQLSpatialTableLayer::GetFeature( long nFeatureId )
 
     poStmt = new CPLODBCStatement( poDS->GetSession() );
     CPLString osFields = BuildFields();
-    poStmt->Appendf( "select %s from %s where %s = %ld", osFields.c_str(), 
+    poStmt->Appendf( "select %s from %s where %s = " CPL_FRMT_GIB, osFields.c_str(), 
         poFeatureDefn->GetName(), pszFIDColumn, nFeatureId );
 
     if( !poStmt->ExecuteSQL() )
@@ -720,16 +720,16 @@ int OGRMSSQLSpatialTableLayer::TestCapability( const char * pszCap )
 }
 
 /************************************************************************/
-/*                          GetFeatureCount()                           */
+/*                          GetFeatureCount64()                           */
 /************************************************************************/
 
-int OGRMSSQLSpatialTableLayer::GetFeatureCount( int bForce )
+GIntBig OGRMSSQLSpatialTableLayer::GetFeatureCount64( int bForce )
 
 {
     GetLayerDefn();
 
     if( TestCapability(OLCFastFeatureCount) == FALSE )
-        return OGRMSSQLSpatialLayer::GetFeatureCount( bForce );
+        return OGRMSSQLSpatialLayer::GetFeatureCount64( bForce );
 
     ClearStatement();
         
@@ -738,10 +738,10 @@ int OGRMSSQLSpatialTableLayer::GetFeatureCount( int bForce )
     if (poStatement == NULL || !poStatement->Fetch())
     {
         delete poStatement;
-        return OGRMSSQLSpatialLayer::GetFeatureCount( bForce );
+        return OGRMSSQLSpatialLayer::GetFeatureCount64( bForce );
     }
 
-    int nRet = atoi(poStatement->GetColData( 0 ));
+    GIntBig nRet = CPLAtoGIntBig(poStatement->GetColData( 0 ));
     delete poStatement;
     return nRet;
 }
@@ -880,7 +880,7 @@ OGRErr OGRMSSQLSpatialTableLayer::ISetFeature( OGRFeature *poFeature )
         return eErr;
     }
 
-    if( poFeature->GetFID() == OGRNullFID )
+    if( poFeature->GetFID64() == OGRNullFID )
     {
         CPLError( CE_Failure, CPLE_AppDefined,
                   "FID required on features given to SetFeature()." );
@@ -911,7 +911,7 @@ OGRErr OGRMSSQLSpatialTableLayer::ISetFeature( OGRFeature *poFeature )
     if (poFeature->GetGeometryRef() != poGeom)
     {
         CPLError( CE_Warning, CPLE_NotSupported,
-                  "Geometry with FID = %ld has been modified.", poFeature->GetFID() );
+                  "Geometry with FID = " CPL_FRMT_GIB " has been modified.", poFeature->GetFID64() );
     }
 
     int nFieldCount = poFeatureDefn->GetFieldCount();
@@ -1024,7 +1024,7 @@ OGRErr OGRMSSQLSpatialTableLayer::ISetFeature( OGRFeature *poFeature )
     }
 
     /* Add the WHERE clause */
-    oStmt.Appendf( " WHERE [%s] = %ld" , pszFIDColumn, poFeature->GetFID());
+    oStmt.Appendf( " WHERE [%s] = " CPL_FRMT_GIB, pszFIDColumn, poFeature->GetFID64());
 
 /* -------------------------------------------------------------------- */
 /*      Execute the update.                                             */
@@ -1033,7 +1033,7 @@ OGRErr OGRMSSQLSpatialTableLayer::ISetFeature( OGRFeature *poFeature )
     if( !oStmt.ExecuteSQL() )
     {
         CPLError( CE_Failure, CPLE_AppDefined,
-            "Error updating feature with FID:%ld, %s", poFeature->GetFID(), 
+            "Error updating feature with FID:" CPL_FRMT_GIB ", %s", poFeature->GetFID64(), 
                     poDS->GetSession()->GetLastError() );
 
         for( i = 0; i < bind_num; i++ )
@@ -1054,7 +1054,7 @@ OGRErr OGRMSSQLSpatialTableLayer::ISetFeature( OGRFeature *poFeature )
 /*                          DeleteFeature()                             */
 /************************************************************************/
 
-OGRErr OGRMSSQLSpatialTableLayer::DeleteFeature( long nFID )
+OGRErr OGRMSSQLSpatialTableLayer::DeleteFeature( GIntBig nFID )
 
 {
     GetLayerDefn();
@@ -1080,13 +1080,13 @@ OGRErr OGRMSSQLSpatialTableLayer::DeleteFeature( long nFID )
 /* -------------------------------------------------------------------- */
     CPLODBCStatement oStatement( poDS->GetSession() );
 
-    oStatement.Appendf("DELETE FROM [%s] WHERE [%s] = %ld", 
+    oStatement.Appendf("DELETE FROM [%s] WHERE [%s] = " CPL_FRMT_GIB, 
             poFeatureDefn->GetName(), pszFIDColumn, nFID);
     
     if( !oStatement.ExecuteSQL() )
     {
         CPLError( CE_Failure, CPLE_AppDefined, 
-                  "Attempt to delete feature with FID %ld failed. %s", 
+                  "Attempt to delete feature with FID " CPL_FRMT_GIB " failed. %s", 
                   nFID, poDS->GetSession()->GetLastError() );
 
         return OGRERR_FAILURE;
@@ -1116,7 +1116,7 @@ OGRErr OGRMSSQLSpatialTableLayer::ICreateFeature( OGRFeature *poFeature )
     CPLODBCStatement oStatement( poDS->GetSession() );
 
     /* the fid values are retieved from the source layer */
-    if( poFeature->GetFID() != OGRNullFID && pszFIDColumn != NULL && bIsIdentityFid )
+    if( poFeature->GetFID64() != OGRNullFID && pszFIDColumn != NULL && bIsIdentityFid )
         oStatement.Appendf("SET IDENTITY_INSERT [%s].[%s] ON;", pszSchemaName, pszTableName );
 
 /* -------------------------------------------------------------------- */
@@ -1131,7 +1131,7 @@ OGRErr OGRMSSQLSpatialTableLayer::ICreateFeature( OGRFeature *poFeature )
     if (poFeature->GetGeometryRef() != poGeom)
     {
         CPLError( CE_Warning, CPLE_NotSupported,
-                  "Geometry with FID = %ld has been modified.", poFeature->GetFID() );
+                  "Geometry with FID = " CPL_FRMT_GIB " has been modified.", poFeature->GetFID64() );
     }
 
     int bNeedComma = FALSE;
@@ -1142,7 +1142,7 @@ OGRErr OGRMSSQLSpatialTableLayer::ICreateFeature( OGRFeature *poFeature )
         bNeedComma = TRUE;
     }
 
-    if( poFeature->GetFID() != OGRNullFID && pszFIDColumn != NULL )
+    if( poFeature->GetFID64() != OGRNullFID && pszFIDColumn != NULL )
     {
         if (bNeedComma)
             oStatement.Appendf( ", [%s]", pszFIDColumn );
@@ -1264,13 +1264,13 @@ OGRErr OGRMSSQLSpatialTableLayer::ICreateFeature( OGRFeature *poFeature )
     }
 
     /* Set the FID */
-    if( poFeature->GetFID() != OGRNullFID && pszFIDColumn != NULL )
+    if( poFeature->GetFID64() != OGRNullFID && pszFIDColumn != NULL )
     {
         if (bNeedComma)
-            oStatement.Appendf( ", %ld", poFeature->GetFID() );
+            oStatement.Appendf( ", " CPL_FRMT_GIB, poFeature->GetFID64() );
         else
         {
-            oStatement.Appendf( "%ld", poFeature->GetFID() );
+            oStatement.Appendf( CPL_FRMT_GIB, poFeature->GetFID64() );
             bNeedComma = TRUE;
         }
     }
@@ -1290,7 +1290,7 @@ OGRErr OGRMSSQLSpatialTableLayer::ICreateFeature( OGRFeature *poFeature )
 
     oStatement.Append( ");" );
 
-    if( poFeature->GetFID() != OGRNullFID && pszFIDColumn != NULL && bIsIdentityFid )
+    if( poFeature->GetFID64() != OGRNullFID && pszFIDColumn != NULL && bIsIdentityFid )
         oStatement.Appendf("SET IDENTITY_INSERT [%s].[%s] OFF;", pszSchemaName, pszTableName );
 
 /* -------------------------------------------------------------------- */

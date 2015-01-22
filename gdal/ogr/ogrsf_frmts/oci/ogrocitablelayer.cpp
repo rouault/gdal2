@@ -291,7 +291,8 @@ OGRFeatureDefn *OGROCITableLayer::ReadTableDefinition( const char * pszTable )
         }
 
         if( EQUAL(oField.GetNameRef(),pszExpectedFIDName) 
-            && oField.GetType() == OFTInteger )
+            && (oField.GetType() == OFTInteger ||
+                oField.GetType() == OFTInteger64) )
         {
             pszFIDName = CPLStrdup(oField.GetNameRef());
             continue;
@@ -300,6 +301,20 @@ OGRFeatureDefn *OGROCITableLayer::ReadTableDefinition( const char * pszTable )
         poDefn->AddFieldDefn( &oField );
     }
 
+    if( EQUAL(pszExpectedFIDName, "OGR_FID") && pszFIDName )
+    {
+        for(int i=0;i<poDefn->GetFieldCount();i++)
+        {
+            // This is presumably a Integer since we always create Integer64 with a
+            // defined precision
+            if( poDefn->GetFieldDefn(i)->GetType() == OFTInteger64 &&
+                poDefn->GetFieldDefn(i)->GetWidth() == 0 )
+            {
+                poDefn->GetFieldDefn(i)->SetType(OFTInteger);
+            }
+        }
+    }
+    
     /* -------------------------------------------------------------------- */
     /*      Identify Geometry dimension                                     */
     /* -------------------------------------------------------------------- */
@@ -552,7 +567,7 @@ void OGROCITableLayer::BuildFullQueryStatement()
 /*                             GetFeature()                             */
 /************************************************************************/
 
-OGRFeature *OGROCITableLayer::GetFeature( long nFeatureId )
+OGRFeature *OGROCITableLayer::GetFeature( GIntBig nFeatureId )
 
 {
 
@@ -579,7 +594,7 @@ OGRFeature *OGROCITableLayer::GetFeature( long nFeatureId )
     oCmd.Append( poFeatureDefn->GetName() );
     oCmd.Append( " " );
     oCmd.Appendf( 50+strlen(pszFIDName), 
-                  " WHERE \"%s\" = %ld ", 
+                  " WHERE \"%s\" = " CPL_FRMT_GIB " ", 
                   pszFIDName, nFeatureId );
 
 /* -------------------------------------------------------------------- */
@@ -606,11 +621,11 @@ OGRFeature *OGROCITableLayer::GetFeature( long nFeatureId )
 /* -------------------------------------------------------------------- */
 /*      verify the FID.                                                 */
 /* -------------------------------------------------------------------- */
-    if( poFeature != NULL && poFeature->GetFID() != nFeatureId )
+    if( poFeature != NULL && poFeature->GetFID64() != nFeatureId )
     {
         CPLError( CE_Failure, CPLE_AppDefined, 
-                  "OGROCITableLayer::GetFeature(%ld) ... query returned feature %ld instead!",
-                  nFeatureId, poFeature->GetFID() );
+                  "OGROCITableLayer::GetFeature(" CPL_FRMT_GIB ") ... query returned feature " CPL_FRMT_GIB " instead!",
+                  nFeatureId, poFeature->GetFID64() );
         delete poFeature;
         return NULL;
     }
@@ -769,19 +784,19 @@ OGRErr OGROCITableLayer::ISetFeature( OGRFeature *poFeature )
     if( pszFIDName == NULL )
     {
         CPLError( CE_Failure, CPLE_AppDefined, 
-                  "OGROCITableLayer::ISetFeature(%ld) failed because there is "
+                  "OGROCITableLayer::ISetFeature(" CPL_FRMT_GIB ") failed because there is "
                   "no apparent FID column on table %s.",
-                  poFeature->GetFID(), 
+                  poFeature->GetFID64(), 
                   poFeatureDefn->GetName() );
 
         return OGRERR_FAILURE;
     }
 
-    if( poFeature->GetFID() == OGRNullFID )
+    if( poFeature->GetFID64() == OGRNullFID )
     {
         CPLError( CE_Failure, CPLE_AppDefined, 
-                  "OGROCITableLayer::ISetFeature(%ld) failed because the feature "
-                  "has no FID!", poFeature->GetFID() );
+                  "OGROCITableLayer::ISetFeature(" CPL_FRMT_GIB ") failed because the feature "
+                  "has no FID!", poFeature->GetFID64() );
 
         return OGRERR_FAILURE;
     }
@@ -798,7 +813,7 @@ OGRErr OGROCITableLayer::ISetFeature( OGRFeature *poFeature )
                       "DELETE FROM %s WHERE \"%s\" = %d",
                       poFeatureDefn->GetName(), 
                       pszFIDName, 
-                      poFeature->GetFID() );
+                      poFeature->GetFID64() );
 
     oCmdStatement.Execute( oCmdText.GetString() );
 
@@ -809,7 +824,7 @@ OGRErr OGROCITableLayer::ISetFeature( OGRFeature *poFeature )
 /*                           DeleteFeature()                            */
 /************************************************************************/
 
-OGRErr OGROCITableLayer::DeleteFeature( long nFID )
+OGRErr OGROCITableLayer::DeleteFeature( GIntBig nFID )
 
 {
 /* -------------------------------------------------------------------- */
@@ -818,7 +833,7 @@ OGRErr OGROCITableLayer::DeleteFeature( long nFID )
     if( pszFIDName == NULL )
     {
         CPLError( CE_Failure, CPLE_AppDefined, 
-                  "OGROCITableLayer::DeleteFeature(%ld) failed because there is "
+                  "OGROCITableLayer::DeleteFeature(" CPL_FRMT_GIB ") failed because there is "
                   "no apparent FID column on table %s.",
                   nFID, 
                   poFeatureDefn->GetName() );
@@ -829,7 +844,7 @@ OGRErr OGROCITableLayer::DeleteFeature( long nFID )
     if( nFID == OGRNullFID )
     {
         CPLError( CE_Failure, CPLE_AppDefined, 
-                  "OGROCITableLayer::DeleteFeature(%ld) failed for Null FID", 
+                  "OGROCITableLayer::DeleteFeature(" CPL_FRMT_GIB ") failed for Null FID", 
                   nFID );
 
         return OGRERR_FAILURE;
@@ -1005,7 +1020,7 @@ OGRErr OGROCITableLayer::UnboundCreateFeature( OGRFeature *poFeature )
 
     if( pszFIDName != NULL )
     {
-        long  nFID;
+        GIntBig  nFID;
 
         if( bNeedComma )
             strcat( pszCommand+nOffset, ", " );
@@ -1013,7 +1028,7 @@ OGRErr OGROCITableLayer::UnboundCreateFeature( OGRFeature *poFeature )
 
         nOffset += strlen(pszCommand+nOffset);
 
-        nFID = poFeature->GetFID();
+        nFID = poFeature->GetFID64();
         if( nFID == OGRNullFID )
         {
             if( iNextFIDToWrite < 0 )
@@ -1023,7 +1038,7 @@ OGRErr OGROCITableLayer::UnboundCreateFeature( OGRFeature *poFeature )
             nFID = iNextFIDToWrite++;
             poFeature->SetFID( nFID );
         }
-        sprintf( pszCommand+nOffset, "%ld", nFID );
+        sprintf( pszCommand+nOffset, CPL_FRMT_GIB, nFID );
     }
 
 /* -------------------------------------------------------------------- */
@@ -1050,6 +1065,7 @@ OGRErr OGROCITableLayer::UnboundCreateFeature( OGRFeature *poFeature )
         }
         
         if( poFldDefn->GetType() == OFTInteger 
+            || poFldDefn->GetType() == OFTInteger64
             || poFldDefn->GetType() == OFTReal )
         {
             if( poFldDefn->GetWidth() > 0 && bPreservePrecision
@@ -1370,7 +1386,7 @@ int OGROCITableLayer::TestCapability( const char * pszCap )
 }
 
 /************************************************************************/
-/*                          GetFeatureCount()                           */
+/*                          GetFeatureCount64()                           */
 /*                                                                      */
 /*      If a spatial filter is in effect, we turn control over to       */
 /*      the generic counter.  Otherwise we return the total count.      */
@@ -1378,7 +1394,7 @@ int OGROCITableLayer::TestCapability( const char * pszCap )
 /*      way of counting features matching a spatial query.              */
 /************************************************************************/
 
-int OGROCITableLayer::GetFeatureCount( int bForce )
+GIntBig OGROCITableLayer::GetFeatureCount64( int bForce )
 
 {
 /* -------------------------------------------------------------------- */
@@ -1386,7 +1402,7 @@ int OGROCITableLayer::GetFeatureCount( int bForce )
 /*      in play.                                                        */
 /* -------------------------------------------------------------------- */
     if( m_poFilterGeom != NULL )
-        return OGROCILayer::GetFeatureCount( bForce );
+        return OGROCILayer::GetFeatureCount64( bForce );
 
 /* -------------------------------------------------------------------- */
 /*      In theory it might be wise to cache this result, but it         */
@@ -1409,10 +1425,10 @@ int OGROCITableLayer::GetFeatureCount( int bForce )
     if( CSLCount(papszResult) < 1 )
     {
         CPLDebug( "OCI", "Fast get count failed, doing hard way." );
-        return OGROCILayer::GetFeatureCount( bForce );
+        return OGROCILayer::GetFeatureCount64( bForce );
     }
     
-    return atoi(papszResult[0]);
+    return CPLAtoGIntBig(papszResult[0]);
 }
 
 /************************************************************************/
@@ -1748,6 +1764,16 @@ int OGROCITableLayer::AllocAndBindForWrite(int eType)
                     sizeof(int), SQLT_INT, papaeWriteFieldInd[i] ) != CE_None )
                 return FALSE;
         }
+        else if( poFldDefn->GetType() == OFTInteger64 )
+        {
+            papWriteFields[i] = 
+                (void *) CPLCalloc( sizeof(GIntBig), nWriteCacheMax );
+
+            if( poBoundStatement->BindScalar( 
+                    szFieldPlaceholderName, papWriteFields[i],
+                    sizeof(GIntBig), SQLT_INT, papaeWriteFieldInd[i] ) != CE_None )
+                return FALSE;
+        }
         else if( poFldDefn->GetType() == OFTReal )
         {
             papWriteFields[i] = (void *) CPLCalloc( sizeof(double), 
@@ -1931,7 +1957,7 @@ OGRErr OGROCITableLayer::BoundCreateFeature( OGRFeature *poFeature )
 /* -------------------------------------------------------------------- */
 /*      Set the FID.                                                    */
 /* -------------------------------------------------------------------- */
-    if( poFeature->GetFID() == OGRNullFID )
+    if( poFeature->GetFID64() == OGRNullFID )
     {
         if( iNextFIDToWrite < 0 )
         {
@@ -1941,7 +1967,7 @@ OGRErr OGROCITableLayer::BoundCreateFeature( OGRFeature *poFeature )
         poFeature->SetFID( iNextFIDToWrite++ );
     }
 
-    panWriteFIDs[iCache] = poFeature->GetFID();
+    panWriteFIDs[iCache] = poFeature->GetFID64();
 
 /* -------------------------------------------------------------------- */
 /*      Set the other fields.                                           */
@@ -1961,6 +1987,10 @@ OGRErr OGROCITableLayer::BoundCreateFeature( OGRFeature *poFeature )
         if( poFldDefn->GetType() == OFTInteger )
             ((int *) (papWriteFields[i]))[iCache] = 
                 poFeature->GetFieldAsInteger( i );
+
+        else if( poFldDefn->GetType() == OFTInteger64 )
+            ((GIntBig *) (papWriteFields[i]))[iCache] = 
+                poFeature->GetFieldAsInteger64( i );
 
         else if( poFldDefn->GetType() == OFTReal )
             ((double *) (papWriteFields[i]))[iCache] = 

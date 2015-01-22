@@ -159,7 +159,7 @@ CPLErr RasterliteBand::IReadBlock( int nBlockXOff, int nBlockYOff, void * pImage
 #ifdef RASTERLITE_DEBUG
     if (nBand == 1)
     {
-        printf("nTiles = %d\n", OGR_L_GetFeatureCount(hSQLLyr, TRUE));
+        printf("nTiles = %d\n", OGR_L_GetFeatureCount64(hSQLLyr, TRUE));
     }
 #endif
 
@@ -1137,7 +1137,7 @@ GDALDataset* RasterliteDataset::Open(GDALOpenInfo* poOpenInfo)
             hSQLLyr = OGR_DS_ExecuteSQL(hDS, osSQL.c_str(), NULL, NULL);
             if (hSQLLyr != NULL)
             {
-                nResolutions = OGR_L_GetFeatureCount(hSQLLyr, TRUE);
+                nResolutions = OGR_L_GetFeatureCount64(hSQLLyr, TRUE);
                 if( nResolutions == 0 )
                 {
                     OGR_DS_ReleaseResultSet(hDS, hSQLLyr);
@@ -1159,7 +1159,7 @@ GDALDataset* RasterliteDataset::Open(GDALOpenInfo* poOpenInfo)
             if (hSQLLyr == NULL)
                 goto end;
 
-            nResolutions = OGR_L_GetFeatureCount(hSQLLyr, TRUE);
+            nResolutions = OGR_L_GetFeatureCount64(hSQLLyr, TRUE);
 
             if (nResolutions == 0)
             {

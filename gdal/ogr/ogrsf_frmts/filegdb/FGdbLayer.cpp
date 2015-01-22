@@ -378,7 +378,7 @@ OGRErr FGdbLayer::ICreateFeature( OGRFeature *poFeature )
 
     /* Cannot write to FID field - it is managed by GDB*/
     //std::wstring wfield_name = StringToWString(m_strOIDFieldName);
-    //hr = fgdb_row.SetInteger(wfield_name, poFeature->GetFID());
+    //hr = fgdb_row.SetInteger(wfield_name, poFeature->GetFID64());
 
     /* Write the row to the table */
     hr = fgdb_table->Insert(fgdb_row);
@@ -477,7 +477,7 @@ OGRErr FGdbLayer::PopulateRowWithFeature( Row& fgdb_row, OGRFeature *poFeature )
                 hr = fgdb_row.SetShort(wfield_name, (short) fldvalue);
             }
         }
-        else if ( nOGRFieldType == OFTReal )
+        else if ( nOGRFieldType == OFTReal || nOGRFieldType == OFTInteger64 )
         {
             /* Doubles (we don't handle FGDB Floats) */
             double fldvalue = poFeature->GetFieldAsDouble(i);
@@ -657,7 +657,7 @@ OGRErr FGdbLayer::GetRow( EnumRows& enumRows, Row& row, long nFID )
 /*                           DeleteFeature()                            */
 /************************************************************************/
 
-OGRErr FGdbLayer::DeleteFeature( long nFID )
+OGRErr FGdbLayer::DeleteFeature( GIntBig nFID )
 
 {
     long           hr;
@@ -695,7 +695,7 @@ OGRErr FGdbLayer::ISetFeature( OGRFeature* poFeature )
     if( !m_pDS->GetUpdate() )
         return OGRERR_FAILURE;
 
-    if( poFeature->GetFID() == OGRNullFID )
+    if( poFeature->GetFID64() == OGRNullFID )
     {
         CPLError( CE_Failure, CPLE_AppDefined,
                   "SetFeature() with unset FID fails." );
@@ -704,7 +704,7 @@ OGRErr FGdbLayer::ISetFeature( OGRFeature* poFeature )
 
     EndBulkLoad();
 
-    if (GetRow(enumRows, row, poFeature->GetFID()) != OGRERR_NONE)
+    if (GetRow(enumRows, row, poFeature->GetFID64()) != OGRERR_NONE)
         return OGRERR_FAILURE;
 
     /* Populate the row with the feature content */
@@ -738,6 +738,13 @@ char* FGdbLayer::CreateFieldDefn(OGRFieldDefn& oField,
     if ( ! OGRToGDBFieldType(fldtype, oField.GetSubType(), &gdbFieldType) )
     {
         GDBErr(-1, "Failed converting field type.");
+        return NULL;
+    }
+    
+    if( oField.GetType() == OFTInteger64 && !bApproxOK )
+    {
+        CPLError(CE_Failure, CPLE_AppDefined,
+                 "Integer64 not supported in FileGDB");
         return NULL;
     }
 
@@ -2407,7 +2414,7 @@ OGRFeature* FGdbLayer::GetNextFeature()
 /*                             GetFeature()                             */
 /************************************************************************/
 
-OGRFeature *FGdbLayer::GetFeature( long oid )
+OGRFeature *FGdbLayer::GetFeature( GIntBig oid )
 {
     // do query to fetch individual row
     EnumRows       enumRows;
@@ -2430,10 +2437,10 @@ OGRFeature *FGdbLayer::GetFeature( long oid )
 
 
 /************************************************************************/
-/*                          GetFeatureCount()                           */
+/*                          GetFeatureCount64()                           */
 /************************************************************************/
 
-int FGdbLayer::GetFeatureCount( CPL_UNUSED int bForce )
+GIntBig FGdbLayer::GetFeatureCount64( CPL_UNUSED int bForce )
 {
     long           hr;
     int32          rowCount = 0;

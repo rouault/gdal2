@@ -2408,7 +2408,7 @@ static OGRFeatureH GCIOAPI_CALL _buildOGRFeature_GCIO (
       return NULL;
     }
     OGR_F_SetFID(f, atol(pszFields[0])); /* FID */
-    if( OGR_F_GetFID(f)==OGRNullFID )
+    if( OGR_F_GetFID64(f)==OGRNullFID )
     {
       OGR_F_SetFID(f, GetGCCurrentLinenum_GCIO(H));
     }
