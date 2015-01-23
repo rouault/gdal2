@@ -105,7 +105,8 @@ static TargetLayerInfo* SetupTargetLayer( GDALDataset *poSrcDS,
                                                 const char* pszZField,
                                                 char **papszFieldMap,
                                                 const char* pszWHERE,
-                                                int bExactFieldNameMatch );
+                                                int bExactFieldNameMatch,
+                                                int bQuiet );
 
 static void FreeTargetLayerInfo(TargetLayerInfo* psInfo);
 
@@ -1499,6 +1500,11 @@ int main( int nArgc, char ** papszArgv )
         Usage("if -addfields is specified, -fieldmap cannot be used.");
     }
 
+    if( papszFieldTypesToString && papszMapFieldType )
+    {
+        Usage("-fieldTypeToString and -mapFieldType are exclusive.");
+    }
+
     if( pszSourceSRSDef != NULL && pszOutputSRSDef == NULL )
     {
         Usage("if -s_srs is specified, -t_srs must also be specified");
@@ -1875,7 +1881,8 @@ int main( int nArgc, char ** papszArgv )
                                                 pszZField,
                                                 papszFieldMap,
                                                 pszWHERE,
-                                                bExactFieldNameMatch );
+                                                bExactFieldNameMatch,
+                                                bQuiet);
 
             poPassedLayer->ResetReading();
 
@@ -2032,7 +2039,8 @@ int main( int nArgc, char ** papszArgv )
                                                     pszZField,
                                                     papszFieldMap,
                                                     pszWHERE,
-						    bExactFieldNameMatch );
+						    bExactFieldNameMatch,
+						    bQuiet);
 
                 if( psInfo == NULL && !bSkipFailures )
                     exit(1);
@@ -2309,7 +2317,8 @@ int main( int nArgc, char ** papszArgv )
                                                 pszZField,
                                                 papszFieldMap,
                                                 pszWHERE,
-						bExactFieldNameMatch );
+						bExactFieldNameMatch,
+						bQuiet);
 
             poPassedLayer->ResetReading();
 
@@ -2661,6 +2670,96 @@ static OGRwkbGeometryType ConvertType(GeometryConversion sGeomConversion,
 }
 
 /************************************************************************/
+/*                        DoFieldTypeConversion()                       */
+/************************************************************************/
+
+void DoFieldTypeConversion(GDALDataset* poDstDS, OGRFieldDefn& oFieldDefn,
+                           char** papszFieldTypesToString,
+                           char** papszMapFieldType,
+                           int bUnsetFieldWidth,
+                           int bQuiet)
+{
+    if (papszFieldTypesToString != NULL &&
+        (CSLFindString(papszFieldTypesToString, "All") != -1 ||
+            CSLFindString(papszFieldTypesToString,
+                        OGRFieldDefn::GetFieldTypeName(oFieldDefn.GetType())) != -1))
+    {
+        oFieldDefn.SetSubType(OFSTNone);
+        oFieldDefn.SetType(OFTString);
+    }
+    else if (papszMapFieldType != NULL)
+    {
+        const char* pszType = CSLFetchNameValue(papszMapFieldType,
+            OGRFieldDefn::GetFieldTypeName(oFieldDefn.GetType()));
+        if( pszType == NULL )
+            pszType = CSLFetchNameValue(papszMapFieldType, "All");
+        if( pszType != NULL )
+        {
+            int iType = GetFieldType(pszType);
+            if( iType >= 0 )
+            {
+                oFieldDefn.SetSubType(OFSTNone);
+                oFieldDefn.SetType((OGRFieldType)iType);
+                if( iType == OFTInteger )
+                    oFieldDefn.SetWidth(0);
+            }
+        }
+    }
+    if( bUnsetFieldWidth )
+    {
+        oFieldDefn.SetWidth(0);
+        oFieldDefn.SetPrecision(0);
+    }
+
+    if( poDstDS->GetDriver() != NULL &&
+        poDstDS->GetDriver()->GetMetadataItem(GDAL_DMD_CREATIONFIELDDATATYPES) != NULL &&
+        strstr(poDstDS->GetDriver()->GetMetadataItem(GDAL_DMD_CREATIONFIELDDATATYPES),
+                OGRFieldDefn::GetFieldTypeName(oFieldDefn.GetType())) == NULL )
+    {
+        if( oFieldDefn.GetType() == OFTInteger64 )
+        {
+            if( !bQuiet )
+            {
+                CPLError(CE_Warning, CPLE_AppDefined,
+                        "The output driver does not seem to natively support %s "
+                        "type for field %s. Converting it to Real instead. "
+                        "-mapFieldType can be used to control field type conversion.",
+                        OGRFieldDefn::GetFieldTypeName(oFieldDefn.GetType()),
+                        oFieldDefn.GetNameRef());
+            }
+            oFieldDefn.SetType(OFTReal);
+        }
+        else if( !bQuiet )
+        {
+            CPLError(CE_Warning, CPLE_AppDefined,
+                        "The output driver does not natively support %s type for "
+                        "field %s. Misconversion can happen. "
+                        "-mapFieldType can be used to control field type conversion.",
+                        OGRFieldDefn::GetFieldTypeName(oFieldDefn.GetType()),
+                        oFieldDefn.GetNameRef());
+        }
+    }
+    else if( poDstDS->GetDriver() != NULL &&
+             poDstDS->GetDriver()->GetMetadataItem(GDAL_DMD_CREATIONFIELDDATATYPES) == NULL )
+    {
+        // All drivers supporting OFTInteger64 should advertize it theoretically
+        if( oFieldDefn.GetType() == OFTInteger64 )
+        {
+            if( !bQuiet )
+            {
+                CPLError(CE_Warning, CPLE_AppDefined,
+                        "The output driver does not seem to natively support %s type "
+                        "for field %s. Converting it to Real instead. "
+                        "-mapFieldType can be used to control field type conversion.",
+                        OGRFieldDefn::GetFieldTypeName(oFieldDefn.GetType()),
+                        oFieldDefn.GetNameRef());
+            }
+            oFieldDefn.SetType(OFTReal);
+        }
+    }
+}
+
+/************************************************************************/
 /*                         SetupTargetLayer()                           */
 /************************************************************************/
 
@@ -2682,7 +2781,8 @@ static TargetLayerInfo* SetupTargetLayer( CPL_UNUSED GDALDataset *poSrcDS,
                                           const char* pszZField,
                                           char **papszFieldMap,
                                           const char* pszWHERE,
-                                          int bExactFieldNameMatch )
+                                          int bExactFieldNameMatch,
+                                          int bQuiet)
 {
     OGRLayer    *poDstLayer;
     OGRFeatureDefn *poSrcFDefn;
@@ -2976,37 +3076,11 @@ static TargetLayerInfo* SetupTargetLayer( CPL_UNUSED GDALDataset *poSrcDS,
                 OGRFieldDefn* poSrcFieldDefn = poSrcFDefn->GetFieldDefn(iSrcField);
                 OGRFieldDefn oFieldDefn( poSrcFieldDefn );
 
-                if (papszFieldTypesToString != NULL &&
-                    (CSLFindString(papszFieldTypesToString, "All") != -1 ||
-                     CSLFindString(papszFieldTypesToString,
-                                   OGRFieldDefn::GetFieldTypeName(poSrcFieldDefn->GetType())) != -1))
-                {
-                    oFieldDefn.SetSubType(OFSTNone);
-                    oFieldDefn.SetType(OFTString);
-                }
-                if (papszMapFieldType != NULL)
-                {
-                    const char* pszType = CSLFetchNameValue(papszMapFieldType,
-                        OGRFieldDefn::GetFieldTypeName(poSrcFieldDefn->GetType()));
-                    if( pszType == NULL )
-                        pszType = CSLFetchNameValue(papszMapFieldType, "All");
-                    if( pszType != NULL )
-                    {
-                        int iType = GetFieldType(pszType);
-                        if( iType >= 0 )
-                        {
-                            oFieldDefn.SetSubType(OFSTNone);
-                            oFieldDefn.SetType((OGRFieldType)iType);
-                            if( iType == OFTInteger )
-                                oFieldDefn.SetWidth(0);
-                        }
-                    }
-                }
-                if( bUnsetFieldWidth )
-                {
-                    oFieldDefn.SetWidth(0);
-                    oFieldDefn.SetPrecision(0);
-                }
+                DoFieldTypeConversion(poDstDS, oFieldDefn,
+                                      papszFieldTypesToString,
+                                      papszMapFieldType,
+                                      bUnsetFieldWidth,
+                                      bQuiet);
 
                 /* The field may have been already created at layer creation */
                 int iDstField = -1;
@@ -3116,37 +3190,11 @@ static TargetLayerInfo* SetupTargetLayer( CPL_UNUSED GDALDataset *poSrcDS,
             OGRFieldDefn* poSrcFieldDefn = poSrcFDefn->GetFieldDefn(iField);
             OGRFieldDefn oFieldDefn( poSrcFieldDefn );
 
-            if (papszFieldTypesToString != NULL &&
-                (CSLFindString(papszFieldTypesToString, "All") != -1 ||
-                 CSLFindString(papszFieldTypesToString,
-                               OGRFieldDefn::GetFieldTypeName(poSrcFieldDefn->GetType())) != -1))
-            {
-                oFieldDefn.SetSubType(OFSTNone);
-                oFieldDefn.SetType(OFTString);
-            }
-            if (papszMapFieldType != NULL)
-            {
-                const char* pszType = CSLFetchNameValue(papszMapFieldType,
-                    OGRFieldDefn::GetFieldTypeName(poSrcFieldDefn->GetType()));
-                if( pszType == NULL )
-                    pszType = CSLFetchNameValue(papszMapFieldType, "All");
-                if( pszType != NULL )
-                {
-                    int iType = GetFieldType(pszType);
-                    if( iType >= 0 )
-                    {
-                        oFieldDefn.SetSubType(OFSTNone);
-                        oFieldDefn.SetType((OGRFieldType)iType);
-                        if( iType == OFTInteger )
-                            oFieldDefn.SetWidth(0);
-                    }
-                }
-            }
-            if( bUnsetFieldWidth )
-            {
-                oFieldDefn.SetWidth(0);
-                oFieldDefn.SetPrecision(0);
-            }
+            DoFieldTypeConversion(poDstDS, oFieldDefn,
+                                  papszFieldTypesToString,
+                                  papszMapFieldType,
+                                  bUnsetFieldWidth,
+                                  bQuiet);
 
             /* The field may have been already created at layer creation */
             std::map<CPLString, int>::iterator oIter =
