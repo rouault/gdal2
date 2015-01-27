@@ -311,7 +311,11 @@ layer[0:4] would return a list of the first four features."""
         ## if fld_type == OFTDateTime or fld_type == OFTDate or fld_type == OFTTime:
         #     return self.GetFieldAsDate(fld_index)
         # default to returning as a string.  Should we add more types?
-        return self.GetFieldAsString(fld_index)
+        try:
+            return self.GetFieldAsString(fld_index)
+        except:
+            # For Python3 on non-UTF8 strings
+            return self.GetFieldAsBinary(fld_index)
 
     # With several override, SWIG cannot dispatch automatically unicode strings
     # to the right implementation, so we have to do it at hand
@@ -511,6 +515,16 @@ layer[0:4] would return a list of the first four features."""
 
 #ifndef FROM_GDAL_I
 %include "callback.i"
+
+
+%extend GDALMajorObjectShadow {
+%pythoncode %{
+  def GetMetadata( self, domain = '' ):
+    if domain[:4] == 'xml:':
+      return self.GetMetadata_List( domain )
+    return self.GetMetadata_Dict( domain )
+%}
+}
 #endif
 
 

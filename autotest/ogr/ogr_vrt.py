@@ -2665,7 +2665,7 @@ def ogr_vrt_33():
 
         if test_cli_utilities.get_test_ogrsf_path() is not None:
             f = open('tmp/ogr_vrt_33.vrt', 'wb')
-            f.write(ds_str)
+            f.write(ds_str.encode('ascii'))
             f.close()
             ret = gdaltest.runexternal(test_cli_utilities.get_test_ogrsf_path() + ' -ro tmp/ogr_vrt_33.vrt')
             os.unlink('tmp/ogr_vrt_33.vrt')
@@ -2729,7 +2729,7 @@ def ogr_vrt_33():
 
         if test_cli_utilities.get_test_ogrsf_path() is not None:
             f = open('tmp/ogr_vrt_33.vrt', 'wb')
-            f.write(ds_str)
+            f.write(ds_str.encode('ascii'))
             f.close()
             ret = gdaltest.runexternal(test_cli_utilities.get_test_ogrsf_path() + ' -ro tmp/ogr_vrt_33.vrt')
             os.unlink('tmp/ogr_vrt_33.vrt')
@@ -2773,7 +2773,7 @@ def ogr_vrt_33():
 
     if test_cli_utilities.get_test_ogrsf_path() is not None:
         f = open('tmp/ogr_vrt_33.vrt', 'wb')
-        f.write(ds_str)
+        f.write(ds_str.encode('ascii'))
         f.close()
         ret = gdaltest.runexternal(test_cli_utilities.get_test_ogrsf_path() + ' -ro tmp/ogr_vrt_33.vrt')
         os.unlink('tmp/ogr_vrt_33.vrt')
@@ -2841,7 +2841,7 @@ def ogr_vrt_33():
 
     if test_cli_utilities.get_test_ogrsf_path() is not None:
         f = open('tmp/ogr_vrt_33.vrt', 'wb')
-        f.write(ds_str)
+        f.write(ds_str.encode('ascii'))
         f.close()
         ret = gdaltest.runexternal(test_cli_utilities.get_test_ogrsf_path() + ' -ro tmp/ogr_vrt_33.vrt')
         os.unlink('tmp/ogr_vrt_33.vrt')
@@ -2989,7 +2989,7 @@ def ogr_vrt_33():
 
     if test_cli_utilities.get_test_ogrsf_path() is not None:
         f = open('tmp/ogr_vrt_33.vrt', 'wb')
-        f.write(ds_str)
+        f.write(ds_str.encode('ascii'))
         f.close()
         ret = gdaltest.runexternal(test_cli_utilities.get_test_ogrsf_path() + ' -ro tmp/ogr_vrt_33.vrt')
         os.unlink('tmp/ogr_vrt_33.vrt')
@@ -3047,7 +3047,7 @@ def ogr_vrt_33():
 
     if test_cli_utilities.get_test_ogrsf_path() is not None:
         f = open('tmp/ogr_vrt_33.vrt', 'wb')
-        f.write(ds_str)
+        f.write(ds_str.encode('ascii'))
         f.close()
         ret = gdaltest.runexternal(test_cli_utilities.get_test_ogrsf_path() + ' -ro tmp/ogr_vrt_33.vrt')
         os.unlink('tmp/ogr_vrt_33.vrt')
@@ -3106,7 +3106,7 @@ def ogr_vrt_33():
 
     if test_cli_utilities.get_test_ogrsf_path() is not None:
         f = open('tmp/ogr_vrt_33.vrt', 'wb')
-        f.write(ds_str)
+        f.write(ds_str.encode('ascii'))
         f.close()
         ret = gdaltest.runexternal(test_cli_utilities.get_test_ogrsf_path() + ' -ro tmp/ogr_vrt_33.vrt')
         os.unlink('tmp/ogr_vrt_33.vrt')
@@ -3161,7 +3161,7 @@ def ogr_vrt_33():
 
     if test_cli_utilities.get_test_ogrsf_path() is not None:
         f = open('tmp/ogr_vrt_33.vrt', 'wb')
-        f.write(ds_str)
+        f.write(ds_str.encode('ascii'))
         f.close()
         ret = gdaltest.runexternal(test_cli_utilities.get_test_ogrsf_path() + ' -ro tmp/ogr_vrt_33.vrt')
         os.unlink('tmp/ogr_vrt_33.vrt')
@@ -3229,7 +3229,7 @@ def ogr_vrt_33():
 
     if test_cli_utilities.get_test_ogrsf_path() is not None:
         f = open('tmp/ogr_vrt_33.vrt', 'wb')
-        f.write(ds_str)
+        f.write(ds_str.encode('ascii'))
         f.close()
         ret = gdaltest.runexternal(test_cli_utilities.get_test_ogrsf_path() + ' -ro tmp/ogr_vrt_33.vrt')
         os.unlink('tmp/ogr_vrt_33.vrt')
@@ -3271,7 +3271,7 @@ def ogr_vrt_33():
 
     if test_cli_utilities.get_test_ogrsf_path() is not None:
         f = open('tmp/ogr_vrt_33.vrt', 'wb')
-        f.write(ds_str)
+        f.write(ds_str.encode('ascii'))
         f.close()
         ret = gdaltest.runexternal(test_cli_utilities.get_test_ogrsf_path() + ' -ro tmp/ogr_vrt_33.vrt')
         os.unlink('tmp/ogr_vrt_33.vrt')
