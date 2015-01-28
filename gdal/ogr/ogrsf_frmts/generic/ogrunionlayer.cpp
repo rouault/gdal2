@@ -772,7 +772,7 @@ OGRErr OGRUnionLayer::ICreateFeature( OGRFeature* poFeature )
         return OGRERR_FAILURE;
     }
 
-    if( poFeature->GetFID64() != OGRNullFID )
+    if( poFeature->GetFID() != OGRNullFID )
     {
         CPLError(CE_Failure, CPLE_NotSupported,
                  "CreateFeature() not supported when FID is set");
@@ -799,7 +799,7 @@ OGRErr OGRUnionLayer::ICreateFeature( OGRFeature* poFeature )
             poSrcFeature->SetFrom(poFeature, TRUE);
             OGRErr eErr = papoSrcLayers[i]->CreateFeature(poSrcFeature);
             if( eErr == OGRERR_NONE )
-                poFeature->SetFID(poSrcFeature->GetFID64());
+                poFeature->SetFID(poSrcFeature->GetFID());
             delete poSrcFeature;
             return eErr;
         }
@@ -831,7 +831,7 @@ OGRErr OGRUnionLayer::ISetFeature( OGRFeature* poFeature )
         return OGRERR_FAILURE;
     }
 
-    if( poFeature->GetFID64() == OGRNullFID )
+    if( poFeature->GetFID() == OGRNullFID )
     {
         CPLError(CE_Failure, CPLE_NotSupported,
                  "SetFeature() not supported when FID is not set");
@@ -856,7 +856,7 @@ OGRErr OGRUnionLayer::ISetFeature( OGRFeature* poFeature )
             OGRFeature* poSrcFeature =
                         new OGRFeature(papoSrcLayers[i]->GetLayerDefn());
             poSrcFeature->SetFrom(poFeature, TRUE);
-            poSrcFeature->SetFID(poFeature->GetFID64());
+            poSrcFeature->SetFID(poFeature->GetFID());
             OGRErr eErr = papoSrcLayers[i]->SetFeature(poSrcFeature);
             delete poSrcFeature;
             return eErr;
@@ -953,10 +953,10 @@ void OGRUnionLayer::ApplyAttributeFilterToSrcLayer(int iSubLayer)
 }
 
 /************************************************************************/
-/*                          GetFeatureCount64()                           */
+/*                          GetFeatureCount()                           */
 /************************************************************************/
 
-GIntBig OGRUnionLayer::GetFeatureCount64( int bForce )
+GIntBig OGRUnionLayer::GetFeatureCount( int bForce )
 {
     if (nFeatureCount >= 0 &&
         m_poFilterGeom == NULL && m_poAttrQuery == NULL)
@@ -965,7 +965,7 @@ GIntBig OGRUnionLayer::GetFeatureCount64( int bForce )
     }
 
     if( !GetAttrFilterPassThroughValue() )
-        return OGRLayer::GetFeatureCount64(bForce);
+        return OGRLayer::GetFeatureCount(bForce);
 
     GIntBig nRet = 0;
     for(int i = 0; i < nSrcLayers; i++)
@@ -973,7 +973,7 @@ GIntBig OGRUnionLayer::GetFeatureCount64( int bForce )
         AutoWarpLayerIfNecessary(i);
         ApplyAttributeFilterToSrcLayer(i);
         SetSpatialFilterToSourceLayer(papoSrcLayers[i]);
-        nRet += papoSrcLayers[i]->GetFeatureCount64(bForce);
+        nRet += papoSrcLayers[i]->GetFeatureCount(bForce);
     }
     ResetReading();
     return nRet;
@@ -1245,7 +1245,7 @@ OGRFeature* OGRUnionLayer::TranslateFromSrcLayer(OGRFeature* poSrcFeature)
     }
 
     if( bPreserveSrcFID )
-        poFeature->SetFID(poSrcFeature->GetFID64());
+        poFeature->SetFID(poSrcFeature->GetFID());
     else
         poFeature->SetFID(nNextFID ++);
     return poFeature;

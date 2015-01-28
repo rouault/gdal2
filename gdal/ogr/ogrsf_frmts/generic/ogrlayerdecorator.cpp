@@ -133,9 +133,9 @@ OGRSpatialReference *OGRLayerDecorator::GetSpatialRef()
     return m_poDecoratedLayer->GetSpatialRef();
 }
 
-GIntBig         OGRLayerDecorator::GetFeatureCount64( int bForce )
+GIntBig         OGRLayerDecorator::GetFeatureCount( int bForce )
 {
-    return m_poDecoratedLayer->GetFeatureCount64(bForce);
+    return m_poDecoratedLayer->GetFeatureCount(bForce);
 }
 
 OGRErr      OGRLayerDecorator::GetExtent(OGREnvelope *psExtent, int bForce)

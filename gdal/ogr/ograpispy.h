@@ -100,7 +100,6 @@ void OGRAPISpy_DS_CreateLayer( OGRDataSourceH hDS,
 void OGRAPISpy_DS_DeleteLayer( OGRDataSourceH hDS, int iLayer, OGRErr eErr );
 
 void OGRAPISpy_L_GetFeatureCount( OGRLayerH hLayer, int bForce );
-void OGRAPISpy_L_GetFeatureCount64( OGRLayerH hLayer, int bForce );
 void OGRAPISpy_L_GetExtent( OGRLayerH hLayer, int bForce );
 void OGRAPISpy_L_GetExtentEx( OGRLayerH hLayer, int iGeomField, int bForce );
 void OGRAPISpy_L_SetAttributeFilter( OGRLayerH hLayer, const char* pszFilter );

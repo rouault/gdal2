@@ -795,7 +795,7 @@ OGRFeature *OGRFeature::Clone()
     if( GetStyleString() != NULL )
         poNew->SetStyleString(GetStyleString());
 
-    poNew->SetFID( GetFID64() );
+    poNew->SetFID( GetFID() );
 
     return poNew;
 }
@@ -1110,7 +1110,7 @@ int OGRFeature::IsFieldSet( int iField )
         switch (iSpecialField)
         {
           case SPF_FID:
-            return ((OGRFeature *)this)->GetFID64() != OGRNullFID;
+            return ((OGRFeature *)this)->GetFID() != OGRNullFID;
 
           case SPF_OGR_GEOM_WKT:
           case SPF_OGR_GEOMETRY:
@@ -1517,7 +1517,7 @@ double OGRFeature::GetFieldAsDouble( int iField )
         switch (iSpecialField)
         {
         case SPF_FID:
-            return GetFID64();
+            return GetFID();
 
         case SPF_OGR_GEOM_AREA:
             if( GetGeomFieldCount() == 0 || papoGeometries[0] == NULL )
@@ -1617,7 +1617,7 @@ const char *OGRFeature::GetFieldAsString( int iField )
         switch (iSpecialField)
         {
           case SPF_FID:
-            snprintf( szTempBuffer, TEMP_BUFFER_SIZE, CPL_FRMT_GIB, GetFID64() );
+            snprintf( szTempBuffer, TEMP_BUFFER_SIZE, CPL_FRMT_GIB, GetFID() );
             return m_pszTmpFieldValue = CPLStrdup( szTempBuffer );
 
           case SPF_OGR_GEOMETRY:
@@ -3681,7 +3681,7 @@ void OGRFeature::DumpReadable( FILE * fpOut, char** papszOptions )
     if( fpOut == NULL )
         fpOut = stdout;
 
-    fprintf( fpOut, "OGRFeature(%s):" CPL_FRMT_GIB "\n", poDefn->GetName(), GetFID64() );
+    fprintf( fpOut, "OGRFeature(%s):" CPL_FRMT_GIB "\n", poDefn->GetName(), GetFID() );
 
     const char* pszDisplayFields =
             CSLFetchNameValue(papszOptions, "DISPLAY_FIELDS");
@@ -3775,90 +3775,37 @@ void OGR_F_DumpReadable( OGRFeatureH hFeat, FILE *fpOut )
 /************************************************************************/
 
 /**
+ * \fn GIntBig OGRFeature::GetFID();
+ *
  * \brief Get feature identifier.
  *
  * This method is the same as the C function OGR_F_GetFID().
+ * Note: since GDAL 2.0, this method returns a GIntBig (previously a long)
  *
  * @return feature id or OGRNullFID if none has been assigned.
- * @deprecated Use GetFID64() instead
  */
-long OGRFeature::GetFID()
-{
-    if( (GIntBig)(long)nFID != nFID )
-    {
-        CPLError(CE_Warning, CPLE_AppDefined,
-                 "Integer overflow occured when trying to return 64bit integer. Use GetFID64() instead");
-    }
-    return (long)nFID;
-}
 
 /************************************************************************/
-/*                            OGR_F_GetFID()                            */
+/*                            OGR_F_GetFID()                          */
 /************************************************************************/
 
 /**
  * \brief Get feature identifier.
  *
  * This function is the same as the C++ method OGRFeature::GetFID().
+ * Note: since GDAL 2.0, this method returns a GIntBig (previously a long)
  *
  * @param hFeat handle to the feature from which to get the feature
  * identifier.
  * @return feature id or OGRNullFID if none has been assigned.
- * @deprecated Use OGR_F_GetFID64() instead
  */
 
-long OGR_F_GetFID( OGRFeatureH hFeat )
+GIntBig OGR_F_GetFID( OGRFeatureH hFeat )
 
 {
     VALIDATE_POINTER1( hFeat, "OGR_F_GetFID", 0 );
-    
-    GIntBig nFID64 = ((OGRFeature *) hFeat)->GetFID64();
-    long nFID = (long)nFID64;
 
-    if( (GIntBig)nFID != nFID64 )
-    {
-        CPLError(CE_Warning, CPLE_AppDefined,
-                 "Integer overflow occured when trying to return 64bit integer. Use OGR_F_GetFID64() instead");
-    }
-    return nFID;
-}
-
-/************************************************************************/
-/*                               GetFID64()                             */
-/************************************************************************/
-
-/**
- * \fn GIntBig OGRFeature::GetFID64();
- *
- * \brief Get feature identifier.
- *
- * This method is the same as the C function OGR_F_GetFID64().
- *
- * @return feature id or OGRNullFID if none has been assigned.
- * @since GDAL 2.0
- */
-
-/************************************************************************/
-/*                            OGR_F_GetFID64()                          */
-/************************************************************************/
-
-/**
- * \brief Get feature identifier.
- *
- * This function is the same as the C++ method OGRFeature::GetFID64().
- *
- * @param hFeat handle to the feature from which to get the feature
- * identifier.
- * @return feature id or OGRNullFID if none has been assigned.
- * @since GDAL 2.0
- */
-
-GIntBig OGR_F_GetFID64( OGRFeatureH hFeat )
-
-{
-    VALIDATE_POINTER1( hFeat, "OGR_F_GetFID64", 0 );
-
-    return ((OGRFeature *) hFeat)->GetFID64();
+    return ((OGRFeature *) hFeat)->GetFID();
 }
 
 /************************************************************************/
@@ -3940,7 +3887,7 @@ OGRBoolean OGRFeature::Equal( OGRFeature * poFeature )
     if( poFeature == this )
         return TRUE;
 
-    if( GetFID64() != poFeature->GetFID64() )
+    if( GetFID() != poFeature->GetFID() )
         return FALSE;
     
     if( GetDefnRef() != poFeature->GetDefnRef() )

@@ -118,7 +118,7 @@ class OGRPGeoTableLayer : public OGRPGeoLayer
                                     int bHasZ );
 
     virtual void        ResetReading();
-    virtual GIntBig     GetFeatureCount64( int );
+    virtual GIntBig     GetFeatureCount( int );
 
     virtual OGRErr      SetAttributeFilter( const char * );
     virtual OGRFeature *GetFeature( GIntBig nFeatureId );
@@ -147,7 +147,7 @@ class OGRPGeoSelectLayer : public OGRPGeoLayer
                         ~OGRPGeoSelectLayer();
 
     virtual void        ResetReading();
-    virtual GIntBig     GetFeatureCount64( int );
+    virtual GIntBig     GetFeatureCount( int );
 
     virtual OGRFeature *GetFeature( GIntBig nFeatureId );
     

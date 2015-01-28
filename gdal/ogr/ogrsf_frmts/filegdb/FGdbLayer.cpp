@@ -378,7 +378,7 @@ OGRErr FGdbLayer::ICreateFeature( OGRFeature *poFeature )
 
     /* Cannot write to FID field - it is managed by GDB*/
     //std::wstring wfield_name = StringToWString(m_strOIDFieldName);
-    //hr = fgdb_row.SetInteger(wfield_name, poFeature->GetFID64());
+    //hr = fgdb_row.SetInteger(wfield_name, poFeature->GetFID());
 
     /* Write the row to the table */
     hr = fgdb_table->Insert(fgdb_row);
@@ -695,7 +695,7 @@ OGRErr FGdbLayer::ISetFeature( OGRFeature* poFeature )
     if( !m_pDS->GetUpdate() )
         return OGRERR_FAILURE;
 
-    if( poFeature->GetFID64() == OGRNullFID )
+    if( poFeature->GetFID() == OGRNullFID )
     {
         CPLError( CE_Failure, CPLE_AppDefined,
                   "SetFeature() with unset FID fails." );
@@ -704,7 +704,7 @@ OGRErr FGdbLayer::ISetFeature( OGRFeature* poFeature )
 
     EndBulkLoad();
 
-    if (GetRow(enumRows, row, poFeature->GetFID64()) != OGRERR_NONE)
+    if (GetRow(enumRows, row, poFeature->GetFID()) != OGRERR_NONE)
         return OGRERR_FAILURE;
 
     /* Populate the row with the feature content */
@@ -2437,10 +2437,10 @@ OGRFeature *FGdbLayer::GetFeature( GIntBig oid )
 
 
 /************************************************************************/
-/*                          GetFeatureCount64()                           */
+/*                          GetFeatureCount()                           */
 /************************************************************************/
 
-GIntBig FGdbLayer::GetFeatureCount64( CPL_UNUSED int bForce )
+GIntBig FGdbLayer::GetFeatureCount( CPL_UNUSED int bForce )
 {
     long           hr;
     int32          rowCount = 0;

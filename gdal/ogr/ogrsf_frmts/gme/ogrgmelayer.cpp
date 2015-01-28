@@ -728,12 +728,12 @@ OGRErr OGRGMELayer::ICreateFeature( OGRFeature *poFeature )
     int nGxId = poFeature->GetFieldIndex("gx_id");
     CPLDebug("GME", "gx_id is field %d", iGxIdField);
     CPLString osGxId;
-    CPLDebug("GME", "Inserting feature " CPL_FRMT_GIB " as %s", poFeature->GetFID64(), osGxId.c_str());
+    CPLDebug("GME", "Inserting feature " CPL_FRMT_GIB " as %s", poFeature->GetFID(), osGxId.c_str());
     if (nGxId >= 0) {
         iGxIdField = nGxId;
         if(poFeature->IsFieldSet(iGxIdField)) {
           osGxId = poFeature->GetFieldAsString(iGxIdField);
-          CPLDebug("GME", "Feature already has " CPL_FRMT_GIB " gx_id='%s'", poFeature->GetFID64(),
+          CPLDebug("GME", "Feature already has " CPL_FRMT_GIB " gx_id='%s'", poFeature->GetFID(),
                    osGxId.c_str());
         }
         else {
@@ -752,7 +752,7 @@ OGRErr OGRGMELayer::ICreateFeature( OGRFeature *poFeature )
                 return iBatchInsertResult;
             }
         }
-        omnosIdToGMEKey[poFeature->GetFID64()] = osGxId;
+        omnosIdToGMEKey[poFeature->GetFID()] = osGxId;
         omnpoInsertedFeatures[nFID] = poFeature->Clone();
         CPLDebug("GME", "In Transaction, added feature to memory only");
         bDirty = true;
@@ -773,7 +773,7 @@ OGRErr OGRGMELayer::ISetFeature( OGRFeature *poFeature )
 {
     if (!poFeature)
         return OGRERR_FAILURE;
-    GIntBig nFID = poFeature->GetFID64();
+    GIntBig nFID = poFeature->GetFID();
     if(bInTransaction) {
         std::map<int, OGRFeature *>::const_iterator fit;
         fit = omnpoInsertedFeatures.find(nFID);

@@ -393,7 +393,7 @@ OGRFeature *OGRNTFRasterLayer::GetFeature( GIntBig nFeatureId )
 }
 
 /************************************************************************/
-/*                          GetFeatureCount64()                           */
+/*                          GetFeatureCount()                           */
 /*                                                                      */
 /*      If a spatial filter is in effect, we turn control over to       */
 /*      the generic counter.  Otherwise we return the total count.      */
@@ -401,7 +401,7 @@ OGRFeature *OGRNTFRasterLayer::GetFeature( GIntBig nFeatureId )
 /*      way of counting features matching a spatial query.              */
 /************************************************************************/
 
-GIntBig OGRNTFRasterLayer::GetFeatureCount64( CPL_UNUSED int bForce )
+GIntBig OGRNTFRasterLayer::GetFeatureCount( CPL_UNUSED int bForce )
 {
     return nFeatureCount;
 }

@@ -93,7 +93,7 @@ class OGRPDSLayer : public OGRLayer
 
     virtual int                 TestCapability( const char * );
 
-    virtual GIntBig             GetFeatureCount64(int bForce = TRUE );
+    virtual GIntBig             GetFeatureCount(int bForce = TRUE );
 
     virtual OGRFeature         *GetFeature( GIntBig nFID );
 

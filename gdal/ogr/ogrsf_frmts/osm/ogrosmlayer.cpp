@@ -189,13 +189,13 @@ OGRErr OGROSMLayer::SetAttributeFilter( const char* pszAttrQuery )
 }
 
 /************************************************************************/
-/*                          GetFeatureCount64()                           */
+/*                          GetFeatureCount()                           */
 /************************************************************************/
 
-GIntBig OGROSMLayer::GetFeatureCount64( int bForce )
+GIntBig OGROSMLayer::GetFeatureCount( int bForce )
 {
     if( poDS->IsFeatureCountEnabled() )
-        return OGRLayer::GetFeatureCount64(bForce);
+        return OGRLayer::GetFeatureCount(bForce);
 
     return -1;
 }

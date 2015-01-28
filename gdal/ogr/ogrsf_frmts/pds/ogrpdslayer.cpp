@@ -699,15 +699,15 @@ int OGRPDSLayer::TestCapability( const char * pszCap )
 }
 
 /************************************************************************/
-/*                          GetFeatureCount64()                           */
+/*                          GetFeatureCount()                           */
 /************************************************************************/
 
-GIntBig OGRPDSLayer::GetFeatureCount64(int bForce )
+GIntBig OGRPDSLayer::GetFeatureCount(int bForce )
 {
     if (TestCapability(OLCFastFeatureCount))
         return nRecords;
 
-    return OGRLayer::GetFeatureCount64(bForce);
+    return OGRLayer::GetFeatureCount(bForce);
 }
 
 /************************************************************************/

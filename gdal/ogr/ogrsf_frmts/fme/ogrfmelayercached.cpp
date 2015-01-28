@@ -187,7 +187,7 @@ OGRFeature *OGRFMELayerCached::GetNextFeature()
         poFeature = ReadNextIndexFeature();
 
         if( poFeature != NULL )
-            nPreviousFeature = poFeature->GetFID64();
+            nPreviousFeature = poFeature->GetFID();
         else
             break;
 
@@ -245,10 +245,10 @@ void OGRFMELayerCached::ResetReading()
 }
 
 /************************************************************************/
-/*                          GetFeatureCount64()                           */
+/*                          GetFeatureCount()                           */
 /************************************************************************/
 
-GIntBig OGRFMELayerCached::GetFeatureCount64( int bForce )
+GIntBig OGRFMELayerCached::GetFeatureCount( int bForce )
 
 {
     int    nResult;
@@ -257,7 +257,7 @@ GIntBig OGRFMELayerCached::GetFeatureCount64( int bForce )
 
     if( m_poAttrQuery != NULL || poIndex == NULL )
     {
-        nResult = OGRLayer::GetFeatureCount64( bForce );
+        nResult = OGRLayer::GetFeatureCount( bForce );
     }
     else
     {

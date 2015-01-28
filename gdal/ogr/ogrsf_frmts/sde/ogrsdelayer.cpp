@@ -853,7 +853,7 @@ OGRErr OGRSDELayer::TranslateOGRRecord( OGRFeature *poFeature,
             
             return OGRERR_FAILURE;
         }
-        else if( poFeature->GetFID64() == OGRNullFID )
+        else if( poFeature->GetFID() == OGRNullFID )
         {
             CPLError( CE_Failure, CPLE_AppDefined,
                       "Cannot update feature: Feature has a NULL Feature ID" );
@@ -866,7 +866,7 @@ OGRErr OGRSDELayer::TranslateOGRRecord( OGRFeature *poFeature,
         
         // Build WHERE clause
         pszWhere = CPLSPrintf( "%s = %ld", osFIDColumnName.c_str(),
-                                           poFeature->GetFID64() );
+                                           poFeature->GetFID() );
         
         nSDEErr = SE_stream_update_table( hStream, poFeatureDefn->GetName(),
                                           nSpecialCols + nAttributeCols,
@@ -893,7 +893,7 @@ OGRErr OGRSDELayer::TranslateOGRRecord( OGRFeature *poFeature,
     {
         LONG            nFID;
         
-        nFID = poFeature->GetFID64();
+        nFID = poFeature->GetFID();
         if( nFID == OGRNullFID )
         {
             nFID = iNextFIDToWrite++;
@@ -2178,7 +2178,7 @@ OGRErr OGRSDELayer::ResetStream()
 }
 
 /************************************************************************/
-/*                          GetFeatureCount64()                           */
+/*                          GetFeatureCount()                           */
 /*                                                                      */
 /*      Issue a special "counter only" query that will just fetch       */
 /*      objectids, and count the result set.  This will inherently      */
@@ -2187,7 +2187,7 @@ OGRErr OGRSDELayer::ResetStream()
 /*      operator in the database.                                       */
 /************************************************************************/
 
-GIntBig OGRSDELayer::GetFeatureCount64( int bForce )
+GIntBig OGRSDELayer::GetFeatureCount( int bForce )
 
 {
 /* -------------------------------------------------------------------- */

@@ -826,7 +826,7 @@ public:
   %feature( "kwargs" ) GetFeatureCount;  
 #endif
   GIntBig GetFeatureCount(int force=1) {
-    return OGR_L_GetFeatureCount64(self, force);
+    return OGR_L_GetFeatureCount(self, force);
   }
   
 #if defined(SWIGCSHARP)
@@ -1407,7 +1407,7 @@ public:
   }
 
   GIntBig GetFID() {
-    return OGR_F_GetFID64(self);
+    return OGR_F_GetFID(self);
   }
   
   OGRErr SetFID(GIntBig fid) {

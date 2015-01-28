@@ -144,7 +144,7 @@ OGRFeature *OGRCouchDBLayer::GetNextRawFeature()
         return NULL;
 
     OGRFeature* poFeature = TranslateFeature(aoFeatures[nNextInSeq - nOffset]);
-    if (poFeature != NULL && poFeature->GetFID64() == OGRNullFID)
+    if (poFeature != NULL && poFeature->GetFID() == OGRNullFID)
         poFeature->SetFID(nNextInSeq);
 
     nNextInSeq ++;

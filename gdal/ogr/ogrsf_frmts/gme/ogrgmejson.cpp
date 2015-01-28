@@ -61,7 +61,7 @@ json_object* OGRGMEFeatureToGeoJSON(OGRFeature* poFeature)
     if ( NULL == pjoGeometry ) {
         CPLError( CE_Failure, CPLE_AppDefined,
                   "GME: NULL Geometry detected in feature " CPL_FRMT_GIB ". Ignoring feature.",
-                  poFeature->GetFID64() );
+                  poFeature->GetFID() );
         json_object_put( pjoFeature );
         return NULL;
     }
@@ -437,7 +437,7 @@ json_object* OGRGMEAttributesToGeoJSON( OGRFeature* poFeature )
     int nGxId = poFeature->GetFieldIndex("gx_id");
     if (nGxId < 0) {
         json_object* pjoProperty = NULL;
-        GIntBig nFID = poFeature->GetFID64();
+        GIntBig nFID = poFeature->GetFID();
 
         char acGxId[128];
         snprintf(acGxId, 128, "GDAL-" CPL_FRMT_GIB, nFID);

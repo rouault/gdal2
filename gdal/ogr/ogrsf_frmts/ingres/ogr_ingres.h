@@ -166,7 +166,7 @@ class OGRIngresTableLayer : public OGRIngresLayer
     
 //    virtual OGRFeature *GetFeature( GIntBig nFeatureId );
     virtual void        ResetReading();
-//    virtual GIntBig     GetFeatureCount64( int );
+//    virtual GIntBig     GetFeatureCount( int );
 
     void                SetSpatialFilter( OGRGeometry * );
 
@@ -213,7 +213,7 @@ class OGRIngresResultLayer : public OGRIngresLayer
 
 
     virtual void        ResetReading();
-    virtual GIntBig     GetFeatureCount64( int );
+    virtual GIntBig     GetFeatureCount( int );
 };
 
 /************************************************************************/

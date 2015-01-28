@@ -398,13 +398,13 @@ OGRSpatialReference *OGRProxiedLayer::GetSpatialRef()
 }
 
 /************************************************************************/
-/*                          GetFeatureCount64()                           */
+/*                          GetFeatureCount()                           */
 /************************************************************************/
 
-GIntBig         OGRProxiedLayer::GetFeatureCount64( int bForce )
+GIntBig         OGRProxiedLayer::GetFeatureCount( int bForce )
 {
     if( poUnderlyingLayer == NULL && !OpenUnderlyingLayer() ) return 0;
-    return poUnderlyingLayer->GetFeatureCount64(bForce);
+    return poUnderlyingLayer->GetFeatureCount(bForce);
 }
 
 /************************************************************************/

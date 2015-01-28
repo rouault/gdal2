@@ -111,7 +111,7 @@ class OGRODBCTableLayer : public OGRODBCLayer
                                     const char *pszGeomCol );
 
     virtual void        ResetReading();
-    virtual GIntBig     GetFeatureCount64( int );
+    virtual GIntBig     GetFeatureCount( int );
 
     virtual OGRErr      SetAttributeFilter( const char * );
 #ifdef notdef
@@ -155,7 +155,7 @@ class OGRODBCSelectLayer : public OGRODBCLayer
                         ~OGRODBCSelectLayer();
 
     virtual void        ResetReading();
-    virtual GIntBig     GetFeatureCount64( int );
+    virtual GIntBig     GetFeatureCount( int );
 
     virtual OGRFeature *GetFeature( GIntBig nFeatureId );
     

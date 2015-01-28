@@ -225,7 +225,7 @@ class OGRMSSQLSpatialTableLayer : public OGRMSSQLSpatialLayer
     void                DropSpatialIndex();
 
     virtual void        ResetReading();
-    virtual GIntBig     GetFeatureCount64( int );
+    virtual GIntBig     GetFeatureCount( int );
 
     virtual OGRFeatureDefn *GetLayerDefn();
 
@@ -281,7 +281,7 @@ class OGRMSSQLSpatialSelectLayer : public OGRMSSQLSpatialLayer
                         ~OGRMSSQLSpatialSelectLayer();
 
     virtual void        ResetReading();
-    virtual GIntBig     GetFeatureCount64( int );
+    virtual GIntBig     GetFeatureCount( int );
 
     virtual OGRFeature *GetFeature( GIntBig nFeatureId );
     

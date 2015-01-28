@@ -72,7 +72,7 @@ private:
     OGRFeature *        GetNextFeatureRef();
     OGRFeature *        GetFeatureRef( long nFID );
 
-    GIntBig             GetFeatureCount64( int bForce = TRUE );
+    GIntBig             GetFeatureCount( int bForce = TRUE );
 
     OGRErr              ICreateFeature( OGRFeature *poFeature );
     int                 GeometryAppend( OGRGeometry *poGeometry );

@@ -114,7 +114,7 @@ class CPL_DLL OGRGenSQLResultsLayer : public OGRLayer
 
     virtual OGRFeatureDefn *GetLayerDefn();
 
-    virtual GIntBig     GetFeatureCount64( int bForce = TRUE );
+    virtual GIntBig     GetFeatureCount( int bForce = TRUE );
     virtual OGRErr      GetExtent(OGREnvelope *psExtent, int bForce = TRUE) { return GetExtent(0, psExtent, bForce); }
     virtual OGRErr      GetExtent(int iGeomField, OGREnvelope *psExtent, int bForce = TRUE);
 

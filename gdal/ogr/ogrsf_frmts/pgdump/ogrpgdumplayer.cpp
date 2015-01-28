@@ -156,7 +156,7 @@ OGRErr OGRPGDumpLayer::ICreateFeature( OGRFeature *poFeature )
             /* FID set (and that a FID column has been identified), then we will */ 
             /* try to copy FID values from features. Otherwise, we will not */ 
             /* do and assume that the FID column is an autoincremented column. */ 
-            StartCopy(poFeature->GetFID64() != OGRNullFID); 
+            StartCopy(poFeature->GetFID() != OGRNullFID); 
         }
 
         return CreateFeatureViaCopy( poFeature );
@@ -202,7 +202,7 @@ OGRErr OGRPGDumpLayer::CreateFeatureViaInsert( OGRFeature *poFeature )
         }
     }
 
-    if( poFeature->GetFID64() != OGRNullFID && pszFIDColumn != NULL )
+    if( poFeature->GetFID() != OGRNullFID && pszFIDColumn != NULL )
     {
         if( bNeedComma )
             osCommand += ", ";
@@ -278,11 +278,11 @@ OGRErr OGRPGDumpLayer::CreateFeatureViaInsert( OGRFeature *poFeature )
     }
 
     /* Set the FID */
-    if( poFeature->GetFID64() != OGRNullFID && pszFIDColumn != NULL )
+    if( poFeature->GetFID() != OGRNullFID && pszFIDColumn != NULL )
     {
         if( bNeedComma )
             osCommand += ", ";
-        osCommand += CPLString().Printf( CPL_FRMT_GIB, poFeature->GetFID64() );
+        osCommand += CPLString().Printf( CPL_FRMT_GIB, poFeature->GetFID() );
         bNeedComma = TRUE;
     }
 
@@ -405,9 +405,9 @@ void OGRPGCommonAppendCopyFieldsExceptGeom(CPLString& osCommand,
         nFIDIndex = poFeatureDefn->GetFieldIndex( pszFIDColumn ); 
 
         /* Set the FID */
-        if( poFeature->GetFID64() != OGRNullFID )
+        if( poFeature->GetFID() != OGRNullFID )
         {
-            osCommand += CPLString().Printf( CPL_FRMT_GIB, poFeature->GetFID64());
+            osCommand += CPLString().Printf( CPL_FRMT_GIB, poFeature->GetFID());
         }
         else
         {

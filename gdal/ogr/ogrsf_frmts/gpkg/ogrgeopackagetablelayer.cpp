@@ -157,7 +157,7 @@ OGRErr OGRGeoPackageTableLayer::FeatureBindParameters( OGRFeature *poFeature,
 
     if( bAddFID )
     {
-        err = sqlite3_bind_int64(poStmt, nColCount++, poFeature->GetFID64());
+        err = sqlite3_bind_int64(poStmt, nColCount++, poFeature->GetFID());
     }
 
     /* Bind data values to the statement, here bind the blob for geometry */
@@ -318,11 +318,11 @@ OGRErr OGRGeoPackageTableLayer::FeatureBindUpdateParameters( OGRFeature *poFeatu
         return err;
 
     /* Bind the FID to the "WHERE" clause */
-    err = sqlite3_bind_int64(poStmt, nColCount, poFeature->GetFID64());    
+    err = sqlite3_bind_int64(poStmt, nColCount, poFeature->GetFID());    
     if ( err != SQLITE_OK )
     {
         CPLError( CE_Failure, CPLE_AppDefined,
-                  "failed to bind FID '" CPL_FRMT_GIB "' to statement", poFeature->GetFID64());
+                  "failed to bind FID '" CPL_FRMT_GIB "' to statement", poFeature->GetFID());
         return OGRERR_FAILURE;       
     }
     
@@ -854,7 +854,7 @@ OGRErr OGRGeoPackageTableLayer::ICreateFeature( OGRFeature *poFeature )
         return OGRERR_FAILURE;
     }
 
-    if( m_poInsertStatement && (m_bInsertStatementWithFID != (poFeature->GetFID64() != OGRNullFID)) )
+    if( m_poInsertStatement && (m_bInsertStatementWithFID != (poFeature->GetFID() != OGRNullFID)) )
     {
         sqlite3_finalize(m_poInsertStatement);
         m_poInsertStatement = NULL;
@@ -865,7 +865,7 @@ OGRErr OGRGeoPackageTableLayer::ICreateFeature( OGRFeature *poFeature )
         /* Construct a SQL INSERT statement from the OGRFeature */
         /* Only work with fields that are set */
         /* Do not stick values into SQL, use placeholder and bind values later */    
-        m_bInsertStatementWithFID = poFeature->GetFID64() != OGRNullFID;
+        m_bInsertStatementWithFID = poFeature->GetFID() != OGRNullFID;
         CPLString osCommand = FeatureGenerateInsertSQL(poFeature, m_bInsertStatementWithFID);
         
         /* Prepare the SQL into a statement */
@@ -935,7 +935,7 @@ OGRErr OGRGeoPackageTableLayer::ISetFeature( OGRFeature *poFeature )
     }
 
     /* No FID? We can't set, we have to create */
-    if ( poFeature->GetFID64() == OGRNullFID )
+    if ( poFeature->GetFID() == OGRNullFID )
     {
         CPLError( CE_Failure, CPLE_AppDefined,
                   "FID required on features given to SetFeature()." );
@@ -966,7 +966,7 @@ OGRErr OGRGeoPackageTableLayer::ISetFeature( OGRFeature *poFeature )
         sqlite3_stmt* hBackupStmt = m_poUpdateStatement;
         m_poUpdateStatement = NULL;
 
-        DeleteFeature( poFeature->GetFID64() );
+        DeleteFeature( poFeature->GetFID() );
 
         m_poUpdateStatement = hBackupStmt;
 
@@ -1236,13 +1236,13 @@ OGRErr OGRGeoPackageTableLayer::RollbackTransaction()
 
 
 /************************************************************************/
-/*                        GetFeatureCount64()                             */
+/*                        GetFeatureCount()                             */
 /************************************************************************/
 
-GIntBig OGRGeoPackageTableLayer::GetFeatureCount64( CPL_UNUSED int bForce )
+GIntBig OGRGeoPackageTableLayer::GetFeatureCount( CPL_UNUSED int bForce )
 {
     if( m_poFilterGeom != NULL && !m_bFilterIsEnvelope )
-        return OGRGeoPackageLayer::GetFeatureCount64();
+        return OGRGeoPackageLayer::GetFeatureCount();
 
     /* Ignore bForce, because we always do a full count on the database */
     OGRErr err;

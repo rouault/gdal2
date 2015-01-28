@@ -873,10 +873,10 @@ int NASReader::PrescanForSchema( int bGetExtents, CPL_UNUSED int bAnalyzeSRSPerF
     {
         GMLFeatureClass *poClass = poFeature->GetClass();
 
-        if( poClass->GetFeatureCount64() == -1 )
+        if( poClass->GetFeatureCount() == -1 )
             poClass->SetFeatureCount( 1 );
         else
-            poClass->SetFeatureCount( poClass->GetFeatureCount64() + 1 );
+            poClass->SetFeatureCount( poClass->GetFeatureCount() + 1 );
 
 #ifdef SUPPORT_GEOMETRY
         if( bGetExtents )
@@ -908,7 +908,7 @@ int NASReader::PrescanForSchema( int bGetExtents, CPL_UNUSED int bAnalyzeSRSPerF
                 poClass->MergeSRSName(pszSRSName);
 
                 // Merge geometry type into layer.
-                if( poClass->GetFeatureCount64() == 1 && eGType == wkbUnknown )
+                if( poClass->GetFeatureCount() == 1 && eGType == wkbUnknown )
                     eGType = wkbNone;
 
                 poClass->GetGeometryProperty(0)->SetType(
@@ -939,7 +939,7 @@ int NASReader::PrescanForSchema( int bGetExtents, CPL_UNUSED int bAnalyzeSRSPerF
             {
                 if( poClass->GetGeometryPropertyCount() == 1 &&
                     poClass->GetGeometryProperty(0)->GetType() == (int) wkbUnknown
-                    && poClass->GetFeatureCount64() == 1 )
+                    && poClass->GetFeatureCount() == 1 )
                 {
                     poClass->ClearGeometryProperties();
                 }

@@ -66,7 +66,7 @@ class OGRSDTSLayer : public OGRLayer
     
     OGRFeatureDefn *    GetLayerDefn() { return poFeatureDefn; }
 
-//    GIntBig             GetFeatureCount64( int );
+//    GIntBig             GetFeatureCount( int );
     
     int                 TestCapability( const char * );
 };

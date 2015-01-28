@@ -891,10 +891,10 @@ OGRFeatureDefn * OGRCouchDBTableLayer::GetLayerDefn()
 }
 
 /************************************************************************/
-/*                          GetFeatureCount64()                           */
+/*                          GetFeatureCount()                           */
 /************************************************************************/
 
-GIntBig OGRCouchDBTableLayer::GetFeatureCount64(int bForce)
+GIntBig OGRCouchDBTableLayer::GetFeatureCount(int bForce)
 {
     GetLayerDefn();
 
@@ -965,13 +965,13 @@ GIntBig OGRCouchDBTableLayer::GetFeatureCount64(int bForce)
     }
 
     if (m_poFilterGeom != NULL || m_poAttrQuery != NULL)
-        return OGRCouchDBLayer::GetFeatureCount64(bForce);
+        return OGRCouchDBLayer::GetFeatureCount(bForce);
 
     return GetTotalFeatureCount();
 }
 
 /************************************************************************/
-/*                          GetFeatureCount64()                           */
+/*                          GetFeatureCount()                           */
 /************************************************************************/
 
 int OGRCouchDBTableLayer::GetTotalFeatureCount()
@@ -1082,19 +1082,19 @@ static json_object* OGRCouchDBWriteFeature( OGRFeature* poFeature,
         json_object_object_add( poObj, "_id",
                                 json_object_new_string(pszId) );
 
-        if ( poFeature->GetFID64() != OGRNullFID &&
-             strcmp(CPLSPrintf("%09ld", (long)poFeature->GetFID64()), pszId) != 0 )
+        if ( poFeature->GetFID() != OGRNullFID &&
+             strcmp(CPLSPrintf("%09ld", (long)poFeature->GetFID()), pszId) != 0 )
         {
             CPLDebug("CouchDB",
                      "_id field = %s, but FID = %09ld --> taking into account _id field only",
                      pszId,
-                     (long)poFeature->GetFID64());
+                     (long)poFeature->GetFID());
         }
     }
-    else if ( poFeature->GetFID64() != OGRNullFID )
+    else if ( poFeature->GetFID() != OGRNullFID )
     {
         json_object_object_add( poObj, "_id",
-                                json_object_new_string(CPLSPrintf("%09ld", (long)poFeature->GetFID64())) );
+                                json_object_new_string(CPLSPrintf("%09ld", (long)poFeature->GetFID())) );
     }
 
     if (poFeature->IsFieldSet(_REV_FIELD))
@@ -1305,9 +1305,9 @@ OGRErr OGRCouchDBTableLayer::ICreateFeature( OGRFeature *poFeature )
     if (!poFeature->IsFieldSet(_ID_FIELD) ||
         !CSLTestBoolean(CPLGetConfigOption("COUCHDB_PRESERVE_ID_ON_INSERT", "FALSE")))
     {
-        if (poFeature->GetFID64() != OGRNullFID)
+        if (poFeature->GetFID() != OGRNullFID)
         {
-            nFID = (int)poFeature->GetFID64();
+            nFID = (int)poFeature->GetFID();
         }
         osFID = CPLSPrintf("%09d", nFID);
 

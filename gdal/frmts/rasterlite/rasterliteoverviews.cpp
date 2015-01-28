@@ -99,7 +99,7 @@ CPLErr RasterliteDataset::ReloadOverviews()
 /*      Rebuild arrays                                                  */
 /* -------------------------------------------------------------------- */
 
-    nResolutions = OGR_L_GetFeatureCount64(hSQLLyr, TRUE);
+    nResolutions = OGR_L_GetFeatureCount(hSQLLyr, TRUE);
     
     padfXResolutions =
         (double*)CPLMalloc(sizeof(double) * nResolutions);
@@ -570,7 +570,7 @@ CPLErr RasterliteDataset::CreateOverviewLevel(const char * pszResampling,
             
             OGR_L_CreateFeature(hRasterLayer, hFeat);
             /* Query raster ID to set it as the ID of the associated metadata */
-            int nRasterID = (int)OGR_F_GetFID64(hFeat);
+            int nRasterID = (int)OGR_F_GetFID(hFeat);
             
             OGR_F_Destroy(hFeat);
             

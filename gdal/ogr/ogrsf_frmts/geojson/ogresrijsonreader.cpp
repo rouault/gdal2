@@ -416,7 +416,7 @@ OGRESRIJSONReader::ReadFeatureCollection( json_object* poObj )
             }
             //CPLAssert( bAdded );
         }
-        //CPLAssert( nFeatures == poLayer_->GetFeatureCount64() );
+        //CPLAssert( nFeatures == poLayer_->GetFeatureCount() );
     }
 
     // We're returning class member to follow the same pattern of

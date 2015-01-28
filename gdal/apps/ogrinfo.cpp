@@ -477,7 +477,7 @@ static void ReportOnLayer( OGRLayer * poLayer, const char *pszWHERE,
                     OGRGeometryTypeToName( poLayer->GetGeomType() ) );
         }
         
-        printf( "Feature Count: " CPL_FRMT_GIB "\n", poLayer->GetFeatureCount64() );
+        printf( "Feature Count: " CPL_FRMT_GIB "\n", poLayer->GetFeatureCount() );
         
         OGREnvelope oExt;
         if( nGeomFieldCount > 1 )

@@ -179,13 +179,13 @@ OGRErr OGREDIGEOLayer::GetExtent(OGREnvelope *psExtent, int bForce)
 }
 
 /************************************************************************/
-/*                          GetFeatureCount64()                           */
+/*                          GetFeatureCount()                           */
 /************************************************************************/
 
-GIntBig OGREDIGEOLayer::GetFeatureCount64( int bForce )
+GIntBig OGREDIGEOLayer::GetFeatureCount( int bForce )
 {
     if (m_poFilterGeom != NULL || m_poAttrQuery != NULL)
-        return OGRLayer::GetFeatureCount64(bForce);
+        return OGRLayer::GetFeatureCount(bForce);
 
     return (int)aosFeatures.size();
 }

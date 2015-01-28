@@ -565,7 +565,7 @@ OGRErr OGRLIBKMLLayer::ICreateFeature (
     }
     else
     {
-        if( poOgrFeat->GetFID64() < 0 )
+        if( poOgrFeat->GetFID() < 0 )
         {
             static int bAlreadyWarned = FALSE;
             if( !bAlreadyWarned )
@@ -578,7 +578,7 @@ OGRErr OGRLIBKMLLayer::ICreateFeature (
         else
         {
             const char* pszId = CPLSPrintf("%s." CPL_FRMT_GIB,
-                    OGRLIBKMLGetSanitizedNCName(GetName()).c_str(), poOgrFeat->GetFID64());
+                    OGRLIBKMLGetSanitizedNCName(GetName()).c_str(), poOgrFeat->GetFID());
             poOgrFeat->SetFID(nFeatures);
             poKmlFeature->set_id(pszId);
         }
@@ -607,7 +607,7 @@ OGRErr OGRLIBKMLLayer::ISetFeature ( OGRFeature * poOgrFeat )
 {
     if( !bUpdate || m_poKmlUpdate == NULL )
         return OGRERR_UNSUPPORTED_OPERATION;
-    if( poOgrFeat->GetFID64() == OGRNullFID )
+    if( poOgrFeat->GetFID() == OGRNullFID )
         return OGRERR_FAILURE;
 
     FeaturePtr poKmlFeature =
@@ -620,7 +620,7 @@ OGRErr OGRLIBKMLLayer::ISetFeature ( OGRFeature * poOgrFeat )
     m_poKmlUpdate->add_updateoperation(poChange);
     
     const char* pszId = CPLSPrintf("%s." CPL_FRMT_GIB,
-                    OGRLIBKMLGetSanitizedNCName(GetName()).c_str(), poOgrFeat->GetFID64());
+                    OGRLIBKMLGetSanitizedNCName(GetName()).c_str(), poOgrFeat->GetFID());
     poKmlFeature->set_targetid(pszId);
 
     /***** mark the layer as updated *****/
@@ -676,14 +676,14 @@ OGRErr OGRLIBKMLLayer::DeleteFeature( GIntBig nFID )
                 
 ******************************************************************************/
 
-GIntBig OGRLIBKMLLayer::GetFeatureCount64 (
+GIntBig OGRLIBKMLLayer::GetFeatureCount (
                                      int bForce )
 {
 
 
     int i = 0; 
     if (m_poFilterGeom != NULL || m_poAttrQuery != NULL ) {
-        i = OGRLayer::GetFeatureCount64( bForce );
+        i = OGRLayer::GetFeatureCount( bForce );
     }
 
     else if( m_poKmlLayer != NULL ) {

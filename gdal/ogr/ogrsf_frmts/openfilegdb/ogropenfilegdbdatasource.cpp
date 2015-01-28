@@ -153,7 +153,7 @@ int OGROpenFileGDBDataSource::Open( const char* pszFilename )
             const char* pszTablX = CPLResetExtension(m_pszName, "gdbtablx");
             if( !FileExists(pszTablX) &&
                 poLayer->GetLayerDefn()->GetFieldCount() == 0 &&
-                poLayer->GetFeatureCount64() == 0 )
+                poLayer->GetFeatureCount() == 0 )
             {
                 delete poLayer;
                 return FALSE;
@@ -658,7 +658,7 @@ class OGROpenFileGDBSimpleSQLLayer: public OGRLayer
        virtual const char* GetFIDColumn() { return poBaseLayer->GetFIDColumn(); }
        virtual OGRErr      GetExtent( OGREnvelope *psExtent, int bForce )
                             { return poBaseLayer->GetExtent(psExtent, bForce); }
-       virtual GIntBig     GetFeatureCount64(int bForce);
+       virtual GIntBig     GetFeatureCount(int bForce);
 };
 
 /***********************************************************************/
@@ -745,7 +745,7 @@ OGRFeature* OGROpenFileGDBSimpleSQLLayer::GetFeature( GIntBig nFeatureId )
     {
         OGRFeature* poFeature = new OGRFeature(poFeatureDefn);
         poFeature->SetFrom(poSrcFeature);
-        poFeature->SetFID(poSrcFeature->GetFID64());
+        poFeature->SetFID(poSrcFeature->GetFID());
         delete poSrcFeature;
         return poFeature;
     }
@@ -779,10 +779,10 @@ OGRFeature* OGROpenFileGDBSimpleSQLLayer::GetNextFeature()
 }
 
 /***********************************************************************/
-/*                         GetFeatureCount64()                           */
+/*                         GetFeatureCount()                           */
 /***********************************************************************/
 
-GIntBig OGROpenFileGDBSimpleSQLLayer::GetFeatureCount64( int bForce )
+GIntBig OGROpenFileGDBSimpleSQLLayer::GetFeatureCount( int bForce )
 {
 
     /* No filter */
@@ -791,7 +791,7 @@ GIntBig OGROpenFileGDBSimpleSQLLayer::GetFeatureCount64( int bForce )
         return poIter->GetRowCount();
     }
 
-    return OGRLayer::GetFeatureCount64(bForce);
+    return OGRLayer::GetFeatureCount(bForce);
 }
 
 /***********************************************************************/
@@ -1122,7 +1122,7 @@ OGRLayer* OGROpenFileGDBDataSource::ExecuteSQL( const char *pszSQLCommand,
 
                     /* Check that they are no NULL values */
                     if( oSelect.where_expr == NULL &&
-                        poIter->GetRowCount() != poLayer->GetFeatureCount64(FALSE) )
+                        poIter->GetRowCount() != poLayer->GetFeatureCount(FALSE) )
                     {
                         delete poIter;
                         poIter = NULL;

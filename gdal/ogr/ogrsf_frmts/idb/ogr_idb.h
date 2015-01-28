@@ -112,7 +112,7 @@ class OGRIDBTableLayer : public OGRIDBLayer
                                   );
 
     virtual void        ResetReading();
-    virtual GIntBig     GetFeatureCount64( int );
+    virtual GIntBig     GetFeatureCount( int );
 
     virtual OGRErr      SetAttributeFilter( const char * );
     virtual OGRErr      ISetFeature( OGRFeature *poFeature );
@@ -148,7 +148,7 @@ class OGRIDBSelectLayer : public OGRIDBLayer
                         ~OGRIDBSelectLayer();
 
     virtual void        ResetReading();
-    virtual GIntBig     GetFeatureCount64( int );
+    virtual GIntBig     GetFeatureCount( int );
 
     virtual OGRFeature *GetFeature( GIntBig nFeatureId );
 

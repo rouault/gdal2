@@ -1264,7 +1264,7 @@ OGRErr SHPWriteOGRFeature( SHPHandle hSHP, DBFHandle hDBF,
 
     if( hSHP != NULL )
     {
-        eErr = SHPWriteOGRObject( hSHP, poFeature->GetFID64(),
+        eErr = SHPWriteOGRObject( hSHP, poFeature->GetFID(),
                                   poFeature->GetGeometryRef() );
         if( eErr != OGRERR_NONE )
             return eErr;
@@ -1278,7 +1278,7 @@ OGRErr SHPWriteOGRFeature( SHPHandle hSHP, DBFHandle hDBF,
 /* -------------------------------------------------------------------- */
 /*      If this is a new feature, establish it's feature id.            */
 /* -------------------------------------------------------------------- */
-        if( hSHP != NULL && poFeature->GetFID64() == OGRNullFID )
+        if( hSHP != NULL && poFeature->GetFID() == OGRNullFID )
             poFeature->SetFID( hSHP->nRecords - 1 );
 
         return OGRERR_NONE;
@@ -1287,7 +1287,7 @@ OGRErr SHPWriteOGRFeature( SHPHandle hSHP, DBFHandle hDBF,
 /* -------------------------------------------------------------------- */
 /*      If this is a new feature, establish it's feature id.            */
 /* -------------------------------------------------------------------- */
-    if( poFeature->GetFID64() == OGRNullFID )
+    if( poFeature->GetFID() == OGRNullFID )
         poFeature->SetFID( DBFGetRecordCount( hDBF ) );
 
 /* -------------------------------------------------------------------- */
@@ -1308,8 +1308,8 @@ OGRErr SHPWriteOGRFeature( SHPHandle hSHP, DBFHandle hDBF,
 /* -------------------------------------------------------------------- */
     if( DBFGetFieldCount( hDBF ) == 1 && poDefn->GetFieldCount() == 0 )
     {
-        DBFWriteIntegerAttribute( hDBF, poFeature->GetFID64(), 0, 
-                                  poFeature->GetFID64() );
+        DBFWriteIntegerAttribute( hDBF, poFeature->GetFID(), 0, 
+                                  poFeature->GetFID() );
     }
 
 /* -------------------------------------------------------------------- */
@@ -1319,7 +1319,7 @@ OGRErr SHPWriteOGRFeature( SHPHandle hSHP, DBFHandle hDBF,
     {
         if( !poFeature->IsFieldSet( iField ) )
         {
-            DBFWriteNULLAttribute( hDBF, poFeature->GetFID64(), iField );
+            DBFWriteNULLAttribute( hDBF, poFeature->GetFID(), iField );
             continue;
         }
 
@@ -1383,7 +1383,7 @@ OGRErr SHPWriteOGRFeature( SHPHandle hSHP, DBFHandle hDBF,
                   }
               }
 
-              DBFWriteStringAttribute( hDBF, poFeature->GetFID64(), iField,
+              DBFWriteStringAttribute( hDBF, poFeature->GetFID(), iField,
                                               pszStr );
 
               CPLFree( pszEncoded );
@@ -1407,7 +1407,7 @@ OGRErr SHPWriteOGRFeature( SHPHandle hSHP, DBFHandle hDBF,
                   }
               }
 
-              DBFWriteAttributeDirectly( hDBF, poFeature->GetFID64(), iField, 
+              DBFWriteAttributeDirectly( hDBF, poFeature->GetFID(), iField, 
                                          szValue );
 
               break;
@@ -1424,19 +1424,19 @@ OGRErr SHPWriteOGRFeature( SHPHandle hSHP, DBFHandle hDBF,
                 {
                     CPLError(CE_Warning, CPLE_AppDefined,
                              "Value %.18g of field %s with 0 decimal of feature " CPL_FRMT_GIB " is bigger than 2^53. Precision loss likely occured or going to happen.%s",
-                             dfVal, poFieldDefn->GetNameRef(), poFeature->GetFID64(),
+                             dfVal, poFieldDefn->GetNameRef(), poFeature->GetFID(),
                              (nCounter == 10) ? " This warning will not be emitted anymore." : "");
                     nCounter ++;
                 }
             }
-            int ret = DBFWriteDoubleAttribute( hDBF, poFeature->GetFID64(), iField, 
+            int ret = DBFWriteDoubleAttribute( hDBF, poFeature->GetFID(), iField, 
                                                dfVal );
             if( !ret )
             {
                 CPLError(CE_Warning, CPLE_AppDefined,
                          "Value %.18g of field %s of feature " CPL_FRMT_GIB " not successfully written. "
                          "Possibly due to too larger number with respect to field width",
-                         dfVal, poFieldDefn->GetNameRef(), poFeature->GetFID64());
+                         dfVal, poFieldDefn->GetNameRef(), poFeature->GetFID());
             }
             break;
           }
@@ -1454,7 +1454,7 @@ OGRErr SHPWriteOGRFeature( SHPHandle hSHP, DBFHandle hDBF,
                                "Year < 0 or > 9999 is not a valid date for shapefile");
                   }
                   else
-                      DBFWriteIntegerAttribute( hDBF, poFeature->GetFID64(), iField, 
+                      DBFWriteIntegerAttribute( hDBF, poFeature->GetFID(), iField, 
                                             nYear*10000 + nMonth*100 + nDay );
               }
           }

@@ -80,7 +80,7 @@ public:
     
     int                  TestCapability(const char *);
 
-    GIntBig              GetFeatureCount64(int = TRUE);
+    GIntBig              GetFeatureCount(int = TRUE);
 };
 
 /************************************************************************/

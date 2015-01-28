@@ -886,7 +886,7 @@ void OGRSXFDataSource::FillLayers()
     for (i = 0; i < nLayers; i++)
     {
         OGRSXFLayer* pOGRSXFLayer = (OGRSXFLayer*)papoLayers[i];
-        if (pOGRSXFLayer && pOGRSXFLayer->GetFeatureCount64() == 0)
+        if (pOGRSXFLayer && pOGRSXFLayer->GetFeatureCount() == 0)
         {
             delete pOGRSXFLayer;
             nDeletedLayerIndex = i;

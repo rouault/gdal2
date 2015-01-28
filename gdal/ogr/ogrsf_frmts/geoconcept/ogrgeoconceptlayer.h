@@ -64,7 +64,7 @@ class OGRGeoconceptLayer : public OGRLayer
     OGRErr               ICreateFeature( OGRFeature* poFeature );
     OGRFeatureDefn*      GetLayerDefn( ) { return _poFeatureDefn; } // FIXME
     OGRSpatialReference* GetSpatialRef( );
-    GIntBig              GetFeatureCount64( int bForce = TRUE );
+    GIntBig              GetFeatureCount( int bForce = TRUE );
     OGRErr               GetExtent( OGREnvelope *psExtent, int bForce = TRUE );
     int                  TestCapability( const char* pszCap );
 //    const char*          GetInfo( const char* pszTag );

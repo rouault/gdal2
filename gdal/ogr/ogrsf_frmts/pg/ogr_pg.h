@@ -307,7 +307,7 @@ public:
     virtual OGRFeature *GetFeature( GIntBig nFeatureId );
     virtual void        ResetReading();
     virtual OGRFeature *GetNextFeature();
-    virtual GIntBig     GetFeatureCount64( int );
+    virtual GIntBig     GetFeatureCount( int );
 
     virtual void        SetSpatialFilter( OGRGeometry *poGeom ) { SetSpatialFilter(0, poGeom); }
     virtual void        SetSpatialFilter( int iGeomField, OGRGeometry *poGeom );
@@ -396,7 +396,7 @@ class OGRPGResultLayer : public OGRPGLayer
     virtual             ~OGRPGResultLayer();
 
     virtual void        ResetReading();
-    virtual GIntBig     GetFeatureCount64( int );
+    virtual GIntBig     GetFeatureCount( int );
 
     virtual void        SetSpatialFilter( OGRGeometry *poGeom ) { SetSpatialFilter(0, poGeom); }
     virtual void        SetSpatialFilter( int iGeomField, OGRGeometry *poGeom );

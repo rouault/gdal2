@@ -262,7 +262,7 @@ OGRErr OGROCILoaderLayer::WriteFeatureStreamMode( OGRFeature *poFeature )
 /* -------------------------------------------------------------------- */
 /*      Write the FID.                                                  */
 /* -------------------------------------------------------------------- */
-    VSIFPrintf( fpLoader, " " CPL_FRMT_GIB "|", poFeature->GetFID64() );
+    VSIFPrintf( fpLoader, " " CPL_FRMT_GIB "|", poFeature->GetFID() );
 
 /* -------------------------------------------------------------------- */
 /*      Set the geometry                                                */
@@ -400,7 +400,7 @@ OGRErr OGROCILoaderLayer::WriteFeatureVariableMode( OGRFeature *poFeature )
 /*      Write the FID.                                                  */
 /* -------------------------------------------------------------------- */
     oLine.Append( "00000000" );
-    oLine.Appendf( 32, " %d|", poFeature->GetFID64() );
+    oLine.Appendf( 32, " %d|", poFeature->GetFID() );
 
 /* -------------------------------------------------------------------- */
 /*      Set the geometry                                                */
@@ -539,7 +539,7 @@ OGRErr OGROCILoaderLayer::ICreateFeature( OGRFeature *poFeature )
 /* -------------------------------------------------------------------- */
 /*      Set the FID.                                                    */
 /* -------------------------------------------------------------------- */
-    if( poFeature->GetFID64() == OGRNullFID )
+    if( poFeature->GetFID() == OGRNullFID )
         poFeature->SetFID( iNextFIDToWrite++ );
 
 /* -------------------------------------------------------------------- */
@@ -584,7 +584,7 @@ int OGROCILoaderLayer::TestCapability( const char * pszCap )
 }
 
 /************************************************************************/
-/*                          GetFeatureCount64()                           */
+/*                          GetFeatureCount()                           */
 /*                                                                      */
 /*      If a spatial filter is in effect, we turn control over to       */
 /*      the generic counter.  Otherwise we return the total count.      */
@@ -592,7 +592,7 @@ int OGROCILoaderLayer::TestCapability( const char * pszCap )
 /*      way of counting features matching a spatial query.              */
 /************************************************************************/
 
-GIntBig OGROCILoaderLayer::GetFeatureCount64( int bForce )
+GIntBig OGROCILoaderLayer::GetFeatureCount( int bForce )
 
 {
     return iNextFIDToWrite - 1;

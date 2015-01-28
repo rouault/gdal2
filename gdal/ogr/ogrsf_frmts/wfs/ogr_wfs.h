@@ -156,7 +156,7 @@ class OGRWFSLayer : public OGRLayer
 
     virtual OGRErr      SetAttributeFilter( const char * );
 
-    virtual GIntBig     GetFeatureCount64( int bForce = TRUE );
+    virtual GIntBig     GetFeatureCount( int bForce = TRUE );
 
     void                SetExtents(double dfMinX, double dfMinY, double dfMaxX, double dfMaxY);
     virtual OGRErr      GetExtent(OGREnvelope *psExtent, int bForce = TRUE);

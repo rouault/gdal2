@@ -86,7 +86,7 @@ public:
 
     virtual int                 TestCapability( const char * );
 
-    virtual GIntBig     GetFeatureCount64(int bForce = TRUE);
+    virtual GIntBig     GetFeatureCount(int bForce = TRUE);
     virtual OGRErr      GetExtent(OGREnvelope *psExtent, int bForce = TRUE);
     virtual OGRSpatialReference *GetSpatialRef();
     virtual const char* GetFIDColumn();

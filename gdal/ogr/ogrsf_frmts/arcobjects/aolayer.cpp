@@ -513,10 +513,10 @@ OGRFeature *AOLayer::GetFeature( GIntBig oid )
 
 
 /************************************************************************/
-/*                          GetFeatureCount64()                           */
+/*                          GetFeatureCount()                           */
 /************************************************************************/
 
-GIntBig AOLayer::GetFeatureCount64( int bForce )
+GIntBig AOLayer::GetFeatureCount( int bForce )
 {
   HRESULT hr;
 

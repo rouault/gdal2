@@ -82,22 +82,20 @@ Link:http://trac.osgeo.org/gdal/wiki/rfc31_ogr_64
 
 C++ API:
   * OGRLayer::GetFeature(), OGRLayer::DeleteFeature(), OGRLayer::SetNextByIndex() take a GIntBig instead of a long
-  * OGRFeature::GetFID() deprecated in favor of OGRFeature::GetFID64()
-  * OGRLayer::GetFeatureCount() deprecated in favor of OGRFeature::GetFeatureCount64()
+  * OGRFeature::GetFID() and OGRLayer::GetFeatureCount() now returns a GIntBig
 
 C API:
   * OGR_L_GetFeature(), OGR_L_DeleteFeature(), OGR_L_SetNextByIndex() take a GIntBig instead of a long
-  * OGR_F_GetFID() deprecated in favor of OGR_F_GetFID64()
-  * OGR_L_GetFeatureCount() deprecated in favor of OGR_L_GetFeatureCount64()
+  * OGR_F_GetFID() and OGR_L_GetFeatureCount() now returns a GIntBig
 
 Behaviour changes :
   * OFTInteger64 and OFTIntegerList64 can be returned whereas OGRFieldType is returned.
 
 Out-of-tree drivers :
-
-  * OGRLayer::GetFeature(), OGRLayer::DeleteFeature(), OGRLayer::SetNextByIndex() take a GIntBig instead of a long
-    int OGRLayer::GetFeatureCount() is replaced by GIntBig OGRLayer::GetFeatureCount64() 
-    Features ids can be 64 bit wide and are retrieved with OGRFeature::GetFID64()
+  * Virtual method signature change: OGRLayer::GetFeature(), OGRLayer::DeleteFeature(),
+    OGRLayer::SetNextByIndex() take a GIntBig argument instead of a long
+  * Virtual method signature change: OGRLayer::GetFeatureCount() now returns a GIntBig
+  * OGRFeature::GetFID() returns a GIntBig
 
 MIGRATION GUIDE FROM GDAL 1.10 to GDAL 1.11
 -------------------------------------------

@@ -105,7 +105,7 @@ OGRFeature* OGRODSLayer::GetNextFeature()
 {
     OGRFeature* poFeature = OGRMemLayer::GetNextFeature();
     if (poFeature)
-        poFeature->SetFID(poFeature->GetFID64() + 1 + bHasHeaderLine);
+        poFeature->SetFID(poFeature->GetFID() + 1 + bHasHeaderLine);
     return poFeature;
 }
 
@@ -130,7 +130,7 @@ OGRErr OGRODSLayer::ISetFeature( OGRFeature *poFeature )
     if (poFeature == NULL)
         return OGRMemLayer::ISetFeature(poFeature);
 
-    long nFID = poFeature->GetFID64();
+    long nFID = poFeature->GetFID();
     if (nFID != OGRNullFID)
         poFeature->SetFID(nFID - (1 + bHasHeaderLine));
     SetUpdated(); 
@@ -1751,7 +1751,7 @@ void OGRODSDataSource::FlushCache()
 int ODSCellEvaluator::EvaluateRange(int nRow1, int nCol1, int nRow2, int nCol2,
                                     std::vector<ods_formula_node>& aoOutValues)
 {
-    if (nRow1 < 0 || nRow1 >= poLayer->GetFeatureCount64(FALSE) ||
+    if (nRow1 < 0 || nRow1 >= poLayer->GetFeatureCount(FALSE) ||
         nCol1 < 0 || nCol1 >= poLayer->GetLayerDefn()->GetFieldCount())
     {
         CPLError(CE_Failure, CPLE_AppDefined,
@@ -1759,7 +1759,7 @@ int ODSCellEvaluator::EvaluateRange(int nRow1, int nCol1, int nRow2, int nCol2,
         return FALSE;
     }
 
-    if (nRow2 < 0 || nRow2 >= poLayer->GetFeatureCount64(FALSE) ||
+    if (nRow2 < 0 || nRow2 >= poLayer->GetFeatureCount(FALSE) ||
         nCol2 < 0 || nCol2 >= poLayer->GetLayerDefn()->GetFieldCount())
     {
         CPLError(CE_Failure, CPLE_AppDefined,

@@ -55,7 +55,7 @@ class OGRGRASSLayer : public OGRLayer
 
     // Layer info
     OGRFeatureDefn *    GetLayerDefn() { return poFeatureDefn; }
-    GIntBig             GetFeatureCount64( int );
+    GIntBig             GetFeatureCount( int );
     OGRErr              GetExtent(OGREnvelope *psExtent, int bForce);
     virtual OGRSpatialReference *GetSpatialRef();
     int                 TestCapability( const char * );

@@ -322,7 +322,7 @@ OGRErr OGRBNALayer::ICreateFeature( OGRFeature *poFeature )
         return OGRERR_FAILURE;
     }
     
-    if( poFeature->GetFID64() == OGRNullFID )
+    if( poFeature->GetFID() == OGRNullFID )
         poFeature->SetFID( nFeatures++ );
     
     VSILFILE* fp = poDS->GetOutputFP();

@@ -364,7 +364,7 @@ class OGROCILoaderLayer : public OGROCIWritableLayer
                         ~OGROCILoaderLayer();
 
     virtual void        ResetReading();
-    virtual GIntBig     GetFeatureCount64( int );
+    virtual GIntBig     GetFeatureCount( int );
 
     virtual void        SetSpatialFilter( OGRGeometry * ) {}
 
@@ -444,7 +444,7 @@ class OGROCITableLayer : public OGROCIWritableLayer
                         ~OGROCITableLayer();
 
     virtual void        ResetReading();
-    virtual GIntBig     GetFeatureCount64( int );
+    virtual GIntBig     GetFeatureCount( int );
 
     virtual void        SetSpatialFilter( OGRGeometry * );
 

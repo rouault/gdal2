@@ -474,14 +474,14 @@ OGRErr OGRIngresTableLayer::ISetFeature( OGRFeature *poFeature )
 {
     OGRErr eErr;
 
-    if( poFeature->GetFID64() == OGRNullFID )
+    if( poFeature->GetFID() == OGRNullFID )
     {
         CPLError( CE_Failure, CPLE_AppDefined,
                   "FID required on features given to SetFeature()." );
         return OGRERR_FAILURE;
     }
 
-    eErr = DeleteFeature( poFeature->GetFID64() );
+    eErr = DeleteFeature( poFeature->GetFID() );
     if( eErr != OGRERR_NONE )
         return eErr;
 
@@ -834,7 +834,7 @@ OGRErr OGRIngresTableLayer::ICreateFeature( OGRFeature *poFeature )
         bNeedComma = TRUE;
     }
 
-    if( poFeature->GetFID64() != OGRNullFID && osFIDColumn.size() )
+    if( poFeature->GetFID() != OGRNullFID && osFIDColumn.size() )
     {
         if( bNeedComma )
             osCommand += ", ";
@@ -909,11 +909,11 @@ OGRErr OGRIngresTableLayer::ICreateFeature( OGRFeature *poFeature )
 /* -------------------------------------------------------------------- */
 /*      Set the FID                                                     */
 /* -------------------------------------------------------------------- */
-    if( poFeature->GetFID64() != OGRNullFID && osFIDColumn.size() )
+    if( poFeature->GetFID() != OGRNullFID && osFIDColumn.size() )
     {
         if( bNeedComma )
             osCommand += ", ";
-        osCommand += CPLString().Printf( "%ld ", poFeature->GetFID64() );
+        osCommand += CPLString().Printf( "%ld ", poFeature->GetFID() );
         bNeedComma = TRUE;
     }
 
@@ -1206,7 +1206,7 @@ OGRFeature *OGRIngresTableLayer::GetFeature( GIntBig nFeatureId )
 #endif
 
 /************************************************************************/
-/*                          GetFeatureCount64()                           */
+/*                          GetFeatureCount()                           */
 /*                                                                      */
 /*      If a spatial filter is in effect, we turn control over to       */
 /*      the generic counter.  Otherwise we return the total count.      */
@@ -1215,7 +1215,7 @@ OGRFeature *OGRIngresTableLayer::GetFeature( GIntBig nFeatureId )
 /************************************************************************/
 
 #ifdef notdef
-GIntBig OGRIngresTableLayer::GetFeatureCount64( int bForce )
+GIntBig OGRIngresTableLayer::GetFeatureCount( int bForce )
 
 {
 /* -------------------------------------------------------------------- */

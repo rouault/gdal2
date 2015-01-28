@@ -859,7 +859,7 @@ OGRErr OGRShapeLayer::ISetFeature( OGRFeature *poFeature )
         return OGRERR_FAILURE;
     }
 
-    GIntBig nFID = poFeature->GetFID64();
+    GIntBig nFID = poFeature->GetFID();
     if( nFID < 0
         || (hSHP != NULL && nFID >= hSHP->nRecords)
         || (hDBF != NULL && nFID >= hDBF->nRecords) )
@@ -1062,7 +1062,7 @@ OGRErr OGRShapeLayer::ICreateFeature( OGRFeature *poFeature )
 /************************************************************************/
 /*               GetFeatureCountWithSpatialFilterOnly()                 */
 /*                                                                      */
-/* Specialized implementation of GetFeatureCount64() when there is *only* */
+/* Specialized implementation of GetFeatureCount() when there is *only* */
 /* a spatial filter and no attribute filter.                            */
 /************************************************************************/
 
@@ -1268,10 +1268,10 @@ int OGRShapeLayer::GetFeatureCountWithSpatialFilterOnly()
 }
 
 /************************************************************************/
-/*                          GetFeatureCount64()                           */
+/*                          GetFeatureCount()                           */
 /************************************************************************/
 
-GIntBig OGRShapeLayer::GetFeatureCount64( int bForce )
+GIntBig OGRShapeLayer::GetFeatureCount( int bForce )
 
 {
     /* Check if the spatial filter is non-trivial */
@@ -1318,13 +1318,13 @@ GIntBig OGRShapeLayer::GetFeatureCount64( int bForce )
         if (!AttributeFilterEvaluationNeedsGeometry())
             poFeatureDefn->SetGeometryIgnored(TRUE);
 
-        GIntBig nRet = OGRLayer::GetFeatureCount64( bForce );
+        GIntBig nRet = OGRLayer::GetFeatureCount( bForce );
 
         poFeatureDefn->SetGeometryIgnored(bSaveGeometryIgnored);
         return nRet;
     }
 
-    return OGRLayer::GetFeatureCount64( bForce );
+    return OGRLayer::GetFeatureCount( bForce );
 }
 
 /************************************************************************/

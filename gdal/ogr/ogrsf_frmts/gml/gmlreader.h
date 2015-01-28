@@ -192,7 +192,7 @@ public:
     const char  *GetExtraInfo();
     void        SetExtraInfo( const char * );
 
-    GIntBig     GetFeatureCount64();
+    GIntBig     GetFeatureCount();
     void        SetFeatureCount( GIntBig );
 
     int         HasExtents() const { return m_bHaveExtents; }

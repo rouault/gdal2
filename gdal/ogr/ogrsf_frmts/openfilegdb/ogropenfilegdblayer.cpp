@@ -1407,10 +1407,10 @@ OGRErr OGROpenFileGDBLayer::GetExtent( OGREnvelope *psExtent, int bForce )
 }
 
 /***********************************************************************/
-/*                         GetFeatureCount64()                           */
+/*                         GetFeatureCount()                           */
 /***********************************************************************/
 
-GIntBig OGROpenFileGDBLayer::GetFeatureCount64( int bForce )
+GIntBig OGROpenFileGDBLayer::GetFeatureCount( int bForce )
 {
     if( !BuildLayerDefinition() )
         return 0;
@@ -1507,7 +1507,7 @@ GIntBig OGROpenFileGDBLayer::GetFeatureCount64( int bForce )
         return m_poIterator->GetRowCount();
     }
 
-    return OGRLayer::GetFeatureCount64(bForce);
+    return OGRLayer::GetFeatureCount(bForce);
 }
 
 /***********************************************************************/

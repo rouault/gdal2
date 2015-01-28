@@ -392,8 +392,7 @@ OGRErr            CPL_DLL OGR_F_SetGeomFieldDirectly( OGRFeatureH hFeat,
 OGRErr            CPL_DLL OGR_F_SetGeomField( OGRFeatureH hFeat,
                                               int iField, OGRGeometryH hGeom );
 
-long CPL_DLL OGR_F_GetFID( OGRFeatureH ) CPL_WARN_DEPRECATED("Use OGR_F_GetFID64() instead");
-GIntBig CPL_DLL OGR_F_GetFID64( OGRFeatureH );
+GIntBig CPL_DLL OGR_F_GetFID( OGRFeatureH );
 OGRErr CPL_DLL OGR_F_SetFID( OGRFeatureH, GIntBig );
 void   CPL_DLL OGR_F_DumpReadable( OGRFeatureH, FILE * );
 OGRErr CPL_DLL OGR_F_SetFrom( OGRFeatureH, OGRFeatureH, int );
@@ -444,8 +443,7 @@ OGRErr CPL_DLL OGR_L_DeleteFeature( OGRLayerH, GIntBig );
 OGRFeatureDefnH CPL_DLL OGR_L_GetLayerDefn( OGRLayerH );
 OGRSpatialReferenceH CPL_DLL OGR_L_GetSpatialRef( OGRLayerH );
 int    CPL_DLL OGR_L_FindFieldIndex( OGRLayerH, const char *, int bExactMatch );
-int    CPL_DLL OGR_L_GetFeatureCount( OGRLayerH, int ) CPL_WARN_DEPRECATED("Use OGR_L_GetFeatureCount64() instead");
-GIntBig CPL_DLL OGR_L_GetFeatureCount64( OGRLayerH, int );
+GIntBig CPL_DLL OGR_L_GetFeatureCount( OGRLayerH, int );
 OGRErr CPL_DLL OGR_L_GetExtent( OGRLayerH, OGREnvelope *, int );
 OGRErr  CPL_DLL OGR_L_GetExtentEx( OGRLayerH, int iGeomField,
                                    OGREnvelope *psExtent, int bForce );

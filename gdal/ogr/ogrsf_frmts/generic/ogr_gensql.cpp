@@ -684,10 +684,10 @@ OGRErr OGRGenSQLResultsLayer::GetExtent( int iGeomField,
 }
 
 /************************************************************************/
-/*                          GetFeatureCount64()                           */
+/*                          GetFeatureCount()                           */
 /************************************************************************/
 
-GIntBig OGRGenSQLResultsLayer::GetFeatureCount64( int bForce )
+GIntBig OGRGenSQLResultsLayer::GetFeatureCount( int bForce )
 
 {
     swq_select *psSelectInfo = (swq_select *) pSelectInfo;
@@ -709,9 +709,9 @@ GIntBig OGRGenSQLResultsLayer::GetFeatureCount64( int bForce )
     else if( psSelectInfo->query_mode != SWQM_RECORDSET )
         return 1;
     else if( m_poAttrQuery == NULL && !MustEvaluateSpatialFilterOnGenSQL() )
-        return poSrcLayer->GetFeatureCount64( bForce );
+        return poSrcLayer->GetFeatureCount( bForce );
     else
-        return OGRLayer::GetFeatureCount64( bForce );
+        return OGRLayer::GetFeatureCount( bForce );
 }
 
 /************************************************************************/
@@ -846,14 +846,14 @@ int OGRGenSQLResultsLayer::PrepareSummary()
 
 /* -------------------------------------------------------------------- */
 /*      We treat COUNT(*) as a special case, and fill with              */
-/*      GetFeatureCount64().                                            */
+/*      GetFeatureCount().                                            */
 /* -------------------------------------------------------------------- */
 
     if( psSelectInfo->result_columns == 1 
         && psSelectInfo->column_defs[0].col_func == SWQCF_COUNT
         && psSelectInfo->column_defs[0].field_index < 0 )
     {
-        GIntBig nRes = poSrcLayer->GetFeatureCount64( TRUE );
+        GIntBig nRes = poSrcLayer->GetFeatureCount( TRUE );
         poSummaryFeature->SetField( 0, nRes );
 
         if( (GIntBig)(int)nRes == nRes )
@@ -1249,7 +1249,7 @@ OGRFeature *OGRGenSQLResultsLayer::TranslateFeature( OGRFeature *poSrcFeat )
 /* -------------------------------------------------------------------- */
     poDstFeat = new OGRFeature( poDefn );
 
-    poDstFeat->SetFID( poSrcFeat->GetFID64() );
+    poDstFeat->SetFID( poSrcFeat->GetFID() );
 
     poDstFeat->SetStyleString( poSrcFeat->GetStyleString() );
 
@@ -1793,7 +1793,7 @@ void OGRGenSQLResultsLayer::CreateOrderByIndex()
             }
         }
 
-        panFIDList[nIndexSize] = poSrcFeat->GetFID64();
+        panFIDList[nIndexSize] = poSrcFeat->GetFID();
         delete poSrcFeat;
 
         nIndexSize++;

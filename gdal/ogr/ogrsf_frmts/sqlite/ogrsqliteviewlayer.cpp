@@ -532,7 +532,7 @@ int OGRSQLiteViewLayer::TestCapability( const char * pszCap )
 }
 
 /************************************************************************/
-/*                          GetFeatureCount64()                           */
+/*                          GetFeatureCount()                           */
 /*                                                                      */
 /*      If a spatial filter is in effect, we turn control over to       */
 /*      the generic counter.  Otherwise we return the total count.      */
@@ -540,14 +540,14 @@ int OGRSQLiteViewLayer::TestCapability( const char * pszCap )
 /*      way of counting features matching a spatial query.              */
 /************************************************************************/
 
-GIntBig OGRSQLiteViewLayer::GetFeatureCount64( int bForce )
+GIntBig OGRSQLiteViewLayer::GetFeatureCount( int bForce )
 
 {
     if (HasLayerDefnError())
         return 0;
 
     if( !TestCapability(OLCFastFeatureCount) )
-        return OGRSQLiteLayer::GetFeatureCount64( bForce );
+        return OGRSQLiteLayer::GetFeatureCount( bForce );
 
 /* -------------------------------------------------------------------- */
 /*      Form count SQL.                                                 */

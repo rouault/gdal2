@@ -88,8 +88,8 @@ class OGRXLSXLayer : public OGRMemLayer
     OGRFeatureDefn *    GetLayerDefn()
     { Init(); return OGRMemLayer::GetLayerDefn(); }
 
-    GIntBig                 GetFeatureCount64( int bForce )
-    { Init(); return OGRMemLayer::GetFeatureCount64(bForce); }
+    GIntBig                 GetFeatureCount( int bForce )
+    { Init(); return OGRMemLayer::GetFeatureCount(bForce); }
 
     virtual OGRErr      CreateField( OGRFieldDefn *poField,
                                      int bApproxOK = TRUE )

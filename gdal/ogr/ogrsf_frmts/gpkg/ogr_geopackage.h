@@ -393,7 +393,7 @@ class OGRGeoPackageTableLayer : public OGRGeoPackageLayer
     OGRErr              StartTransaction();
     OGRErr              CommitTransaction();
     OGRErr              RollbackTransaction();
-    GIntBig             GetFeatureCount64( int );
+    GIntBig             GetFeatureCount( int );
     OGRErr              GetExtent(OGREnvelope *psExtent, int bForce = TRUE);
     
     // void                SetSpatialFilter( int iGeomField, OGRGeometry * poGeomIn );
@@ -458,7 +458,7 @@ class OGRGeoPackageSelectLayer : public OGRGeoPackageLayer, public IOGRSQLiteSel
     virtual void        ResetReading();
 
     virtual OGRFeature *GetNextFeature();
-    virtual GIntBig     GetFeatureCount64( int );
+    virtual GIntBig     GetFeatureCount( int );
 
     virtual void        SetSpatialFilter( OGRGeometry * poGeom ) { SetSpatialFilter(0, poGeom); }
     virtual void        SetSpatialFilter( int iGeomField, OGRGeometry * );
@@ -480,7 +480,7 @@ class OGRGeoPackageSelectLayer : public OGRGeoPackageLayer, public IOGRSQLiteSel
     virtual void                 BaseResetReading() { OGRGeoPackageLayer::ResetReading(); }
     virtual OGRFeature          *BaseGetNextFeature() { return OGRGeoPackageLayer::GetNextFeature(); }
     virtual OGRErr               BaseSetAttributeFilter(const char* pszQuery) { return OGRGeoPackageLayer::SetAttributeFilter(pszQuery); }
-    virtual int                  BaseGetFeatureCount64(int bForce) { return OGRGeoPackageLayer::GetFeatureCount64(bForce); }
+    virtual int                  BaseGetFeatureCount(int bForce) { return OGRGeoPackageLayer::GetFeatureCount(bForce); }
     virtual int                  BaseTestCapability( const char *pszCap ) { return OGRGeoPackageLayer::TestCapability(pszCap); }
     virtual OGRErr               BaseGetExtent(OGREnvelope *psExtent, int bForce) { return OGRGeoPackageLayer::GetExtent(psExtent, bForce); }
     virtual OGRErr               BaseGetExtent(int iGeomField, OGREnvelope *psExtent, int bForce) { return OGRGeoPackageLayer::GetExtent(iGeomField, psExtent, bForce); }

@@ -720,7 +720,7 @@ by the OGRSFDriverManager.
 
 /**
 
- \fn int OGRLayer::GetFeatureCount( int bForce = TRUE );
+ \fn GIntBig OGRLayer::GetFeatureCount( int bForce = TRUE );
 
  \brief Fetch the feature count in this layer. 
 
@@ -736,16 +736,18 @@ by the OGRSFDriverManager.
  of the layer.
 
  This method is the same as the C function OGR_L_GetFeatureCount().
+ 
+ Note: since GDAL 2.0, this method returns a GIntBig (previously a int)
 
  @param bForce Flag indicating whether the count should be computed even
  if it is expensive.
 
  @return feature count, -1 if count not known. 
- @deprecated Use GetFeatureCount64() instead
+
 */
 
 /**
- \fn int OGR_L_GetFeatureCount( OGRLayerH hLayer, int bForce );
+ \fn GIntBig OGR_L_GetFeatureCount( OGRLayerH hLayer, int bForce );
 
  \brief Fetch the feature count in this layer. 
 
@@ -762,66 +764,13 @@ by the OGRSFDriverManager.
 
  This function is the same as the CPP OGRLayer::GetFeatureCount().
 
- @param hLayer handle to the layer that owned the features.
- @param bForce Flag indicating whether the count should be computed even
- if it is expensive.
-
- @return feature count, -1 if count not known. 
- @deprecated Use OGR_L_GetFeatureCount64() instead
-
-*/
-
-/**
-
- \fn GIntBig OGRLayer::GetFeatureCount64( int bForce = TRUE );
-
- \brief Fetch the feature count in this layer. 
-
- Returns the number of features in the layer.  For dynamic databases the
- count may not be exact.  If bForce is FALSE, and it would be expensive
- to establish the feature count a value of -1 may be returned indicating
- that the count isn't know.  If bForce is TRUE some implementations will
- actually scan the entire layer once to count objects. 
-
- The returned count takes the spatial filter into account. 
-
- Note that some implementations of this method may alter the read cursor
- of the layer.
-
- This method is the same as the C function OGR_L_GetFeatureCount64().
-
- @param bForce Flag indicating whether the count should be computed even
- if it is expensive.
-
- @return feature count, -1 if count not known. 
- @since GDAL 2.0
-
-*/
-
-/**
- \fn GIntBig OGR_L_GetFeatureCount64( OGRLayerH hLayer, int bForce );
-
- \brief Fetch the feature count in this layer. 
-
- Returns the number of features in the layer.  For dynamic databases the
- count may not be exact.  If bForce is FALSE, and it would be expensive
- to establish the feature count a value of -1 may be returned indicating
- that the count isn't know.  If bForce is TRUE some implementations will
- actually scan the entire layer once to count objects. 
-
- The returned count takes the spatial filter into account. 
-
- Note that some implementations of this method may alter the read cursor
- of the layer.
-
- This function is the same as the CPP OGRLayer::GetFeatureCount64().
+ Note: since GDAL 2.0, this method returns a GIntBig (previously a int)
 
  @param hLayer handle to the layer that owned the features.
  @param bForce Flag indicating whether the count should be computed even
  if it is expensive.
 
  @return feature count, -1 if count not known. 
- @since GDAL 2.0
 
 */
 

@@ -171,7 +171,7 @@ OGRFeature *OGRWarpedLayer::SrcFeatureToWarpedFeature(OGRFeature* poSrcFeature)
 {
     OGRFeature* poFeature = new OGRFeature(GetLayerDefn());
     poFeature->SetFrom(poSrcFeature);
-    poFeature->SetFID(poSrcFeature->GetFID64());
+    poFeature->SetFID(poSrcFeature->GetFID());
 
     OGRGeometry* poGeom = poFeature->GetGeomFieldRef(m_iGeomField);
     if( poGeom == NULL )
@@ -194,7 +194,7 @@ OGRFeature *OGRWarpedLayer::WarpedFeatureToSrcFeature(OGRFeature* poFeature)
 {
     OGRFeature* poSrcFeature = new OGRFeature(m_poDecoratedLayer->GetLayerDefn());
     poSrcFeature->SetFrom(poFeature);
-    poSrcFeature->SetFID(poFeature->GetFID64());
+    poSrcFeature->SetFID(poFeature->GetFID());
 
     OGRGeometry* poGeom = poSrcFeature->GetGeomFieldRef(m_iGeomField);
     if( poGeom != NULL )
@@ -326,15 +326,15 @@ OGRSpatialReference *OGRWarpedLayer::GetSpatialRef()
 }
 
 /************************************************************************/
-/*                           GetFeatureCount64()                          */
+/*                           GetFeatureCount()                          */
 /************************************************************************/
 
-GIntBig OGRWarpedLayer::GetFeatureCount64( int bForce )
+GIntBig OGRWarpedLayer::GetFeatureCount( int bForce )
 {
     if( m_poFilterGeom == NULL )
-        return m_poDecoratedLayer->GetFeatureCount64(bForce);
+        return m_poDecoratedLayer->GetFeatureCount(bForce);
 
-    return OGRLayer::GetFeatureCount64(bForce);
+    return OGRLayer::GetFeatureCount(bForce);
 }
 
 /************************************************************************/

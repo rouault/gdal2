@@ -166,7 +166,7 @@ int OGRPGeoSelectLayer::TestCapability( const char * pszCap )
 }
 
 /************************************************************************/
-/*                          GetFeatureCount64()                           */
+/*                          GetFeatureCount()                           */
 /*                                                                      */
 /*      If a spatial filter is in effect, we turn control over to       */
 /*      the generic counter.  Otherwise we return the total count.      */
@@ -174,8 +174,8 @@ int OGRPGeoSelectLayer::TestCapability( const char * pszCap )
 /*      way of counting features matching a spatial query.              */
 /************************************************************************/
 
-GIntBig OGRPGeoSelectLayer::GetFeatureCount64( int bForce )
+GIntBig OGRPGeoSelectLayer::GetFeatureCount( int bForce )
 
 {
-    return OGRPGeoLayer::GetFeatureCount64( bForce );
+    return OGRPGeoLayer::GetFeatureCount( bForce );
 }

@@ -89,15 +89,15 @@ OGRFeatureDefn* OGRGeoJSONLayer::GetLayerDefn()
 }
 
 /************************************************************************/
-/*                           GetFeatureCount64                            */
+/*                           GetFeatureCount                            */
 /************************************************************************/
 
-GIntBig OGRGeoJSONLayer::GetFeatureCount64( int bForce )
+GIntBig OGRGeoJSONLayer::GetFeatureCount( int bForce )
 {
     if (m_poFilterGeom == NULL && m_poAttrQuery == NULL)
         return static_cast<int>( seqFeatures_.size() );
     else
-        return OGRLayer::GetFeatureCount64(bForce);
+        return OGRLayer::GetFeatureCount(bForce);
 }
 
 /************************************************************************/
@@ -188,7 +188,7 @@ void OGRGeoJSONLayer::AddFeature( OGRFeature* poFeature )
     poNewFeature = poFeature->Clone();
 
 
-    if( -1 == poNewFeature->GetFID64() )
+    if( -1 == poNewFeature->GetFID() )
     {
         int nFID = static_cast<int>(seqFeatures_.size());
         poNewFeature->SetFID( nFID );
@@ -202,7 +202,7 @@ void OGRGeoJSONLayer::AddFeature( OGRFeature* poFeature )
     }
     
         
-    if( (GIntBig)(int)poNewFeature->GetFID64() != poNewFeature->GetFID64() )
+    if( (GIntBig)(int)poNewFeature->GetFID() != poNewFeature->GetFID() )
         SetMetadataItem(OLMD_FID64, "YES");
 
     seqFeatures_.push_back( poNewFeature );

@@ -289,7 +289,7 @@ OGRFeature *OGRGeomediaLayer::GetNextRawFeature()
             {
                 CPLDebug( "Geomedia",
                           "Translation geomedia binary to OGR geometry failed (FID=%ld)",
-                           (long)poFeature->GetFID64() );
+                           (long)poFeature->GetFID() );
             }
         }
 

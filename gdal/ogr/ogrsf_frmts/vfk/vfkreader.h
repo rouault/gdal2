@@ -111,7 +111,7 @@ public:
     IVFKFeature(IVFKDataBlock *);
     virtual ~IVFKFeature();
 
-    GIntBig              GetFID64() const { return m_nFID; }
+    GIntBig              GetFID() const { return m_nFID; }
     void                 SetFID(GIntBig);
     void                 SetGeometryType(OGRwkbGeometryType);
 
@@ -261,7 +261,7 @@ public:
     void               SetProperties(const char *);
     int                GetPropertyIndex(const char *) const;
 
-    GIntBig            GetFeatureCount64();
+    GIntBig            GetFeatureCount();
     void               SetFeatureCount(int, bool = FALSE);
     IVFKFeature       *GetFeatureByIndex(int) const;
     IVFKFeature       *GetFeature(GIntBig);
@@ -302,7 +302,7 @@ public:
     VFKFeatureList     GetFeatures(int, GUIntBig);
     VFKFeatureList     GetFeatures(int, int, GUIntBig);
 
-    GIntBig            GetFeatureCount64(const char *, const char *);
+    GIntBig            GetFeatureCount(const char *, const char *);
 };
 
 /************************************************************************/

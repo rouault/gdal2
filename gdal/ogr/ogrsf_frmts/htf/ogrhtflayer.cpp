@@ -525,13 +525,13 @@ OGRFeature *OGRHTFSoundingLayer::GetNextRawFeature()
 }
 
 /************************************************************************/
-/*                          GetFeatureCount64()                           */
+/*                          GetFeatureCount()                           */
 /************************************************************************/
 
-GIntBig OGRHTFSoundingLayer::GetFeatureCount64(int bForce)
+GIntBig OGRHTFSoundingLayer::GetFeatureCount(int bForce)
 {
     if (m_poFilterGeom != NULL || m_poAttrQuery != NULL)
-        return OGRHTFLayer::GetFeatureCount64(bForce);
+        return OGRHTFLayer::GetFeatureCount(bForce);
 
     if (nTotalSoundings != 0)
         return nTotalSoundings;

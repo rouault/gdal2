@@ -338,15 +338,15 @@ OGRErr OGRSXFLayer::GetExtent(OGREnvelope *psExtent, int bForce)
 }
 
 /************************************************************************/
-/*                          GetFeatureCount64()                           */
+/*                          GetFeatureCount()                           */
 /************************************************************************/
 
-GIntBig OGRSXFLayer::GetFeatureCount64(int bForce)
+GIntBig OGRSXFLayer::GetFeatureCount(int bForce)
 {
     if (m_poFilterGeom == NULL && m_poAttrQuery == NULL)
         return static_cast<int>(mnRecordDesc.size());
     else
-        return OGRLayer::GetFeatureCount64(bForce);
+        return OGRLayer::GetFeatureCount(bForce);
 }
 
 /************************************************************************/

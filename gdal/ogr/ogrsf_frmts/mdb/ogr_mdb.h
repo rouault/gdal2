@@ -269,7 +269,7 @@ class OGRMDBLayer : public OGRLayer
                                     OGRSpatialReference* poSRS );
 
     virtual void        ResetReading();
-    virtual GIntBig     GetFeatureCount64( int bForce );
+    virtual GIntBig     GetFeatureCount( int bForce );
     virtual OGRFeature *GetNextRawFeature();
     virtual OGRFeature *GetNextFeature();
 

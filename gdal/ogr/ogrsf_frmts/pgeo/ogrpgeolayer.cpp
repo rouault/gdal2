@@ -295,7 +295,7 @@ OGRFeature *OGRPGeoLayer::GetNextRawFeature()
             {
                 CPLDebug( "PGeo",
                           "Translation shape binary to OGR geometry failed (FID=%ld)",
-                           (long)poFeature->GetFID64() );
+                           (long)poFeature->GetFID() );
             }
         }
 

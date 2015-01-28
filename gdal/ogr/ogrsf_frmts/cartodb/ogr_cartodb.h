@@ -129,7 +129,7 @@ class OGRCARTODBTableLayer : public OGRCARTODBLayer
     virtual const char*         GetName() { return osName.c_str(); }
     virtual OGRFeatureDefn *    GetLayerDefnInternal(json_object* poObjIn);
 
-    virtual GIntBig             GetFeatureCount64( int bForce = TRUE );
+    virtual GIntBig             GetFeatureCount( int bForce = TRUE );
     virtual OGRFeature         *GetFeature( GIntBig nFeatureId );
 
     virtual int                 TestCapability( const char * );

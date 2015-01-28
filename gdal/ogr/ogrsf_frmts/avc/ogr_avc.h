@@ -196,7 +196,7 @@ class OGRAVCE00Layer : public OGRAVCLayer
     void		ResetReading();
     OGRFeature *	GetNextFeature();
     OGRFeature *GetFeature( GIntBig nFID );
-    GIntBig GetFeatureCount64(int bForce);
+    GIntBig GetFeatureCount(int bForce);
     int CheckSetupTable(AVCE00Section *psTblSectionIn);
     int AppendTableFields( OGRFeature *poFeature );
 };

@@ -85,7 +85,7 @@ class OGRSelafinLayer : public OGRLayer {
         OGRErr SetNextByIndex(GIntBig nIndex);
         OGRFeatureDefn *GetLayerDefn() {return poFeatureDefn;}
         int TestCapability(const char *pszCap);
-        GIntBig GetFeatureCount64(int bForce=TRUE);
+        GIntBig GetFeatureCount(int bForce=TRUE);
         OGRErr GetExtent(OGREnvelope *psExtent,int bForce=TRUE);
         OGRErr ISetFeature(OGRFeature *poFeature);
         OGRErr ICreateFeature(OGRFeature *poFeature);

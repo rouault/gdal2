@@ -137,7 +137,7 @@ class OGRMySQLTableLayer : public OGRMySQLLayer
     
     virtual OGRFeature *GetFeature( GIntBig nFeatureId );
     virtual void        ResetReading();
-    virtual GIntBig     GetFeatureCount64( int );
+    virtual GIntBig     GetFeatureCount( int );
 
     void                SetSpatialFilter( OGRGeometry * );
 
@@ -181,7 +181,7 @@ class OGRMySQLResultLayer : public OGRMySQLLayer
 
 
     virtual void        ResetReading();
-    virtual GIntBig     GetFeatureCount64( int );
+    virtual GIntBig     GetFeatureCount( int );
 
     virtual int         TestCapability( const char * );
 };

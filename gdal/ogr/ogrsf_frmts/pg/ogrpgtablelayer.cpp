@@ -1173,7 +1173,7 @@ OGRErr OGRPGTableLayer::ISetFeature( OGRFeature *poFeature )
         return eErr;
     }
 
-    if( poFeature->GetFID64() == OGRNullFID )
+    if( poFeature->GetFID() == OGRNullFID )
     {
         CPLError( CE_Failure, CPLE_AppDefined,
                   "FID required on features given to SetFeature()." );
@@ -1332,7 +1332,7 @@ OGRErr OGRPGTableLayer::ISetFeature( OGRFeature *poFeature )
     /* Add the WHERE clause */
     osCommand += " WHERE ";
     osCommand = osCommand + OGRPGEscapeColumnName(pszFIDColumn) + " = ";
-    osCommand += CPLString().Printf( CPL_FRMT_GIB, poFeature->GetFID64() );
+    osCommand += CPLString().Printf( CPL_FRMT_GIB, poFeature->GetFID() );
 
 /* -------------------------------------------------------------------- */
 /*      Execute the update.                                             */
@@ -1342,7 +1342,7 @@ OGRErr OGRPGTableLayer::ISetFeature( OGRFeature *poFeature )
     {
         CPLError( CE_Failure, CPLE_AppDefined,
                   "UPDATE command for feature " CPL_FRMT_GIB " failed.\n%s\nCommand: %s",
-                  poFeature->GetFID64(), PQerrorMessage(hPGConn), osCommand.c_str() );
+                  poFeature->GetFID(), PQerrorMessage(hPGConn), osCommand.c_str() );
 
         OGRPGClearResult( hResult );
 
@@ -1384,7 +1384,7 @@ OGRErr OGRPGTableLayer::ICreateFeature( OGRFeature *poFeature )
 
     /* Auto-promote FID column to 64bit if necessary */
     if( pszFIDColumn != NULL &&
-        (GIntBig)(int)poFeature->GetFID64() != poFeature->GetFID64() &&
+        (GIntBig)(int)poFeature->GetFID() != poFeature->GetFID() &&
         GetMetadataItem(OLMD_FID64) == NULL )
     {
         CPLString osCommand;
@@ -1440,11 +1440,11 @@ OGRErr OGRPGTableLayer::ICreateFeature( OGRFeature *poFeature )
             /* FID set (and that a FID column has been identified), then we will */
             /* try to copy FID values from features. Otherwise, we will not */
             /* do and assume that the FID column is an autoincremented column. */
-            StartCopy(poFeature->GetFID64() != OGRNullFID);
+            StartCopy(poFeature->GetFID() != OGRNullFID);
         }
 
         OGRErr eErr = CreateFeatureViaCopy( poFeature );
-        if( poFeature->GetFID64() != OGRNullFID )
+        if( poFeature->GetFID() != OGRNullFID )
             bAutoFIDOnCreateViaCopy = FALSE;
         if( eErr == CE_None && bAutoFIDOnCreateViaCopy )
         {
@@ -1583,7 +1583,7 @@ OGRErr OGRPGTableLayer::CreateFeatureViaInsert( OGRFeature *poFeature )
     }
     
     /* Use case of ogr_pg_60 test */
-    if( poFeature->GetFID64() != OGRNullFID && pszFIDColumn != NULL )
+    if( poFeature->GetFID() != OGRNullFID && pszFIDColumn != NULL )
     {
         if( bNeedComma )
             osCommand += ", ";
@@ -1700,11 +1700,11 @@ OGRErr OGRPGTableLayer::CreateFeatureViaInsert( OGRFeature *poFeature )
         }
     }
 
-    if( poFeature->GetFID64() != OGRNullFID && pszFIDColumn != NULL )
+    if( poFeature->GetFID() != OGRNullFID && pszFIDColumn != NULL )
     {
         if( bNeedComma )
             osCommand += ", ";
-        osCommand += CPLString().Printf( CPL_FRMT_GIB " ", poFeature->GetFID64() );
+        osCommand += CPLString().Printf( CPL_FRMT_GIB " ", poFeature->GetFID() );
         bNeedComma = TRUE;
     }
 
@@ -1732,7 +1732,7 @@ OGRErr OGRPGTableLayer::CreateFeatureViaInsert( OGRFeature *poFeature )
     /* RETURNING is only available since Postgres 8.2 */
     /* We only get the FID, but we also could add the unset fields to get */
     /* the default values */
-    if (bRetrieveFID && pszFIDColumn != NULL && poFeature->GetFID64() == OGRNullFID &&
+    if (bRetrieveFID && pszFIDColumn != NULL && poFeature->GetFID() == OGRNullFID &&
         (poDS->sPostgreSQLVersion.nMajor >= 9 ||
          (poDS->sPostgreSQLVersion.nMajor == 8 && poDS->sPostgreSQLVersion.nMinor >= 2)))
     {
@@ -1757,7 +1757,7 @@ OGRErr OGRPGTableLayer::CreateFeatureViaInsert( OGRFeature *poFeature )
                   "INSERT command for new feature failed.\n%s\nCommand: %s",
                   PQerrorMessage(hPGConn), osCommand.c_str() );
 
-        if( !bHasWarnedAlreadySetFID && poFeature->GetFID64() != OGRNullFID &&
+        if( !bHasWarnedAlreadySetFID && poFeature->GetFID() != OGRNullFID &&
             pszFIDColumn != NULL )
         {
             bHasWarnedAlreadySetFID = TRUE;
@@ -2491,10 +2491,10 @@ OGRFeature *OGRPGTableLayer::GetFeature( GIntBig nFeatureId )
 }
 
 /************************************************************************/
-/*                          GetFeatureCount64()                           */
+/*                          GetFeatureCount()                           */
 /************************************************************************/
 
-GIntBig OGRPGTableLayer::GetFeatureCount64( int bForce )
+GIntBig OGRPGTableLayer::GetFeatureCount( int bForce )
 
 {
     if( bDifferedCreation && RunDifferedCreationIfNecessary() != OGRERR_NONE )
@@ -2502,7 +2502,7 @@ GIntBig OGRPGTableLayer::GetFeatureCount64( int bForce )
     if( bCopyActive ) EndCopy();
 
     if( TestCapability(OLCFastFeatureCount) == FALSE )
-        return OGRPGLayer::GetFeatureCount64( bForce );
+        return OGRPGLayer::GetFeatureCount( bForce );
 
 /* -------------------------------------------------------------------- */
 /*      In theory it might be wise to cache this result, but it         */

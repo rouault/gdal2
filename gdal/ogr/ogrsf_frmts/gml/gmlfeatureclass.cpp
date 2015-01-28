@@ -272,10 +272,10 @@ size_t GMLFeatureClass::GetElementNameLen() const
 }
 
 /************************************************************************/
-/*                         GetFeatureCount64()                          */
+/*                         GetFeatureCount()                          */
 /************************************************************************/
 
-GIntBig GMLFeatureClass::GetFeatureCount64()
+GIntBig GMLFeatureClass::GetFeatureCount()
 
 {
     return m_nFeatureCount;

@@ -376,7 +376,7 @@ int TABSeamless::OpenBaseTable(TABFeature *poIndexFeature,
      * Fetch table id.  We actually use the index feature's ids as the
      * base table ids.
      *----------------------------------------------------------------*/
-    GIntBig nTableId64 = poIndexFeature->GetFID64();
+    GIntBig nTableId64 = poIndexFeature->GetFID();
     int nTableId = (int)nTableId64;
     CPLAssert((GIntBig)nTableId == nTableId64);
 
@@ -749,7 +749,7 @@ OGRErr TABSeamless::GetExtent (OGREnvelope *psExtent, int bForce)
 }
 
 /**********************************************************************
- *                   TABSeamless::GetFeatureCount64ByType()
+ *                   TABSeamless::GetFeatureCountByType()
  *
  * Return number of features of each type.
  *
@@ -774,14 +774,14 @@ int TABSeamless::GetFeatureCountByType(CPL_UNUSED int &numPoints,
     return -1;
 }
 
-GIntBig TABSeamless::GetFeatureCount64(int bForce)
+GIntBig TABSeamless::GetFeatureCount(int bForce)
 {
     /*-----------------------------------------------------------------
      * __TODO__  This should be implemented to return -1 if force=false,
      * or scan all the base tables if force=true
      *----------------------------------------------------------------*/
 
-    return OGRLayer::GetFeatureCount64(bForce);
+    return OGRLayer::GetFeatureCount(bForce);
 }
 
 

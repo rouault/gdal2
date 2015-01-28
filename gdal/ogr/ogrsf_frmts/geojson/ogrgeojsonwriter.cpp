@@ -53,10 +53,10 @@ json_object* OGRGeoJSONWriteFeature( OGRFeature* poFeature, int bWriteBBOX, int 
 /* -------------------------------------------------------------------- */
 /*      Write FID if available                                          */
 /* -------------------------------------------------------------------- */
-    if ( poFeature->GetFID64() != OGRNullFID )
+    if ( poFeature->GetFID() != OGRNullFID )
     {
         json_object_object_add( poObj, "id",
-                                json_object_new_int64(poFeature->GetFID64()) );
+                                json_object_new_int64(poFeature->GetFID()) );
     }
 
 /* -------------------------------------------------------------------- */

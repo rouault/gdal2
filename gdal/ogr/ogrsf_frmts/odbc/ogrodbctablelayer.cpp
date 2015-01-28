@@ -341,7 +341,7 @@ int OGRODBCTableLayer::TestCapability( const char * pszCap )
 }
 
 /************************************************************************/
-/*                          GetFeatureCount64()                           */
+/*                          GetFeatureCount()                           */
 /*                                                                      */
 /*      If a spatial filter is in effect, we turn control over to       */
 /*      the generic counter.  Otherwise we return the total count.      */
@@ -349,11 +349,11 @@ int OGRODBCTableLayer::TestCapability( const char * pszCap )
 /*      way of counting features matching a spatial query.              */
 /************************************************************************/
 
-GIntBig OGRODBCTableLayer::GetFeatureCount64( int bForce )
+GIntBig OGRODBCTableLayer::GetFeatureCount( int bForce )
 
 {
     if( m_poFilterGeom != NULL )
-        return OGRODBCLayer::GetFeatureCount64( bForce );
+        return OGRODBCLayer::GetFeatureCount( bForce );
 
     CPLODBCStatement oStmt( poDS->GetSession() );
     oStmt.Append( "SELECT COUNT(*) FROM " );
@@ -365,9 +365,9 @@ GIntBig OGRODBCTableLayer::GetFeatureCount64( int bForce )
     if( !oStmt.ExecuteSQL() || !oStmt.Fetch() )
     {
         CPLError( CE_Failure, CPLE_AppDefined, 
-                  "GetFeatureCount64() failed on query %s.\n%s",
+                  "GetFeatureCount() failed on query %s.\n%s",
                   oStmt.GetCommand(), poDS->GetSession()->GetLastError() );
-        return OGRODBCLayer::GetFeatureCount64(bForce);
+        return OGRODBCLayer::GetFeatureCount(bForce);
     }
 
     return CPLAtoGIntBig(oStmt.GetColData(0));

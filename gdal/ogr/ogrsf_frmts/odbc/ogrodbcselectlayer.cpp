@@ -161,7 +161,7 @@ OGRErr OGRODBCSelectLayer::GetExtent(OGREnvelope *, int )
 }
 
 /************************************************************************/
-/*                          GetFeatureCount64()                           */
+/*                          GetFeatureCount()                           */
 /*                                                                      */
 /*      If a spatial filter is in effect, we turn control over to       */
 /*      the generic counter.  Otherwise we return the total count.      */
@@ -169,8 +169,8 @@ OGRErr OGRODBCSelectLayer::GetExtent(OGREnvelope *, int )
 /*      way of counting features matching a spatial query.              */
 /************************************************************************/
 
-GIntBig OGRODBCSelectLayer::GetFeatureCount64( int bForce )
+GIntBig OGRODBCSelectLayer::GetFeatureCount( int bForce )
 
 {
-    return OGRODBCLayer::GetFeatureCount64( bForce );
+    return OGRODBCLayer::GetFeatureCount( bForce );
 }

@@ -1035,7 +1035,7 @@ int OGR2SQLITE_Filter(sqlite3_vtab_cursor* pCursor,
 
     if( pMyCursor->poLayer->TestCapability(OLCFastFeatureCount) )
     {
-        pMyCursor->nFeatureCount = pMyCursor->poLayer->GetFeatureCount64();
+        pMyCursor->nFeatureCount = pMyCursor->poLayer->GetFeatureCount();
         pMyCursor->poLayer->ResetReading();
     }
     else
@@ -1046,7 +1046,7 @@ int OGR2SQLITE_Filter(sqlite3_vtab_cursor* pCursor,
         pMyCursor->poFeature = pMyCursor->poLayer->GetNextFeature();
 #ifdef DEBUG_OGR2SQLITE
         CPLDebug("OGR2SQLITE", "GetNextFeature() --> " CPL_FRMT_GIB,
-            pMyCursor->poFeature ? pMyCursor->poFeature->GetFID64() : -1);
+            pMyCursor->poFeature ? pMyCursor->poFeature->GetFID() : -1);
 #endif
     }
 
@@ -1080,7 +1080,7 @@ int OGR2SQLITE_Next(sqlite3_vtab_cursor* pCursor)
 
 #ifdef DEBUG_OGR2SQLITE
         CPLDebug("OGR2SQLITE", "GetNextFeature() --> " CPL_FRMT_GIB,
-            pMyCursor->poFeature ? pMyCursor->poFeature->GetFID64() : -1);
+            pMyCursor->poFeature ? pMyCursor->poFeature->GetFID() : -1);
 #endif
     }
     return SQLITE_OK;
@@ -1126,7 +1126,7 @@ static void OGR2SQLITE_GoToWishedIndex(OGR2SQLITE_vtab_cursor* pMyCursor)
                 pMyCursor->poFeature = pMyCursor->poLayer->GetNextFeature();
 #ifdef DEBUG_OGR2SQLITE
                 CPLDebug("OGR2SQLITE", "GetNextFeature() --> " CPL_FRMT_GIB,
-                    pMyCursor->poFeature ? pMyCursor->poFeature->GetFID64() : -1);
+                    pMyCursor->poFeature ? pMyCursor->poFeature->GetFID() : -1);
 #endif
             }
             while( pMyCursor->nCurFeatureIndex < pMyCursor->nNextWishedIndex );
@@ -1368,7 +1368,7 @@ int OGR2SQLITE_Rowid(sqlite3_vtab_cursor* pCursor, sqlite3_int64 *pRowid)
     if( pMyCursor->poFeature == NULL)
         return SQLITE_ERROR;
 
-    *pRowid = pMyCursor->poFeature->GetFID64();
+    *pRowid = pMyCursor->poFeature->GetFID();
 
     return SQLITE_OK;
 }
@@ -1534,7 +1534,7 @@ int OGR2SQLITE_Update(sqlite3_vtab *pVTab,
 
         OGRErr eErr = poLayer->CreateFeature(poFeature);
         if( eErr == OGRERR_NONE )
-            *pRowid = poFeature->GetFID64();
+            *pRowid = poFeature->GetFID();
 
         delete poFeature;
 
@@ -1766,7 +1766,7 @@ void OGR2SQLITE_ogr_layer_FeatureCount(sqlite3_context* pContext,
     if( poLayer == NULL )
         return;
 
-    sqlite3_result_int64( pContext, poLayer->GetFeatureCount64() );
+    sqlite3_result_int64( pContext, poLayer->GetFeatureCount() );
 }
 
 /************************************************************************/
@@ -2246,8 +2246,8 @@ int OGR2SQLITESpatialIndex_Column(sqlite3_vtab_cursor* pCursor,
 
     if( nCol == 0 )
     {
-        CPLDebug("OGR2SQLITE", "--> FID = " CPL_FRMT_GIB, poFeature->GetFID64());
-        sqlite3_result_int64(pContext, poFeature->GetFID64());
+        CPLDebug("OGR2SQLITE", "--> FID = " CPL_FRMT_GIB, poFeature->GetFID());
+        sqlite3_result_int64(pContext, poFeature->GetFID());
         return SQLITE_OK;
     }
 

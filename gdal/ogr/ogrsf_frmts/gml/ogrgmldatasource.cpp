@@ -1077,7 +1077,7 @@ int OGRGMLDataSource::Open( const char * pszNameIn )
     if (poReader->GetClassCount() == 1 && nNumberOfFeatures != 0)
     {
         GMLFeatureClass *poClass = poReader->GetClass(0);
-        int nFeatureCount = poClass->GetFeatureCount64();
+        int nFeatureCount = poClass->GetFeatureCount();
         if (nFeatureCount < 0)
         {
             poClass->SetFeatureCount(nNumberOfFeatures);
@@ -1209,7 +1209,7 @@ OGRGMLLayer *OGRGMLDataSource::TranslateGMLSchema( GMLFeatureClass *poClass )
     {
         GMLGeometryPropertyDefn *poProperty = poClass->GetGeometryProperty( iField );
         OGRGeomFieldDefn oField( poProperty->GetName(), (OGRwkbGeometryType)poProperty->GetType() );
-        if( poClass->GetGeometryPropertyCount() == 1 && poClass->GetFeatureCount64() == 0 )
+        if( poClass->GetGeometryPropertyCount() == 1 && poClass->GetFeatureCount() == 0 )
         {
             oField.SetType(wkbUnknown);
         }

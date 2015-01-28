@@ -130,7 +130,7 @@ public:
   virtual OGRFeature* GetFeature( GIntBig nFeatureId );
   virtual OGRErr      SetNextByIndex( GIntBig nIndex );
 
-  virtual GIntBig     GetFeatureCount64( int bForce = TRUE );
+  virtual GIntBig     GetFeatureCount( int bForce = TRUE );
   virtual OGRErr      GetExtent(OGREnvelope *psExtent, int bForce = TRUE);
 
   virtual OGRFeatureDefn* GetLayerDefn();

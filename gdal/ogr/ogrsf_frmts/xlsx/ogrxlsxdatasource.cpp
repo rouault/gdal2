@@ -101,7 +101,7 @@ OGRFeature* OGRXLSXLayer::GetNextFeature()
     Init();
     OGRFeature* poFeature = OGRMemLayer::GetNextFeature();
     if (poFeature)
-        poFeature->SetFID(poFeature->GetFID64() + 1 + bHasHeaderLine);
+        poFeature->SetFID(poFeature->GetFID() + 1 + bHasHeaderLine);
     return poFeature;
 }
 
@@ -128,7 +128,7 @@ OGRErr OGRXLSXLayer::ISetFeature( OGRFeature *poFeature )
     if (poFeature == NULL)
         return OGRMemLayer::ISetFeature(poFeature);
 
-    long nFID = poFeature->GetFID64();
+    long nFID = poFeature->GetFID();
     if (nFID != OGRNullFID)
         poFeature->SetFID(nFID - (1 + bHasHeaderLine));
     SetUpdated();
@@ -258,7 +258,7 @@ int OGRXLSXDataSource::Open( const char * pszFilename,
     /* Remove empty layers at the end, which tend to be there */
     while(nLayers > 1)
     {
-        if (papoLayers[nLayers-1]->GetFeatureCount64() == 0)
+        if (papoLayers[nLayers-1]->GetFeatureCount() == 0)
         {
             delete papoLayers[nLayers-1];
             nLayers --;

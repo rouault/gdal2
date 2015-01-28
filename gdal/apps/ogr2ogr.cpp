@@ -308,9 +308,9 @@ class OGRSplitListFieldLayer : public OGRLayer
     virtual void                 ResetReading() { poSrcLayer->ResetReading(); }
     virtual int                  TestCapability(const char*) { return FALSE; }
 
-    virtual GIntBig              GetFeatureCount64( int bForce = TRUE )
+    virtual GIntBig              GetFeatureCount( int bForce = TRUE )
     {
-        return poSrcLayer->GetFeatureCount64(bForce);
+        return poSrcLayer->GetFeatureCount(bForce);
     }
 
     virtual OGRSpatialReference *GetSpatialRef()
@@ -431,7 +431,7 @@ int  OGRSplitListFieldLayer::BuildLayerDefn(GDALProgressFunc pfnProgress,
 
         GIntBig nFeatureCount = 0;
         if (poSrcLayer->TestCapability(OLCFastFeatureCount))
-            nFeatureCount = poSrcLayer->GetFeatureCount64();
+            nFeatureCount = poSrcLayer->GetFeatureCount();
         GIntBig nFeatureIndex = 0;
 
         /* Scan the whole layer to compute the maximum number of */
@@ -556,7 +556,7 @@ OGRFeature *OGRSplitListFieldLayer::TranslateFeature(OGRFeature* poSrcFeature)
         return poSrcFeature;
 
     OGRFeature* poFeature = OGRFeature::CreateFeature(poFeatureDefn);
-    poFeature->SetFID(poSrcFeature->GetFID64());
+    poFeature->SetFID(poSrcFeature->GetFID());
     for(int i=0;i<poFeature->GetGeomFieldCount();i++)
     {
         poFeature->SetGeomFieldDirectly(i, poSrcFeature->StealGeometry(i));
@@ -1833,7 +1833,7 @@ int main( int nArgc, char ** papszArgv )
                 }
                 else
                 {
-                    nCountLayerFeatures = poResultSet->GetFeatureCount64();
+                    nCountLayerFeatures = poResultSet->GetFeatureCount();
                     pfnProgress = GDALTermProgress;
                 }
             }
@@ -2231,7 +2231,7 @@ int main( int nArgc, char ** papszArgv )
                 }
                 else
                 {
-                    panLayerCountFeatures[iLayer] = poLayer->GetFeatureCount64();
+                    panLayerCountFeatures[iLayer] = poLayer->GetFeatureCount();
                     nCountLayersFeatures += panLayerCountFeatures[iLayer];
                 }
             }
@@ -3648,7 +3648,7 @@ static int TranslateLayer( TargetLayerInfo* psInfo,
 
                 CPLError( CE_Failure, CPLE_AppDefined,
                         "Unable to translate feature " CPL_FRMT_GIB " from layer %s.\n",
-                        poFeature->GetFID64(), poSrcLayer->GetName() );
+                        poFeature->GetFID(), poSrcLayer->GetName() );
 
                 OGRFeature::DestroyFeature( poFeature );
                 OGRFeature::DestroyFeature( poDstFeature );
@@ -3663,7 +3663,7 @@ static int TranslateLayer( TargetLayerInfo* psInfo,
             }
 
             if( bPreserveFID )
-                poDstFeature->SetFID( poFeature->GetFID64() );
+                poDstFeature->SetFID( poFeature->GetFID() );
             
             for( int iGeom = 0; iGeom < nDstGeomFieldCount; iGeom ++ )
             {
@@ -3740,7 +3740,7 @@ static int TranslateLayer( TargetLayerInfo* psInfo,
                             poDstLayer->CommitTransaction();
 
                         fprintf( stderr, "Failed to reproject feature %d (geometry probably out of source or destination SRS).\n",
-                                (int) poFeature->GetFID64() );
+                                (int) poFeature->GetFID() );
                         if( !bSkipFailures )
                         {
                             OGRFeature::DestroyFeature( poFeature );
@@ -3803,7 +3803,7 @@ static int TranslateLayer( TargetLayerInfo* psInfo,
 
                 CPLError( CE_Failure, CPLE_AppDefined,
                         "Unable to write feature " CPL_FRMT_GIB " from layer %s.\n",
-                        poFeature->GetFID64(), poSrcLayer->GetName() );
+                        poFeature->GetFID(), poSrcLayer->GetName() );
 
                 OGRFeature::DestroyFeature( poFeature );
                 OGRFeature::DestroyFeature( poDstFeature );
@@ -3812,7 +3812,7 @@ static int TranslateLayer( TargetLayerInfo* psInfo,
             else
             {
                 CPLDebug( "OGR2OGR", "Unable to write feature " CPL_FRMT_GIB " into layer %s.\n",
-                           poFeature->GetFID64(), poSrcLayer->GetName() );
+                           poFeature->GetFID(), poSrcLayer->GetName() );
             }
 
 end_loop:

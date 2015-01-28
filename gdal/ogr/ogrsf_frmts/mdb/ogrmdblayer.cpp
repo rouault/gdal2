@@ -198,13 +198,13 @@ void OGRMDBLayer::ResetReading()
 }
 
 /************************************************************************/
-/*                          GetFeatureCount64()                           */
+/*                          GetFeatureCount()                           */
 /************************************************************************/
 
-GIntBig OGRMDBLayer::GetFeatureCount64(int bForce)
+GIntBig OGRMDBLayer::GetFeatureCount(int bForce)
 {
     if (m_poFilterGeom != NULL || m_poAttrQuery != NULL)
-        return OGRLayer::GetFeatureCount64(bForce);
+        return OGRLayer::GetFeatureCount(bForce);
     return poMDBTable->GetRowCount();
 }
 
@@ -312,7 +312,7 @@ OGRFeature *OGRMDBLayer::GetNextRawFeature()
             {
                 CPLDebug( "MDB",
                           "Translation shape binary to OGR geometry failed (FID=%ld)",
-                           (long)poFeature->GetFID64() );
+                           (long)poFeature->GetFID() );
             }
         }
 
@@ -337,7 +337,7 @@ OGRFeature *OGRMDBLayer::GetNextRawFeature()
             {
                 CPLDebug( "MDB",
                           "Translation geomedia binary to OGR geometry failed (FID=%ld)",
-                           (long)poFeature->GetFID64() );
+                           (long)poFeature->GetFID() );
             }
         }
 

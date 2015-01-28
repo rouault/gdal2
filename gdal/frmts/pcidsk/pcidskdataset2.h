@@ -195,7 +195,7 @@ class OGRPCIDSKLayer : public OGRLayer
     virtual OGRErr      CreateField( OGRFieldDefn *poField,
                                      int bApproxOK = TRUE );
 
-    GIntBig             GetFeatureCount64( int );
+    GIntBig             GetFeatureCount( int );
     OGRErr              GetExtent( OGREnvelope *psExtent, int bForce );
 };
 

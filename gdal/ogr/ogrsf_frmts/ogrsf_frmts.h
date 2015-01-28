@@ -112,8 +112,7 @@ class CPL_DLL OGRLayer : public GDALMajorObject
 
     virtual OGRSpatialReference *GetSpatialRef();
 
-    int                 GetFeatureCount( int bForce = TRUE ) CPL_WARN_DEPRECATED("Use GetFeatureCount64() instead");
-    virtual GIntBig     GetFeatureCount64( int bForce = TRUE );
+    virtual GIntBig     GetFeatureCount( int bForce = TRUE );
     virtual OGRErr      GetExtent(OGREnvelope *psExtent, int bForce = TRUE);
     virtual OGRErr      GetExtent(int iGeomField, OGREnvelope *psExtent,
                                   int bForce = TRUE);

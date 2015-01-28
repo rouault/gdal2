@@ -171,7 +171,7 @@ class OGRCouchDBTableLayer : public OGRCouchDBLayer
 
     virtual const char *        GetName() { return osName.c_str(); }
 
-    virtual GIntBig             GetFeatureCount64( int bForce = TRUE );
+    virtual GIntBig             GetFeatureCount( int bForce = TRUE );
     virtual OGRErr              GetExtent(OGREnvelope *psExtent, int bForce = TRUE);
 
     virtual OGRFeature *        GetFeature( GIntBig nFID );

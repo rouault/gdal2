@@ -200,7 +200,7 @@ static void ReportOnLayer( OGRLayer * poLayer )
     
     printf( "Layer name: %s\n", poDefn->GetName() );
 
-    printf( "Feature Count: %d\n", poLayer->GetFeatureCount64() );
+    printf( "Feature Count: %d\n", poLayer->GetFeatureCount() );
 
     if( bVerbose )
     {

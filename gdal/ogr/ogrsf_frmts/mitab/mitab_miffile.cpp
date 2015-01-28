@@ -833,14 +833,14 @@ int  MIFFile::AddFields(const char *pszLine)
 }
 
 /************************************************************************/
-/*                          GetFeatureCount64()                           */
+/*                          GetFeatureCount()                           */
 /************************************************************************/
 
-GIntBig MIFFile::GetFeatureCount64 (int bForce)
+GIntBig MIFFile::GetFeatureCount (int bForce)
 {
     
     if( m_poFilterGeom != NULL || m_poAttrQuery != NULL )
-        return OGRLayer::GetFeatureCount64( bForce );
+        return OGRLayer::GetFeatureCount( bForce );
     else
     {
         if (bForce == TRUE)

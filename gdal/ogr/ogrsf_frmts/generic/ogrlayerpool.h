@@ -130,7 +130,7 @@ class OGRProxiedLayer : public OGRAbstractProxiedLayer
 
     virtual OGRSpatialReference *GetSpatialRef();
 
-    virtual GIntBig     GetFeatureCount64( int bForce = TRUE );
+    virtual GIntBig     GetFeatureCount( int bForce = TRUE );
     virtual OGRErr      GetExtent(int iGeomField, OGREnvelope *psExtent, int bForce = TRUE);
     virtual OGRErr      GetExtent(OGREnvelope *psExtent, int bForce = TRUE);
 

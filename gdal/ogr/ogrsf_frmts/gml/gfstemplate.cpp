@@ -139,7 +139,7 @@ int GMLReader::ReArrangeTemplateClasses ( GFSTemplateList *pCC )
         }
         if (poClass != NULL)
         {
-            if (poClass->GetFeatureCount64() > 0)
+            if (poClass->GetFeatureCount() > 0)
                 AddClass( poClass );
         }
         pItem = pItem->GetNext();

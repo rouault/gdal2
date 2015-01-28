@@ -129,7 +129,7 @@ class OGRCSVLayer : public OGRLayer
     void                SetCreateCSVT(int bCreateCSVT);
     void                SetWriteBOM(int bWriteBOM);
 
-    virtual GIntBig     GetFeatureCount64( int bForce = TRUE );
+    virtual GIntBig     GetFeatureCount( int bForce = TRUE );
 
     OGRErr              WriteHeader();
 };

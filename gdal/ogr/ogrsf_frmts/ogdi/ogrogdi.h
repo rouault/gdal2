@@ -76,7 +76,7 @@ class OGROGDILayer : public OGRLayer
 
     OGRFeatureDefn *    GetLayerDefn() { return m_poFeatureDefn; }
 
-    GIntBig             GetFeatureCount64( int );
+    GIntBig             GetFeatureCount( int );
 
     int                 TestCapability( const char * );
 

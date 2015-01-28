@@ -159,7 +159,7 @@ public:
   virtual OGRErr      DeleteFeature( GIntBig nFID );
 
   virtual OGRErr      GetExtent( OGREnvelope *psExtent, int bForce );
-  virtual GIntBig     GetFeatureCount64( int bForce );
+  virtual GIntBig     GetFeatureCount( int bForce );
   virtual OGRErr      SetAttributeFilter( const char *pszQuery );
   virtual void 	      SetSpatialFilterRect (double dfMinX, double dfMinY, double dfMaxX, double dfMaxY);
   virtual void        SetSpatialFilter( OGRGeometry * );

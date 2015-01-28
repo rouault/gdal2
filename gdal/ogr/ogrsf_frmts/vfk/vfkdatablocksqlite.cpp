@@ -80,7 +80,7 @@ int VFKDataBlockSQLite::LoadGeometryPoint()
 	rowId = sqlite3_column_int(hStmt, 3);
 
         poFeature = (VFKFeatureSQLite *) GetFeatureByIndex(rowId - 1);
-        CPLAssert(NULL != poFeature && poFeature->GetFID64() == iFID);
+        CPLAssert(NULL != poFeature && poFeature->GetFID() == iFID);
 
         /* create geometry */
 	OGRPoint pt(x, y);
@@ -145,31 +145,31 @@ bool VFKDataBlockSQLite::SetGeometryLineString(VFKFeatureSQLite *poLine, OGRLine
             */
             CPLDebug("OGR-VFK", 
                      "Line (fid=" CPL_FRMT_GIB ") defined by more than two vertices",
-                     poLine->GetFID64());
+                     poLine->GetFID());
         }
         else if (EQUAL(ftype, "11") && npoints < 2) { 
             bValid = FALSE;
             CPLError(CE_Warning, CPLE_AppDefined, 
                      "Curve (fid=" CPL_FRMT_GIB ") defined by less than two vertices",
-                     poLine->GetFID64());
+                     poLine->GetFID());
         }
         else if (EQUAL(ftype, "15") && npoints != 3) {
             bValid = FALSE;
             CPLError(CE_Warning, CPLE_AppDefined, 
                      "Circle (fid=" CPL_FRMT_GIB ") defined by invalid number of vertices (%d)",
-                     poLine->GetFID64(), oOGRLine->getNumPoints());
+                     poLine->GetFID(), oOGRLine->getNumPoints());
         }
         else if (strlen(ftype) > 2 && EQUALN(ftype, "15", 2) && npoints != 1) {
             bValid = FALSE;
             CPLError(CE_Warning, CPLE_AppDefined, 
                      "Circle (fid=" CPL_FRMT_GIB ") defined by invalid number of vertices (%d)",
-                     poLine->GetFID64(), oOGRLine->getNumPoints());
+                     poLine->GetFID(), oOGRLine->getNumPoints());
         }
         else if (EQUAL(ftype, "16") && npoints != 3) {
             bValid = FALSE;
             CPLError(CE_Warning, CPLE_AppDefined, 
                      "Arc (fid=" CPL_FRMT_GIB ") defined by invalid number of vertices (%d)",
-                     poLine->GetFID64(), oOGRLine->getNumPoints());
+                     poLine->GetFID(), oOGRLine->getNumPoints());
         }
     }
 
@@ -184,7 +184,7 @@ bool VFKDataBlockSQLite::SetGeometryLineString(VFKFeatureSQLite *poLine, OGRLine
     }
     
     /* update fid column */
-    UpdateFID(poLine->GetFID64(), rowIdFeat);        
+    UpdateFID(poLine->GetFID(), rowIdFeat);        
     
     /* store also geometry in DB */
     CPLAssert(0 != rowIdFeat.size());
@@ -381,7 +381,7 @@ int VFKDataBlockSQLite::LoadGeometryLineStringHP()
         rowId      = sqlite3_column_int(hStmt, 2);
 
         poFeature = (VFKFeatureSQLite *) GetFeatureByIndex(rowId - 1);
-        CPLAssert(NULL != poFeature && poFeature->GetFID64() == iFID);
+        CPLAssert(NULL != poFeature && poFeature->GetFID() == iFID);
 
         poLine = poDataBlockLines->GetFeature(vrColumn, vrValue, 2, TRUE);
 	if (!poLine) {
@@ -496,7 +496,7 @@ int VFKDataBlockSQLite::LoadGeometryPolygon()
         rowId     = sqlite3_column_int(hStmt, 2);
         
         poFeature = (VFKFeatureSQLite *) GetFeatureByIndex(rowId - 1);
-        CPLAssert(NULL != poFeature && poFeature->GetFID64() == iFID);
+        CPLAssert(NULL != poFeature && poFeature->GetFID() == iFID);
 
         if (bIsPar) {
             vrValue[0] = vrValue[1] = id;
@@ -951,7 +951,7 @@ bool VFKDataBlockSQLite::LoadGeometryFromDB()
             sqlite3_column_double(hStmt, 2);
 
         poFeature = (VFKFeatureSQLite *) GetFeatureByIndex(rowId - 1);
-        CPLAssert(NULL != poFeature && poFeature->GetFID64() == iFID);
+        CPLAssert(NULL != poFeature && poFeature->GetFID() == iFID);
 
         // read geometry from DB
 	nBytes = sqlite3_column_bytes(hStmt, 0);
@@ -1001,7 +1001,7 @@ void VFKDataBlockSQLite::UpdateVfkBlocks(int nGeometries) {
     poReader = (VFKReaderSQLite*) m_poReader;
 
     /* update number of features in VFK_DB_TABLE table */    
-    nFeatCount = GetFeatureCount64();
+    nFeatCount = GetFeatureCount();
     if (nFeatCount > 0) {
         osSQL.Printf("UPDATE %s SET num_features = %d WHERE table_name = '%s'",
                      VFK_DB_TABLE, nFeatCount, m_pszName);

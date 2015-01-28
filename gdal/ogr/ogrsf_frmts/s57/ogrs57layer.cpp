@@ -239,13 +239,13 @@ OGRErr OGRS57Layer::GetExtent( OGREnvelope *psExtent, int bForce )
 }
 
 /************************************************************************/
-/*                          GetFeatureCount64()                           */
+/*                          GetFeatureCount()                           */
 /************************************************************************/
-GIntBig OGRS57Layer::GetFeatureCount64 (int bForce)
+GIntBig OGRS57Layer::GetFeatureCount (int bForce)
 {
     
     if( !TestCapability(OLCFastFeatureCount) )
-        return OGRLayer::GetFeatureCount64( bForce );
+        return OGRLayer::GetFeatureCount( bForce );
     else
         return nFeatureCount;
 }

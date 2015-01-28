@@ -3602,7 +3602,7 @@ SWIGINTERN OGRFeatureDefnShadow *OGRLayerShadow_GetLayerDefn(OGRLayerShadow *sel
     return (OGRFeatureDefnShadow*) OGR_L_GetLayerDefn(self);
   }
 SWIGINTERN GIntBig OGRLayerShadow_GetFeatureCount(OGRLayerShadow *self,int force=1){
-    return OGR_L_GetFeatureCount64(self, force);
+    return OGR_L_GetFeatureCount(self, force);
   }
 SWIGINTERN void OGRLayerShadow_GetExtent(OGRLayerShadow *self,double argout[4],int *isvalid=NULL,int force=1,int can_return_null=0,int geom_field=0){
     OGRErr eErr = OGR_L_GetExtentEx(self, geom_field, (OGREnvelope*)argout, force);
@@ -3886,7 +3886,7 @@ SWIGINTERN int OGRFeatureShadow_GetGeomFieldIndex(OGRFeatureShadow *self,char co
       return OGR_F_GetGeomFieldIndex(self, name);
   }
 SWIGINTERN GIntBig OGRFeatureShadow_GetFID(OGRFeatureShadow *self){
-    return OGR_F_GetFID64(self);
+    return OGR_F_GetFID(self);
   }
 SWIGINTERN OGRErr OGRFeatureShadow_SetFID(OGRFeatureShadow *self,GIntBig fid){
     return OGR_F_SetFID(self, fid);

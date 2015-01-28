@@ -616,14 +616,14 @@ OGRErr OGRMySQLTableLayer::ISetFeature( OGRFeature *poFeature )
 {
     OGRErr eErr;
 
-    if( poFeature->GetFID64() == OGRNullFID )
+    if( poFeature->GetFID() == OGRNullFID )
     {
         CPLError( CE_Failure, CPLE_AppDefined,
                   "FID required on features given to SetFeature()." );
         return OGRERR_FAILURE;
     }
 
-    eErr = DeleteFeature( poFeature->GetFID64() );
+    eErr = DeleteFeature( poFeature->GetFID() );
     if( eErr != OGRERR_NONE )
         return eErr;
 
@@ -702,7 +702,7 @@ OGRErr OGRMySQLTableLayer::ICreateFeature( OGRFeature *poFeature )
         bNeedComma = TRUE;
     }
 
-    if( poFeature->GetFID64() != OGRNullFID && pszFIDColumn != NULL )
+    if( poFeature->GetFID() != OGRNullFID && pszFIDColumn != NULL )
     {
         if( bNeedComma )
             osCommand += ", ";
@@ -757,9 +757,9 @@ OGRErr OGRMySQLTableLayer::ICreateFeature( OGRFeature *poFeature )
 
 
     // Set the FID 
-    if( poFeature->GetFID64() != OGRNullFID && pszFIDColumn != NULL )
+    if( poFeature->GetFID() != OGRNullFID && pszFIDColumn != NULL )
     {
-        if( (GIntBig)(int)poFeature->GetFID64() != poFeature->GetFID64() &&
+        if( (GIntBig)(int)poFeature->GetFID() != poFeature->GetFID() &&
             GetMetadataItem(OLMD_FID64) == NULL )
         {
             CPLString osCommand2;
@@ -784,7 +784,7 @@ OGRErr OGRMySQLTableLayer::ICreateFeature( OGRFeature *poFeature )
         
         if( bNeedComma )
             osCommand += ", ";
-        osCommand += CPLString().Printf( CPL_FRMT_GIB, poFeature->GetFID64() );
+        osCommand += CPLString().Printf( CPL_FRMT_GIB, poFeature->GetFID() );
         bNeedComma = TRUE;
     }
 
@@ -1097,7 +1097,7 @@ OGRFeature *OGRMySQLTableLayer::GetFeature( GIntBig nFeatureId )
 }
 
 /************************************************************************/
-/*                          GetFeatureCount64()                           */
+/*                          GetFeatureCount()                           */
 /*                                                                      */
 /*      If a spatial filter is in effect, we turn control over to       */
 /*      the generic counter.  Otherwise we return the total count.      */
@@ -1105,7 +1105,7 @@ OGRFeature *OGRMySQLTableLayer::GetFeature( GIntBig nFeatureId )
 /*      way of counting features matching a spatial query.              */
 /************************************************************************/
 
-GIntBig OGRMySQLTableLayer::GetFeatureCount64( CPL_UNUSED int bForce )
+GIntBig OGRMySQLTableLayer::GetFeatureCount( CPL_UNUSED int bForce )
 {
 /* -------------------------------------------------------------------- */
 /*      Ensure any active long result is interrupted.                   */

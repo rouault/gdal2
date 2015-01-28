@@ -467,14 +467,14 @@ int OGRPCIDSKLayer::TestCapability( const char * pszCap )
 }
 
 /************************************************************************/
-/*                         GetFeatureCount64()                          */
+/*                         GetFeatureCount()                          */
 /************************************************************************/
 
-GIntBig OGRPCIDSKLayer::GetFeatureCount64( int bForce )
+GIntBig OGRPCIDSKLayer::GetFeatureCount( int bForce )
 
 {
     if( m_poFilterGeom != NULL || m_poAttrQuery != NULL )
-        return OGRLayer::GetFeatureCount64( bForce );
+        return OGRLayer::GetFeatureCount( bForce );
     else
     {
         try {
@@ -597,7 +597,7 @@ OGRErr OGRPCIDSKLayer::ICreateFeature( OGRFeature *poFeature )
     try {
 
         PCIDSK::ShapeId id = poVecSeg->CreateShape( 
-            (PCIDSK::ShapeId) poFeature->GetFID64() );
+            (PCIDSK::ShapeId) poFeature->GetFID() );
 
         poFeature->SetFID( (long) id );
 
@@ -628,7 +628,7 @@ OGRErr OGRPCIDSKLayer::ICreateFeature( OGRFeature *poFeature )
 OGRErr OGRPCIDSKLayer::ISetFeature( OGRFeature *poFeature )
 
 {
-    PCIDSK::ShapeId id = (PCIDSK::ShapeId) poFeature->GetFID64();
+    PCIDSK::ShapeId id = (PCIDSK::ShapeId) poFeature->GetFID();
     
 /* -------------------------------------------------------------------- */
 /*      Translate attribute fields.                                     */

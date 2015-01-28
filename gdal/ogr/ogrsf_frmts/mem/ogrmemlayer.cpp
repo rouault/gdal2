@@ -173,23 +173,23 @@ OGRErr OGRMemLayer::ISetFeature( OGRFeature *poFeature )
     if( poFeature == NULL )
         return OGRERR_FAILURE;
 
-    if( poFeature->GetFID64() == OGRNullFID )
+    if( poFeature->GetFID() == OGRNullFID )
     {
         while( iNextCreateFID < nMaxFeatureCount 
                && papoFeatures[iNextCreateFID] != NULL )
             iNextCreateFID++;
         poFeature->SetFID( iNextCreateFID++ );
     }
-    else if ( poFeature->GetFID64() < OGRNullFID )
+    else if ( poFeature->GetFID() < OGRNullFID )
     {
         CPLError(CE_Failure, CPLE_NotSupported,
                  "negative FID are not supported");
         return OGRERR_FAILURE;
     }
 
-    if( poFeature->GetFID64() >= nMaxFeatureCount )
+    if( poFeature->GetFID() >= nMaxFeatureCount )
     {
-        GIntBig nNewCount = MAX(2*nMaxFeatureCount+10, poFeature->GetFID64() + 1 );
+        GIntBig nNewCount = MAX(2*nMaxFeatureCount+10, poFeature->GetFID() + 1 );
         if( (GIntBig)(size_t)(sizeof(OGRFeature *) * nNewCount) !=
                                 (GIntBig)sizeof(OGRFeature *) * nNewCount )
         {
@@ -212,18 +212,18 @@ OGRErr OGRMemLayer::ISetFeature( OGRFeature *poFeature )
         nMaxFeatureCount = nNewCount;
     }
 
-    if( papoFeatures[poFeature->GetFID64()] != NULL )
+    if( papoFeatures[poFeature->GetFID()] != NULL )
     {
-        delete papoFeatures[poFeature->GetFID64()];
-        papoFeatures[poFeature->GetFID64()] = NULL;
+        delete papoFeatures[poFeature->GetFID()];
+        papoFeatures[poFeature->GetFID()] = NULL;
         nFeatureCount--;
     }
 
-    papoFeatures[poFeature->GetFID64()] = poFeature->Clone();
+    papoFeatures[poFeature->GetFID()] = poFeature->Clone();
     int i;
     for(i = 0; i < poFeatureDefn->GetGeomFieldCount(); i ++)
     {
-        OGRGeometry* poGeom = papoFeatures[poFeature->GetFID64()]->GetGeomFieldRef(i);
+        OGRGeometry* poGeom = papoFeatures[poFeature->GetFID()]->GetGeomFieldRef(i);
         if( poGeom != NULL && poGeom->getSpatialReference() == NULL )
         {
             poGeom->assignSpatialReference(
@@ -245,19 +245,19 @@ OGRErr OGRMemLayer::ICreateFeature( OGRFeature *poFeature )
     if (!bUpdatable)
         return OGRERR_FAILURE;
 
-    if( poFeature->GetFID64() != OGRNullFID &&
-        poFeature->GetFID64() != iNextCreateFID )
+    if( poFeature->GetFID() != OGRNullFID &&
+        poFeature->GetFID() != iNextCreateFID )
         bHasHoles = TRUE;
 
-    if( poFeature->GetFID64() != OGRNullFID 
-        && poFeature->GetFID64() >= 0
-        && poFeature->GetFID64() < nMaxFeatureCount )
+    if( poFeature->GetFID() != OGRNullFID 
+        && poFeature->GetFID() >= 0
+        && poFeature->GetFID() < nMaxFeatureCount )
     {
-        if( papoFeatures[poFeature->GetFID64()] != NULL )
+        if( papoFeatures[poFeature->GetFID()] != NULL )
             poFeature->SetFID( OGRNullFID );
     }
 
-    if( poFeature->GetFID64() > 10000000 )
+    if( poFeature->GetFID() > 10000000 )
         poFeature->SetFID( OGRNullFID );
 
     return SetFeature( poFeature );
@@ -290,7 +290,7 @@ OGRErr OGRMemLayer::DeleteFeature( GIntBig nFID )
 }
 
 /************************************************************************/
-/*                          GetFeatureCount64()                           */
+/*                          GetFeatureCount()                           */
 /*                                                                      */
 /*      If a spatial filter is in effect, we turn control over to       */
 /*      the generic counter.  Otherwise we return the total count.      */
@@ -298,11 +298,11 @@ OGRErr OGRMemLayer::DeleteFeature( GIntBig nFID )
 /*      way of counting features matching a spatial query.              */
 /************************************************************************/
 
-GIntBig OGRMemLayer::GetFeatureCount64( int bForce )
+GIntBig OGRMemLayer::GetFeatureCount( int bForce )
 
 {
     if( m_poFilterGeom != NULL || m_poAttrQuery != NULL )
-        return OGRLayer::GetFeatureCount64( bForce );
+        return OGRLayer::GetFeatureCount( bForce );
     else
         return nFeatureCount;
 }

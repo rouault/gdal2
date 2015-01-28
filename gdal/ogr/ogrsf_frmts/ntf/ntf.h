@@ -404,7 +404,7 @@ class OGRNTFLayer : public OGRLayer
     OGRFeatureDefn *    GetLayerDefn() { return poFeatureDefn; }
 
 #ifdef notdef    
-    GIntBig             GetFeatureCount64( int );
+    GIntBig             GetFeatureCount( int );
 #endif
     
     int                 TestCapability( const char * );
@@ -440,7 +440,7 @@ class OGRNTFFeatureClassLayer : public OGRLayer
     
     OGRFeatureDefn *    GetLayerDefn() { return poFeatureDefn; }
 
-    GIntBig             GetFeatureCount64( int = TRUE );
+    GIntBig             GetFeatureCount( int = TRUE );
     
     int                 TestCapability( const char * );
 };
@@ -481,7 +481,7 @@ class OGRNTFRasterLayer : public OGRLayer
     
     OGRFeatureDefn *    GetLayerDefn() { return poFeatureDefn; }
 
-    GIntBig             GetFeatureCount64( int = TRUE );
+    GIntBig             GetFeatureCount( int = TRUE );
     
     int                 TestCapability( const char * );
 };

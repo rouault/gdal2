@@ -67,7 +67,7 @@ class OGREDIGEOLayer : public OGRLayer
     virtual void                ResetReading();
     virtual OGRFeature *        GetNextFeature();
     virtual OGRFeature *        GetFeature(GIntBig nFID);
-    virtual GIntBig             GetFeatureCount64( int bForce );
+    virtual GIntBig             GetFeatureCount( int bForce );
 
     virtual OGRFeatureDefn *    GetLayerDefn() { return poFeatureDefn; }
 

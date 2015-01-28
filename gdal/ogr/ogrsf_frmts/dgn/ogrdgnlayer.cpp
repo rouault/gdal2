@@ -253,7 +253,7 @@ OGRFeature *OGRDGNLayer::GetFeature( GIntBig nFeatureId )
     if( poFeature == NULL )
         return NULL;
 
-    if( poFeature->GetFID64() != nFeatureId )
+    if( poFeature->GetFID() != nFeatureId )
     {
         delete poFeature;
         return NULL;
@@ -749,10 +749,10 @@ int OGRDGNLayer::TestCapability( const char * pszCap )
 }
 
 /************************************************************************/
-/*                          GetFeatureCount64()                           */
+/*                          GetFeatureCount()                           */
 /************************************************************************/
 
-GIntBig OGRDGNLayer::GetFeatureCount64( int bForce )
+GIntBig OGRDGNLayer::GetFeatureCount( int bForce )
 
 {
 /* -------------------------------------------------------------------- */
@@ -760,7 +760,7 @@ GIntBig OGRDGNLayer::GetFeatureCount64( int bForce )
 /*      normally.                                                       */
 /* -------------------------------------------------------------------- */
     if( m_poFilterGeom != NULL || m_poAttrQuery != NULL )
-        return OGRLayer::GetFeatureCount64( bForce );
+        return OGRLayer::GetFeatureCount( bForce );
 
 /* -------------------------------------------------------------------- */
 /*      Otherwise scan the index.                                       */

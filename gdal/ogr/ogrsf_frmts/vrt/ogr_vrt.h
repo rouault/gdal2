@@ -163,7 +163,7 @@ class OGRVRTLayer : public OGRLayer
 
     virtual OGRSpatialReference *GetSpatialRef();
 
-    virtual GIntBig     GetFeatureCount64( int );
+    virtual GIntBig     GetFeatureCount( int );
 
     virtual OGRErr      SetAttributeFilter( const char * );
 

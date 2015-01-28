@@ -586,14 +586,14 @@ int OGRDODSGridLayer::ProvideDataDDS()
 }
 
 /************************************************************************/
-/*                          GetFeatureCount64()                           */
+/*                          GetFeatureCount()                           */
 /************************************************************************/
 
-GIntBig OGRDODSGridLayer::GetFeatureCount64( int bForce )
+GIntBig OGRDODSGridLayer::GetFeatureCount( int bForce )
 
 {
     if( m_poFilterGeom == NULL && m_poAttrQuery == NULL )
         return nMaxRawIndex;
     else
-        return OGRDODSLayer::GetFeatureCount64( bForce );
+        return OGRDODSLayer::GetFeatureCount( bForce );
 }

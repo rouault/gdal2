@@ -1390,7 +1390,7 @@ retry:
 /*      Handle FID.                                                     */
 /* -------------------------------------------------------------------- */
     if( iFIDField == -1 )
-        poDstFeat->SetFID( poSrcFeat->GetFID64() );
+        poDstFeat->SetFID( poSrcFeat->GetFID() );
     else
         poDstFeat->SetFID( poSrcFeat->GetFieldAsInteger64( iFIDField ) );
     
@@ -1670,7 +1670,7 @@ OGRFeature* OGRVRTLayer::TranslateVRTFeatureToSrcFeature( OGRFeature* poVRTFeatu
 {
     OGRFeature *poSrcFeat = new OGRFeature( poSrcLayer->GetLayerDefn() );
 
-    poSrcFeat->SetFID( poVRTFeature->GetFID64() );
+    poSrcFeat->SetFID( poVRTFeature->GetFID() );
 
 /* -------------------------------------------------------------------- */
 /*      Handle style string.                                            */
@@ -1854,7 +1854,7 @@ OGRErr OGRVRTLayer::ICreateFeature( OGRFeature* poVRTFeature )
     OGRErr eErr = poSrcLayer->CreateFeature(poSrcFeature);
     if (eErr == OGRERR_NONE)
     {
-        poVRTFeature->SetFID(poSrcFeature->GetFID64());
+        poVRTFeature->SetFID(poSrcFeature->GetFID());
     }
     delete poSrcFeature;
     return eErr;
@@ -2098,10 +2098,10 @@ OGRErr OGRVRTLayer::GetExtent( int iGeomField, OGREnvelope *psExtent, int bForce
 }
 
 /************************************************************************/
-/*                          GetFeatureCount64()                           */
+/*                          GetFeatureCount()                           */
 /************************************************************************/
 
-GIntBig OGRVRTLayer::GetFeatureCount64( int bForce )
+GIntBig OGRVRTLayer::GetFeatureCount( int bForce )
 
 {
     if (nFeatureCount >= 0 &&
@@ -2118,10 +2118,10 @@ GIntBig OGRVRTLayer::GetFeatureCount64( int bForce )
         if( bNeedReset )
             ResetSourceReading();
 
-        return poSrcLayer->GetFeatureCount64( bForce );
+        return poSrcLayer->GetFeatureCount( bForce );
     }
 
-    return OGRLayer::GetFeatureCount64( bForce );
+    return OGRLayer::GetFeatureCount( bForce );
 }
 
 

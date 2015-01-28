@@ -109,7 +109,7 @@ class OGRWFSWrappedResultLayer : public OGRLayer
         virtual OGRErr      SetNextByIndex( GIntBig nIndex ) { return poLayer->SetNextByIndex(nIndex); }
         virtual OGRFeature *GetFeature( GIntBig nFID ) { return poLayer->GetFeature(nFID); }
         virtual OGRFeatureDefn *GetLayerDefn() { return poLayer->GetLayerDefn(); }
-        virtual GIntBig     GetFeatureCount64( int bForce = TRUE ) { return poLayer->GetFeatureCount64(bForce); }
+        virtual GIntBig     GetFeatureCount( int bForce = TRUE ) { return poLayer->GetFeatureCount(bForce); }
         virtual int         TestCapability( const char * pszCap )  { return poLayer->TestCapability(pszCap); }
 };
 

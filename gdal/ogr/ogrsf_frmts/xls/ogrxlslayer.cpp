@@ -261,10 +261,10 @@ OGRFeatureDefn * OGRXLSLayer::GetLayerDefn()
 }
 
 /************************************************************************/
-/*                          GetFeatureCount64()                           */
+/*                          GetFeatureCount()                           */
 /************************************************************************/
 
-GIntBig OGRXLSLayer::GetFeatureCount64( int bForce )
+GIntBig OGRXLSLayer::GetFeatureCount( int bForce )
 {
     if  ( m_poAttrQuery == NULL /* && m_poFilterGeom == NULL */ )
     {
@@ -276,7 +276,7 @@ GIntBig OGRXLSLayer::GetFeatureCount64( int bForce )
         return bFirstLineIsHeaders ? nRows - 1 : nRows;
     }
 
-    return OGRLayer::GetFeatureCount64(bForce);
+    return OGRLayer::GetFeatureCount(bForce);
 }
 
 /************************************************************************/

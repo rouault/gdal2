@@ -540,14 +540,6 @@ void OGRAPISpy_L_GetFeatureCount( OGRLayerH hLayer, int bForce )
     OGRAPISpyFileClose();
 }
 
-void OGRAPISpy_L_GetFeatureCount64( OGRLayerH hLayer, int bForce )
-{
-    OGRAPISpyFlushDiffered();
-    fprintf(fpSpyFile, "%s.GetFeatureCount(force = %d)\n",
-            OGRAPISpyGetLayerVar(hLayer).c_str(), bForce);
-    OGRAPISpyFileClose();
-}
-
 void OGRAPISpy_L_GetExtent( OGRLayerH hLayer, int bForce )
 {
     OGRAPISpyFlushDiffered();
@@ -609,8 +601,8 @@ static void OGRAPISpyDumpFeature( OGRLayerH hLayer, OGRFeatureH hFeat )
     CPLAssert(poFeature->GetDefnRef()->IsSame(poLayer->GetLayerDefn()));
     fprintf(fpSpyFile, "f = ogr.Feature(%s_defn)\n",
             OGRAPISpyGetLayerVar(hLayer).c_str());
-    if( poFeature->GetFID64() != -1 )
-        fprintf(fpSpyFile, "f.SetFID(" CPL_FRMT_GIB ")\n", poFeature->GetFID64());
+    if( poFeature->GetFID() != -1 )
+        fprintf(fpSpyFile, "f.SetFID(" CPL_FRMT_GIB ")\n", poFeature->GetFID());
     int i;
     for(i = 0; i < poFeature->GetFieldCount(); i++)
     {

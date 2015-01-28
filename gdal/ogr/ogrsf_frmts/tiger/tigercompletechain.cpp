@@ -364,7 +364,7 @@ int TigerCompleteChain::SetModule( const char * pszModule )
                           pszFilename );
         }
         else
-            panShapeRecordId = (int *)CPLCalloc(sizeof(int),GetFeatureCount64());
+            panShapeRecordId = (int *)CPLCalloc(sizeof(int),GetFeatureCount());
         
         CPLFree( pszFilename );
     }
@@ -577,7 +577,7 @@ int TigerCompleteChain::AddShapePoints( int nTLID, int nRecordId,
 int TigerCompleteChain::GetShapeRecordId( int nChainId, int nTLID )
 
 {
-    CPLAssert( nChainId >= 0 && nChainId < GetFeatureCount64() );
+    CPLAssert( nChainId >= 0 && nChainId < GetFeatureCount() );
 
     if( fpShape == NULL || panShapeRecordId == NULL )
         return -1;

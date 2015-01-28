@@ -159,13 +159,13 @@ void OGRIngresResultLayer::ResetReading()
 }
 
 /************************************************************************/
-/*                          GetFeatureCount64()                           */
+/*                          GetFeatureCount()                           */
 /************************************************************************/
 
-GIntBig OGRIngresResultLayer::GetFeatureCount64( int bForce )
+GIntBig OGRIngresResultLayer::GetFeatureCount( int bForce )
 
 {
     // I wonder if we could do anything smart here...
     // ... not till Ingres grows up (HB)
-    return OGRIngresLayer::GetFeatureCount64( bForce );
+    return OGRIngresLayer::GetFeatureCount( bForce );
 }

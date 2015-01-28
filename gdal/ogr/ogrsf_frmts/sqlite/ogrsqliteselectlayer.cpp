@@ -255,12 +255,12 @@ OGRErr OGRSQLiteSelectLayerCommonBehaviour::SetAttributeFilter( const char *pszQ
 /*                           GetNextFeature()                           */
 /************************************************************************/
 
-GIntBig OGRSQLiteSelectLayer::GetFeatureCount64( int bForce )
+GIntBig OGRSQLiteSelectLayer::GetFeatureCount( int bForce )
 {
-    return poBehaviour->GetFeatureCount64(bForce);
+    return poBehaviour->GetFeatureCount(bForce);
 }
 
-GIntBig OGRSQLiteSelectLayerCommonBehaviour::GetFeatureCount64( int bForce )
+GIntBig OGRSQLiteSelectLayerCommonBehaviour::GetFeatureCount( int bForce )
 {
     if( bEmptyLayer )
         return 0;
@@ -274,7 +274,7 @@ GIntBig OGRSQLiteSelectLayerCommonBehaviour::GetFeatureCount64( int bForce )
         return 1;
 
     if( poLayer->GetFeatureQuery() != NULL || (poLayer->GetFilterGeom() != NULL && !bSpatialFilterInSQL) )
-        return poLayer->BaseGetFeatureCount64(bForce);
+        return poLayer->BaseGetFeatureCount(bForce);
 
     CPLString osFeatureCountSQL("SELECT COUNT(*) FROM (");
     osFeatureCountSQL += osSQLCurrent;
@@ -295,7 +295,7 @@ GIntBig OGRSQLiteSelectLayerCommonBehaviour::GetFeatureCount64( int bForce )
     {
         CPLDebug("SQLITE", "Error: %s", pszErrMsg);
         sqlite3_free(pszErrMsg);
-        return poLayer->BaseGetFeatureCount64(bForce);
+        return poLayer->BaseGetFeatureCount(bForce);
     }
 
     if( nRowCount == 1 && nColCount == 1 )

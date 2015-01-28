@@ -4046,13 +4046,13 @@ class OGROSMResultLayerDecorator : public OGRLayerDecorator
                                         osDSName(osDSName),
                                         osInterestLayers(osInterestLayers) {}
 
-        virtual GIntBig     GetFeatureCount64( int bForce = TRUE )
+        virtual GIntBig     GetFeatureCount( int bForce = TRUE )
         {
-            /* When we run GetFeatureCount64() with SQLite SQL dialect, */
+            /* When we run GetFeatureCount() with SQLite SQL dialect, */
             /* the OSM dataset will be re-opened. Make sure that it is */
             /* re-opened with the same interest layers */
             AddInterestLayersForDSName(osDSName, osInterestLayers);
-            return OGRLayerDecorator::GetFeatureCount64(bForce);
+            return OGRLayerDecorator::GetFeatureCount(bForce);
         }
 };
 

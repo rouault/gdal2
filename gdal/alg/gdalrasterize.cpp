@@ -917,7 +917,7 @@ CPLErr GDALRasterizeLayers( GDALDatasetH hDS,
 /*      Do not force the feature count, so if driver doesn't know       */
 /*      exact number of features, go down the normal way.               */
 /* -------------------------------------------------------------------- */
-        if ( poLayer->GetFeatureCount64(FALSE) == 0 )
+        if ( poLayer->GetFeatureCount(FALSE) == 0 )
             continue;
 
         if ( pszBurnAttribute )
@@ -1233,7 +1233,7 @@ CPLErr GDALRasterizeLayersBuf( void *pData, int nBufXSize, int nBufYSize,
 /*      Do not force the feature count, so if driver doesn't know       */
 /*      exact number of features, go down the normal way.               */
 /* -------------------------------------------------------------------- */
-        if ( poLayer->GetFeatureCount64(FALSE) == 0 )
+        if ( poLayer->GetFeatureCount(FALSE) == 0 )
             continue;
 
         if ( pszBurnAttribute )

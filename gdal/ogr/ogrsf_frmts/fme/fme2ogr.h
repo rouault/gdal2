@@ -98,7 +98,7 @@ class OGRFMELayerCached : public OGRFMELayer
                        
     virtual void        ResetReading();
     virtual OGRFeature *GetNextFeature();
-    virtual GIntBig     GetFeatureCount64( int bForce );
+    virtual GIntBig     GetFeatureCount( int bForce );
 
     virtual OGRErr      GetExtent(OGREnvelope *psExtent, int bForce = TRUE);
     
@@ -138,7 +138,7 @@ class OGRFMELayerDB : public OGRFMELayer
     
     virtual void        ResetReading();
     virtual OGRFeature *GetNextFeature();
-    virtual GIntBig     GetFeatureCount64( int bForce );
+    virtual GIntBig     GetFeatureCount( int bForce );
 
     virtual int         TestCapability( const char * );
 

@@ -137,7 +137,7 @@ class OGRGFTTableLayer : public OGRGFTLayer
     virtual OGRFeatureDefn *    GetLayerDefn();
 
     virtual const char *        GetName() { return osTableName.c_str(); }
-    virtual GIntBig     GetFeatureCount64( int bForce = TRUE );
+    virtual GIntBig     GetFeatureCount( int bForce = TRUE );
 
     virtual OGRFeature *        GetFeature( GIntBig nFID );
 

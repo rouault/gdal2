@@ -1948,13 +1948,13 @@ void OGRCSVLayer::SetWriteBOM(int bWriteBOM)
 }
 
 /************************************************************************/
-/*                        GetFeatureCount64()                             */
+/*                        GetFeatureCount()                             */
 /************************************************************************/
 
-GIntBig OGRCSVLayer::GetFeatureCount64( int bForce )
+GIntBig OGRCSVLayer::GetFeatureCount( int bForce )
 {
     if (bInWriteMode || m_poFilterGeom != NULL || m_poAttrQuery != NULL)
-        return OGRLayer::GetFeatureCount64(bForce);
+        return OGRLayer::GetFeatureCount(bForce);
 
     if (nTotalFeatures >= 0)
         return nTotalFeatures;

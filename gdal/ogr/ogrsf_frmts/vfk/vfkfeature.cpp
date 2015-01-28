@@ -85,7 +85,7 @@ void IVFKFeature::SetFID(GIntBig nFID)
         m_nFID = nFID;
     }
     else {
-        m_nFID = m_poDataBlock->GetFeatureCount64() + 1;
+        m_nFID = m_poDataBlock->GetFeatureCount() + 1;
     }
 }
 

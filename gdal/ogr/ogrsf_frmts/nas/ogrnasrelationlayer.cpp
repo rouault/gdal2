@@ -145,10 +145,10 @@ OGRFeature *OGRNASRelationLayer::GetNextFeature()
 }
 
 /************************************************************************/
-/*                          GetFeatureCount64()                           */
+/*                          GetFeatureCount()                           */
 /************************************************************************/
 
-GIntBig OGRNASRelationLayer::GetFeatureCount64( int bForce )
+GIntBig OGRNASRelationLayer::GetFeatureCount( int bForce )
 
 {
     if( !bPopulated )
@@ -157,7 +157,7 @@ GIntBig OGRNASRelationLayer::GetFeatureCount64( int bForce )
     if( m_poAttrQuery == NULL )
         return aoRelationCollection.size();
     else
-        return OGRLayer::GetFeatureCount64( bForce );
+        return OGRLayer::GetFeatureCount( bForce );
 }
 
 /************************************************************************/

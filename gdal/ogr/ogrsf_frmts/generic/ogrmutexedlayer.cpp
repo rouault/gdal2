@@ -149,10 +149,10 @@ OGRSpatialReference *OGRMutexedLayer::GetSpatialRef()
     return OGRLayerDecorator::GetSpatialRef();
 }
 
-GIntBig         OGRMutexedLayer::GetFeatureCount64( int bForce )
+GIntBig         OGRMutexedLayer::GetFeatureCount( int bForce )
 {
     CPLMutexHolderOptionalLockD(m_hMutex);
-    return OGRLayerDecorator::GetFeatureCount64(bForce);
+    return OGRLayerDecorator::GetFeatureCount(bForce);
 }
 
 OGRErr      OGRMutexedLayer::GetExtent(int iGeomField, OGREnvelope *psExtent, int bForce)

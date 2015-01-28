@@ -818,17 +818,17 @@ int OGRSQLiteTableLayer::TestCapability( const char * pszCap )
 }
 
 /************************************************************************/
-/*                          GetFeatureCount64()                           */
+/*                          GetFeatureCount()                           */
 /************************************************************************/
 
-GIntBig OGRSQLiteTableLayer::GetFeatureCount64( int bForce )
+GIntBig OGRSQLiteTableLayer::GetFeatureCount( int bForce )
 
 {
     if (HasLayerDefnError())
         return 0;
 
     if( !TestCapability(OLCFastFeatureCount) )
-        return OGRSQLiteLayer::GetFeatureCount64( bForce );
+        return OGRSQLiteLayer::GetFeatureCount( bForce );
 
     if (nFeatureCount >= 0 && m_poFilterGeom == NULL &&
         osQuery.size() == 0 )
@@ -2013,7 +2013,7 @@ OGRErr OGRSQLiteTableLayer::ISetFeature( OGRFeature *poFeature )
         return OGRERR_FAILURE;
     }
     
-    if( poFeature->GetFID64() == OGRNullFID )
+    if( poFeature->GetFID() == OGRNullFID )
     {
         CPLError( CE_Failure, CPLE_AppDefined, 
                   "SetFeature() with unset FID fails." );
@@ -2078,7 +2078,7 @@ OGRErr OGRSQLiteTableLayer::ISetFeature( OGRFeature *poFeature )
 /* -------------------------------------------------------------------- */
     osCommand += " WHERE \"";
     osCommand += OGRSQLiteEscapeName(pszFIDColumn);
-    osCommand += CPLSPrintf("\" = " CPL_FRMT_GIB, poFeature->GetFID64());
+    osCommand += CPLSPrintf("\" = " CPL_FRMT_GIB, poFeature->GetFID());
 
 /* -------------------------------------------------------------------- */
 /*      Prepare the statement.                                          */
@@ -2314,7 +2314,7 @@ OGRErr OGRSQLiteTableLayer::ICreateFeature( OGRFeature *poFeature )
     }
 
     int bReuseStmt = FALSE;
-    if( hInsertStmt == NULL || poFeature->GetFID64() != OGRNullFID || bHasDefaultValue )
+    if( hInsertStmt == NULL || poFeature->GetFID() != OGRNullFID || bHasDefaultValue )
     {
         CPLString      osValues;
 
@@ -2327,13 +2327,13 @@ OGRErr OGRSQLiteTableLayer::ICreateFeature( OGRFeature *poFeature )
 /*      Add FID if we have a cleartext FID column.                      */
 /* -------------------------------------------------------------------- */
         if( pszFIDColumn != NULL // && !EQUAL(pszFIDColumn,"OGC_FID") 
-            && poFeature->GetFID64() != OGRNullFID )
+            && poFeature->GetFID() != OGRNullFID )
         {
             osCommand += "\"";
             osCommand += OGRSQLiteEscapeName(pszFIDColumn);
             osCommand += "\"";
 
-            osValues += CPLSPrintf( CPL_FRMT_GIB, poFeature->GetFID64() );
+            osValues += CPLSPrintf( CPL_FRMT_GIB, poFeature->GetFID() );
             bNeedComma = TRUE;
         }
 
@@ -2411,7 +2411,7 @@ OGRErr OGRSQLiteTableLayer::ICreateFeature( OGRFeature *poFeature )
     #endif
 
         ClearInsertStmt();
-        if( poFeature->GetFID64() == OGRNullFID )
+        if( poFeature->GetFID() == OGRNullFID )
             osLastInsertStmt = osCommand;
 
 #ifdef HAVE_SQLITE3_PREPARE_V2

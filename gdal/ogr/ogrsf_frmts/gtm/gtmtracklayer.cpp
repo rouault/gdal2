@@ -349,12 +349,12 @@ OGRFeature* GTMTrackLayer::GetNextFeature()
     return NULL;
 }
 
-GIntBig GTMTrackLayer::GetFeatureCount64(int bForce)
+GIntBig GTMTrackLayer::GetFeatureCount(int bForce)
 {
     if (m_poFilterGeom == NULL && m_poAttrQuery == NULL)
         return poDS->getNTracks();
         
-    return OGRLayer::GetFeatureCount64(bForce);
+    return OGRLayer::GetFeatureCount(bForce);
 }
 
 

@@ -478,10 +478,10 @@ OGRFeatureDefn * OGRGFTTableLayer::GetLayerDefn()
 }
 
 /************************************************************************/
-/*                          GetFeatureCount64()                           */
+/*                          GetFeatureCount()                           */
 /************************************************************************/
 
-GIntBig OGRGFTTableLayer::GetFeatureCount64(CPL_UNUSED int bForce)
+GIntBig OGRGFTTableLayer::GetFeatureCount(CPL_UNUSED int bForce)
 {
     GetLayerDefn();
 
@@ -503,7 +503,7 @@ GIntBig OGRGFTTableLayer::GetFeatureCount64(CPL_UNUSED int bForce)
         strncmp(pszLine, "count()", 7) != 0 ||
         psResult->pszErrBuf != NULL)
     {
-        CPLError(CE_Failure, CPLE_AppDefined, "GetFeatureCount64() failed");
+        CPLError(CE_Failure, CPLE_AppDefined, "GetFeatureCount() failed");
         CPLHTTPDestroyResult(psResult);
         return 0;
     }
@@ -511,7 +511,7 @@ GIntBig OGRGFTTableLayer::GetFeatureCount64(CPL_UNUSED int bForce)
     pszLine = OGRGFTGotoNextLine(pszLine);
     if (pszLine == NULL)
     {
-        CPLError(CE_Failure, CPLE_AppDefined, "GetFeatureCount64() failed");
+        CPLError(CE_Failure, CPLE_AppDefined, "GetFeatureCount() failed");
         CPLHTTPDestroyResult(psResult);
         return 0;
     }
@@ -904,7 +904,7 @@ OGRErr      OGRGFTTableLayer::ISetFeature( OGRFeature *poFeature )
         return OGRERR_FAILURE;
     }
 
-    if (poFeature->GetFID64() == OGRNullFID)
+    if (poFeature->GetFID() == OGRNullFID)
     {
         CPLError( CE_Failure, CPLE_AppDefined,
                   "FID required on features given to SetFeature()." );
@@ -1007,7 +1007,7 @@ OGRErr      OGRGFTTableLayer::ISetFeature( OGRFeature *poFeature )
     }
 
     osCommand += " WHERE ROWID = '";
-    osCommand += CPLSPrintf(CPL_FRMT_GIB, poFeature->GetFID64());
+    osCommand += CPLSPrintf(CPL_FRMT_GIB, poFeature->GetFID());
     osCommand += "'";
 
     CPLHTTPResult * psResult = poDS->RunSQL(osCommand);

@@ -532,25 +532,25 @@ OGRFeature *OGRGMLLayer::GetNextFeature()
 }
 
 /************************************************************************/
-/*                          GetFeatureCount64()                           */
+/*                          GetFeatureCount()                           */
 /************************************************************************/
 
-GIntBig OGRGMLLayer::GetFeatureCount64( int bForce )
+GIntBig OGRGMLLayer::GetFeatureCount( int bForce )
 
 {
     if( poFClass == NULL )
         return 0;
 
     if( m_poFilterGeom != NULL || m_poAttrQuery != NULL )
-        return OGRLayer::GetFeatureCount64( bForce );
+        return OGRLayer::GetFeatureCount( bForce );
     else
     {
         /* If the schema is read from a .xsd file, we haven't read */
         /* the feature count, so compute it now */
-        GIntBig nFeatureCount = poFClass->GetFeatureCount64();
+        GIntBig nFeatureCount = poFClass->GetFeatureCount();
         if (nFeatureCount < 0)
         {
-            nFeatureCount = OGRLayer::GetFeatureCount64(bForce);
+            nFeatureCount = OGRLayer::GetFeatureCount(bForce);
             poFClass->SetFeatureCount(nFeatureCount);
         }
         return nFeatureCount;
@@ -667,7 +667,7 @@ OGRErr OGRGMLLayer::ICreateFeature( OGRFeature *poFeature )
         }
     }
 
-    if( poFeature->GetFID64() == OGRNullFID )
+    if( poFeature->GetFID() == OGRNullFID )
         poFeature->SetFID( iNextGMLId++ );
 
     int nGMLIdIndex = -1;
@@ -687,7 +687,7 @@ OGRErr OGRGMLLayer::ICreateFeature( OGRFeature *poFeature )
             poDS->PrintLine( fp, "%s gml:id=\"%s." CPL_FRMT_GIB "\">",
                              poFeatureDefn->GetName(),
                              poFeatureDefn->GetName(),
-                             poFeature->GetFID64() );
+                             poFeature->GetFID() );
     }
     else
     {
@@ -696,7 +696,7 @@ OGRErr OGRGMLLayer::ICreateFeature( OGRFeature *poFeature )
         {
             poDS->PrintLine( fp, "%s fid=\"F" CPL_FRMT_GIB "\">",
                              poFeatureDefn->GetName(),
-                             poFeature->GetFID64() );
+                             poFeature->GetFID() );
         }
         else if (nGMLIdIndex >= 0 && poFeature->IsFieldSet( nGMLIdIndex ) )
         {
@@ -709,7 +709,7 @@ OGRErr OGRGMLLayer::ICreateFeature( OGRFeature *poFeature )
             poDS->PrintLine( fp, "%s fid=\"%s." CPL_FRMT_GIB "\">",
                              poFeatureDefn->GetName(),
                              poFeatureDefn->GetName(),
-                             poFeature->GetFID64() );
+                             poFeature->GetFID() );
         }
     }
 
@@ -771,11 +771,11 @@ OGRErr OGRGMLLayer::ICreateFeature( OGRFeature *poFeature )
                         CPLSPrintf("GMLID=%s.%s." CPL_FRMT_GIB,
                                    poFeatureDefn->GetName(),
                                    poFieldDefn->GetNameRef(),
-                                   poFeature->GetFID64()));
+                                   poFeature->GetFID()));
                 else
                     papszOptions = CSLAddString(papszOptions,
                         CPLSPrintf("GMLID=%s.geom." CPL_FRMT_GIB,
-                                   poFeatureDefn->GetName(), poFeature->GetFID64()));
+                                   poFeatureDefn->GetName(), poFeature->GetFID()));
             }
             if( !bIsGML3Output && OGR_GT_IsNonLinear(poGeom->getGeometryType()) )
             {
@@ -984,7 +984,7 @@ int OGRGMLLayer::TestCapability( const char * pszCap )
             || m_poAttrQuery != NULL )
             return FALSE;
 
-        return poFClass->GetFeatureCount64() != -1;
+        return poFClass->GetFeatureCount() != -1;
     }
 
     else if( EQUAL(pszCap,OLCStringsAsUTF8) )

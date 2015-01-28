@@ -1171,7 +1171,7 @@ OGRFeature *OGRWFSLayer::GetNextFeature()
             poNewFeature->SetStyleString(poSrcFeature->GetStyleString());
             poNewFeature->SetGeometryDirectly(poSrcFeature->StealGeometry());
         }
-        poNewFeature->SetFID(poSrcFeature->GetFID64());
+        poNewFeature->SetFID(poSrcFeature->GetFID());
         poGeom = poNewFeature->GetGeometryRef();
 
         /* FIXME? I don't really know what we should do with WFS 1.1.0 */
@@ -1467,7 +1467,7 @@ GIntBig OGRWFSLayer::ExecuteGetFeatureResultTypeHits()
 
 int OGRWFSLayer::CanRunGetFeatureCountAndGetExtentTogether()
 {
-    /* In some cases, we can evaluate the result of GetFeatureCount64() */
+    /* In some cases, we can evaluate the result of GetFeatureCount() */
     /* and GetExtent() with the same data */
     CPLString osRequestURL = MakeGetFeatureURL(0, FALSE);
     return( !bHasExtents && nFeatures < 0 &&
@@ -1478,16 +1478,16 @@ int OGRWFSLayer::CanRunGetFeatureCountAndGetExtentTogether()
 }
 
 /************************************************************************/
-/*                           GetFeatureCount64()                          */
+/*                           GetFeatureCount()                          */
 /************************************************************************/
 
-GIntBig OGRWFSLayer::GetFeatureCount64( int bForce )
+GIntBig OGRWFSLayer::GetFeatureCount( int bForce )
 {
     if (nFeatures >= 0)
         return nFeatures;
 
     if (TestCapability(OLCFastFeatureCount))
-        return poBaseLayer->GetFeatureCount64(bForce);
+        return poBaseLayer->GetFeatureCount(bForce);
 
     if ((m_poAttrQuery == NULL || osWFSWhere.size() != 0) &&
          poDS->GetFeatureSupportHits())
@@ -1509,10 +1509,10 @@ GIntBig OGRWFSLayer::GetFeatureCount64( int bForce )
         ResetReading();
 
         if (TestCapability(OLCFastFeatureCount))
-            return poBaseLayer->GetFeatureCount64(bForce);
+            return poBaseLayer->GetFeatureCount(bForce);
     }
 
-    /* In some cases, we can evaluate the result of GetFeatureCount64() */
+    /* In some cases, we can evaluate the result of GetFeatureCount() */
     /* and GetExtent() with the same data */
     if( CanRunGetFeatureCountAndGetExtentTogether() )
     {
@@ -1521,7 +1521,7 @@ GIntBig OGRWFSLayer::GetFeatureCount64( int bForce )
     }
 
     if( nFeatures < 0 )
-        nFeatures = OGRLayer::GetFeatureCount64(bForce);
+        nFeatures = OGRLayer::GetFeatureCount(bForce);
 
     return nFeatures;
 }
@@ -1570,7 +1570,7 @@ OGRErr OGRWFSLayer::GetExtent(OGREnvelope *psExtent, int bForce)
     if (TestCapability(OLCFastGetExtent))
         return poBaseLayer->GetExtent(psExtent, bForce);
 
-    /* In some cases, we can evaluate the result of GetFeatureCount64() */
+    /* In some cases, we can evaluate the result of GetFeatureCount() */
     /* and GetExtent() with the same data */
     if( CanRunGetFeatureCountAndGetExtentTogether() )
     {
@@ -1878,7 +1878,7 @@ OGRErr OGRWFSLayer::ICreateFeature( OGRFeature *poFeature )
         poFeature->SetFID(nFID);
     }
 
-    CPLDebug("WFS", "Got FID = " CPL_FRMT_GIB, poFeature->GetFID64());
+    CPLDebug("WFS", "Got FID = " CPL_FRMT_GIB, poFeature->GetFID());
 
     CPLDestroyXMLNode( psXML );
     CPLHTTPDestroyResult(psResult);

@@ -879,7 +879,7 @@ OGRFeature* OGRGeoJSONReader::ReadFeature( OGRGeoJSONLayer* poLayer, json_object
 /*      and of integral type. Otherwise, leave unset (-1) then index    */
 /*      in features sequence will be used as FID.                       */
 /* -------------------------------------------------------------------- */
-    if( -1 == poFeature->GetFID64() )
+    if( -1 == poFeature->GetFID() )
     {
         json_object* poObjId = NULL;
         OGRFieldSubType eSubType;
@@ -892,11 +892,11 @@ OGRFeature* OGRGeoJSONReader::ReadFeature( OGRGeoJSONLayer* poLayer, json_object
             poFeature->SetFID( (GIntBig)json_object_get_int64( poObjId ) );
             int nField = poFeature->GetFieldIndex( poLayer->GetFIDColumn() );
             if( -1 != nField )
-                poFeature->SetField( nField, poFeature->GetFID64() );
+                poFeature->SetField( nField, poFeature->GetFID() );
         }
     }
 
-    if( -1 == poFeature->GetFID64() )
+    if( -1 == poFeature->GetFID() )
     {
         json_object* poObjId = OGRGeoJSONFindMemberByName( poObj, "id" );
         if (poObjId != NULL && json_object_get_type(poObjId) == json_type_int)
@@ -979,7 +979,7 @@ OGRGeoJSONReader::ReadFeatureCollection( OGRGeoJSONLayer* poLayer, json_object* 
             /* bAdded = */ AddFeature( poLayer, poFeature );
             //CPLAssert( bAdded );
         }
-        //CPLAssert( nFeatures == poLayer_->GetFeatureCount64() );
+        //CPLAssert( nFeatures == poLayer_->GetFeatureCount() );
     }
 }
 

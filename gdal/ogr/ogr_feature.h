@@ -367,8 +367,7 @@ class CPL_DLL OGRFeature
                                        nYear, nMonth, nDay, 
                                        nHour, nMinute, nSecond, nTZFlag ); }
 
-    long                GetFID() CPL_WARN_DEPRECATED("Use GetFID64()");
-    GIntBig             GetFID64() { return nFID; }
+    GIntBig             GetFID() { return nFID; }
     virtual OGRErr      SetFID( GIntBig nFIDIn );
 
     void                DumpReadable( FILE *, char** papszOptions = NULL );

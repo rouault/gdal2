@@ -348,12 +348,12 @@ OGRFeature* GTMWaypointLayer::GetNextFeature()
     return NULL;
 }
 
-GIntBig GTMWaypointLayer::GetFeatureCount64(int bForce)
+GIntBig GTMWaypointLayer::GetFeatureCount(int bForce)
 {
     if (m_poFilterGeom == NULL && m_poAttrQuery == NULL)
         return poDS->getNWpts();
         
-    return OGRLayer::GetFeatureCount64(bForce);
+    return OGRLayer::GetFeatureCount(bForce);
 }
 
 void GTMWaypointLayer::ResetReading()

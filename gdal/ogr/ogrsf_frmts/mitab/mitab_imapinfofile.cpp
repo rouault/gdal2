@@ -423,7 +423,7 @@ TABFeature* IMapInfoFile::CreateTABFeature(OGRFeature *poFeature)
         poTABFeature->SetField(i,poFeature->GetRawFieldRef( i ));
     }
     
-    poTABFeature->SetFID(poFeature->GetFID64());
+    poTABFeature->SetFID(poFeature->GetFID());
     
     return poTABFeature;
 }
@@ -445,7 +445,7 @@ OGRErr     IMapInfoFile::ICreateFeature(OGRFeature *poFeature)
 
     eErr = CreateFeature(poTABFeature);
     if( eErr == OGRERR_NONE )
-        poFeature->SetFID(poTABFeature->GetFID64());
+        poFeature->SetFID(poTABFeature->GetFID());
 
     delete poTABFeature;
     

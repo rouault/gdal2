@@ -202,7 +202,7 @@ class IMapInfoFile : public OGRLayer
     ///////////////
     //  OGR methods for read support
     virtual void        ResetReading() = 0;
-    virtual GIntBig     GetFeatureCount64 (int bForce) = 0;
+    virtual GIntBig     GetFeatureCount (int bForce) = 0;
     virtual OGRFeature *GetNextFeature();
     virtual OGRFeature *GetFeature(GIntBig nFeatureId);
     virtual OGRErr      ICreateFeature(OGRFeature *poFeature);
@@ -331,7 +331,7 @@ class TABFile: public IMapInfoFile
 
     virtual void        ResetReading();
     virtual int         TestCapability( const char * pszCap );
-    virtual GIntBig     GetFeatureCount64 (int bForce);
+    virtual GIntBig     GetFeatureCount (int bForce);
     virtual int         GetExtent(OGREnvelope *psExtent, int bForce);
 
     /* Implement OGRLayer's SetFeature() for random write, only with TABFile */
@@ -477,7 +477,7 @@ class TABView: public IMapInfoFile
 
     virtual void        ResetReading();
     virtual int         TestCapability( const char * pszCap );
-    virtual GIntBig     GetFeatureCount64 (int bForce);
+    virtual GIntBig     GetFeatureCount (int bForce);
     virtual int         GetExtent(OGREnvelope *psExtent, int bForce);
     
     ///////////////
@@ -592,7 +592,7 @@ class TABSeamless: public IMapInfoFile
 
     virtual void        ResetReading();
     virtual int         TestCapability( const char * pszCap );
-    virtual GIntBig     GetFeatureCount64 (int bForce);
+    virtual GIntBig     GetFeatureCount (int bForce);
     virtual int         GetExtent(OGREnvelope *psExtent, int bForce);
     
     ///////////////
@@ -742,7 +742,7 @@ class MIFFile: public IMapInfoFile
                            {return m_poDefn?m_poDefn->GetName():"";};
 
     virtual int         TestCapability( const char * pszCap ) ;
-    virtual GIntBig     GetFeatureCount64 (int bForce);
+    virtual GIntBig     GetFeatureCount (int bForce);
     virtual void        ResetReading();
     virtual int         GetExtent(OGREnvelope *psExtent, int bForce);
 

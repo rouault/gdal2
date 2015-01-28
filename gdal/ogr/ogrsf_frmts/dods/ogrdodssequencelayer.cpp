@@ -846,10 +846,10 @@ OGRFeature *OGRDODSSequenceLayer::GetFeature( GIntBig nFeatureId )
 }
 
 /************************************************************************/
-/*                          GetFeatureCount64()                           */
+/*                          GetFeatureCount()                           */
 /************************************************************************/
 
-GIntBig OGRDODSSequenceLayer::GetFeatureCount64( int bForce )
+GIntBig OGRDODSSequenceLayer::GetFeatureCount( int bForce )
 
 {
     if( !bDataLoaded && !bForce )

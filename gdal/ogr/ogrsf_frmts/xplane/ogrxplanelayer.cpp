@@ -243,10 +243,10 @@ OGRFeature *  OGRXPlaneLayer::GetFeature( GIntBig nFID )
 }
 
 /************************************************************************/
-/*                      GetFeatureCount64()                               */
+/*                      GetFeatureCount()                               */
 /************************************************************************/
 
-GIntBig  OGRXPlaneLayer::GetFeatureCount64( int bForce )
+GIntBig  OGRXPlaneLayer::GetFeatureCount( int bForce )
 {
     if (poReader == NULL && m_poFilterGeom == NULL && m_poAttrQuery == NULL)
     {
@@ -254,7 +254,7 @@ GIntBig  OGRXPlaneLayer::GetFeatureCount64( int bForce )
         return nFeatureArraySize;
     }
     else
-        return OGRLayer::GetFeatureCount64( bForce ) ;
+        return OGRLayer::GetFeatureCount( bForce ) ;
 }
 
 

@@ -951,7 +951,7 @@ OGRErr CreateParts(OGRLayer* const poLnLayer, OGRLayer* const poPkLayer, int nMV
         {
             if (!bQuiet)
             {
-                fprintf(stdout, "\nThe geometry " CPL_FRMT_GIB " is wkbMultiLineString type\n", pPathFeature->GetFID64());
+                fprintf(stdout, "\nThe geometry " CPL_FRMT_GIB " is wkbMultiLineString type\n", pPathFeature->GetFID());
             }
 
             OGRGeometryCollection* pGeomColl = (OGRGeometryCollection*)pGeom;

@@ -622,7 +622,7 @@ OGRErr OGRMILayerAttrIndex::AddToIndex( OGRFeature *poFeature,
 {
     OGRErr eErr = OGRERR_NONE;
 
-    if( poFeature->GetFID64() == OGRNullFID )
+    if( poFeature->GetFID() == OGRNullFID )
     {
         CPLError( CE_Failure, CPLE_AppDefined, 
                   "Attempt to index feature with no FID." );
@@ -641,7 +641,7 @@ OGRErr OGRMILayerAttrIndex::AddToIndex( OGRFeature *poFeature,
 
         eErr = 
             papoIndexList[i]->AddEntry( poFeature->GetRawFieldRef( iField ),
-                                        poFeature->GetFID64() );
+                                        poFeature->GetFID() );
     }
 
     return eErr;

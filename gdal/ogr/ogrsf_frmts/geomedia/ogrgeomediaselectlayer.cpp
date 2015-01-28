@@ -151,7 +151,7 @@ int OGRGeomediaSelectLayer::TestCapability( const char * pszCap )
 }
 
 /************************************************************************/
-/*                          GetFeatureCount64()                           */
+/*                          GetFeatureCount()                           */
 /*                                                                      */
 /*      If a spatial filter is in effect, we turn control over to       */
 /*      the generic counter.  Otherwise we return the total count.      */
@@ -159,8 +159,8 @@ int OGRGeomediaSelectLayer::TestCapability( const char * pszCap )
 /*      way of counting features matching a spatial query.              */
 /************************************************************************/
 
-GIntBig OGRGeomediaSelectLayer::GetFeatureCount64( int bForce )
+GIntBig OGRGeomediaSelectLayer::GetFeatureCount( int bForce )
 
 {
-    return OGRGeomediaLayer::GetFeatureCount64( bForce );
+    return OGRGeomediaLayer::GetFeatureCount( bForce );
 }
