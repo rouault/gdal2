@@ -44,7 +44,7 @@ CPL_CVSID("$Id$");
 static int bSkipFailures = FALSE;
 static int nGroupTransactions = 20000;
 static int bPreserveFID = FALSE;
-static int nFIDToFetch = OGRNullFID;
+static GIntBig nFIDToFetch = OGRNullFID;
 
 #define COORD_DIM_LAYER_DIM -2
 
@@ -1037,7 +1037,7 @@ int main( int nArgc, char ** papszArgv )
         else if( EQUAL(papszArgv[iArg],"-fid") )
         {
             CHECK_HAS_ENOUGH_ADDITIONAL_ARGS(1);
-            nFIDToFetch = atoi(papszArgv[++iArg]);
+            nFIDToFetch = CPLAtoGIntBig(papszArgv[++iArg]);
         }
         else if( EQUAL(papszArgv[iArg],"-sql") )
         {
