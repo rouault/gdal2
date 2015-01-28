@@ -291,7 +291,7 @@ OGRFeature *IMapInfoFile::GetNextFeature()
 {
     OGRFeature *poFeatureRef;
     OGRGeometry *poGeom;
-    int nFeatureId;
+    GIntBig nFeatureId;
 
     while( (nFeatureId = GetNextFeatureId(m_nCurFeatureId)) != -1 )
     {

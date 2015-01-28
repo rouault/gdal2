@@ -167,7 +167,7 @@ class IMapInfoFile : public OGRLayer
   private:
 
   protected: 
-    int                 m_nCurFeatureId;
+    GIntBig             m_nCurFeatureId;
     TABFeature         *m_poCurFeature;
     GBool               m_bBoundsSet;
 
@@ -212,8 +212,8 @@ class IMapInfoFile : public OGRLayer
     ///////////////
     // Read access specific stuff
     //
-    virtual int GetNextFeatureId(int nPrevId) = 0;
-    virtual TABFeature *GetFeatureRef(int nFeatureId) = 0;
+    virtual GIntBig GetNextFeatureId(GIntBig nPrevId) = 0;
+    virtual TABFeature *GetFeatureRef(GIntBig nFeatureId) = 0;
     virtual OGRFeatureDefn *GetLayerDefn() = 0;
 
     virtual TABFieldType GetNativeFieldType(int nFieldId) = 0;
@@ -350,8 +350,8 @@ class TABFile: public IMapInfoFile
 
     int         GetNextFeatureId_Spatial( int nPrevId );
 
-    virtual int GetNextFeatureId(int nPrevId);
-    virtual TABFeature *GetFeatureRef(int nFeatureId);
+    virtual GIntBig GetNextFeatureId(GIntBig nPrevId);
+    virtual TABFeature *GetFeatureRef(GIntBig nFeatureId);
     virtual OGRFeatureDefn *GetLayerDefn();
 
     virtual TABFieldType GetNativeFieldType(int nFieldId);
@@ -484,8 +484,8 @@ class TABView: public IMapInfoFile
     // Read access specific stuff
     //
 
-    virtual int GetNextFeatureId(int nPrevId);
-    virtual TABFeature *GetFeatureRef(int nFeatureId);
+    virtual GIntBig GetNextFeatureId(GIntBig nPrevId);
+    virtual TABFeature *GetFeatureRef(GIntBig nFeatureId);
     virtual OGRFeatureDefn *GetLayerDefn();
 
     virtual TABFieldType GetNativeFieldType(int nFieldId);
@@ -555,8 +555,6 @@ class TABSeamless: public IMapInfoFile
     OGRFeatureDefn *m_poFeatureDefnRef;
 
     TABFile     *m_poIndexTable;
-    int         m_nIndexTableFIDBits;
-    int         m_nIndexTableFIDMask;
     int         m_nTableNameField;
     int         m_nCurBaseTableId;
     TABFile     *m_poCurBaseTable;
@@ -571,9 +569,9 @@ class TABSeamless: public IMapInfoFile
                               GBool bTestOpenNoError = FALSE);
     int         OpenBaseTable(int nTableId, GBool bTestOpenNoError = FALSE);
     int         OpenNextBaseTable(GBool bTestOpenNoError =FALSE);
-    int         EncodeFeatureId(int nTableId, int nBaseFeatureId);
-    int         ExtractBaseTableId(int nEncodedFeatureId);
-    int         ExtractBaseFeatureId(int nEncodedFeatureId);
+    GIntBig     EncodeFeatureId(int nTableId, int nBaseFeatureId);
+    int         ExtractBaseTableId(GIntBig nEncodedFeatureId);
+    int         ExtractBaseFeatureId(GIntBig nEncodedFeatureId);
 
   public:
     TABSeamless();
@@ -601,8 +599,8 @@ class TABSeamless: public IMapInfoFile
     // Read access specific stuff
     //
 
-    virtual int GetNextFeatureId(int nPrevId);
-    virtual TABFeature *GetFeatureRef(int nFeatureId);
+    virtual GIntBig GetNextFeatureId(GIntBig nPrevId);
+    virtual TABFeature *GetFeatureRef(GIntBig nFeatureId);
     virtual OGRFeatureDefn *GetLayerDefn();
 
     virtual TABFieldType GetNativeFieldType(int nFieldId);
@@ -752,8 +750,8 @@ class MIFFile: public IMapInfoFile
     // Read access specific stuff
     //
     
-    virtual int GetNextFeatureId(int nPrevId);
-    virtual TABFeature *GetFeatureRef(int nFeatureId);
+    virtual GIntBig GetNextFeatureId(GIntBig nPrevId);
+    virtual TABFeature *GetFeatureRef(GIntBig nFeatureId);
     virtual OGRFeatureDefn *GetLayerDefn();
 
     virtual TABFieldType GetNativeFieldType(int nFieldId);

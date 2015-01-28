@@ -1185,7 +1185,7 @@ int TABFile::SetQuickSpatialIndexMode(GBool bQuickSpatialIndexMode/*=TRUE*/)
  * Returns feature id that follows nPrevId, or -1 if it is the
  * last feature id.  Pass nPrevId=-1 to fetch the first valid feature id.
  **********************************************************************/
-int TABFile::GetNextFeatureId(int nPrevId)
+GIntBig TABFile::GetNextFeatureId(GIntBig nPrevId)
 {
     if( m_bLastOpWasWrite )
         ResetReading();
@@ -1310,7 +1310,7 @@ int TABFile::GetNextFeatureId_Spatial(int nPrevId)
  * and a warning will be produced with code TAB_WarningFeatureTypeNotSupported
  * CPLGetLastErrorNo() should be used to detect that case.
  **********************************************************************/
-TABFeature *TABFile::GetFeatureRef(int nFeatureId)
+TABFeature *TABFile::GetFeatureRef(GIntBig nFeatureId)
 {
     CPLErrorReset();
 
@@ -1344,7 +1344,7 @@ TABFeature *TABFile::GetFeatureRef(int nFeatureId)
         if( m_poMAPFile->GetCurObjType() != TAB_GEOM_NONE )
         {
             CPLError(CE_Failure, CPLE_AppDefined,
-                    "Valid .MAP record %d found, but .DAT is marked as deleted. File likely corrupt",
+                    "Valid .MAP record " CPL_FRMT_GIB " found, but .DAT is marked as deleted. File likely corrupt",
                     nFeatureId);
         }
         return NULL;
