@@ -262,7 +262,7 @@ const char* OGRSQLiteTableLayer::GetName()
 
 char** OGRSQLiteTableLayer::GetMetadata( const char * pszDomain )
 {
-    EstablishFeatureDefn();
+    GetLayerDefn();
     return OGRSQLiteLayer::GetMetadata(pszDomain);
 }
 
@@ -273,7 +273,7 @@ char** OGRSQLiteTableLayer::GetMetadata( const char * pszDomain )
 const char * OGRSQLiteTableLayer::GetMetadataItem( const char * pszName,
                                                    const char * pszDomain )
 {
-    EstablishFeatureDefn();
+    GetLayerDefn();
     return OGRSQLiteLayer::GetMetadataItem(pszName, pszDomain);
 }
 
