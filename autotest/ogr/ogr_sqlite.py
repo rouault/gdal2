@@ -2576,45 +2576,7 @@ def ogr_sqlite_36():
         return 'skip'
     
     try:
-        os.remove('tmp/ogr_sqlite_35.sqlite')
-    except:
-        pass
-
-    ds = ogr.GetDriverByName('SQLite').CreateDataSource('tmp/ogr_sqlite_36.sqlite')
-    lyr = ds.CreateLayer('test')
-    field_defn = ogr.FieldDefn('foo', ogr.OFTString)
-    lyr.CreateField(field_defn)
-
-    feat = ogr.Feature(lyr.GetLayerDefn())
-    feat.SetField('foo', 'bar')
-    feat.SetFID(1234567890123)
-    lyr.CreateFeature(feat)
-    feat = None
-
-    ds = None
-    
-    ds = ogr.Open('tmp/ogr_sqlite_36.sqlite')
-    lyr = ds.GetLayer(0)
-    if lyr.GetMetadataItem(ogr.OLMD_FID64) is None:
-        gdaltest.post_reason('fail')
-        return 'fail'
-    f = lyr.GetNextFeature()
-    if f.GetFID() != 1234567890123:
-        gdaltest.post_reason('failure')
-        return 'fail'
-
-    return 'success'
-
-###############################################################################
-# Test FID64 support
-
-def ogr_sqlite_36():
-
-    if gdaltest.sl_ds is None:
-        return 'skip'
-    
-    try:
-        os.remove('tmp/ogr_sqlite_35.sqlite')
+        os.remove('tmp/ogr_sqlite_36.sqlite')
     except:
         pass
 
