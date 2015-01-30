@@ -2111,18 +2111,11 @@ static int TestAttributeFilter( GDALDataset* poDS, OGRLayer *poLayer )
 /*      Construct inclusive filter.                                     */
 /* -------------------------------------------------------------------- */
 
-    if (EQUAL(poDS->GetDriverName(), "PostgreSQL") &&
-        (strchr(pszFieldName, '_') || strchr(pszFieldName, ' ')))
+    if( strchr(pszFieldName, '_') || strchr(pszFieldName, ' ') )
     {
         osAttributeFilter = "\"";
         osAttributeFilter += pszFieldName;
         osAttributeFilter += "\"";
-    }
-    else if (strchr(pszFieldName, ' ') || pszFieldName[0] == '_')
-    {
-        osAttributeFilter = "'";
-        osAttributeFilter += pszFieldName;
-        osAttributeFilter += "'";
     }
     else
         osAttributeFilter = pszFieldName;
@@ -2169,18 +2162,11 @@ static int TestAttributeFilter( GDALDataset* poDS, OGRLayer *poLayer )
 /* -------------------------------------------------------------------- */
 /*      Construct exclusive filter.                                     */
 /* -------------------------------------------------------------------- */
-    if (EQUAL(poDS->GetDriverName(), "PostgreSQL") &&
-        (strchr(pszFieldName, '_') || strchr(pszFieldName, ' ')))
+    if( strchr(pszFieldName, '_') || strchr(pszFieldName, ' ') )
     {
         osAttributeFilter = "\"";
         osAttributeFilter += pszFieldName;
         osAttributeFilter += "\"";
-    }
-    else if (strchr(pszFieldName, ' ') || pszFieldName[0] == '_')
-    {
-        osAttributeFilter = "'";
-        osAttributeFilter += pszFieldName;
-        osAttributeFilter += "'";
     }
     else
         osAttributeFilter = pszFieldName;
