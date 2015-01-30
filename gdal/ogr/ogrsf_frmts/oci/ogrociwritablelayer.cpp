@@ -327,7 +327,7 @@ OGRErr OGROCIWritableLayer::CreateField( OGRFieldDefn *poFieldIn, int bApproxOK 
     OGROCIStringBuf     oCommand;
     OGROCIStatement     oAddField( poSession );
 
-    oCommand.MakeRoomFor( 40 + strlen(poFeatureDefn->GetName())
+    oCommand.MakeRoomFor( 60 + strlen(poFeatureDefn->GetName())
                           + strlen(oField.GetNameRef())
                           + strlen(szFieldType) );
 
@@ -341,8 +341,9 @@ OGRErr OGROCIWritableLayer::CreateField( OGRFieldDefn *poFieldIn, int bApproxOK 
                   oField.GetNameRef(), szFieldName );
         oField.SetName(szFieldName);
     }
-    sprintf( oCommand.GetString(), "ALTER TABLE %s ADD \"%s\" %s", 
-             poFeatureDefn->GetName(), szFieldName, szFieldType );
+    sprintf( oCommand.GetString(), "ALTER TABLE %s ADD \"%s\" %s%s", 
+             poFeatureDefn->GetName(), szFieldName, szFieldType,
+             (!oField.IsNullable()) ? " NOT NULL": "");
     if( oAddField.Execute( oCommand.GetString() ) != CE_None )
         return OGRERR_FAILURE;
 

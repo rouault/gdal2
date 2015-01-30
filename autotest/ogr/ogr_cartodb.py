@@ -138,6 +138,7 @@ def ogr_cartodb_rw_1():
     lyr = ds.CreateLayer(lyr_name)
     lyr.CreateField(ogr.FieldDefn("strfield", ogr.OFTString))
     lyr.CreateField(ogr.FieldDefn("intfield", ogr.OFTInteger))
+    lyr.CreateField(ogr.FieldDefn("int64field", ogr.OFTInteger64))
     lyr.CreateField(ogr.FieldDefn("doublefield", ogr.OFTReal))
     lyr.CreateField(ogr.FieldDefn("dt", ogr.OFTDateTime))
     fd = ogr.FieldDefn("bool", ogr.OFTInteger)
@@ -148,6 +149,7 @@ def ogr_cartodb_rw_1():
     lyr.CreateFeature(f)
     f.SetField('strfield', "fo'o")
     f.SetField('intfield', 123)
+    f.SetField('int64field', 12345678901234)
     f.SetField('doublefield', 1.23)
     f.SetField('dt', '2014/12/04 12:34:56')
     f.SetField('bool', 0)
@@ -166,6 +168,7 @@ def ogr_cartodb_rw_1():
     f = lyr.GetFeature(fid)
     if f.GetField('strfield') != "fo'o" or \
        f.GetField('intfield') != 456 or \
+       f.GetField('int64field') != 12345678901234 or \
        f.GetField('doublefield') != 1.23 or \
        f.GetField('dt') != '2014/12/04 12:34:56+00' or \
        f.GetField('bool') != 1 or \
@@ -195,13 +198,25 @@ def ogr_cartodb_rw_1():
     
     # Layer without geometry
     lyr = ds.CreateLayer(lyr_name, geom_type = ogr.wkbNone)
+    fd = ogr.FieldDefn("nullable", ogr.OFTString)
+    lyr.CreateField(fd)
+    fd = ogr.FieldDefn("not_nullable", ogr.OFTString)
+    fd.SetNullable(0)
+    lyr.CreateField(fd)
     f = ogr.Feature(lyr.GetLayerDefn())
+    f.SetField('not_nullable', 'foo')
     lyr.CreateFeature(f)
     f = None
     ds = None
 
     ds = ogr.Open(ogrtest.cartodb_connection, update = 1)
     lyr = ds.GetLayerByName(lyr_name)
+    if lyr.GetLayerDefn().GetFieldDefn(lyr.GetLayerDefn().GetFieldIndex('nullable')).IsNullable() != 1:
+        gdaltest.post_reason('fail')
+        return 'fail'
+    if lyr.GetLayerDefn().GetFieldDefn(lyr.GetLayerDefn().GetFieldIndex('not_nullable')).IsNullable() != 0:
+        gdaltest.post_reason('fail')
+        return 'fail'
     f = lyr.GetNextFeature()
     if f is None:
         gdaltest.post_reason('fail')

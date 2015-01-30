@@ -4785,3 +4785,141 @@ void OGR_F_SetStyleTable( OGRFeatureH hFeat,
     
     ((OGRFeature *) hFeat)->SetStyleTable( (OGRStyleTable *) hStyleTable);
 }
+
+/************************************************************************/
+/*                              Validate()                              */
+/************************************************************************/
+
+/**
+ * \brief Validate that a feature meets constraints of its schema.
+ *
+ * The scope of test is specified with the nValidateFlags parameter.
+ *
+ * Regarding OGR_F_VAL_WIDTH, the test is done assuming the string width must
+ * be interpreted as the number of UTF-8 characters. Some drivers might interpret
+ * the width as the number of bytes instead. So this test is rather conservative
+ * (if it fails, then it will fail for all interpretations).
+ *
+ * This method is the same as the C function OGR_F_Validate().
+ *
+ * @param nValidateFlags OGR_F_VAL_ALL or combination of OGR_F_VAL_NULL,
+ *                       OGR_F_VAL_GEOM_TYPE, OGR_F_VAL_WIDTH with '|' operator
+ * @param bEmitError TRUE if a CPLError() must be emitted when a check fails
+ * @return TRUE if all enabled validation tests pass.
+ * @since GDAL 2.0
+ */
+
+int OGRFeature::Validate( int nValidateFlags, int bEmitError )
+
+{
+    int bRet = TRUE;
+
+    int i;
+    int nGeomFieldCount = poDefn->GetGeomFieldCount();
+    for(i = 0; i < nGeomFieldCount; i ++ )
+    {
+        if( (nValidateFlags & OGR_F_VAL_NULL) &&
+            !poDefn->GetGeomFieldDefn(i)->IsNullable() &&
+            GetGeomFieldRef(i) == NULL )
+        {
+            bRet = FALSE;
+            if( bEmitError )
+            {
+                CPLError(CE_Failure, CPLE_AppDefined,
+                            "Geometry field %s has a NULL content which is not allowed",
+                            poDefn->GetGeomFieldDefn(i)->GetNameRef());
+            }
+        }
+        if( (nValidateFlags & OGR_F_VAL_GEOM_TYPE) &&
+            poDefn->GetGeomFieldDefn(i)->GetType() != wkbUnknown )
+        {
+            OGRGeometry* poGeom = GetGeomFieldRef(i);
+            if( poGeom != NULL )
+            {
+                OGRwkbGeometryType eType = poDefn->GetGeomFieldDefn(i)->GetType();
+                OGRwkbGeometryType eFType = poGeom->getGeometryType();
+                if( (eType == wkbSetZ(wkbUnknown) && !wkbHasZ(eFType)) ||
+                    (eType != wkbSetZ(wkbUnknown) && eFType != eType) )
+                {
+                    bRet = FALSE;
+                    if( bEmitError )
+                    {
+                        CPLError(CE_Failure, CPLE_AppDefined,
+                                 "Geometry field %s has a %s geometry whereas %s is expected",
+                                 poDefn->GetGeomFieldDefn(i)->GetNameRef(),
+                                 OGRGeometryTypeToName(eFType),
+                                 OGRGeometryTypeToName(eType));
+                    }
+                }
+            }
+        }
+    }
+    int nFieldCount = poDefn->GetFieldCount();
+    for(i = 0; i < nFieldCount; i ++ )
+    {
+        if( (nValidateFlags & OGR_F_VAL_NULL) &&
+            !poDefn->GetFieldDefn(i)->IsNullable() &&
+            !IsFieldSet(i) )
+        {
+            bRet = FALSE;
+            if( bEmitError )
+            {
+                CPLError(CE_Failure, CPLE_AppDefined,
+                         "Field %s has a NULL content which is not allowed",
+                         poDefn->GetFieldDefn(i)->GetNameRef());
+            }
+        }
+        if( (nValidateFlags & OGR_F_VAL_WIDTH) &&
+            poDefn->GetFieldDefn(i)->GetWidth() > 0 &&
+            poDefn->GetFieldDefn(i)->GetType() == OFTString &&
+            IsFieldSet(i) &&
+            CPLIsUTF8(GetFieldAsString(i), -1) &&
+            CPLStrlenUTF8(GetFieldAsString(i)) > poDefn->GetFieldDefn(i)->GetWidth())
+        {
+            bRet = FALSE;
+            if( bEmitError )
+            {
+                CPLError(CE_Failure, CPLE_AppDefined,
+                         "Field %s has a %d UTF-8 characters whereas a maximum of %d is allowed",
+                         poDefn->GetFieldDefn(i)->GetNameRef(),
+                         CPLStrlenUTF8(GetFieldAsString(i)),
+                         poDefn->GetFieldDefn(i)->GetWidth());
+            }
+        }
+    }
+
+    return bRet;
+}
+
+/************************************************************************/
+/*                           OGR_F_Validate()                           */
+/************************************************************************/
+
+/**
+ * \brief Validate that a feature meets constraints of its schema.
+ *
+ * The scope of test is specified with the nValidateFlags parameter.
+ *
+ * Regarding OGR_F_VAL_WIDTH, the test is done assuming the string width must
+ * be interpreted as the number of UTF-8 characters. Some drivers might interpret
+ * the width as the number of bytes instead. So this test is rather conservative
+ * (if it fails, then it will fail for all interpretations).
+ *
+ * This function is the same as the C++ method
+ * OGRFeature::Validate().
+ *
+ * @param hFeat handle to the feature to validate
+ * @param nValidateFlags OGR_F_VAL_ALL or combination of OGR_F_VAL_NULL,
+ *                       OGR_F_VAL_GEOM_TYPE, OGR_F_VAL_WIDTH with '|' operator
+ * @param bEmitError TRUE if a CPLError() must be emitted when a check fails
+ * @return TRUE if all enabled validation tests pass.
+ * @since GDAL 2.0
+ */
+
+int OGR_F_Validate( OGRFeatureH hFeat, int nValidateFlags, int bEmitError )
+
+{
+    VALIDATE_POINTER1( hFeat, "OGR_F_Validate", FALSE );
+
+    return ((OGRFeature *) hFeat)->Validate( nValidateFlags, bEmitError );
+}

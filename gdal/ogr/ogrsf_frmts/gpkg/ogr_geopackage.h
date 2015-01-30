@@ -246,9 +246,6 @@ class GDALGeoPackageDataset : public OGRSQLiteBaseDataSource
         const char*         GetSrsName( const OGRSpatialReference * poSRS );
         OGRSpatialReference* GetSpatialRef( int iSrsId );
         virtual int         GetUTF8() { return m_bUtf8; }
-        OGRErr              AddColumn( const char * pszTableName, 
-                                       const char * pszColumnName, 
-                                       const char * pszColumnType );
         OGRErr              CreateExtensionsTableIfNecessary();
         int                 HasExtensionsTable();
         OGRErr              CreateGDALAspatialExtension();
@@ -370,6 +367,7 @@ class OGRGeoPackageTableLayer : public OGRGeoPackageLayer
     virtual OGRErr      ResetStatement();
     
     void                BuildWhere(void);
+    OGRErr              RegisterGeometryColumn();
     
     public:
     
@@ -382,6 +380,8 @@ class OGRGeoPackageTableLayer : public OGRGeoPackageLayer
                         
     int                 TestCapability( const char * );
     OGRErr              CreateField( OGRFieldDefn *poField, int bApproxOK = TRUE );
+    OGRErr              CreateGeomField( OGRGeomFieldDefn *poGeomFieldIn,
+                                         int bApproxOK = TRUE );
     void                ResetReading();
 	OGRErr              ICreateFeature( OGRFeature *poFeater );
     OGRErr              ISetFeature( OGRFeature *poFeature );
@@ -402,6 +402,7 @@ class OGRGeoPackageTableLayer : public OGRGeoPackageLayer
     OGRErr              ReadTableDefinition(int bIsSpatial);
     void                SetCreationParameters( OGRwkbGeometryType eGType,
                                                const char* pszGeomColumnName,
+                                               int bGeomNullable,
                                                OGRSpatialReference* poSRS,
                                                const char* pszFIDColumnName );
     void                SetDeferedSpatialIndexCreation( int bFlag )

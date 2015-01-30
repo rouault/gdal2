@@ -211,6 +211,24 @@ int OGROpenFileGDBLayer::BuildGeometryColumnGDBv10()
         OGROpenFileGDBGeomFieldDefn* poGeomFieldDefn =
             new OGROpenFileGDBGeomFieldDefn(NULL, pszShapeFieldName, m_eGeomType);
 
+        CPLXMLNode* psGPFieldInfoExs = CPLGetXMLNode(psInfo, "GPFieldInfoExs");
+        if( psGPFieldInfoExs )
+        {
+            for(CPLXMLNode* psChild = psGPFieldInfoExs->psChild;
+                            psChild != NULL;
+                            psChild = psChild->psNext )
+            {
+                if( psChild->eType != CXT_Element )
+                    continue;
+                if( EQUAL(psChild->pszValue, "GPFieldInfoEx") &&
+                    EQUAL(CPLGetXMLValue(psChild, "Name", ""), pszShapeFieldName) )
+                {
+                    poGeomFieldDefn->SetNullable( CSLTestBoolean(CPLGetXMLValue( psChild, "IsNullable", "TRUE" )) );
+                    break;
+                }
+            }
+        }
+
         OGRSpatialReference* poSRS = NULL;
         if( nWKID > 0 || nLatestWKID > 0 )
         {
@@ -355,6 +373,7 @@ int OGROpenFileGDBLayer::BuildLayerDefinition()
                                         m_poFeatureDefn->GetGeomFieldDefn(0);
             poGeomFieldDefn->SetType(m_eGeomType);
         }
+        poGeomFieldDefn->SetNullable(poGDBGeomField->IsNullable());
 
         OGRSpatialReference* poSRS = NULL;
         if( poGDBGeomField->GetWKT().size() && 
@@ -435,6 +454,7 @@ int OGROpenFileGDBLayer::BuildLayerDefinition()
         OGRFieldDefn oFieldDefn(poGDBField->GetName().c_str(), eType);
         oFieldDefn.SetSubType(eSubType);
         /* oFieldDefn.SetWidth(nWidth); */
+        oFieldDefn.SetNullable(poGDBField->IsNullable());
         m_poFeatureDefn->AddFieldDefn(&oFieldDefn);
     }
 

@@ -122,7 +122,12 @@ NullFID = _ogr.NullFID
 ALTER_NAME_FLAG = _ogr.ALTER_NAME_FLAG
 ALTER_TYPE_FLAG = _ogr.ALTER_TYPE_FLAG
 ALTER_WIDTH_PRECISION_FLAG = _ogr.ALTER_WIDTH_PRECISION_FLAG
+ALTER_NULLABLE_FLAG = _ogr.ALTER_NULLABLE_FLAG
 ALTER_ALL_FLAG = _ogr.ALTER_ALL_FLAG
+F_VAL_NULL = _ogr.F_VAL_NULL
+F_VAL_GEOM_TYPE = _ogr.F_VAL_GEOM_TYPE
+F_VAL_WIDTH = _ogr.F_VAL_WIDTH
+F_VAL_ALL = _ogr.F_VAL_ALL
 OLCRandomRead = _ogr.OLCRandomRead
 OLCSequentialWrite = _ogr.OLCSequentialWrite
 OLCRandomWrite = _ogr.OLCRandomWrite
@@ -3123,6 +3128,10 @@ class Feature(_object):
         """
         return _ogr.Feature_GetFieldType(self, *args)
 
+    def Validate(self, *args):
+        """Validate(self, int flags = OGR_F_VAL_ALL, int bEmitError = TRUE) -> int"""
+        return _ogr.Feature_Validate(self, *args)
+
     def SetFieldString(self, *args):
         """
         SetFieldString(self, int id, char value)
@@ -4002,6 +4011,14 @@ class FieldDefn(_object):
         """
         return _ogr.FieldDefn_SetIgnored(self, *args)
 
+    def IsNullable(self, *args):
+        """IsNullable(self) -> int"""
+        return _ogr.FieldDefn_IsNullable(self, *args)
+
+    def SetNullable(self, *args):
+        """SetNullable(self, int bNullable)"""
+        return _ogr.FieldDefn_SetNullable(self, *args)
+
     width = property(GetWidth, SetWidth)
     type = property(GetType, SetType)
     precision = property(GetPrecision, SetPrecision)
@@ -4065,6 +4082,14 @@ class GeomFieldDefn(_object):
     def SetIgnored(self, *args):
         """SetIgnored(self, int bIgnored)"""
         return _ogr.GeomFieldDefn_SetIgnored(self, *args)
+
+    def IsNullable(self, *args):
+        """IsNullable(self) -> int"""
+        return _ogr.GeomFieldDefn_IsNullable(self, *args)
+
+    def SetNullable(self, *args):
+        """SetNullable(self, int bNullable)"""
+        return _ogr.GeomFieldDefn_SetNullable(self, *args)
 
     type = property(GetType, SetType)
     name = property(GetName, SetName)

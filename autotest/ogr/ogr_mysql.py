@@ -784,6 +784,65 @@ def ogr_mysql_72():
     return 'success'
 
 ###############################################################################
+# Test nullable
+
+def ogr_mysql_25():
+
+    if gdaltest.mysql_ds is None:
+        return 'skip'
+
+    lyr = gdaltest.mysql_ds.CreateLayer('ogr_mysql_25', geom_type = ogr.wkbPoint)
+    field_defn = ogr.FieldDefn('field_not_nullable', ogr.OFTString)
+    field_defn.SetNullable(0)
+    lyr.CreateField(field_defn)
+    field_defn = ogr.FieldDefn('field_nullable', ogr.OFTString)
+    lyr.CreateField(field_defn)
+
+    f = ogr.Feature(lyr.GetLayerDefn())
+    f.SetField('field_not_nullable', 'not_null')
+    f.SetGeometryDirectly(ogr.CreateGeometryFromWkt('POINT(0 0)'))
+    lyr.CreateFeature(f)
+    f = None
+
+    # Error case: missing geometry
+    f = ogr.Feature(lyr.GetLayerDefn())
+    f.SetField('field_not_nullable', 'not_null')
+    gdal.PushErrorHandler()
+    ret = lyr.CreateFeature(f)
+    gdal.PopErrorHandler()
+    if ret == 0:
+        gdaltest.post_reason('fail')
+        return 'fail'
+    f = None
+    
+    # Error case: missing non-nullable field
+    if False:
+        # hum mysql seems OK with unset non-nullable fields ??
+        f = ogr.Feature(lyr.GetLayerDefn())
+        f.SetGeometryDirectly(ogr.CreateGeometryFromWkt('POINT(0 0)'))
+        gdal.PushErrorHandler()
+        ret = lyr.CreateFeature(f)
+        gdal.PopErrorHandler()
+        if ret == 0:
+            gdaltest.post_reason('fail')
+            return 'fail'
+        f = None
+
+    gdaltest.mysql_ds = None
+    gdaltest.mysql_ds = ogr.Open( 'MYSQL:autotest', update = 1 )
+    lyr = gdaltest.mysql_ds.GetLayerByName('ogr_mysql_25')
+    if lyr.GetLayerDefn().GetFieldDefn(lyr.GetLayerDefn().GetFieldIndex('field_not_nullable')).IsNullable() != 0:
+        gdaltest.post_reason('fail')
+        return 'fail'
+    if lyr.GetLayerDefn().GetFieldDefn(lyr.GetLayerDefn().GetFieldIndex('field_nullable')).IsNullable() != 1:
+        gdaltest.post_reason('fail')
+        return 'fail'
+    if lyr.GetLayerDefn().GetGeomFieldDefn(0).IsNullable() != 0:
+        gdaltest.post_reason('fail')
+        return 'fail'
+
+    return 'success'
+###############################################################################
 # 
 
 def ogr_mysql_cleanup():
@@ -798,6 +857,7 @@ def ogr_mysql_cleanup():
     gdaltest.mysql_ds.ExecuteSQL( 'DROP TABLE geometry_columns' )
     gdaltest.mysql_ds.ExecuteSQL( 'DROP TABLE spatial_ref_sys' )
     gdaltest.mysql_ds.ExecuteSQL( 'DROP TABLE ogr_mysql_72' )
+    gdaltest.mysql_ds.ExecuteSQL( 'DROP TABLE ogr_mysql_25' )
 
     gdaltest.mysql_ds.Destroy()
     gdaltest.mysql_ds = None
@@ -829,6 +889,7 @@ gdaltest_list = [
     ogr_mysql_23,
     ogr_mysql_24,
     ogr_mysql_72,
+    ogr_mysql_25,
     ogr_mysql_cleanup
     ]
 

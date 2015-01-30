@@ -177,7 +177,6 @@ def ogr_oci_4():
     if gdaltest.oci_ds is None:
         return 'skip'
 
-    dst_feat = ogr.Feature( feature_def = gdaltest.oci_lyr.GetLayerDefn() )
     wkt_list = [ '10', '2', '1', '3d_1', '4', '5', '6' ]
 
     for item in wkt_list:
@@ -188,6 +187,7 @@ def ogr_oci_4():
         ######################################################################
         # Write geometry as a new Oracle feature.
     
+        dst_feat = ogr.Feature( feature_def = gdaltest.oci_lyr.GetLayerDefn() )
         dst_feat.SetGeometryDirectly( geom )
         dst_feat.SetField( 'PRFEDEA', item )
         gdaltest.oci_lyr.CreateFeature( dst_feat )
@@ -835,6 +835,104 @@ def ogr_oci_19():
         f.DumpReadable()
         return 'fail'
     gdaltest.oci_ds.ReleaseResultSet(sql_lyr)
+    
+    return 'success'
+
+###############################################################################
+# Test not nullable fields
+
+def ogr_oci_20():
+
+    if gdaltest.oci_ds is None:
+        return 'skip'
+    lyr = gdaltest.oci_ds.CreateLayer('ogr_oci_20', geom_type = ogr.wkbPoint, options = ['GEOMETRY_NULLABLE=NO', 'DIM=2'])
+    if lyr.GetLayerDefn().GetGeomFieldDefn(0).IsNullable() != 0:
+        gdaltest.post_reason('fail')
+        return 'fail'
+    field_defn = ogr.FieldDefn('field_not_nullable', ogr.OFTString)
+    field_defn.SetNullable(0)
+    lyr.CreateField(field_defn)
+    field_defn = ogr.FieldDefn('field_nullable', ogr.OFTString)
+    lyr.CreateField(field_defn)
+
+    f = ogr.Feature(lyr.GetLayerDefn())
+    f.SetField('field_not_nullable', 'not_null')
+    f.SetGeometryDirectly(ogr.CreateGeometryFromWkt('POINT(0 1)'))
+    ret = lyr.CreateFeature(f)
+    f = None
+    if ret != 0:
+        gdaltest.post_reason('fail')
+        return 'fail'
+
+    # Error case: missing geometry
+    f = ogr.Feature(lyr.GetLayerDefn())
+    f.SetField('field_not_nullable', 'not_null')
+    gdal.PushErrorHandler()
+    ret = lyr.CreateFeature(f)
+    gdal.PopErrorHandler()
+    if ret == 0:
+        gdaltest.post_reason('fail')
+        return 'fail'
+    f = None
+    
+    # Error case: missing non-nullable field
+    f = ogr.Feature(lyr.GetLayerDefn())
+    f.SetGeometryDirectly(ogr.CreateGeometryFromWkt('POINT(0 0)'))
+    gdal.PushErrorHandler()
+    ret = lyr.CreateFeature(f)
+    gdal.PopErrorHandler()
+    if ret == 0:
+        gdaltest.post_reason('fail')
+        return 'fail'
+    f = None
+    lyr.SyncToDisk()
+
+    # Test with nullable geometry
+    lyr = gdaltest.oci_ds.CreateLayer('ogr_oci_20bis', geom_type = ogr.wkbPoint, options = ['DIM=2'])
+    if lyr.GetLayerDefn().GetGeomFieldDefn(0).IsNullable() != 1:
+        gdaltest.post_reason('fail')
+        return 'fail'
+    f = ogr.Feature(lyr.GetLayerDefn())
+    f.SetGeometryDirectly(ogr.CreateGeometryFromWkt('POINT(0 1)'))
+    ret = lyr.CreateFeature(f)
+    f = None
+    if ret != 0:
+        gdaltest.post_reason('fail')
+        return 'fail'
+
+    f = ogr.Feature(lyr.GetLayerDefn())
+    ret = lyr.CreateFeature(f)
+    f = None
+    if ret != 0:
+        gdaltest.post_reason('fail')
+        return 'fail'
+    lyr.SyncToDisk()
+
+    oci_ds2 = ogr.Open( os.environ['OCI_DSNAME'] )
+
+    lyr = oci_ds2.GetLayerByName('ogr_oci_20')
+    if lyr.GetLayerDefn().GetFieldDefn(lyr.GetLayerDefn().GetFieldIndex('field_not_nullable')).IsNullable() != 0:
+        gdaltest.post_reason('fail')
+        return 'fail'
+    if lyr.GetLayerDefn().GetFieldDefn(lyr.GetLayerDefn().GetFieldIndex('field_nullable')).IsNullable() != 1:
+        gdaltest.post_reason('fail')
+        return 'fail'
+    if lyr.GetLayerDefn().GetGeomFieldDefn(0).IsNullable() != 0:
+        gdaltest.post_reason('fail')
+        return 'fail'
+
+    lyr = oci_ds2.GetLayerByName('ogr_oci_20bis')
+    if lyr.GetLayerDefn().GetGeomFieldDefn(0).IsNullable() != 1:
+        gdaltest.post_reason('fail')
+        return 'fail'
+    feat = lyr.GetNextFeature()
+    if feat.GetGeometryRef() is None:
+        gdaltest.post_reason('fail')
+        return 'fail'
+    feat = lyr.GetNextFeature()
+    if feat.GetGeometryRef() is not None:
+        gdaltest.post_reason('fail')
+        return 'fail'
 
     return 'success'
 
@@ -863,6 +961,8 @@ def ogr_oci_cleanup():
     gdaltest.oci_ds.ExecuteSQL( 'DELLAYER:test_GEOMETRYCOLLECTION' )
     gdaltest.oci_ds.ExecuteSQL( 'DELLAYER:test_NONE' )
     gdaltest.oci_ds.ExecuteSQL( 'DELLAYER:testdate' )
+    gdaltest.oci_ds.ExecuteSQL( 'DELLAYER:ogr_oci_20' )
+    gdaltest.oci_ds.ExecuteSQL( 'DELLAYER:ogr_oci_20bis' )
 
     gdaltest.oci_ds.Destroy()
     gdaltest.oci_ds = None
@@ -890,6 +990,7 @@ gdaltest_list = [
     ogr_oci_17,
     ogr_oci_18,
     ogr_oci_19,
+    ogr_oci_20,
     ogr_oci_cleanup ]
 
 if __name__ == '__main__':

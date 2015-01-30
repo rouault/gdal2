@@ -432,10 +432,56 @@ typedef enum
 #  define DB2_V72_UNFIX_BYTE_ORDER(x) (x)
 #endif
 
+/** Alter field name.
+ * Used by OGR_L_AlterFieldDefn().
+ */
 #define ALTER_NAME_FLAG            0x1
+
+/** Alter field type.
+ * Used by OGR_L_AlterFieldDefn().
+ */
 #define ALTER_TYPE_FLAG            0x2
+
+/** Alter field width and precision.
+ * Used by OGR_L_AlterFieldDefn().
+ */
 #define ALTER_WIDTH_PRECISION_FLAG 0x4
-#define ALTER_ALL_FLAG             (ALTER_NAME_FLAG | ALTER_TYPE_FLAG | ALTER_WIDTH_PRECISION_FLAG)
+
+/** Alter field NOT NULL constraint.
+ * Used by OGR_L_AlterFieldDefn().
+ * @since GDAL 2.0
+ */
+#define ALTER_NULLABLE_FLAG        0x8
+
+/** Alter all parameters of field definition.
+ * Used by OGR_L_AlterFieldDefn().
+ */
+#define ALTER_ALL_FLAG             (ALTER_NAME_FLAG | ALTER_TYPE_FLAG | ALTER_WIDTH_PRECISION_FLAG | ALTER_NULLABLE_FLAG)
+
+
+/** Validate that fields respect not-null constraints.
+ * Used by OGR_F_Validate().
+ * @since GDAL2.0
+ */
+#define OGR_F_VAL_NULL           0x00000001
+
+/** Validate that geometries respect geometry column type.
+ * Used by OGR_F_Validate().
+ * @since GDAL2.0
+ */
+#define OGR_F_VAL_GEOM_TYPE      0x00000002
+
+/** Validate that (string) fields respect field width.
+ * Used by OGR_F_Validate().
+ * @since GDAL2.0
+ */
+#define OGR_F_VAL_WIDTH          0x00000004
+
+/** Enable all validation tests.
+ * Used by OGR_F_Validate().
+ * @since GDAL2.0
+ */
+#define OGR_F_VAL_ALL            0xFFFFFFFF
 
 /************************************************************************/
 /*                  ogr_feature.h related definitions.                  */
@@ -592,6 +638,10 @@ int CPL_DLL OGRParseDate( const char *pszInput, OGRField *psOutput,
 /* -------------------------------------------------------------------- */
 /*      Layer metadata items.                                           */
 /* -------------------------------------------------------------------- */
+/** Capability set to YES as metadata on a layer that has features with
+  * 64 bit identifiers.
+  @since GDAL 2.0
+  */
 #define OLMD_FID64             "OLMD_FID64"
 
 /************************************************************************/

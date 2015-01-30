@@ -106,7 +106,8 @@ static TargetLayerInfo* SetupTargetLayer( GDALDataset *poSrcDS,
                                                 char **papszFieldMap,
                                                 const char* pszWHERE,
                                                 int bExactFieldNameMatch,
-                                                int bQuiet );
+                                                int bQuiet,
+                                                int bForceNullable);
 
 static void FreeTargetLayerInfo(TargetLayerInfo* psInfo);
 
@@ -932,6 +933,7 @@ int main( int nArgc, char ** papszArgv )
     int          nCoordDim = -1;
     char       **papszOpenOptions = NULL;
     char       **papszDestOpenOptions = NULL;
+    int          bForceNullable = FALSE;
  
     int          nGCPCount = 0;
     GDAL_GCP    *pasGCPs = NULL;
@@ -1465,6 +1467,10 @@ int main( int nArgc, char ** papszArgv )
             papszFieldMap = CSLTokenizeStringComplex(pszFieldMap, ",", 
                                                       FALSE, FALSE );
         }
+        else if( EQUAL(papszArgv[iArg],"-forceNullable") )
+        {
+            bForceNullable = TRUE;
+        }
         else if( papszArgv[iArg][0] == '-' )
         {
             Usage(CPLSPrintf("Unknown option name '%s'", papszArgv[iArg]));
@@ -1882,7 +1888,8 @@ int main( int nArgc, char ** papszArgv )
                                                 papszFieldMap,
                                                 pszWHERE,
                                                 bExactFieldNameMatch,
-                                                bQuiet);
+                                                bQuiet,
+                                                bForceNullable);
 
             poPassedLayer->ResetReading();
 
@@ -2040,7 +2047,8 @@ int main( int nArgc, char ** papszArgv )
                                                     papszFieldMap,
                                                     pszWHERE,
 						    bExactFieldNameMatch,
-						    bQuiet);
+						    bQuiet,
+                                                    bForceNullable);
 
                 if( psInfo == NULL && !bSkipFailures )
                     exit(1);
@@ -2318,7 +2326,8 @@ int main( int nArgc, char ** papszArgv )
                                                 papszFieldMap,
                                                 pszWHERE,
 						bExactFieldNameMatch,
-						bQuiet);
+						bQuiet,
+                                                bForceNullable);
 
             poPassedLayer->ResetReading();
 
@@ -2444,7 +2453,7 @@ static void Usage(const char* pszAdditionalMsg, int bShort)
             "               [-wrapdateline][-datelineoffset val]\n"
             "               [[-simplify tolerance] | [-segmentize max_dist]]\n"
             "               [-addfields]\n"
-            "               [-relaxedFieldNameMatch]\n"
+            "               [-relaxedFieldNameMatch] [-forceNullable]\n"
             "               [-fieldTypeToString All|(type1[,type2]*)] [-unsetFieldWidth]\n"
             "               [-mapFieldType srctype|All=dsttype[,srctype2=dsttype2]*]\n"
             "               [-fieldmap identity | index1[,index2]*]\n"
@@ -2677,7 +2686,8 @@ void DoFieldTypeConversion(GDALDataset* poDstDS, OGRFieldDefn& oFieldDefn,
                            char** papszFieldTypesToString,
                            char** papszMapFieldType,
                            int bUnsetFieldWidth,
-                           int bQuiet)
+                           int bQuiet,
+                           int bForceNullable)
 {
     if (papszFieldTypesToString != NULL &&
         (CSLFindString(papszFieldTypesToString, "All") != -1 ||
@@ -2710,6 +2720,8 @@ void DoFieldTypeConversion(GDALDataset* poDstDS, OGRFieldDefn& oFieldDefn,
         oFieldDefn.SetWidth(0);
         oFieldDefn.SetPrecision(0);
     }
+    if( bForceNullable )
+        oFieldDefn.SetNullable(TRUE);
 
     if( poDstDS->GetDriver() != NULL &&
         poDstDS->GetDriver()->GetMetadataItem(GDAL_DMD_CREATIONFIELDDATATYPES) != NULL &&
@@ -2782,7 +2794,8 @@ static TargetLayerInfo* SetupTargetLayer( CPL_UNUSED GDALDataset *poSrcDS,
                                           char **papszFieldMap,
                                           const char* pszWHERE,
                                           int bExactFieldNameMatch,
-                                          int bQuiet)
+                                          int bQuiet,
+                                          int bForceNullable)
 {
     OGRLayer    *poDstLayer;
     OGRFeatureDefn *poSrcFDefn;
@@ -2927,6 +2940,8 @@ static TargetLayerInfo* SetupTargetLayer( CPL_UNUSED GDALDataset *poSrcDS,
 
         CPLErrorReset();
 
+        char** papszLCOTemp = CSLDuplicate(papszLCO);
+
         int eGCreateLayerType = eGType;
         if( anRequestedGeomFields.size() == 0 &&
             nSrcGeomFieldCount > 1 &&
@@ -2939,8 +2954,32 @@ static TargetLayerInfo* SetupTargetLayer( CPL_UNUSED GDALDataset *poSrcDS,
         {
             eGCreateLayerType = wkbNone;
         }
-        
-        char** papszLCOTemp = CSLDuplicate(papszLCO);
+        // If the source feature has a single geometry column that is not nullable
+        // and that ODsCCreateGeomFieldAfterCreateLayer is available, use it
+        // so as to be able to set the not null constraint (if the driver supports it)
+        else if( anRequestedGeomFields.size() == 0 &&
+                 nSrcGeomFieldCount == 1 &&
+                 poDstDS->TestCapability(ODsCCreateGeomFieldAfterCreateLayer) &&
+                 !poSrcFDefn->GetGeomFieldDefn(0)->IsNullable() &&
+                 !bForceNullable)
+        {
+            anRequestedGeomFields.push_back(0);
+            eGCreateLayerType = wkbNone;
+        }
+        // If the source feature first geometry column is not nullable
+        // and that GEOMETRY_NULLABLE creation option is available, use it
+        // so as to be able to set the not null constraint (if the driver supports it)
+        else if( anRequestedGeomFields.size() == 0 &&
+                 nSrcGeomFieldCount >= 1 &&
+                 !poSrcFDefn->GetGeomFieldDefn(0)->IsNullable() &&
+                 poDstDS->GetDriver()->GetMetadataItem(GDAL_DS_LAYER_CREATIONOPTIONLIST) != NULL &&
+                 strstr(poDstDS->GetDriver()->GetMetadataItem(GDAL_DS_LAYER_CREATIONOPTIONLIST), "GEOMETRY_NULLABLE") != NULL &&
+                 CSLFetchNameValue(papszLCO, "GEOMETRY_NULLABLE") == NULL&&
+                 !bForceNullable )
+        {
+            papszLCOTemp = CSLSetNameValue(papszLCOTemp, "GEOMETRY_NULLABLE", "NO");
+        }
+
         // Force FID column as 64 bit if the source feature has a 64 bit FID,
         // the target driver supports 64 bit FID and the user didn't set it
         // manually.
@@ -2991,6 +3030,8 @@ static TargetLayerInfo* SetupTargetLayer( CPL_UNUSED GDALDataset *poSrcDS,
                     eGType = ForceCoordDimension(eGType, nCoordDim);
                     oGFldDefn.SetType((OGRwkbGeometryType) eGType);
                 }
+                if( bForceNullable )
+                    oGFldDefn.SetNullable(TRUE);
                 poDstLayer->CreateGeomField(&oGFldDefn);
             }
         }
@@ -3082,7 +3123,8 @@ static TargetLayerInfo* SetupTargetLayer( CPL_UNUSED GDALDataset *poSrcDS,
                                       papszFieldTypesToString,
                                       papszMapFieldType,
                                       bUnsetFieldWidth,
-                                      bQuiet);
+                                      bQuiet,
+                                      bForceNullable);
 
                 /* The field may have been already created at layer creation */
                 int iDstField = -1;
@@ -3196,7 +3238,8 @@ static TargetLayerInfo* SetupTargetLayer( CPL_UNUSED GDALDataset *poSrcDS,
                                   papszFieldTypesToString,
                                   papszMapFieldType,
                                   bUnsetFieldWidth,
-                                  bQuiet);
+                                  bQuiet,
+                                  bForceNullable);
 
             /* The field may have been already created at layer creation */
             std::map<CPLString, int>::iterator oIter =

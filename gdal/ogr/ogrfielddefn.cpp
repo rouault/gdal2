@@ -41,6 +41,8 @@ CPL_CVSID("$Id$");
 /**
  * \brief Constructor.
  *
+ * By default, fields have no width, precision, are nullable and not ignored.
+ *
  * @param pszNameIn the name of the new field.
  * @param eTypeIn the type of the new field.
  */
@@ -72,6 +74,7 @@ OGRFieldDefn::OGRFieldDefn( OGRFieldDefn *poPrototype )
     SetWidth( poPrototype->GetWidth() );
     SetPrecision( poPrototype->GetPrecision() );
     SetSubType( poPrototype->GetSubType() );
+    SetNullable( poPrototype->IsNullable() );
 //    SetDefault( poPrototype->GetDefaultRef() );
 }
 
@@ -80,6 +83,8 @@ OGRFieldDefn::OGRFieldDefn( OGRFieldDefn *poPrototype )
 /************************************************************************/
 /**
  * \brief Create a new field definition.
+ *
+ * By default, fields have no width, precision, are nullable and not ignored.
  *
  * This function is the same as the CPP method OGRFieldDefn::OGRFieldDefn().
  *
@@ -111,6 +116,7 @@ void OGRFieldDefn::Initialize( const char * pszNameIn, OGRFieldType eTypeIn )
     memset( &uDefault, 0, sizeof(OGRField) );
     bIgnore = FALSE;
     eSubType = OFSTNone;
+    bNullable = TRUE;
 }
 
 /************************************************************************/
@@ -917,5 +923,100 @@ int OGRFieldDefn::IsSame( const OGRFieldDefn * poOtherFieldDefn ) const
             eType == poOtherFieldDefn->eType &&
             eSubType == poOtherFieldDefn->eSubType &&
             nWidth == poOtherFieldDefn->nWidth &&
-            nPrecision == poOtherFieldDefn->nPrecision);
+            nPrecision == poOtherFieldDefn->nPrecision &&
+            bNullable == poOtherFieldDefn->bNullable);
+}
+
+/************************************************************************/
+/*                             IsNullable()                             */
+/************************************************************************/
+
+/**
+ * \fn int OGRFieldDefn::IsNullable() const
+ *
+ * \brief Return whether this field can receive null values.
+ *
+ * By default, fields are nullable.
+ *
+ * Even if this method returns FALSE (i.e not-nullable field), it doesn't mean
+ * that OGRFeature::IsFieldSet() will necessary return TRUE, as fields can be
+ * temporary unset and null/not-null validation is usually done when
+ * OGRLayer::CreateFeature()/SetFeature() is called.
+ *
+ * This method is the same as the C function OGR_Fld_IsNullable().
+ *
+ * @return TRUE if the field is authorized to be null.
+ * @since GDAL 2.0
+ */
+
+/************************************************************************/
+/*                         OGR_Fld_IsNullable()                         */
+/************************************************************************/
+
+/**
+ * \brief Return whether this field can receive null values.
+ *
+ * By default, fields are nullable.
+ *
+ * Even if this method returns FALSE (i.e not-nullable field), it doesn't mean
+ * that OGRFeature::IsFieldSet() will necessary return TRUE, as fields can be
+ * temporary unset and null/not-null validation is usually done when
+ * OGRLayer::CreateFeature()/SetFeature() is called.
+ *
+ * This method is the same as the C++ method OGRFieldDefn::IsNullable().
+ *
+ * @param hDefn handle to the field definition
+ * @return TRUE if the field is authorized to be null.
+ * @since GDAL 2.0
+ */
+
+int OGR_Fld_IsNullable( OGRFieldDefnH hDefn )
+{
+    return ((OGRFieldDefn *) hDefn)->IsNullable();
+}
+
+/************************************************************************/
+/*                            SetNullable()                             */
+/************************************************************************/
+
+/**
+ * \fn void OGRFieldDefn::SetNullable( int bNullableIn );
+ *
+ * \brief Set whether this field can receive null values.
+ *
+ * By default, fields are nullable, so this method is generally called with FALSE
+ * to set a not-null constraint.
+ *
+ * Depending on their capabilities, a not-null constraint may be ignored by
+ * drivers when adding fields to layers.
+ *
+ * This method is the same as the C function OGR_Fld_SetNullable().
+ *
+ * @param bNullableIn FALSE if the field must have a not-null constraint.
+ * @since GDAL 2.0
+ */
+
+/************************************************************************/
+/*                        OGR_Fld_SetNullable()                          */
+/************************************************************************/
+
+/**
+ * \brief Set whether this field can receive null values.
+ *
+ * By default, fields are nullable, so this method is generally called with FALSE
+ * to set a not-null constraint.
+ *
+ * Depending on their capabilities, a not-null constraint may be ignored by
+ * drivers when adding fields to layers.
+ *
+ * This method is the same as the C++ method OGRFieldDefn::SetNullable().
+ *
+ * @param hDefn handle to the field definition
+ * @param bNullableIn FALSE if the field must have a not-null constraint.
+ * @since GDAL 2.0
+ */
+
+void OGR_Fld_SetNullable( OGRFieldDefnH hDefn, int bNullableIn )
+{
+    ((OGRFieldDefn *) hDefn)->SetNullable( bNullableIn );
 }

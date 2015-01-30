@@ -157,6 +157,7 @@ void RegisterOGRMySQL()
     "</LayerCreationOptionList>");
         
         poDriver->SetMetadataItem( GDAL_DMD_CREATIONFIELDDATATYPES, "Integer Integer64 Real String Date DateTime Time Binary" );
+        poDriver->SetMetadataItem( GDAL_DCAP_NOTNULL_FIELDS, "YES" );
 
         poDriver->pfnOpen = OGRMySQLDriverOpen;
         poDriver->pfnCreate = OGRMySQLDriverCreate;

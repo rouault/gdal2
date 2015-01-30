@@ -634,6 +634,9 @@ OGRErr OGRGMLLayer::ICreateFeature( OGRFeature *poFeature )
     if( !bWriter )
         return OGRERR_FAILURE;
 
+    if( !poFeature->Validate( OGR_F_VAL_ALL & ~OGR_F_VAL_GEOM_TYPE, TRUE ) )
+        return OGRERR_FAILURE;
+
     if (bWriteSpaceIndentation)
         VSIFPrintfL(fp, "  ");
     if (bIsGML3Output)

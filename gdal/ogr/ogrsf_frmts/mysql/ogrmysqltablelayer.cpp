@@ -132,6 +132,7 @@ OGRFeatureDefn *OGRMySQLTableLayer::ReadTableDefinition( const char *pszTable )
     OGRFeatureDefn *poDefn = new OGRFeatureDefn( pszTable );
     char           **papszRow;
     OGRwkbGeometryType eForcedGeomType = wkbUnknown;
+    int bGeomColumnNotNullable = FALSE;
 
     poDefn->Reference();
 
@@ -297,6 +298,7 @@ OGRFeatureDefn *OGRMySQLTableLayer::ReadTableDefinition( const char *pszTable )
             {
                 pszGeomColumn = CPLStrdup(papszRow[0]);
                 eForcedGeomType = OGRFromOGCGeomType(pszType);
+                bGeomColumnNotNullable = ( papszRow[2] != NULL && EQUAL(papszRow[2], "NO") );
             }
             else
             {
@@ -316,6 +318,10 @@ OGRFeatureDefn *OGRMySQLTableLayer::ReadTableDefinition( const char *pszTable )
                 SetMetadataItem(OLMD_FID64, "YES");
             continue;
         }
+        
+        // Is not nullable ?
+        if( papszRow[2] != NULL && EQUAL(papszRow[2], "NO") )
+            oField.SetNullable(FALSE);
 
         poDefn->AddFieldDefn( &oField );
     }
@@ -372,6 +378,9 @@ OGRFeatureDefn *OGRMySQLTableLayer::ReadTableDefinition( const char *pszTable )
         else if (eForcedGeomType != wkbUnknown)
             poDefn->SetGeomType(eForcedGeomType);
 
+        if( bGeomColumnNotNullable )
+            poDefn->GetGeomFieldDefn(0)->SetNullable(FALSE);
+        
         if( hResult != NULL )
             mysql_free_result( hResult );   //Free our query results for finding type.
 			hResult = NULL;
@@ -1000,8 +1009,9 @@ OGRErr OGRMySQLTableLayer::CreateField( OGRFieldDefn *poFieldIn, int bApproxOK )
     }
 
     osCommand.Printf(
-             "ALTER TABLE `%s` ADD COLUMN `%s` %s",
-             poFeatureDefn->GetName(), oField.GetNameRef(), szFieldType );
+             "ALTER TABLE `%s` ADD COLUMN `%s` %s%s",
+             poFeatureDefn->GetName(), oField.GetNameRef(), szFieldType,
+             (!oField.IsNullable()) ? " NOT NULL" : "");
 
     if( mysql_query(poDS->GetConn(), osCommand ) )
     {

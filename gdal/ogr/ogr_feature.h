@@ -61,6 +61,8 @@ class CPL_DLL OGRFieldDefn
     
     int                 bIgnore;
     OGRFieldSubType     eSubType;
+    
+    int                 bNullable;
 
     void                Initialize( const char *, OGRFieldType );
     
@@ -100,6 +102,9 @@ class CPL_DLL OGRFieldDefn
     int                 IsIgnored() { return bIgnore; }
     void                SetIgnored( int bIgnoreIn ) { bIgnore = bIgnoreIn; }
 
+    int                 IsNullable() const { return bNullable; }
+    void                SetNullable( int bNullableIn ) { bNullable = bNullableIn; }
+
     int                 IsSame( const OGRFieldDefn * ) const;
 };
 
@@ -122,6 +127,7 @@ protected:
         OGRSpatialReference* poSRS;
 
         int                 bIgnore;
+        int                 bNullable;
 
         void                Initialize( const char *, OGRwkbGeometryType );
 
@@ -142,6 +148,9 @@ public:
 
         int                 IsIgnored() { return bIgnore; }
         void                SetIgnored( int bIgnoreIn ) { bIgnore = bIgnoreIn; }
+
+        int                 IsNullable() const { return bNullable; }
+        void                SetNullable( int bNullableIn ) { bNullable = bNullableIn; }
 
         int                 IsSame( OGRGeomFieldDefn * );
 };
@@ -380,6 +389,9 @@ class CPL_DLL OGRFeature
                                      int *panRemapSource );
     OGRErr              RemapGeomFields( OGRFeatureDefn *poNewDefn, 
                                      int *panRemapSource );
+
+    int                 Validate( int nValidateFlags,
+                                  int bEmitError );
 
     virtual const char *GetStyleString();
     virtual void        SetStyleString( const char * );

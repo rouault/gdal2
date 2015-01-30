@@ -765,6 +765,136 @@ def ogr_feature_overflow_64bit_integer():
         return 'failure'
     return 'success'
 
+###############################################################################
+# Test SetNullable(), IsNullable() and Validate()
+
+def ogr_feature_nullable_validate():
+    # No fields
+    feat_def = ogr.FeatureDefn( 'test' )
+    f = ogr.Feature(feat_def)
+    if f.Validate() != 1:
+        gdaltest.post_reason('fail')
+        return 'failure'
+
+    # Field with default parameter and empty feature
+    feat_def = ogr.FeatureDefn( 'test' )
+    field_def = ogr.FieldDefn( 'field_string', ogr.OFTString )
+    if field_def.IsNullable() != 1:
+        gdaltest.post_reason('fail')
+        return 'failure'
+    if feat_def.GetGeomFieldDefn(0).IsNullable() != 1:
+        gdaltest.post_reason('fail')
+        return 'failure'
+    feat_def.AddFieldDefn( field_def )
+    f = ogr.Feature(feat_def)
+    if f.Validate() != 1:
+        gdaltest.post_reason('fail')
+        return 'failure'
+
+    # Field with not NULL constraint and empty feature
+    feat_def = ogr.FeatureDefn( 'test' )
+    field_def = ogr.FieldDefn( 'field_string', ogr.OFTString )
+    field_def.SetNullable(0)
+    if field_def.IsNullable() != 0:
+        gdaltest.post_reason('fail')
+        return 'failure'
+    feat_def.AddFieldDefn( field_def )
+    f = ogr.Feature(feat_def)
+    gdal.PushErrorHandler()
+    ret = f.Validate()
+    gdal.PopErrorHandler()
+    if ret != 0:
+        gdaltest.post_reason('fail')
+        return 'failure'
+
+    # Field with not NULL constraint and non-empty feature
+    feat_def = ogr.FeatureDefn( 'test' )
+    field_def = ogr.FieldDefn( 'field_string', ogr.OFTString )
+    field_def.SetNullable(0)
+    feat_def.AddFieldDefn( field_def )
+    f = ogr.Feature(feat_def)
+    f.SetField(0, 'foo')
+    if f.Validate() != 1:
+        gdaltest.post_reason('fail')
+        return 'failure'
+
+    # Field with width constraint that is met
+    feat_def = ogr.FeatureDefn( 'test' )
+    field_def = ogr.FieldDefn( 'field_string', ogr.OFTString )
+    field_def.SetWidth(3)
+    feat_def.AddFieldDefn( field_def )
+    f = ogr.Feature(feat_def)
+    f.SetField(0, 'foo')
+    if f.Validate() != 1:
+        gdaltest.post_reason('fail')
+        return 'failure'
+
+    # Field with width constraint that is not met
+    feat_def = ogr.FeatureDefn( 'test' )
+    field_def = ogr.FieldDefn( 'field_string', ogr.OFTString )
+    field_def.SetWidth(2)
+    feat_def.AddFieldDefn( field_def )
+    f = ogr.Feature(feat_def)
+    f.SetField(0, 'foo')
+    gdal.PushErrorHandler()
+    ret = f.Validate()
+    gdal.PopErrorHandler()
+    if ret != 0:
+        gdaltest.post_reason('fail')
+        return 'failure'
+
+    # Geometry field with not-null geometry constraint that is met
+    feat_def = ogr.FeatureDefn( 'test' )
+    feat_def.SetGeomType(ogr.wkbNone)
+    gfield_def = ogr.GeomFieldDefn( 'test', ogr.wkbUnknown )
+    gfield_def.SetNullable(0)
+    if gfield_def.IsNullable() != 0:
+        gdaltest.post_reason('fail')
+        return 'failure'
+    feat_def.AddGeomFieldDefn( gfield_def )
+    f = ogr.Feature(feat_def)
+    f.SetGeometry(ogr.CreateGeometryFromWkt('POINT(0 1)'))
+    if f.Validate() != 1:
+        gdaltest.post_reason('fail')
+        return 'failure'
+
+    # Geometry field with not-null geometry constraint that is not met
+    feat_def = ogr.FeatureDefn( 'test' )
+    feat_def.SetGeomType(ogr.wkbNone)
+    gfield_def = ogr.GeomFieldDefn( 'test', ogr.wkbPoint )
+    gfield_def.SetNullable(0)
+    feat_def.AddGeomFieldDefn( gfield_def )
+    f = ogr.Feature(feat_def)
+    gdal.PushErrorHandler()
+    ret = f.Validate()
+    gdal.PopErrorHandler()
+    if ret != 0:
+        gdaltest.post_reason('fail')
+        return 'failure'
+
+    # Geometry field with Point geometry type that is met
+    feat_def = ogr.FeatureDefn( 'test' )
+    feat_def.SetGeomType(ogr.wkbPoint)
+    f = ogr.Feature(feat_def)
+    f.SetGeometry(ogr.CreateGeometryFromWkt('POINT(0 1)'))
+    if f.Validate() != 1:
+        gdaltest.post_reason('fail')
+        return 'failure'
+
+    # Geometry field with LineString geometry type that is not met
+    feat_def = ogr.FeatureDefn( 'test' )
+    feat_def.SetGeomType(ogr.wkbLineString)
+    f = ogr.Feature(feat_def)
+    f.SetGeometry(ogr.CreateGeometryFromWkt('POINT(0 1)'))
+    gdal.PushErrorHandler()
+    ret = f.Validate()
+    gdal.PopErrorHandler()
+    if ret != 0:
+        gdaltest.post_reason('fail')
+        return 'failure'
+
+    return 'success'
+
 def ogr_feature_cleanup():
 
     gdaltest.src_feature = None
@@ -787,6 +917,7 @@ gdaltest_list = [
     ogr_feature_unicode,
     ogr_feature_64bit_fid,
     ogr_feature_overflow_64bit_integer,
+    ogr_feature_nullable_validate,
     ogr_feature_cleanup ]
 
 if __name__ == '__main__':

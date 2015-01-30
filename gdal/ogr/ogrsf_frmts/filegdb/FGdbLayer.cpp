@@ -734,7 +734,7 @@ char* FGdbLayer::CreateFieldDefn(OGRFieldDefn& oField,
 {
     std::string fieldname = oField.GetNameRef();
     std::string fidname = std::string(GetFIDColumn());
-    std::string nullable = "true";
+    std::string nullable = (oField.IsNullable()) ? "true" : "false";
 
     /* Try to map the OGR type to an ESRI type */
     OGRFieldType fldtype = oField.GetType();
@@ -1500,7 +1500,10 @@ bool FGdbLayer::Create(FGdbDataSource* pParentDataSource,
         FGDB_CPLAddXMLAttribute(shape_xml, "xsi:type", "esri:Field");
         CPLCreateXMLElementAndValue(shape_xml, "Name", geometry_name.c_str());
         CPLCreateXMLElementAndValue(shape_xml, "Type", "esriFieldTypeGeometry");
-        CPLCreateXMLElementAndValue(shape_xml, "IsNullable", "true");
+        if( CSLFetchBoolean( papszOptions, "GEOMETRY_NULLABLE", TRUE) )
+            CPLCreateXMLElementAndValue(shape_xml, "IsNullable", "true");
+        else
+            CPLCreateXMLElementAndValue(shape_xml, "IsNullable", "false");
         CPLCreateXMLElementAndValue(shape_xml, "Length", "0");
         CPLCreateXMLElementAndValue(shape_xml, "Precision", "0");
         CPLCreateXMLElementAndValue(shape_xml, "Scale", "0");
@@ -1943,6 +1946,7 @@ bool FGdbLayer::GDBToOGRFields(CPLXMLNode* psRoot)
             std::string fieldType;
             int nLength = 0;
             int nPrecision = 0;
+            int bNullable = TRUE;
 
             // loop through all items in Field element
             //
@@ -1953,34 +1957,37 @@ bool FGdbLayer::GDBToOGRFields(CPLXMLNode* psRoot)
             {
                 if (psFieldItemNode->eType == CXT_Element)
                 {
-
-                if (EQUAL(psFieldItemNode->pszValue,"Name"))
-                {
-                    char* pszUnescaped = CPLUnescapeString(
-                        psFieldItemNode->psChild->pszValue, NULL, CPLES_XML);
-                    fieldName = pszUnescaped;
-                    CPLFree(pszUnescaped);
-                }
-                else if (EQUAL(psFieldItemNode->pszValue,"Type") )
-                {
-                    char* pszUnescaped = CPLUnescapeString(
-                        psFieldItemNode->psChild->pszValue, NULL, CPLES_XML);
-                    fieldType = pszUnescaped;
-                    CPLFree(pszUnescaped);
-                }
-                else if (EQUAL(psFieldItemNode->pszValue,"GeometryDef") )
-                {
-                    if (!ParseGeometryDef(psFieldItemNode))
-                        return false; // if we failed parsing the GeometryDef, we are done!
-                }
-                else if (EQUAL(psFieldItemNode->pszValue,"Length") )
-                {
-                    nLength = atoi(psFieldItemNode->psChild->pszValue);
-                }
-                else if (EQUAL(psFieldItemNode->pszValue,"Precision") )
-                {
-                    nPrecision = atoi(psFieldItemNode->psChild->pszValue);
-                }
+                    if (EQUAL(psFieldItemNode->pszValue,"Name"))
+                    {
+                        char* pszUnescaped = CPLUnescapeString(
+                            psFieldItemNode->psChild->pszValue, NULL, CPLES_XML);
+                        fieldName = pszUnescaped;
+                        CPLFree(pszUnescaped);
+                    }
+                    else if (EQUAL(psFieldItemNode->pszValue,"Type") )
+                    {
+                        char* pszUnescaped = CPLUnescapeString(
+                            psFieldItemNode->psChild->pszValue, NULL, CPLES_XML);
+                        fieldType = pszUnescaped;
+                        CPLFree(pszUnescaped);
+                    }
+                    else if (EQUAL(psFieldItemNode->pszValue,"GeometryDef") )
+                    {
+                        if (!ParseGeometryDef(psFieldItemNode))
+                            return false; // if we failed parsing the GeometryDef, we are done!
+                    }
+                    else if (EQUAL(psFieldItemNode->pszValue,"Length") )
+                    {
+                        nLength = atoi(psFieldItemNode->psChild->pszValue);
+                    }
+                    else if (EQUAL(psFieldItemNode->pszValue,"Precision") )
+                    {
+                        nPrecision = atoi(psFieldItemNode->psChild->pszValue);
+                    }
+                    else if (EQUAL(psFieldItemNode->pszValue,"IsNullable") )
+                    {
+                        bNullable = EQUAL(psFieldItemNode->psChild->pszValue, "true");
+                    }
                 }
             }
 
@@ -1992,6 +1999,7 @@ bool FGdbLayer::GDBToOGRFields(CPLXMLNode* psRoot)
             if (fieldType == "esriFieldTypeGeometry")
             {
                 m_strShapeFieldName = fieldName;
+                m_pFeatureDefn->GetGeomFieldDefn(0)->SetNullable(bNullable);
 
                 continue; // finish here for special field - don't add as OGR fielddef
             }
@@ -2020,6 +2028,7 @@ bool FGdbLayer::GDBToOGRFields(CPLXMLNode* psRoot)
             fieldTemplate.SetSubType(eSubType);
             //fieldTemplate.SetWidth(nLength);
             //fieldTemplate.SetPrecision(nPrecision);
+            fieldTemplate.SetNullable(bNullable);
             m_pFeatureDefn->AddFieldDefn( &fieldTemplate );
 
             m_vOGRFieldToESRIField.push_back(StringToWString(fieldName));

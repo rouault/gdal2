@@ -329,6 +329,7 @@ OGRFeatureDefn* OGRWFSLayer::BuildLayerDefnFromFeatureClass(GMLFeatureClass* poC
 /*      Added attributes (properties).                                  */
 /* -------------------------------------------------------------------- */
     OGRFieldDefn oField( "gml_id", OFTString );
+    oField.SetNullable(FALSE);
     poFDefn->AddFieldDefn( &oField );
 
     for( int iField = 0; iField < poGMLFeatureClass->GetPropertyCount(); iField++ )
@@ -364,6 +365,7 @@ OGRFeatureDefn* OGRWFSLayer::BuildLayerDefnFromFeatureClass(GMLFeatureClass* poC
             oField.SetWidth( poProperty->GetWidth() );
         if( poProperty->GetPrecision() > 0 )
             oField.SetPrecision( poProperty->GetPrecision() );
+        oField.SetNullable(poProperty->IsNullable());
 
         poFDefn->AddFieldDefn( &oField );
     }
@@ -375,7 +377,10 @@ OGRFeatureDefn* OGRWFSLayer::BuildLayerDefnFromFeatureClass(GMLFeatureClass* poC
         {
             osGeometryColumnName = pszGeometryColumnName;
             if( poFDefn->GetGeomFieldCount() > 0 )
+            {
+                poFDefn->GetGeomFieldDefn(0)->SetNullable(poGMLFeatureClass->GetGeometryProperty(0)->IsNullable());
                 poFDefn->GetGeomFieldDefn(0)->SetName(pszGeometryColumnName);
+            }
         }
     }
 
