@@ -293,7 +293,7 @@ int OGRGMLDataSource::Open( const char * pszNameIn )
 {
     VSILFILE   *fp;
     char        szHeader[4096];
-    int         nNumberOfFeatures = 0;
+    GIntBig     nNumberOfFeatures = 0;
     CPLString   osWithVsiGzip;
     const char *pszSchemaLocation = NULL;
     int bCheckAuxFile = TRUE;
@@ -425,7 +425,7 @@ int OGRGMLDataSource::Open( const char * pszNameIn )
             char ch = pszNumberOfFeatures[0];
             if ((ch == '\'' || ch == '"') && strchr(pszNumberOfFeatures + 1, ch) != NULL)
             {
-                nNumberOfFeatures = atoi(pszNumberOfFeatures + 1);
+                nNumberOfFeatures = CPLAtoGIntBig(pszNumberOfFeatures + 1);
             }
         }
         else if ((pszNumberOfFeatures = strstr(szPtr, "numberReturned=")) != NULL) /* WFS 2.0.0 */
@@ -437,7 +437,7 @@ int OGRGMLDataSource::Open( const char * pszNameIn )
                 /* 'unknown' might be a valid value in a corrected version of WFS 2.0 */
                 /* but it will also evaluate to 0, that is considered as unknown, so nothing */
                 /* particular to do */
-                nNumberOfFeatures = atoi(pszNumberOfFeatures + 1);
+                nNumberOfFeatures = CPLAtoGIntBig(pszNumberOfFeatures + 1);
             }
         }
     }
@@ -1077,7 +1077,7 @@ int OGRGMLDataSource::Open( const char * pszNameIn )
     if (poReader->GetClassCount() == 1 && nNumberOfFeatures != 0)
     {
         GMLFeatureClass *poClass = poReader->GetClass(0);
-        int nFeatureCount = poClass->GetFeatureCount();
+        GIntBig nFeatureCount = poClass->GetFeatureCount();
         if (nFeatureCount < 0)
         {
             poClass->SetFeatureCount(nNumberOfFeatures);
@@ -1998,38 +1998,8 @@ void OGRGMLDataSource::InsertHeader()
                 PrintLine( fpSchema, "          </xs:simpleType>");
                 PrintLine( fpSchema, "        </xs:element>");
             }
-            if( poFieldDefn->GetType() == OFTInteger64 ||
-                poFieldDefn->GetType() == OFTInteger64List  )
-            {
-                int nWidth;
-
-                if( poFieldDefn->GetWidth() > 0 )
-                    nWidth = poFieldDefn->GetWidth();
-                else
-                    nWidth = 16;
-
-                PrintLine( fpSchema, "        <xs:element name=\"%s\" nillable=\"true\" minOccurs=\"0\" maxOccurs=\"%s\">",
-                           poFieldDefn->GetNameRef(), poFieldDefn->GetType() == OFTInteger64List ? "unbounded": "1" );
-                PrintLine( fpSchema, "          <xs:simpleType>");
-                if( poFieldDefn->GetSubType() == OFSTBoolean )
-                {
-                    PrintLine( fpSchema, "            <xs:restriction base=\"xs:boolean\">");
-                }
-                else if( poFieldDefn->GetSubType() == OFSTInt16 )
-                {
-                    PrintLine( fpSchema, "            <xs:restriction base=\"xs:short\">");
-                }
-                else
-                {
-                    PrintLine( fpSchema, "            <xs:restriction base=\"xs:long\">");
-                    PrintLine( fpSchema, "              <xs:totalDigits value=\"%d\"/>", nWidth);
-                }
-                PrintLine( fpSchema, "            </xs:restriction>");
-                PrintLine( fpSchema, "          </xs:simpleType>");
-                PrintLine( fpSchema, "        </xs:element>");
-            }
-            if( poFieldDefn->GetType() == OFTInteger64 ||
-                poFieldDefn->GetType() == OFTInteger64List  )
+            else if( poFieldDefn->GetType() == OFTInteger64 ||
+                     poFieldDefn->GetType() == OFTInteger64List  )
             {
                 int nWidth;
 

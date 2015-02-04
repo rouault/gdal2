@@ -30,10 +30,8 @@
 #  DEALINGS IN THE SOFTWARE.
 #******************************************************************************
 
-from osgeo import osr
 from osgeo import gdal
 import sys
-import string
 
 # dummy object to hold options
 class Options:
@@ -109,7 +107,7 @@ def auto_noaa( options, loslas_list ):
     original_metadata = options.metadata
     
     have_nad27 = 0
-    have_hpgn = 0
+    #have_hpgn = 0
 
     for los in loslas_list:
 
@@ -142,7 +140,7 @@ def auto_noaa( options, loslas_list ):
                 options.append = 1
             have_nad27 = 1
 
-        print 'Integrate %s into %s.' % (los, ntv2_filename)
+        print('Integrate %s into %s.' % (los, ntv2_filename))
         
         TranslateLOSLAS( los, ntv2_filename, options )
         

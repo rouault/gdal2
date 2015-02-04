@@ -992,6 +992,14 @@ static int TestLayerErrorConditions( OGRLayer* poLyr )
         goto bye;
     }
 
+    // This should detect int overflow
+    if (LOG_ACTION(poLyr->GetFeature((GIntBig)INT_MAX + 1)) != NULL)
+    {
+        printf( "ERROR: GetFeature((GIntBig)INT_MAX + 1) should have returned NULL\n" );
+        bRet = FALSE;
+        goto bye;
+    }
+
 #if 0
     /* PG driver doesn't issue errors when the feature doesn't exist */
     /* So, not sure if emitting error is expected or not */
@@ -1478,7 +1486,7 @@ static int TestOGRLayerRandomWrite( OGRLayer *poLayer )
     int bRet = TRUE;
     OGRFeature  *papoFeatures[5], *poFeature;
     int         iFeature;
-    long        nFID2, nFID5;
+    GIntBig     nFID2, nFID5;
 
     memset(papoFeatures, 0, sizeof(papoFeatures));
 
@@ -1899,8 +1907,8 @@ static int TestFullSpatialFilter( OGRLayer *poLayer, int iGeomField )
         epsilon = MIN( sLayerExtent.MaxX - sLayerExtent.MinX, sLayerExtent.MaxY - sLayerExtent.MinY ) / 10.0;
     }
 
-    int         nTotalFeatureCount = LOG_ACTION(poLayer->GetFeatureCount());
-    for(int i=0; i<nTotalFeatureCount;i++ )
+    GIntBig nTotalFeatureCount = LOG_ACTION(poLayer->GetFeatureCount());
+    for(GIntBig i=0; i<nTotalFeatureCount;i++ )
     {
         OGRFeature  *poFeature, *poTargetFeature;
         OGRPolygon  oInclusiveFilter;
@@ -2487,7 +2495,7 @@ static int TestOGRLayerDeleteAndCreateFeature( OGRLayer *poLayer )
     int bRet = TRUE;
     OGRFeature  * poFeature = NULL;
     OGRFeature  * poFeatureTest = NULL;
-    long        nFID;
+    GIntBig nFID;
 
     LOG_ACTION(poLayer->SetSpatialFilter( NULL ));
     
@@ -2607,7 +2615,7 @@ static int TestTransactions( OGRLayer *poLayer )
 
 {
     OGRFeature* poFeature = NULL;
-    int nInitialFeatureCount = LOG_ACTION(poLayer->GetFeatureCount());
+    GIntBig nInitialFeatureCount = LOG_ACTION(poLayer->GetFeatureCount());
 
     OGRErr eErr = LOG_ACTION(poLayer->StartTransaction());
     if (eErr == OGRERR_NONE)
@@ -2721,7 +2729,7 @@ static int TestTransactions( OGRLayer *poLayer )
         if (poLayer->GetLayerDefn()->GetFieldCount() > 0)
             poFeature->SetField(0, "0");
         eErr = poLayer->CreateFeature(poFeature);
-        int nFID = poFeature->GetFID();
+        GIntBig nFID = poFeature->GetFID();
         delete poFeature;
         poFeature = NULL;
 

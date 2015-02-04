@@ -64,9 +64,6 @@ OGRSQLiteLayer::OGRSQLiteLayer()
     panFieldOrdinals = NULL;
     iFIDCol = -1;
 
-    bHasSpatialIndex = FALSE;
-    bHasM = FALSE;
-
     bIsVirtualShape = FALSE;
 
     bUseComprGeom = CSLTestBoolean(CPLGetConfigOption("COMPRESS_GEOM", "FALSE"));
@@ -176,8 +173,8 @@ int OGRIsBinaryGeomCol( sqlite3_stmt *hStmt,
 
 void OGRSQLiteLayer::BuildFeatureDefn( const char *pszLayerName,
                                        sqlite3_stmt *hStmt,
-                                       const char* pszExpectedGeomCol,
-                                       const std::set<CPLString>& aosGeomCols )
+                                       const std::set<CPLString>& aosGeomCols,
+                                       const std::set<CPLString>& aosIgnoredCols )
 
 {
     poFeatureDefn = new OGRSQLiteFeatureDefn( pszLayerName );
@@ -213,16 +210,17 @@ void OGRSQLiteLayer::BuildFeatureDefn( const char *pszLayerName,
 
         //oField.SetWidth( MAX(0,poStmt->GetColSize( iCol )) );
 
-        if( pszExpectedGeomCol != NULL
-            && EQUAL(oField.GetNameRef(),pszExpectedGeomCol) )
+        if( aosIgnoredCols.find( CPLString(oField.GetNameRef()).tolower() ) != aosIgnoredCols.end() )
+        {
+            continue;
+        }
+        if( aosGeomCols.find( CPLString(oField.GetNameRef()).tolower() ) != aosGeomCols.end() )
         {
             OGRSQLiteGeomFieldDefn* poGeomFieldDefn =
                 new OGRSQLiteGeomFieldDefn(oField.GetNameRef(), iCol);
             poFeatureDefn->AddGeomFieldDefn(poGeomFieldDefn, FALSE);
             continue;
         }
-        if( aosGeomCols.find( oField.GetNameRef() ) != aosGeomCols.end() )
-            continue;
 
         int nColType = sqlite3_column_type( hStmt, iCol );
         switch( nColType )
@@ -711,21 +709,36 @@ OGRFeature *OGRSQLiteLayer::GetNextRawFeature()
 
         int iRawField = panFieldOrdinals[iField];
 
-        if( sqlite3_column_type( hStmt, iRawField ) == SQLITE_NULL )
+        int nSQLite3Type = sqlite3_column_type( hStmt, iRawField );
+        if( nSQLite3Type == SQLITE_NULL )
             continue;
 
         switch( poFieldDefn->GetType() )
         {
         case OFTInteger:
         case OFTInteger64:
-            poFeature->SetField( iField, 
-                sqlite3_column_int64( hStmt, iRawField ) );
+        {
+            /* Possible since SQLite3 has no strong typing */
+            if( nSQLite3Type == SQLITE_TEXT )
+                poFeature->SetField( iField, 
+                        (const char *)sqlite3_column_text( hStmt, iRawField ) );
+            else
+                poFeature->SetField( iField, 
+                    sqlite3_column_int64( hStmt, iRawField ) );
             break;
+        }
 
         case OFTReal:
-            poFeature->SetField( iField, 
-                sqlite3_column_double( hStmt, iRawField ) );
+        {
+            /* Possible since SQLite3 has no strong typing */
+            if( nSQLite3Type == SQLITE_TEXT )
+                poFeature->SetField( iField, 
+                        (const char *)sqlite3_column_text( hStmt, iRawField ) );
+            else
+                poFeature->SetField( iField, 
+                    sqlite3_column_double( hStmt, iRawField ) );
             break;
+        }
 
         case OFTBinary:
             {
@@ -3248,6 +3261,12 @@ CPLString OGRSQLiteLayer::FormatSpatialFilterFromRTree(OGRGeometry* poFilterGeom
 
     poFilterGeom->getEnvelope( &sEnvelope );
 
+    if( CPLIsInf(sEnvelope.MinX) && sEnvelope.MinX < 0 &&
+        CPLIsInf(sEnvelope.MinY) && sEnvelope.MinY < 0 &&
+        CPLIsInf(sEnvelope.MaxX) && sEnvelope.MaxX > 0 &&
+        CPLIsInf(sEnvelope.MaxY) && sEnvelope.MaxY > 0 )
+        return "";
+
     osSpatialWHERE.Printf("%s IN ( SELECT pkid FROM 'idx_%s_%s' WHERE "
                     "xmax >= %s AND xmin <= %s AND ymax >= %s AND ymin <= %s)",
                     pszRowIDName,
@@ -3273,6 +3292,12 @@ CPLString OGRSQLiteLayer::FormatSpatialFilterFromMBR(OGRGeometry* poFilterGeom,
     OGREnvelope  sEnvelope;
 
     poFilterGeom->getEnvelope( &sEnvelope );
+
+    if( CPLIsInf(sEnvelope.MinX) && sEnvelope.MinX < 0 &&
+        CPLIsInf(sEnvelope.MinY) && sEnvelope.MinY < 0 &&
+        CPLIsInf(sEnvelope.MaxX) && sEnvelope.MaxX > 0 &&
+        CPLIsInf(sEnvelope.MaxY) && sEnvelope.MaxY > 0 )
+        return "";
 
     /* A bit inefficient but still faster than OGR filtering */
     osSpatialWHERE.Printf("MBRIntersects(\"%s\", BuildMBR(%s, %s, %s, %s))",

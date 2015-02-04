@@ -251,6 +251,7 @@ class GDALGeoPackageDataset : public OGRSQLiteBaseDataSource
                                        const char * pszColumnType );
         OGRErr              CreateExtensionsTableIfNecessary();
         int                 HasExtensionsTable();
+        OGRErr              CreateGDALAspatialExtension();
 
         static GDALDataset* CreateCopy( const char *pszFilename,
                                                    GDALDataset *poSrcDS, 
@@ -264,7 +265,6 @@ class GDALGeoPackageDataset : public OGRSQLiteBaseDataSource
         OGRErr              SetApplicationId();
         int                 OpenOrCreateDB(int flags);
         int                 HasGDALAspatialExtension();
-        OGRErr              CreateGDALAspatialExtension();
 };
 
 /************************************************************************/
@@ -365,6 +365,7 @@ class OGRGeoPackageTableLayer : public OGRGeoPackageLayer
     int                         m_anHasGeometryExtension[wkbMultiSurface+1];
     int                         m_bPreservePrecision;
     int                         m_bTruncateFields;
+    int                         m_bDeferredCreation;
 
     virtual OGRErr      ResetStatement();
     
@@ -399,6 +400,10 @@ class OGRGeoPackageTableLayer : public OGRGeoPackageLayer
     // void                SetSpatialFilter( int iGeomField, OGRGeometry * poGeomIn );
 
     OGRErr              ReadTableDefinition(int bIsSpatial);
+    void                SetCreationParameters( OGRwkbGeometryType eGType,
+                                               const char* pszGeomColumnName,
+                                               OGRSpatialReference* poSRS,
+                                               const char* pszFIDColumnName );
     void                SetDeferedSpatialIndexCreation( int bFlag )
                                 { bDeferedSpatialIndexCreation = bFlag; }
 
@@ -413,11 +418,11 @@ class OGRGeoPackageTableLayer : public OGRGeoPackageLayer
                                          OGRGeometry* poFilterGeom);
 
     int                 HasSpatialIndex();
-    int                 CreateGeometryExtensionIfNecessary(OGRwkbGeometryType eGType);
     void                SetPrecisionFlag( int bFlag )
                                 { m_bPreservePrecision = bFlag; }
     void                SetTruncateFieldsFlag( int bFlag )
                                 { m_bTruncateFields = bFlag; }
+    OGRErr              RunDeferredCreationIfNecessary();
 
     /************************************************************************/
     /* GPKG methods */
@@ -435,6 +440,7 @@ class OGRGeoPackageTableLayer : public OGRGeoPackageLayer
     OGRErr              FeatureBindParameters( OGRFeature *poFeature, sqlite3_stmt *poStmt, int *pnColCount, int bAddFID );
 
     void                CheckUnknownExtensions();
+    int                 CreateGeometryExtensionIfNecessary(OGRwkbGeometryType eGType);
 };
 
 /************************************************************************/
@@ -480,7 +486,7 @@ class OGRGeoPackageSelectLayer : public OGRGeoPackageLayer, public IOGRSQLiteSel
     virtual void                 BaseResetReading() { OGRGeoPackageLayer::ResetReading(); }
     virtual OGRFeature          *BaseGetNextFeature() { return OGRGeoPackageLayer::GetNextFeature(); }
     virtual OGRErr               BaseSetAttributeFilter(const char* pszQuery) { return OGRGeoPackageLayer::SetAttributeFilter(pszQuery); }
-    virtual int                  BaseGetFeatureCount(int bForce) { return OGRGeoPackageLayer::GetFeatureCount(bForce); }
+    virtual GIntBig              BaseGetFeatureCount(int bForce) { return OGRGeoPackageLayer::GetFeatureCount(bForce); }
     virtual int                  BaseTestCapability( const char *pszCap ) { return OGRGeoPackageLayer::TestCapability(pszCap); }
     virtual OGRErr               BaseGetExtent(OGREnvelope *psExtent, int bForce) { return OGRGeoPackageLayer::GetExtent(psExtent, bForce); }
     virtual OGRErr               BaseGetExtent(int iGeomField, OGREnvelope *psExtent, int bForce) { return OGRGeoPackageLayer::GetExtent(iGeomField, psExtent, bForce); }

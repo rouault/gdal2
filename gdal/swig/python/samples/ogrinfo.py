@@ -200,7 +200,7 @@ def main(argv = None):
 
     poDS_Name = poDS.GetName()
     if str(type(pszDataSource)) == "<type 'unicode'>" and str(type(poDS_Name)) == "<type 'str'>":
-        poDS_Name = unicode(poDS_Name, "utf8")
+        poDS_Name = poDS_Name.decode("utf8")
     if bVerbose and pszDataSource != poDS_Name:
         print( "INFO: Internal data source name `%s'\n"
                 "      different from user name `%s'." % (poDS_Name, pszDataSource ))
@@ -450,7 +450,7 @@ def DumpReadableFeature( poFeature, options = None ):
     if poFeature.GetStyleString() is not None:
 
         if 'DISPLAY_STYLE' not in options or EQUAL(options['DISPLAY_STYLE'], 'yes'):
-            print("  Style = %s" % GetStyleString() )
+            print("  Style = %s" % poFeature.GetStyleString() )
 
     nGeomFieldCount = poFeature.GetGeomFieldCount()
     if nGeomFieldCount > 0:

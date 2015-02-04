@@ -29,7 +29,6 @@
 
 import os
 import sys
-import string
 
 sys.path.append( '../pymod' )
 
@@ -1480,6 +1479,7 @@ def ogr_vrt_26():
     lyr = sqlite_ds.CreateLayer('test')
     lyr.CreateField(ogr.FieldDefn('foo', ogr.OFTString))
     lyr = None
+    sqlite_ds.SyncToDisk()
 
     vrt_ds = ogr.Open("""<OGRVRTDataSource>
     <OGRVRTLayer name="test">
@@ -1592,7 +1592,7 @@ def ogr_vrt_28():
         gdal.ErrorReset()
         gdal.PushErrorHandler('CPLQuietErrorHandler')
         lyr = ds.GetLayer(i)
-        feat = lyr.GetNextFeature()
+        lyr.GetNextFeature()
         gdal.PopErrorHandler()
         if gdal.GetLastErrorMsg() == '':
             gdaltest.post_reason('expected failure for layer %d of datasource %s' % (i, ds.GetName()))
