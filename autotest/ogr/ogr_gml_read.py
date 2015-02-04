@@ -3584,6 +3584,42 @@ def ogr_gml_69():
     return 'success'
 
 ###############################################################################
+# Test default fields (not really supported, but we must do something as we
+# support not nullable fields)
+
+def ogr_gml_70():
+
+    if not gdaltest.have_gml_reader:
+        return 'skip'
+
+    ds = ogr.GetDriverByName('SQLite').CreateDataSource('/vsimem/ogr_gml_70.gml')
+    lyr = ds.CreateLayer('test', geom_type = ogr.wkbNone)
+    
+    field_defn = ogr.FieldDefn( 'field_string', ogr.OFTString )
+    field_defn.SetDefault("'a'")
+    field_defn.SetNullable(0)
+    lyr.CreateField(field_defn)
+
+    f = ogr.Feature(lyr.GetLayerDefn())
+    lyr.CreateFeature(f)
+    f = None
+
+    ds = None
+
+    ds = ogr.Open('/vsimem/ogr_gml_70.gml')
+    lyr = ds.GetLayerByName('test')
+    f = lyr.GetNextFeature()
+    if f.GetField(0) != 'a':
+        gdaltest.post_reason('fail')
+        return 'fail'
+    ds = None
+    
+    gdal.Unlink("/vsimem/ogr_gml_70.gml")
+    gdal.Unlink("/vsimem/ogr_gml_70.xsd")
+
+    return 'success'
+
+###############################################################################
 #  Cleanup
 
 def ogr_gml_cleanup():
@@ -3784,6 +3820,7 @@ gdaltest_list = [
     ogr_gml_67,
     ogr_gml_68,
     ogr_gml_69,
+    ogr_gml_70,
     ogr_gml_cleanup ]
 
 #gdaltest_list = [ 

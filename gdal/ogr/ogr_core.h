@@ -453,33 +453,48 @@ typedef enum
  */
 #define ALTER_NULLABLE_FLAG        0x8
 
+/** Alter field DEFAULT value.
+ * Used by OGR_L_AlterFieldDefn().
+ * @since GDAL 2.0
+ */
+#define ALTER_DEFAULT_FLAG         0x10
+
 /** Alter all parameters of field definition.
  * Used by OGR_L_AlterFieldDefn().
  */
-#define ALTER_ALL_FLAG             (ALTER_NAME_FLAG | ALTER_TYPE_FLAG | ALTER_WIDTH_PRECISION_FLAG | ALTER_NULLABLE_FLAG)
+#define ALTER_ALL_FLAG             (ALTER_NAME_FLAG | ALTER_TYPE_FLAG | ALTER_WIDTH_PRECISION_FLAG | ALTER_NULLABLE_FLAG | ALTER_DEFAULT_FLAG)
 
 
 /** Validate that fields respect not-null constraints.
  * Used by OGR_F_Validate().
- * @since GDAL2.0
+ * @since GDAL 2.0
  */
 #define OGR_F_VAL_NULL           0x00000001
 
 /** Validate that geometries respect geometry column type.
  * Used by OGR_F_Validate().
- * @since GDAL2.0
+ * @since GDAL 2.0
  */
 #define OGR_F_VAL_GEOM_TYPE      0x00000002
 
 /** Validate that (string) fields respect field width.
  * Used by OGR_F_Validate().
- * @since GDAL2.0
+ * @since GDAL 2.0
  */
 #define OGR_F_VAL_WIDTH          0x00000004
 
+/** Allow fields that are null when there's an associated default value.
+ * This can be used for drivers where the low-level layers will automatically set the
+ * field value to the associated default value.
+ * This flag only makes sense if OGR_F_VAL_NULL is set too.
+ * Used by OGR_F_Validate().
+ * @since GDAL 2.0
+ */
+#define OGR_F_VAL_ALLOW_NULL_WHEN_DEFAULT       0x00000008
+
 /** Enable all validation tests.
  * Used by OGR_F_Validate().
- * @since GDAL2.0
+ * @since GDAL 2.0
  */
 #define OGR_F_VAL_ALL            0xFFFFFFFF
 

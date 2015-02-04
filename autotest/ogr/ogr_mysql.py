@@ -842,6 +842,96 @@ def ogr_mysql_25():
         return 'fail'
 
     return 'success'
+
+###############################################################################
+# Test default values
+
+def ogr_mysql_26():
+
+    if gdaltest.mysql_ds is None:
+        return 'skip'
+
+    lyr = gdaltest.mysql_ds.CreateLayer('ogr_mysql_26', geom_type = ogr.wkbPoint)
+
+    field_defn = ogr.FieldDefn( 'field_string', ogr.OFTString )
+    field_defn.SetDefault("'a''b'")
+    lyr.CreateField(field_defn)
+
+    field_defn = ogr.FieldDefn( 'field_int', ogr.OFTInteger )
+    field_defn.SetDefault('123')
+    lyr.CreateField(field_defn)
+
+    field_defn = ogr.FieldDefn( 'field_real', ogr.OFTReal )
+    field_defn.SetDefault('1.23')
+    lyr.CreateField(field_defn)
+
+    field_defn = ogr.FieldDefn( 'field_nodefault', ogr.OFTInteger )
+    lyr.CreateField(field_defn)
+
+    field_defn = ogr.FieldDefn( 'field_datetime', ogr.OFTDateTime )
+    field_defn.SetDefault("CURRENT_TIMESTAMP")
+    lyr.CreateField(field_defn)
+
+    field_defn = ogr.FieldDefn( 'field_datetime2', ogr.OFTDateTime )
+    field_defn.SetDefault("'2015/06/30 12:34:56'")
+    lyr.CreateField(field_defn)
+
+    #field_defn = ogr.FieldDefn( 'field_date', ogr.OFTDate )
+    #field_defn.SetDefault("CURRENT_DATE")
+    #lyr.CreateField(field_defn)
+
+    #field_defn = ogr.FieldDefn( 'field_time', ogr.OFTTime )
+    #field_defn.SetDefault("CURRENT_TIME")
+    #lyr.CreateField(field_defn)
+
+    f = ogr.Feature(lyr.GetLayerDefn())
+    f.SetGeometryDirectly(ogr.CreateGeometryFromWkt('POINT(0 0)'))
+    lyr.CreateFeature(f)
+    f = None
+
+    gdaltest.mysql_ds = None
+    gdaltest.mysql_ds = ogr.Open( 'MYSQL:autotest', update = 1 )
+    lyr = gdaltest.mysql_ds.GetLayerByName('ogr_mysql_26')
+    if lyr.GetLayerDefn().GetFieldDefn(lyr.GetLayerDefn().GetFieldIndex('field_string')).GetDefault() != "'a''b'":
+        gdaltest.post_reason('fail')
+        return 'fail'
+    if lyr.GetLayerDefn().GetFieldDefn(lyr.GetLayerDefn().GetFieldIndex('field_int')).GetDefault() != '123':
+        gdaltest.post_reason('fail')
+        return 'fail'
+    if lyr.GetLayerDefn().GetFieldDefn(lyr.GetLayerDefn().GetFieldIndex('field_real')).GetDefault() != '1.23':
+        gdaltest.post_reason('fail')
+        return 'fail'
+    if lyr.GetLayerDefn().GetFieldDefn(lyr.GetLayerDefn().GetFieldIndex('field_nodefault')).GetDefault() is not None:
+        gdaltest.post_reason('fail')
+        return 'fail'
+    if lyr.GetLayerDefn().GetFieldDefn(lyr.GetLayerDefn().GetFieldIndex('field_datetime')).GetDefault() != 'CURRENT_TIMESTAMP':
+        gdaltest.post_reason('fail')
+        return 'fail'
+    if lyr.GetLayerDefn().GetFieldDefn(lyr.GetLayerDefn().GetFieldIndex('field_datetime2')).GetDefault() != "'2015/06/30 12:34:56'":
+        gdaltest.post_reason('fail')
+        print(lyr.GetLayerDefn().GetFieldDefn(lyr.GetLayerDefn().GetFieldIndex('field_datetime2')).GetDefault())
+        return 'fail'
+    #if lyr.GetLayerDefn().GetFieldDefn(lyr.GetLayerDefn().GetFieldIndex('field_date')).GetDefault() != "CURRENT_DATE":
+    #    gdaltest.post_reason('fail')
+    #    print(lyr.GetLayerDefn().GetFieldDefn(lyr.GetLayerDefn().GetFieldIndex('field_date')).GetDefault())
+    #    return 'fail'
+    #if lyr.GetLayerDefn().GetFieldDefn(lyr.GetLayerDefn().GetFieldIndex('field_time')).GetDefault() != "CURRENT_TIME":
+    #    gdaltest.post_reason('fail')
+    #    return 'fail'
+    f = lyr.GetNextFeature()
+    if f.GetField('field_string') != 'a\'b' or f.GetField('field_int') != 123 or \
+       f.GetField('field_real') != 1.23 or \
+       f.IsFieldSet('field_nodefault') or not f.IsFieldSet('field_datetime')  or \
+       f.GetField('field_datetime2') != '2015/06/30 12:34:56':
+        gdaltest.post_reason('fail')
+        f.DumpReadable()
+        return 'fail'
+    ds = None
+
+    gdal.Unlink('/vsimem/ogr_gpkg_24.gpkg')
+
+    return 'success'
+
 ###############################################################################
 # 
 
@@ -858,6 +948,7 @@ def ogr_mysql_cleanup():
     gdaltest.mysql_ds.ExecuteSQL( 'DROP TABLE spatial_ref_sys' )
     gdaltest.mysql_ds.ExecuteSQL( 'DROP TABLE ogr_mysql_72' )
     gdaltest.mysql_ds.ExecuteSQL( 'DROP TABLE ogr_mysql_25' )
+    gdaltest.mysql_ds.ExecuteSQL( 'DROP TABLE ogr_mysql_26' )
 
     gdaltest.mysql_ds.Destroy()
     gdaltest.mysql_ds = None
@@ -890,6 +981,7 @@ gdaltest_list = [
     ogr_mysql_24,
     ogr_mysql_72,
     ogr_mysql_25,
+    ogr_mysql_26,
     ogr_mysql_cleanup
     ]
 

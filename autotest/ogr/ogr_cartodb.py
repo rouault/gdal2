@@ -144,6 +144,7 @@ def ogr_cartodb_rw_1():
     fd = ogr.FieldDefn("bool", ogr.OFTInteger)
     fd.SetSubType(ogr.OFSTBoolean)
     lyr.CreateField(fd)
+
     f = ogr.Feature(lyr.GetLayerDefn())
     lyr.StartTransaction()
     lyr.CreateFeature(f)
@@ -203,6 +204,15 @@ def ogr_cartodb_rw_1():
     fd = ogr.FieldDefn("not_nullable", ogr.OFTString)
     fd.SetNullable(0)
     lyr.CreateField(fd)
+
+    field_defn = ogr.FieldDefn( 'field_string', ogr.OFTString )
+    field_defn.SetDefault("'a''b'")
+    lyr.CreateField(field_defn)
+    
+    field_defn = ogr.FieldDefn( 'field_datetime_with_default', ogr.OFTDateTime )
+    field_defn.SetDefault("CURRENT_TIMESTAMP")
+    lyr.CreateField(field_defn)
+    
     f = ogr.Feature(lyr.GetLayerDefn())
     f.SetField('not_nullable', 'foo')
     lyr.CreateFeature(f)
@@ -217,8 +227,14 @@ def ogr_cartodb_rw_1():
     if lyr.GetLayerDefn().GetFieldDefn(lyr.GetLayerDefn().GetFieldIndex('not_nullable')).IsNullable() != 0:
         gdaltest.post_reason('fail')
         return 'fail'
+    if lyr.GetLayerDefn().GetFieldDefn(lyr.GetLayerDefn().GetFieldIndex('field_string')).GetDefault() != "'a''b'":
+        gdaltest.post_reason('fail')
+        return 'fail'
+    if lyr.GetLayerDefn().GetFieldDefn(lyr.GetLayerDefn().GetFieldIndex('field_datetime_with_default')).GetDefault() != 'CURRENT_TIMESTAMP':
+        gdaltest.post_reason('fail')
+        return 'fail'
     f = lyr.GetNextFeature()
-    if f is None:
+    if f is None or f.GetField('field_string') != 'a\'b' or not f.IsFieldSet('field_datetime_with_default'):
         gdaltest.post_reason('fail')
         ds.ExecuteSQL("DELLAYER:" + lyr_name)
         return 'fail'

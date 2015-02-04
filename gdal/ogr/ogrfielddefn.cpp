@@ -75,7 +75,7 @@ OGRFieldDefn::OGRFieldDefn( OGRFieldDefn *poPrototype )
     SetPrecision( poPrototype->GetPrecision() );
     SetSubType( poPrototype->GetSubType() );
     SetNullable( poPrototype->IsNullable() );
-//    SetDefault( poPrototype->GetDefaultRef() );
+    SetDefault( poPrototype->GetDefault() );
 }
 
 /************************************************************************/
@@ -113,7 +113,7 @@ void OGRFieldDefn::Initialize( const char * pszNameIn, OGRFieldType eTypeIn )
     nWidth = 0;         // should these be defined in some particular way
     nPrecision = 0;     // for numbers?
 
-    memset( &uDefault, 0, sizeof(OGRField) );
+    pszDefault = NULL;
     bIgnore = FALSE;
     eSubType = OFSTNone;
     bNullable = TRUE;
@@ -127,6 +127,7 @@ OGRFieldDefn::~OGRFieldDefn()
 
 {
     CPLFree( pszName );
+    CPLFree( pszDefault );
 }
 
 /************************************************************************/
@@ -383,31 +384,205 @@ void OGR_Fld_SetSubType( OGRFieldDefnH hDefn, OGRFieldSubType eSubType )
 /**
  * \brief Set default field value.
  *
- * Currently use of OGRFieldDefn "defaults" is discouraged.  This feature
- * may be fleshed out in the future.
+ * The default field value is taken into account by drivers (generally those with
+ * a SQL interface) that support it at field creation time. OGR will generally not
+ * automatically set the default field value to null fields by itself when calling
+ * OGRFeature::CreateFeature() / OGRFeature::SetFeature(), but will let the
+ * low-level layers to do the job. So retrieving the feature from the layer is
+ * recommended.
  *
+ * The accepted values are NULL, a numeric value, a litteral value enclosed
+ * between single quote characters (and inner single quote characters escaped by
+ * repetition of the single quote character),
+ * CURRENT_TIMESTAMP, CURRENT_TIME, CURRENT_DATE or
+ * a driver specific expression (that might be ignored by other drivers).
+ * For a datetime literal value, format should be 'YYYY/MM/DD HH:MM:SS[.sss]'
+ * (considered as UTC time).
+ *
+ * Drivers that support writing DEFAULT clauses will advertize the
+ * GDAL_DCAP_DEFAULT_FIELDS driver metadata item.
+ *
+ * This function is the same as the C function OGR_Fld_SetDefault().
+ *
+ * @param pszDefault new default field value or NULL pointer.
+ *
+ * @since GDAL 2.0
  */
 
-void OGRFieldDefn::SetDefault( const OGRField * puDefaultIn )
+void OGRFieldDefn::SetDefault( const char* pszDefaultIn )
 
 {
-    switch( eType )
+    CPLFree(pszDefault);
+    pszDefault = NULL;
+
+    if( pszDefaultIn && pszDefaultIn[0] == '\'' )
     {
-      case OFTInteger:
-      case OFTReal:
-        uDefault = *puDefaultIn;
-        break;
-
-      case OFTString:
-//        CPLFree( uDefault.String );
-//        uDefault.String = CPLStrdup( puDefaultIn->String );
-        break;
-
-      default:
-        // add handling for other complex types.
-        CPLAssert( FALSE );
-        break;
+        if( pszDefaultIn[strlen(pszDefaultIn)-1] != '\'' )
+        {
+            CPLError(CE_Failure, CPLE_AppDefined, "Incorrectly quoted string literal");
+            return;
+        }
+        const char* pszPtr = pszDefaultIn + 1;
+        for(; *pszPtr != '\0'; pszPtr ++ )
+        {
+            if( *pszPtr == '\'' )
+            {
+                if( pszPtr[1] == '\0' )
+                    break;
+                if( pszPtr[1] != '\'' )
+                {
+                    CPLError(CE_Failure, CPLE_AppDefined, "Incorrectly quoted string literal");
+                    return;
+                }
+                pszPtr ++;
+            }
+        }
+        if( *pszPtr == '\0' )
+        {
+            CPLError(CE_Failure, CPLE_AppDefined, "Incorrectly quoted string literal");
+            return;
+        }
     }
+
+    pszDefault = pszDefaultIn ? CPLStrdup(pszDefaultIn) : NULL;
+}
+
+/************************************************************************/
+/*                         OGR_Fld_SetDefault()                         */
+/************************************************************************/
+
+/**
+ * \brief Set default field value.
+ *
+ * The default field value is taken into account by drivers (generally those with
+ * a SQL interface) that support it at field creation time. OGR will generally not
+ * automatically set the default field value to null fields by itself when calling
+ * OGRFeature::CreateFeature() / OGRFeature::SetFeature(), but will let the
+ * low-level layers to do the job. So retrieving the feature from the layer is
+ * recommended.
+ *
+ * The accepted values are NULL, a numeric value, a litteral value enclosed
+ * between single quote characters (and inner single quote characters escaped by
+ * repetition of the single quote character),
+ * CURRENT_TIMESTAMP, CURRENT_TIME, CURRENT_DATE or
+ * a driver specific expression (that might be ignored by other drivers).
+ * For a datetime literal value, format should be 'YYYY/MM/DD HH:MM:SS[.sss]'
+ * (considered as UTC time).
+ *
+ * Drivers that support writing DEFAULT clauses will advertize the
+ * GDAL_DCAP_DEFAULT_FIELDS driver metadata item.
+ *
+ * This function is the same as the C++ method OGRFieldDefn::SetDefault().
+ *
+ * @param hDefn handle to the field definition.
+ * @param pszDefault new default field value or NULL pointer.
+ *
+ * @since GDAL 2.0
+ */
+
+void   CPL_DLL OGR_Fld_SetDefault( OGRFieldDefnH hDefn, const char* pszDefault )
+{
+    ((OGRFieldDefn *) hDefn)->SetDefault( pszDefault );
+}
+
+/************************************************************************/
+/*                             GetDefault()                             */
+/************************************************************************/
+
+/**
+ * \brief Get default field value.
+ *
+ * This function is the same as the C function OGR_Fld_GetDefault().
+ *
+ * @return default field value or NULL.
+ * @since GDAL 2.0
+ */
+
+const char* OGRFieldDefn::GetDefault() const
+
+{
+    return pszDefault;
+}
+
+/************************************************************************/
+/*                         OGR_Fld_GetDefault()                         */
+/************************************************************************/
+
+/**
+ * \brief Get default field value.
+ *
+ * This function is the same as the C++ method OGRFieldDefn::GetDefault().
+ *
+ * @param hDefn handle to the field definition.
+ * @return default field value or NULL.
+ * @since GDAL 2.0
+ */
+
+const char *OGR_Fld_GetDefault( OGRFieldDefnH hDefn )
+{
+    return ((OGRFieldDefn *) hDefn)->GetDefault();
+}
+
+/************************************************************************/
+/*                        IsDefaultDriverSpecific()                     */
+/************************************************************************/
+
+/**
+ * \brief Returns whether the default value is driver specific.
+ *
+ * Driver specific default values are those that are *not* NULL, a numeric value,
+ * a litteral value enclosed between single quote characters, CURRENT_TIMESTAMP,
+ * CURRENT_TIME, CURRENT_DATE or datetime literal value.
+ *
+ * This method is the same as the C function OGR_Fld_IsDefaultDriverSpecific().
+ *
+ * @return TRUE if the default value is driver specific.
+ * @since GDAL 2.0
+ */
+
+int OGRFieldDefn::IsDefaultDriverSpecific() const
+{
+    if( pszDefault == NULL )
+        return FALSE;
+
+    if( EQUAL(pszDefault, "NULL") ||
+        EQUAL(pszDefault, "CURRENT_TIMESTAMP") ||
+        EQUAL(pszDefault, "CURRENT_TIME") ||
+        EQUAL(pszDefault, "CURRENT_DATE") )
+        return FALSE;
+
+    if( pszDefault[0] == '\'' && pszDefault[strlen(pszDefault)-1] == '\'' )
+        return FALSE;
+
+    char* pszEnd = NULL;
+    CPLStrtod(pszDefault, &pszEnd);
+    if( *pszEnd == '\0' )
+        return FALSE;
+
+    return TRUE;
+}
+
+/************************************************************************/
+/*                     OGR_Fld_IsDefaultDriverSpecific()                */
+/************************************************************************/
+
+/**
+ * \brief Returns whether the default value is driver specific.
+ *
+ * Driver specific default values are those that are *not* NULL, a numeric value,
+ * a litteral value enclosed between single quote characters, CURRENT_TIMESTAMP,
+ * CURRENT_TIME, CURRENT_DATE or datetime literal value.
+ *
+ * This function is the same as the C++ method OGRFieldDefn::IsDefaultDriverSpecific().
+ *
+ * @param hDefn handle to the field definition
+ * @return TRUE if the default value is driver specific.
+ * @since GDAL 2.0
+ */
+
+int OGR_Fld_IsDefaultDriverSpecific( OGRFieldDefnH hDefn )
+{
+    return ((OGRFieldDefn *) hDefn)->IsDefaultDriverSpecific();
 }
 
 /************************************************************************/
@@ -987,8 +1162,8 @@ int OGR_Fld_IsNullable( OGRFieldDefnH hDefn )
  * By default, fields are nullable, so this method is generally called with FALSE
  * to set a not-null constraint.
  *
- * Depending on their capabilities, a not-null constraint may be ignored by
- * drivers when adding fields to layers.
+ * Drivers that support writing not-null constraint will advertize the
+ * GDAL_DCAP_NOTNULL_FIELDS driver metadata item.
  *
  * This method is the same as the C function OGR_Fld_SetNullable().
  *
@@ -1006,8 +1181,8 @@ int OGR_Fld_IsNullable( OGRFieldDefnH hDefn )
  * By default, fields are nullable, so this method is generally called with FALSE
  * to set a not-null constraint.
  *
- * Depending on their capabilities, a not-null constraint may be ignored by
- * drivers when adding fields to layers.
+ * Drivers that support writing not-null constraint will advertize the
+ * GDAL_DCAP_NOTNULL_FIELDS driver metadata item.
  *
  * This method is the same as the C++ method OGRFieldDefn::SetNullable().
  *

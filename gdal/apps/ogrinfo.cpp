@@ -568,6 +568,8 @@ static void ReportOnLayer( OGRLayer * poLayer, const char *pszWHERE,
                     poField->GetPrecision() );
             if( !poField->IsNullable() )
                 printf(" NOT NULL");
+            if( poField->GetDefault() != NULL )
+                printf(" DEFAULT %s", poField->GetDefault() );
             printf( "\n" );
         }
     }

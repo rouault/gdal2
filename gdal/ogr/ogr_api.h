@@ -276,6 +276,9 @@ int    CPL_DLL OGR_Fld_IsIgnored( OGRFieldDefnH hDefn );
 void   CPL_DLL OGR_Fld_SetIgnored( OGRFieldDefnH hDefn, int );
 int    CPL_DLL OGR_Fld_IsNullable( OGRFieldDefnH hDefn );
 void   CPL_DLL OGR_Fld_SetNullable( OGRFieldDefnH hDefn, int );
+const char CPL_DLL *OGR_Fld_GetDefault( OGRFieldDefnH hDefn );
+void   CPL_DLL OGR_Fld_SetDefault( OGRFieldDefnH hDefn, const char* );
+int    CPL_DLL OGR_Fld_IsDefaultDriverSpecific( OGRFieldDefnH hDefn );
 
 const char CPL_DLL *OGR_GetFieldTypeName( OGRFieldType );
 const char CPL_DLL *OGR_GetFieldSubTypeName( OGRFieldSubType );
@@ -410,6 +413,9 @@ OGRStyleTableH CPL_DLL OGR_F_GetStyleTable( OGRFeatureH );
 void   CPL_DLL OGR_F_SetStyleTableDirectly( OGRFeatureH, OGRStyleTableH );
 void   CPL_DLL OGR_F_SetStyleTable( OGRFeatureH, OGRStyleTableH );
 
+void   CPL_DLL OGR_F_FillUnsetWithDefault( OGRFeatureH hFeat,
+                                           int bNotNullableOnly,
+                                           char** papszOptions );
 int    CPL_DLL OGR_F_Validate( OGRFeatureH, int nValidateFlags, int bEmitError );
 
 /* -------------------------------------------------------------------- */

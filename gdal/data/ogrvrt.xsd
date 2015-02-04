@@ -179,6 +179,7 @@
         <xs:attribute name="width" type="xs:nonNegativeInteger"/>
         <xs:attribute name="precision" type="xs:nonNegativeInteger"/>
         <xs:attribute name="nullable" type="OGRBooleanType" default="true"/>  <!-- new in GDAL 2.0 -->
+        <xs:attribute name="default" type="xs:string"/>  <!-- new in GDAL 2.0 -->
     </xs:complexType>
 
     <xs:complexType name="FieldType">

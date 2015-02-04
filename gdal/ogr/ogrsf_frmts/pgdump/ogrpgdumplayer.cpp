@@ -153,6 +153,26 @@ OGRErr OGRPGDumpLayer::ICreateFeature( OGRFeature *poFeature )
     }
     else
     {
+        /* If there's a unset field with a default value, then we must use */
+        /* a specific INSERT statement to avoid unset fields to be bound to NULL */
+        int bHasDefaultValue = FALSE;
+        int iField;
+        int nFieldCount = poFeatureDefn->GetFieldCount();
+        for( iField = 0; iField < nFieldCount; iField++ )
+        {
+            if( !poFeature->IsFieldSet( iField ) &&
+                poFeature->GetFieldDefnRef(iField)->GetDefault() != NULL )
+            {
+                bHasDefaultValue = TRUE;
+                break;
+            }
+        }
+        if( bHasDefaultValue )
+        {
+            EndCopy();
+            return CreateFeatureViaInsert( poFeature );
+        }
+
         if ( !bCopyActive )
         {
             /* This is a heuristics. If the first feature to be copied has a */ 
@@ -1287,6 +1307,75 @@ int OGRPGCommonLayerSetType(OGRFieldDefn& oField,
 }
 
 /************************************************************************/
+/*                  OGRPGCommonLayerNormalizeDefault()                  */
+/************************************************************************/
+
+void OGRPGCommonLayerNormalizeDefault(OGRFieldDefn* poFieldDefn,
+                                      const char* pszDefault)
+{
+    if(pszDefault==NULL)
+        return;
+    CPLString osDefault(pszDefault);
+    size_t nPos = osDefault.find("::character varying");
+    if( nPos != std::string::npos )
+        osDefault.resize(nPos);
+    else if( strcmp(osDefault, "now()") == 0 )
+        osDefault = "CURRENT_TIMESTAMP";
+    else if( strcmp(osDefault, "('now'::text)::date") == 0 )
+        osDefault = "CURRENT_DATE";
+    else if( strcmp(osDefault, "('now'::text)::time with time zone") == 0 )
+        osDefault = "CURRENT_TIME";
+    else
+    {
+        nPos = osDefault.find("::timestamp with time zone");
+        if( poFieldDefn->GetType() == OFTDateTime && nPos != std::string::npos )
+        {
+            osDefault.resize(nPos);
+            nPos = osDefault.find("'+");
+            if( nPos != std::string::npos )
+            {
+                osDefault.resize(nPos);
+                osDefault += "'";
+            }
+            int nYear, nMonth, nDay, nHour, nMinute;
+            float fSecond;
+            if( sscanf(osDefault, "'%d-%d-%d %d:%d:%f'", &nYear, &nMonth, &nDay,
+                                &nHour, &nMinute, &fSecond) == 6 ||
+                sscanf(osDefault, "'%d-%d-%d %d:%d:%f+00'", &nYear, &nMonth, &nDay,
+                                &nHour, &nMinute, &fSecond) == 6)
+            {
+                if( fabs(fSecond - (int)(fSecond+0.5)) < 1e-3 )
+                    osDefault = CPLSPrintf("'%04d/%02d/%02d %02d:%02d:%02d'",
+                                            nYear, nMonth, nDay, nHour, nMinute, (int)(fSecond+0.5));
+                else
+                    osDefault = CPLSPrintf("'%04d/%02d/%02d %02d:%02d:%02.3f'",
+                                                    nYear, nMonth, nDay, nHour, nMinute, fSecond);
+            }
+        }
+    }
+    poFieldDefn->SetDefault(osDefault);
+}
+
+/************************************************************************/
+/*                     OGRPGCommonLayerGetPGDefault()                   */
+/************************************************************************/
+
+CPLString OGRPGCommonLayerGetPGDefault(OGRFieldDefn* poFieldDefn)
+{
+    CPLString osRet = poFieldDefn->GetDefault();
+    int nYear, nMonth, nDay, nHour, nMinute;
+    float fSecond;
+    if( sscanf(osRet, "'%d/%d/%d %d:%d:%f'",
+                &nYear, &nMonth, &nDay,
+                &nHour, &nMinute, &fSecond) == 6 )
+    {
+        osRet.resize(osRet.size()-1);
+        osRet += "+00'::timestamp with time zone";
+    }
+    return osRet;
+}
+
+/************************************************************************/
 /*                           GetNextFeature()                           */
 /************************************************************************/
 
@@ -1334,6 +1423,11 @@ OGRErr OGRPGDumpLayer::CreateField( OGRFieldDefn *poFieldIn,
                       osFieldType.c_str() );
     if( !oField.IsNullable() )
         osCommand += " NOT NULL";
+    if( oField.GetDefault() != NULL && !oField.IsDefaultDriverSpecific() )
+    {
+        osCommand += " DEFAULT ";
+        osCommand += OGRPGCommonLayerGetPGDefault(&oField);
+    }
     if (bCreateTable)
         poDS->Log(osCommand);
 

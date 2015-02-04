@@ -2252,8 +2252,8 @@ This function is the same as the C function OGR_L_AlterFieldDefn().
 
 @param iField index of the field whose definition must be altered.
 @param poNewFieldDefn new field definition
-@param nFlags combination of ALTER_NAME_FLAG, ALTER_TYPE_FLAG, ALTER_WIDTH_PRECISION_FLAG and
-ALTER_NULLABLE_FLAG
+@param nFlags combination of ALTER_NAME_FLAG, ALTER_TYPE_FLAG, ALTER_WIDTH_PRECISION_FLAG,
+ALTER_NULLABLE_FLAG and ALTER_DEFAULT_FLAG
 to indicate which of the name and/or type and/or width and precision fields and/or nullability from the new field
 definition must be taken into account.
 
@@ -2286,8 +2286,8 @@ This function is the same as the C++ method OGRLayer::AlterFieldDefn().
 @param hLayer handle to the layer.
 @param iField index of the field whose definition must be altered.
 @param hNewFieldDefn new field definition
-@param nFlags combination of ALTER_NAME_FLAG, ALTER_TYPE_FLAG, ALTER_WIDTH_PRECISION_FLAG and
-ALTER_NULLABLE_FLAG
+@param nFlags combination of ALTER_NAME_FLAG, ALTER_TYPE_FLAG, ALTER_WIDTH_PRECISION_FLAG,
+ALTER_NULLABLE_FLAG and ALTER_DEFAULT_FLAG
 to indicate which of the name and/or type and/or width and precision fields and/or nullability from the new field
 definition must be taken into account.
 

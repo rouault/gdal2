@@ -937,6 +937,115 @@ def ogr_oci_20():
     return 'success'
 
 ###############################################################################
+# Test default values
+
+def ogr_oci_21():
+
+    if gdaltest.oci_ds is None:
+        return 'skip'
+
+    lyr = gdaltest.oci_ds.CreateLayer('ogr_oci_21', geom_type = ogr.wkbPoint, options = ['DIM=2'])
+
+    field_defn = ogr.FieldDefn( 'field_string', ogr.OFTString )
+    field_defn.SetDefault("'a''b'")
+    lyr.CreateField(field_defn)
+
+    field_defn = ogr.FieldDefn( 'field_int', ogr.OFTInteger )
+    field_defn.SetDefault('123')
+    lyr.CreateField(field_defn)
+
+    field_defn = ogr.FieldDefn( 'field_real', ogr.OFTReal )
+    field_defn.SetDefault('1.23')
+    lyr.CreateField(field_defn)
+
+    field_defn = ogr.FieldDefn( 'field_nodefault', ogr.OFTInteger )
+    lyr.CreateField(field_defn)
+
+    field_defn = ogr.FieldDefn( 'field_datetime', ogr.OFTDateTime )
+    field_defn.SetDefault("CURRENT_TIMESTAMP")
+    lyr.CreateField(field_defn)
+
+    field_defn = ogr.FieldDefn( 'field_datetime2', ogr.OFTDateTime )
+    field_defn.SetDefault("'2015/06/30 12:34:56'")
+    lyr.CreateField(field_defn)
+
+    #field_defn = ogr.FieldDefn( 'field_date', ogr.OFTDate )
+    #field_defn.SetDefault("CURRENT_DATE")
+    #lyr.CreateField(field_defn)
+
+    #field_defn = ogr.FieldDefn( 'field_time', ogr.OFTTime )
+    #field_defn.SetDefault("CURRENT_TIME")
+    #lyr.CreateField(field_defn)
+
+    f = ogr.Feature(lyr.GetLayerDefn())
+    f.SetField('field_string', 'c')
+    f.SetField('field_int', 456)
+    f.SetField('field_real', 4.56)
+    f.SetField('field_datetime', '2015/06/30 12:34:56')
+    f.SetField('field_datetime2', '2015/06/30 12:34:56')
+    f.SetGeometryDirectly(ogr.CreateGeometryFromWkt('POINT(0 1)'))
+    lyr.CreateFeature(f)
+    f = None
+    
+    # Transition from BoundCopy to UnboundCopy
+    f = ogr.Feature(lyr.GetLayerDefn())
+    f.SetGeometryDirectly(ogr.CreateGeometryFromWkt('POINT(0 1)'))
+    lyr.CreateFeature(f)
+    f = None
+
+    lyr.SyncToDisk()
+
+    oci_ds2 = ogr.Open( os.environ['OCI_DSNAME'] )
+
+    lyr = oci_ds2.GetLayerByName('ogr_oci_21')
+    if lyr.GetLayerDefn().GetFieldDefn(lyr.GetLayerDefn().GetFieldIndex('field_string')).GetDefault() != "'a''b'":
+        gdaltest.post_reason('fail')
+        return 'fail'
+    if lyr.GetLayerDefn().GetFieldDefn(lyr.GetLayerDefn().GetFieldIndex('field_int')).GetDefault() != '123':
+        gdaltest.post_reason('fail')
+        return 'fail'
+    if lyr.GetLayerDefn().GetFieldDefn(lyr.GetLayerDefn().GetFieldIndex('field_real')).GetDefault() != '1.23':
+        gdaltest.post_reason('fail')
+        return 'fail'
+    if lyr.GetLayerDefn().GetFieldDefn(lyr.GetLayerDefn().GetFieldIndex('field_nodefault')).GetDefault() is not None:
+        gdaltest.post_reason('fail')
+        return 'fail'
+    if lyr.GetLayerDefn().GetFieldDefn(lyr.GetLayerDefn().GetFieldIndex('field_datetime')).GetDefault() != 'CURRENT_TIMESTAMP':
+        gdaltest.post_reason('fail')
+        return 'fail'
+    if lyr.GetLayerDefn().GetFieldDefn(lyr.GetLayerDefn().GetFieldIndex('field_datetime2')).GetDefault() != "'2015/06/30 12:34:56'":
+        gdaltest.post_reason('fail')
+        print(lyr.GetLayerDefn().GetFieldDefn(lyr.GetLayerDefn().GetFieldIndex('field_datetime2')).GetDefault())
+        return 'fail'
+    #if lyr.GetLayerDefn().GetFieldDefn(lyr.GetLayerDefn().GetFieldIndex('field_date')).GetDefault() != "CURRENT_DATE":
+    #    gdaltest.post_reason('fail')
+    #    print(lyr.GetLayerDefn().GetFieldDefn(lyr.GetLayerDefn().GetFieldIndex('field_date')).GetDefault())
+    #    return 'fail'
+    #if lyr.GetLayerDefn().GetFieldDefn(lyr.GetLayerDefn().GetFieldIndex('field_time')).GetDefault() != "CURRENT_TIME":
+    #    gdaltest.post_reason('fail')
+    #    return 'fail'
+
+    f = lyr.GetNextFeature()
+    if f.GetField('field_string') != 'c':
+        gdaltest.post_reason('fail')
+        f.DumpReadable()
+        return 'fail'
+
+    f = lyr.GetNextFeature()
+    if f.GetField('field_string') != 'a\'b' or f.GetField('field_int') != 123 or \
+       f.GetField('field_real') != 1.23 or \
+       f.IsFieldSet('field_nodefault') or not f.IsFieldSet('field_datetime')  or \
+       f.GetField('field_datetime2') != '2015/06/30 12:34:56':
+        gdaltest.post_reason('fail')
+        f.DumpReadable()
+        return 'fail'
+    ds = None
+
+    gdal.Unlink('/vsimem/ogr_gpkg_24.gpkg')
+
+    return 'success'
+
+###############################################################################
 # 
 
 def ogr_oci_cleanup():
@@ -963,6 +1072,7 @@ def ogr_oci_cleanup():
     gdaltest.oci_ds.ExecuteSQL( 'DELLAYER:testdate' )
     gdaltest.oci_ds.ExecuteSQL( 'DELLAYER:ogr_oci_20' )
     gdaltest.oci_ds.ExecuteSQL( 'DELLAYER:ogr_oci_20bis' )
+    gdaltest.oci_ds.ExecuteSQL( 'DELLAYER:ogr_oci_21' )
 
     gdaltest.oci_ds.Destroy()
     gdaltest.oci_ds = None
@@ -991,6 +1101,7 @@ gdaltest_list = [
     ogr_oci_18,
     ogr_oci_19,
     ogr_oci_20,
+    ogr_oci_21,
     ogr_oci_cleanup ]
 
 if __name__ == '__main__':

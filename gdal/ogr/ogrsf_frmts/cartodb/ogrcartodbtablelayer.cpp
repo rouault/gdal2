@@ -116,10 +116,11 @@ OGRFeatureDefn * OGRCARTODBTableLayer::GetLayerDefnInternal(CPL_UNUSED json_obje
     if( poDS->IsAuthenticatedConnection() )
     {
         CPLString osCommand;
+        int bHasDefault = FALSE;
 
         osCommand.Printf(
                  "SELECT DISTINCT a.attname, t.typname, a.attlen,"
-                 "       format_type(a.atttypid,a.atttypmod), a.attnum, a.attnotnull "
+                 "       format_type(a.atttypid,a.atttypmod), a.attnum, a.attnotnull, a.atthasdef "
                  "FROM pg_class c, pg_attribute a, pg_type t, pg_namespace n "
                  "WHERE c.relname = '%s' "
                  "AND a.attnum > 0 AND a.attrelid = c.oid "
@@ -145,6 +146,8 @@ OGRFeatureDefn * OGRCARTODBTableLayer::GetLayerDefnInternal(CPL_UNUSED json_obje
                 int nWidth = poFeat->GetFieldAsInteger("attlen");
                 const char* pszFormatType = poFeat->GetFieldAsString("format_type");
                 int bNotNull = poFeat->GetFieldAsInteger("attnotnull");
+                if( poFeat->GetFieldAsInteger("atthasdef") )
+                    bHasDefault = TRUE;
                 if( strcmp(pszAttname, "cartodb_id") == 0 )
                 {
                     osFIDColName = pszAttname;
@@ -186,6 +189,40 @@ OGRFeatureDefn * OGRCARTODBTableLayer::GetLayerDefnInternal(CPL_UNUSED json_obje
             }
 
             poDS->ReleaseResultSet(poLyr);
+        }
+
+        if( bHasDefault )
+        {
+            osCommand.Printf(
+                    "SELECT a.attname, pg_get_expr(def.adbin, c.oid) "
+                    "FROM pg_attrdef def, pg_class c, pg_attribute a, pg_type t, pg_namespace n "
+                    "WHERE c.relname = '%s' AND a.attnum > 0 AND a.attrelid = c.oid "
+                    "AND a.atttypid = t.oid AND c.relnamespace=n.oid AND "
+                    "def.adrelid = c.oid AND def.adnum = a.attnum "
+                    "AND n.nspname= '%s' "
+                    "ORDER BY a.attnum",
+                    OGRCARTODBEscapeLiteral(osName).c_str(),
+                    OGRCARTODBEscapeLiteral(poDS->GetCurrentSchema()).c_str());
+
+            poLyr = poDS->ExecuteSQL(osCommand, NULL, NULL);
+            if( poLyr != NULL )
+            {
+                OGRFeature* poFeat;
+                while( (poFeat = poLyr->GetNextFeature()) != NULL )
+                {
+                    const char      *pszName = poFeat->GetFieldAsString(0);
+                    const char      *pszDefault = poFeat->GetFieldAsString(1);
+                    int nIdx = poFeatureDefn->GetFieldIndex(pszName);
+                    if( nIdx >= 0 )
+                    {
+                        OGRFieldDefn* poFieldDefn = poFeatureDefn->GetFieldDefn(nIdx);
+                        OGRPGCommonLayerNormalizeDefault(poFieldDefn, pszDefault);
+                    }
+                    delete poFeat;
+                }
+
+                poDS->ReleaseResultSet(poLyr);
+            }
         }
     }
 
@@ -346,7 +383,12 @@ OGRErr OGRCARTODBTableLayer::CreateField( OGRFieldDefn *poFieldIn,
                     OGRCARTODBEscapeIdentifier(poFieldIn->GetNameRef()).c_str(),
                     OGRPGCommonLayerGetType(*poFieldIn, FALSE, TRUE).c_str() );
         if( !poFieldIn->IsNullable() )
-                osSQL += " NOT NULL";
+            osSQL += " NOT NULL";
+        if( poFieldIn->GetDefault() != NULL && !poFieldIn->IsDefaultDriverSpecific() )
+        {
+            osSQL += " DEFAULT ";
+            osSQL += OGRPGCommonLayerGetPGDefault(poFieldIn);
+        }
 
         json_object* poObj = poDS->RunSQL(osSQL);
         if( poObj == NULL )
@@ -1179,6 +1221,11 @@ OGRErr OGRCARTODBTableLayer::RunDifferedCreationIfNecessary()
             osSQL += OGRPGCommonLayerGetType(*poFieldDefn, FALSE, TRUE);
             if( !poFieldDefn->IsNullable() )
                 osSQL += " NOT NULL";
+            if( poFieldDefn->GetDefault() != NULL && !poFieldDefn->IsDefaultDriverSpecific() )
+            {
+                osSQL += " DEFAULT ";
+                osSQL += poFieldDefn->GetDefault();
+            }
             osSQL += ",";
         }
     }

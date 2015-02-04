@@ -337,7 +337,6 @@ class OGRSQLiteTableLayer : public OGRSQLiteLayer
 
     sqlite3_stmt       *hInsertStmt;
     CPLString           osLastInsertStmt;
-    int                 bHasDefaultValue;
 
     int                 bHasCheckedTriggers;
 

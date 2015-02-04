@@ -380,6 +380,99 @@ def ogr_pgdump_5():
     return 'success'
 
 ###############################################################################
+# Test default values
+
+def ogr_pgdump_6():
+    
+    ds = ogr.GetDriverByName('PGDump').CreateDataSource('/vsimem/ogr_pgdump_6.sql', options = [ 'LINEFORMAT=LF' ] )
+    lyr = ds.CreateLayer('test', geom_type = ogr.wkbNone)
+    
+    field_defn = ogr.FieldDefn( 'field_string', ogr.OFTString )
+    field_defn.SetDefault("'a''b'")
+    lyr.CreateField(field_defn)
+
+    field_defn = ogr.FieldDefn( 'field_int', ogr.OFTInteger )
+    field_defn.SetDefault('123')
+    lyr.CreateField(field_defn)
+
+    field_defn = ogr.FieldDefn( 'field_real', ogr.OFTReal )
+    field_defn.SetDefault('1.23')
+    lyr.CreateField(field_defn)
+
+    field_defn = ogr.FieldDefn( 'field_nodefault', ogr.OFTInteger )
+    lyr.CreateField(field_defn)
+
+    field_defn = ogr.FieldDefn( 'field_datetime', ogr.OFTDateTime )
+    field_defn.SetDefault("CURRENT_TIMESTAMP")
+    lyr.CreateField(field_defn)
+
+    field_defn = ogr.FieldDefn( 'field_datetime2', ogr.OFTDateTime )
+    field_defn.SetDefault("'2015/06/30 12:34:56'")
+    lyr.CreateField(field_defn)
+
+    field_defn = ogr.FieldDefn( 'field_date', ogr.OFTDate )
+    field_defn.SetDefault("CURRENT_DATE")
+    lyr.CreateField(field_defn)
+
+    field_defn = ogr.FieldDefn( 'field_time', ogr.OFTTime )
+    field_defn.SetDefault("CURRENT_TIME")
+    lyr.CreateField(field_defn)
+
+    gdal.SetConfigOption( 'PG_USE_COPY', 'YES' )
+
+    f = ogr.Feature(lyr.GetLayerDefn())
+    f.SetField('field_string', 'a')
+    f.SetField('field_int', 456)
+    f.SetField('field_real', 4.56)
+    f.SetField('field_datetime', '2015/06/30 12:34:56')
+    f.SetField('field_datetime2', '2015/06/30 12:34:56')
+    f.SetField('field_date', '2015/06/30')
+    f.SetField('field_time', '12:34:56')
+    lyr.CreateFeature(f)
+    f = None
+    
+    # Transition from COPY to INSERT
+    f = ogr.Feature(lyr.GetLayerDefn())
+    lyr.CreateFeature(f)
+    f = None
+
+    # Transition from INSERT to COPY
+    f = ogr.Feature(lyr.GetLayerDefn())
+    f.SetField('field_string', 'b')
+    f.SetField('field_int', 456)
+    f.SetField('field_real', 4.56)
+    f.SetField('field_datetime', '2015/06/30 12:34:56')
+    f.SetField('field_datetime2', '2015/06/30 12:34:56')
+    f.SetField('field_date', '2015/06/30')
+    f.SetField('field_time', '12:34:56')
+    lyr.CreateFeature(f)
+    f = None
+
+    gdal.SetConfigOption( 'PG_USE_COPY', None )
+
+    ds = None
+    
+    f = gdal.VSIFOpenL('/vsimem/ogr_pgdump_6.sql', 'rb')
+    sql = gdal.VSIFReadL(1, 10000, f).decode('ascii')
+    gdal.VSIFCloseL(f)
+
+    gdal.Unlink('/vsimem/ogr_pgdump_6.sql')
+
+    if sql.find("""a\t456\t4.56\t\\N\t2015/06/30 12:34:56\t2015/06/30 12:34:56\t2015/06/30\t12:34:56""") < 0 or \
+       sql.find("""ALTER TABLE "public"."test" ADD COLUMN "field_string" VARCHAR DEFAULT 'a''b';""") == -1 or \
+       sql.find("""ALTER TABLE "public"."test" ADD COLUMN "field_int" INTEGER DEFAULT 123;""") == -1 or \
+       sql.find("""ALTER TABLE "public"."test" ADD COLUMN "field_real" FLOAT8 DEFAULT 1.23;""") == -1 or \
+       sql.find("""ALTER TABLE "public"."test" ADD COLUMN "field_datetime" timestamp with time zone DEFAULT CURRENT_TIMESTAMP;""") == -1 or \
+       sql.find("""ALTER TABLE "public"."test" ADD COLUMN "field_datetime2" timestamp with time zone DEFAULT '2015/06/30 12:34:56+00'::timestamp with time zone;""") == -1 or \
+       sql.find("""ALTER TABLE "public"."test" ADD COLUMN "field_date" date DEFAULT CURRENT_DATE;""") == -1 or \
+       sql.find("""ALTER TABLE "public"."test" ADD COLUMN "field_time" time DEFAULT CURRENT_TIME;""") == -1 or \
+       sql.find("""b\t456\t4.56\t\\N\t2015/06/30 12:34:56\t2015/06/30 12:34:56\t2015/06/30\t12:34:56""") < 0:
+        print(sql)
+        return 'fail'
+
+    return 'success'
+
+###############################################################################
 # Cleanup
 
 def ogr_pgdump_cleanup():
@@ -400,6 +493,7 @@ gdaltest_list = [
     ogr_pgdump_3,
     ogr_pgdump_4,
     ogr_pgdump_5,
+    ogr_pgdump_6,
     ogr_pgdump_cleanup ]
 
 

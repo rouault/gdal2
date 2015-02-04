@@ -46,7 +46,17 @@
 /************************************************************************/
 
 /**
- * Definition of an attribute of an OGRFeatureDefn.
+ * Definition of an attribute of an OGRFeatureDefn. A field is described by :
+ * <ul>
+ * <li>a name. See SetName() / GetNameRef()</li>
+ * <li>a type: OFTString, OFTInteger, OFTReal, ... See SetType() / GetType()</li>
+ * <li>a subtype (optional): OFSTBoolean, ... See SetSubType() / GetSubType()</li>
+ * <li>a width (optional): maximal number of characters. See SetWidth() / GetWidth()</li>
+ * <li>a precision (optional): number of digits after decimal point. See SetPrecision() / GetPrecision()</li>
+ * <li>a NOT NULL constraint (optional). See SetNullable() / IsNullable()</li>
+ * <li>a default value (optional).  See SetDefault() / GetDefault()</li>
+ * <li>a boolean to indicate whether it should be ignored when retrieving features.  See SetIgnored() / IsIgnored()</li>
+ * </ul>
  */
 
 class CPL_DLL OGRFieldDefn
@@ -57,7 +67,7 @@ class CPL_DLL OGRFieldDefn
     OGRJustification    eJustify;               
     int                 nWidth;                 /* zero is variable */
     int                 nPrecision;
-    OGRField            uDefault;
+    char                *pszDefault;
     
     int                 bIgnore;
     OGRFieldSubType     eSubType;
@@ -96,9 +106,10 @@ class CPL_DLL OGRFieldDefn
     void                Set( const char *, OGRFieldType, int = 0, int = 0,
                              OGRJustification = OJUndefined );
 
-    void                SetDefault( const OGRField * );
-    const OGRField     *GetDefaultRef() { return &uDefault; }
-    
+    void                SetDefault( const char* );
+    const char         *GetDefault() const;
+    int                 IsDefaultDriverSpecific() const;
+
     int                 IsIgnored() { return bIgnore; }
     void                SetIgnored( int bIgnoreIn ) { bIgnore = bIgnoreIn; }
 
@@ -113,10 +124,17 @@ class CPL_DLL OGRFieldDefn
 /************************************************************************/
 
 /**
- * Definition of a geometry field of an OGRFeatureDefn. A geometry field
- * is described by a name, a geometry type and a spatial reference system.
+ * Definition of a geometry field of an OGRFeatureDefn. A geometry field is
+ * described by :
+ * <ul>
+ * <li>a name. See SetName() / GetNameRef()</li>
+ * <li>a type: wkbPoint, wkbLineString, ... See SetType() / GetType()</li>
+ * <li>a spatial reference system (optional). See SetSpatialRef() / GetSpatialRef()</li>
+ * <li>a NOT NULL constraint (optional). See SetNullable() / IsNullable()</li>
+ * <li>a boolean to indicate whether it should be ignored when retrieving features.  See SetIgnored() / IsIgnored()</li>
+ * </ul>
  *
- * @since OGR 2.0
+ * @since OGR 1.11
  */
 
 class CPL_DLL OGRGeomFieldDefn
@@ -168,11 +186,12 @@ public:
  * of features but doesn't necessarily relate to all of a layer, or just one
  * layer.
  *
- * This object also can contain some other information such as a name, the
- * base geometry type and potentially other metadata.
+ * This object also can contain some other information such as a name and
+ * potentially other metadata.
  *
+ * It is essentially a collection of field descriptions (OGRFieldDefn class).
  * Starting with GDAL 1.11, in addition to attribute fields, it can also
- * contain multiple geometry fields.
+ * contain multiple geometry fields (OGRGeomFieldDefn class).
  *
  * It is reasonable for different translators to derive classes from
  * OGRFeatureDefn with additional translator specific information. 
@@ -392,6 +411,8 @@ class CPL_DLL OGRFeature
 
     int                 Validate( int nValidateFlags,
                                   int bEmitError );
+    void                FillUnsetWithDefault(int bNotNullableOnly,
+                                             char** papszOptions );
 
     virtual const char *GetStyleString();
     virtual void        SetStyleString( const char * );

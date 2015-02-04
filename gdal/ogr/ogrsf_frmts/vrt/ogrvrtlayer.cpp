@@ -960,6 +960,11 @@ try_again:
              oFieldDefn.SetNullable(bNullable);
 
 /* -------------------------------------------------------------------- */
+/*      Default attribute.                                              */
+/* -------------------------------------------------------------------- */
+             oFieldDefn.SetDefault(CPLGetXMLValue( psChild, "default",NULL));
+
+/* -------------------------------------------------------------------- */
 /*      Create the field.                                               */
 /* -------------------------------------------------------------------- */
              poFeatureDefn->AddFieldDefn( &oFieldDefn );

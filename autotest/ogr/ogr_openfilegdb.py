@@ -1228,6 +1228,33 @@ def ogr_openfilegdb_14():
     return 'success'
 
 ###############################################################################
+# Test default values
+
+def ogr_openfilegdb_15():
+
+    ds = ogr.Open('data/test_default_val.gdb.zip')
+    lyr = ds.GetLayer(0)
+    if lyr.GetLayerDefn().GetFieldDefn(lyr.GetLayerDefn().GetFieldIndex('STR')).GetDefault() != "'default_val'":
+        gdaltest.post_reason('fail')
+        return 'fail'
+    if lyr.GetLayerDefn().GetFieldDefn(lyr.GetLayerDefn().GetFieldIndex('INT32')).GetDefault() != "123456788":
+        gdaltest.post_reason('fail')
+        return 'fail'
+    if lyr.GetLayerDefn().GetFieldDefn(lyr.GetLayerDefn().GetFieldIndex('INT16')).GetDefault() != "12345":
+        gdaltest.post_reason('fail')
+        return 'fail'
+    if lyr.GetLayerDefn().GetFieldDefn(lyr.GetLayerDefn().GetFieldIndex('FLOAT32')).GetDefault().find('1.23') != 0:
+        gdaltest.post_reason('fail')
+        return 'fail'
+    if lyr.GetLayerDefn().GetFieldDefn(lyr.GetLayerDefn().GetFieldIndex('FLOAT64')).GetDefault().find('1.23456') != 0:
+        gdaltest.post_reason('fail')
+        return 'fail'
+    if lyr.GetLayerDefn().GetFieldDefn(lyr.GetLayerDefn().GetFieldIndex('DATETIME')).GetDefault() != "'2015/06/30 12:34:56'":
+        gdaltest.post_reason('fail')
+        return 'fail'
+    return 'success'
+
+###############################################################################
 # Cleanup
 
 def ogr_openfilegdb_cleanup():
@@ -1268,6 +1295,7 @@ gdaltest_list = [
     ogr_openfilegdb_12,
     ogr_openfilegdb_13,
     ogr_openfilegdb_14,
+    ogr_openfilegdb_15,
     ogr_openfilegdb_cleanup,
     ]
 

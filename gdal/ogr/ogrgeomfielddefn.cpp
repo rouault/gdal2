@@ -566,6 +566,9 @@ int OGR_GFld_IsNullable( OGRGeomFieldDefnH hDefn )
  * By default, fields are nullable, so this method is generally called with FALSE
  * to set a not-null constraint.
  *
+ * Drivers that support writing not-null constraint will advertize the
+ * GDAL_DCAP_NOTNULL_GEOMFIELDS driver metadata item.
+ *
  * This method is the same as the C function OGR_GFld_SetNullable().
  *
  * @param bNullableIn FALSE if the field must have a not-null constraint.
@@ -581,6 +584,9 @@ int OGR_GFld_IsNullable( OGRGeomFieldDefnH hDefn )
  *
  * By default, fields are nullable, so this method is generally called with FALSE
  * to set a not-null constraint.
+ *
+ * Drivers that support writing not-null constraint will advertize the
+ * GDAL_DCAP_NOTNULL_GEOMFIELDS driver metadata item.
  *
  * This method is the same as the C++ method OGRGeomFieldDefn::SetNullable().
  *

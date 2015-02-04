@@ -372,6 +372,10 @@ OGRErr FGdbLayer::ICreateFeature( OGRFeature *poFeature )
         return OGRERR_FAILURE;
     }
 
+    /* As we have issues with fixed values for dates, or CURRENT_xxxx isn't */
+    /* handled anyway, let's fill ourselves all unset fields with their default */
+    poFeature->FillUnsetWithDefault(FALSE, NULL);
+
     /* Populate the row with the feature content */
     if (PopulateRowWithFeature(fgdb_row, poFeature) != OGRERR_NONE)
         return OGRERR_FAILURE;
@@ -862,7 +866,53 @@ char* FGdbLayer::CreateFieldDefn(OGRFieldDefn& oField,
         CPLCreateXMLElementAndValue(defn_xml, "AliasName", fieldname.c_str());
     }
 
-    /* Default values are discouraged in OGR API docs */
+    if( oField.GetDefault() != NULL )
+    {
+        const char* pszDefault = oField.GetDefault();
+        /*int nYear, nMonth, nDay, nHour, nMinute;
+        float fSecond;*/
+        if( oField.GetType() == OFTString )
+        {
+            CPLString osVal = pszDefault;
+            if( osVal[0] == '\'' && osVal[osVal.size()-1] == '\'' )
+            {
+                osVal = osVal.substr(1);
+                osVal.resize(osVal.size()-1);
+                char* pszTmp = CPLUnescapeString(osVal, NULL, CPLES_SQL);
+                osVal = pszTmp;
+                CPLFree(pszTmp);
+            }
+            CPLXMLNode* psDefaultValue =
+                CPLCreateXMLElementAndValue(defn_xml, "DefaultValue", osVal);
+            FGDB_CPLAddXMLAttribute(psDefaultValue, "xsi:type", "xs:string");
+        }
+        else if( oField.GetType() == OFTInteger &&
+                 !EQUAL(gdbFieldType.c_str(), "esriFieldTypeSmallInteger") &&
+                 CPLGetValueType(pszDefault) == CPL_VALUE_INTEGER )
+        {
+            CPLXMLNode* psDefaultValue =
+                CPLCreateXMLElementAndValue(defn_xml, "DefaultValue", pszDefault);
+            FGDB_CPLAddXMLAttribute(psDefaultValue, "xsi:type", "xs:int");
+        }
+        else if( oField.GetType() == OFTReal &&
+                 !EQUAL(gdbFieldType.c_str(), "esriFieldTypeSingle") &&
+                 CPLGetValueType(pszDefault) != CPL_VALUE_STRING )
+        {
+            CPLXMLNode* psDefaultValue =
+                CPLCreateXMLElementAndValue(defn_xml, "DefaultValue", pszDefault);
+            FGDB_CPLAddXMLAttribute(psDefaultValue, "xsi:type", "xs:double");
+        }
+        /*else if( oField.GetType() == OFTDateTime &&
+                 sscanf(pszDefault, "'%d/%d/%d %d:%d:%f'", &nYear, &nMonth, &nDay,
+                        &nHour, &nMinute, &fSecond) == 6 )
+        {
+            CPLXMLNode* psDefaultValue =
+                CPLCreateXMLElementAndValue(defn_xml, "DefaultValue",
+                    CPLSPrintf("%04d-%02d-%02dT%02d:%02d:%02d",
+                               nYear, nMonth, nDay, nHour, nMinute, (int)(fSecond + 0.5)));
+            FGDB_CPLAddXMLAttribute(psDefaultValue, "xsi:type", "xs:dateTime");
+        }*/
+    }
     /* <DefaultValue xsi:type="xs:string">afternoon</DefaultValue> */
 
     /* Convert our XML tree into a string for FGDB */
@@ -1828,7 +1878,7 @@ bool FGdbLayer::ParseGeometryDef(CPLXMLNode* psRoot)
             }
             else
             {
-                CPLDebug("OpenFileGDB", "Cannot import SRID %s", wkid.c_str());
+                CPLDebug("FGDB", "Cannot import SRID %s", wkid.c_str());
             }
         }
         CPLPopErrorHandler();
@@ -1929,6 +1979,7 @@ bool FGdbLayer::GDBToOGRFields(CPLXMLNode* psRoot)
     //CPLAssert(ogrToESRIFieldMapping.size() == pOGRFeatureDef->GetFieldCount());
 
     CPLXMLNode* psFieldNode;
+    int bShouldQueryOpenFileGDB = FALSE;
 
     for( psFieldNode = psRoot->psChild;
         psFieldNode != NULL;
@@ -1947,6 +1998,7 @@ bool FGdbLayer::GDBToOGRFields(CPLXMLNode* psRoot)
             int nLength = 0;
             int nPrecision = 0;
             int bNullable = TRUE;
+            std::string osDefault;
 
             // loop through all items in Field element
             //
@@ -1987,6 +2039,10 @@ bool FGdbLayer::GDBToOGRFields(CPLXMLNode* psRoot)
                     else if (EQUAL(psFieldItemNode->pszValue,"IsNullable") )
                     {
                         bNullable = EQUAL(psFieldItemNode->psChild->pszValue, "true");
+                    }
+                    else if (EQUAL(psFieldItemNode->pszValue,"DefaultValue"))
+                    {
+                        osDefault = CPLGetXMLValue(psFieldItemNode, NULL, "");
                     }
                 }
             }
@@ -2029,6 +2085,50 @@ bool FGdbLayer::GDBToOGRFields(CPLXMLNode* psRoot)
             //fieldTemplate.SetWidth(nLength);
             //fieldTemplate.SetPrecision(nPrecision);
             fieldTemplate.SetNullable(bNullable);
+            if( osDefault.size() )
+            {
+                if( ogrType == OFTString )
+                {
+                    char* pszTmp = CPLEscapeString(osDefault.c_str(), -1, CPLES_SQL);
+                    osDefault = "'";
+                    osDefault += pszTmp;
+                    CPLFree(pszTmp);
+                    osDefault += "'";
+                    fieldTemplate.SetDefault(osDefault.c_str());
+                }
+                else if( ogrType == OFTInteger ||
+                         ogrType == OFTReal )
+                {
+#ifdef unreliable
+                    /* Disabling this as GDBs and the FileGDB SDK aren't reliable for numeric values */
+                    /* It often occurs that the XML definition in a00000004.gdbtable doesn't */
+                    /* match the default values (in binary) found in the field definition */
+                    /* section of the .gdbtable of the layers themselves */
+                    /* The Table::GetDefinition() API of FileGDB doesn't seem to use the */
+                    /* XML definition, but rather the values found in the field definition */
+                    /* section of the .gdbtable of the layers themselves */
+                    /* It seems that the XML definition in a00000004.gdbtable is authoritative */
+                    /* in ArcGIS, so we're screwed... */
+
+                    fieldTemplate.SetDefault(osDefault.c_str());
+#endif
+                    bShouldQueryOpenFileGDB = TRUE;
+                }
+                else if( ogrType == OFTDateTime )
+                {
+                    int nYear, nMonth, nDay, nHour, nMinute;
+                    float fSecond;
+                    if( sscanf(osDefault.c_str(), "%d-%d-%dT%d:%d:%fZ", &nYear, &nMonth, &nDay,
+                        &nHour, &nMinute, &fSecond) == 6 ||
+                        sscanf(osDefault.c_str(), "'%d-%d-%d %d:%d:%fZ'", &nYear, &nMonth, &nDay,
+                             &nHour, &nMinute, &fSecond) == 6 )
+                    {
+                        fieldTemplate.SetDefault(CPLSPrintf("'%04d/%02d/%02d %02d:%02d:%02d'",
+                               nYear, nMonth, nDay, nHour, nMinute, (int)(fSecond + 0.5)));
+                    }
+                }
+            }
+
             m_pFeatureDefn->AddFieldDefn( &fieldTemplate );
 
             m_vOGRFieldToESRIField.push_back(StringToWString(fieldName));
@@ -2036,6 +2136,33 @@ bool FGdbLayer::GDBToOGRFields(CPLXMLNode* psRoot)
             if( ogrType == OFTBinary )
                 m_apoByteArrays.push_back(new ByteArray());
 
+        }
+    }
+
+    /* Using OpenFileGDB to get reliable default values for integer/real fields */
+    if( bShouldQueryOpenFileGDB )
+    {
+        const char* apszDrivers[] = { "OpenFileGDB", NULL };
+        GDALDataset* poDS = (GDALDataset*) GDALOpenEx(m_pDS->GetName(),
+                            GDAL_OF_VECTOR, (char**)apszDrivers, NULL, NULL);
+        if( poDS != NULL )
+        {
+            OGRLayer* poLyr = poDS->GetLayerByName(GetName());
+            if( poLyr )
+            {
+                for(int i=0;i<poLyr->GetLayerDefn()->GetFieldCount();i++)
+                {
+                    OGRFieldDefn* poSrcDefn = poLyr->GetLayerDefn()->GetFieldDefn(i);
+                    if( (poSrcDefn->GetType() == OFTInteger || poSrcDefn->GetType() == OFTReal) &&
+                        poSrcDefn->GetDefault() != NULL )
+                    {
+                        int nIdxDst = m_pFeatureDefn->GetFieldIndex(poSrcDefn->GetNameRef());
+                        if( nIdxDst >= 0 )
+                            m_pFeatureDefn->GetFieldDefn(nIdxDst)->SetDefault(poSrcDefn->GetDefault());
+                    }
+                }
+            }
+            GDALClose( poDS );
         }
     }
 

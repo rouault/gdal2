@@ -1382,6 +1382,113 @@ def ogr_gpkg_23():
     return 'success'
 
 ###############################################################################
+# Test default values
+
+def ogr_gpkg_24():
+
+    if gdaltest.gpkg_dr is None:
+        return 'skip'
+
+    ds = gdaltest.gpkg_dr.CreateDataSource('/vsimem/ogr_gpkg_24.gpkg')
+    lyr = ds.CreateLayer('test', geom_type = ogr.wkbNone)
+
+    field_defn = ogr.FieldDefn( 'field_string', ogr.OFTString )
+    field_defn.SetDefault("'a''b'")
+    lyr.CreateField(field_defn)
+
+    field_defn = ogr.FieldDefn( 'field_int', ogr.OFTInteger )
+    field_defn.SetDefault('123')
+    lyr.CreateField(field_defn)
+
+    field_defn = ogr.FieldDefn( 'field_real', ogr.OFTReal )
+    field_defn.SetDefault('1.23')
+    lyr.CreateField(field_defn)
+
+    field_defn = ogr.FieldDefn( 'field_nodefault', ogr.OFTInteger )
+    lyr.CreateField(field_defn)
+
+    # This will be translated as "(strftime('%Y-%m-%dT%H:%M:%fZ','now'))"
+    field_defn = ogr.FieldDefn( 'field_datetime', ogr.OFTDateTime )
+    field_defn.SetDefault("CURRENT_TIMESTAMP")
+    lyr.CreateField(field_defn)
+
+    field_defn = ogr.FieldDefn( 'field_datetime2', ogr.OFTDateTime )
+    field_defn.SetDefault("'2015/06/30 12:34:56'")
+    lyr.CreateField(field_defn)
+
+    field_defn = ogr.FieldDefn( 'field_datetime3', ogr.OFTDateTime )
+    field_defn.SetDefault("(strftime('%Y-%m-%dT%H:%M:%fZ','now'))")
+    lyr.CreateField(field_defn)
+    
+    field_defn = ogr.FieldDefn( 'field_date', ogr.OFTDate )
+    field_defn.SetDefault("CURRENT_DATE")
+    lyr.CreateField(field_defn)
+
+    #field_defn = ogr.FieldDefn( 'field_time', ogr.OFTTime )
+    #field_defn.SetDefault("CURRENT_TIME")
+    #lyr.CreateField(field_defn)
+
+    f = ogr.Feature(lyr.GetLayerDefn())
+    lyr.CreateFeature(f)
+    f = None
+
+    # Doesn't work currently. Would require rewriting the whole table
+    #field_defn = ogr.FieldDefn( 'field_datetime4', ogr.OFTDateTime )
+    #field_defn.SetDefault("CURRENT_TIMESTAMP")
+    #lyr.CreateField(field_defn)
+    
+    ds = None
+
+    ds = ogr.Open('/vsimem/ogr_gpkg_24.gpkg', update = 1)
+    lyr = ds.GetLayerByName('test')
+    if lyr.GetLayerDefn().GetFieldDefn(lyr.GetLayerDefn().GetFieldIndex('field_string')).GetDefault() != "'a''b'":
+        gdaltest.post_reason('fail')
+        return 'fail'
+    if lyr.GetLayerDefn().GetFieldDefn(lyr.GetLayerDefn().GetFieldIndex('field_int')).GetDefault() != '123':
+        gdaltest.post_reason('fail')
+        return 'fail'
+    if lyr.GetLayerDefn().GetFieldDefn(lyr.GetLayerDefn().GetFieldIndex('field_real')).GetDefault() != '1.23':
+        gdaltest.post_reason('fail')
+        return 'fail'
+    if lyr.GetLayerDefn().GetFieldDefn(lyr.GetLayerDefn().GetFieldIndex('field_nodefault')).GetDefault() is not None:
+        gdaltest.post_reason('fail')
+        return 'fail'
+    # Translated from "(strftime('%Y-%m-%dT%H:%M:%fZ','now'))" to CURRENT_TIMESTAMP
+    if lyr.GetLayerDefn().GetFieldDefn(lyr.GetLayerDefn().GetFieldIndex('field_datetime')).GetDefault() != 'CURRENT_TIMESTAMP':
+        gdaltest.post_reason('fail')
+        return 'fail'
+    if lyr.GetLayerDefn().GetFieldDefn(lyr.GetLayerDefn().GetFieldIndex('field_datetime2')).GetDefault() != "'2015/06/30 12:34:56'":
+        gdaltest.post_reason('fail')
+        print(lyr.GetLayerDefn().GetFieldDefn(lyr.GetLayerDefn().GetFieldIndex('field_datetime2')).GetDefault())
+        return 'fail'
+    if lyr.GetLayerDefn().GetFieldDefn(lyr.GetLayerDefn().GetFieldIndex('field_datetime3')).GetDefault() != "CURRENT_TIMESTAMP":
+        gdaltest.post_reason('fail')
+        print(lyr.GetLayerDefn().GetFieldDefn(lyr.GetLayerDefn().GetFieldIndex('field_datetime3')).GetDefault())
+        return 'fail'
+    if lyr.GetLayerDefn().GetFieldDefn(lyr.GetLayerDefn().GetFieldIndex('field_date')).GetDefault() != "CURRENT_DATE":
+        gdaltest.post_reason('fail')
+        return 'fail'
+    #if lyr.GetLayerDefn().GetFieldDefn(lyr.GetLayerDefn().GetFieldIndex('field_time')).GetDefault() != "CURRENT_TIME":
+    #    gdaltest.post_reason('fail')
+    #    return 'fail'
+    f = lyr.GetNextFeature()
+    if f.GetField('field_string') != 'a\'b' or f.GetField('field_int') != 123 or \
+       f.GetField('field_real') != 1.23 or \
+       f.IsFieldSet('field_nodefault') or not f.IsFieldSet('field_datetime')  or \
+       f.GetField('field_datetime2') != '2015/06/30 12:34:56' or \
+       not f.IsFieldSet('field_datetime3') or \
+       not f.IsFieldSet('field_date'):
+        gdaltest.post_reason('fail')
+        f.DumpReadable()
+        return 'fail'
+
+    ds = None
+
+    gdal.Unlink('/vsimem/ogr_gpkg_24.gpkg')
+
+    return 'success'
+
+###############################################################################
 # Run test_ogrsf
 
 def ogr_gpkg_test_ogrsf():
@@ -1462,6 +1569,7 @@ gdaltest_list = [
     ogr_gpkg_21,
     ogr_gpkg_22,
     ogr_gpkg_23,
+    ogr_gpkg_24,
     ogr_gpkg_test_ogrsf,
     ogr_gpkg_cleanup,
 ]

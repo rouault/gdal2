@@ -65,7 +65,6 @@ OGRSQLiteTableLayer::OGRSQLiteTableLayer( OGRSQLiteDataSource *poDSIn )
     bDeferredSpatialIndexCreation = FALSE;
 
     hInsertStmt = NULL;
-    bHasDefaultValue = FALSE;
 
     bLayerDefnError = FALSE;
 
@@ -535,7 +534,42 @@ CPLErr OGRSQLiteTableLayer::EstablishFeatureDefn(const char* pszGeomCol)
                 const char* pszNotNull = papszResult[(i+1)*6+3];
                 const char* pszDefault = papszResult[(i+1)*6+4];
                 if( pszDefault != NULL )
-                    bHasDefaultValue = TRUE;
+                {
+                    int idx = poFeatureDefn->GetFieldIndex(pszName);
+                    if( idx >= 0 )
+                    {
+                        OGRFieldDefn* poFieldDefn =  poFeatureDefn->GetFieldDefn(idx);
+                        if( poFieldDefn->GetType() == OFTString &&
+                            !EQUAL(pszDefault, "NULL") &&
+                            !EQUALN(pszDefault, "CURRENT_", strlen("CURRENT_")) &&
+                            pszDefault[0] != '(' &&
+                            pszDefault[0] != '\'' &&
+                            CPLGetValueType(pszDefault) == CPL_VALUE_STRING )
+                        {
+                            CPLString osDefault("'");
+                            char* pszTmp = CPLEscapeString(pszDefault, -1, CPLES_SQL);
+                            osDefault += pszTmp;
+                            CPLFree(pszTmp);
+                            osDefault += "'";
+                            poFieldDefn->SetDefault(osDefault);
+                        }
+                        else if( (poFieldDefn->GetType() == OFTDate || poFieldDefn->GetType() == OFTDateTime) &&
+                             !EQUAL(pszDefault, "NULL") &&
+                             !EQUALN(pszDefault, "CURRENT_", strlen("CURRENT_")) &&
+                             pszDefault[0] != '(' &&
+                             pszDefault[0] != '\'' &&
+                             !(pszDefault[0] >= '0' && pszDefault[0] <= '9') &&
+                            CPLGetValueType(pszDefault) == CPL_VALUE_STRING )
+                        {
+                            CPLString osDefault("(");
+                            osDefault += pszDefault;
+                            osDefault += ")";
+                            poFieldDefn->SetDefault(osDefault);
+                        }
+                        else
+                            poFieldDefn->SetDefault(pszDefault);
+                    }
+                }
                 if( pszName != NULL && pszNotNull != NULL &&
                     EQUAL(pszNotNull, "1") )
                 {
@@ -1330,11 +1364,20 @@ OGRErr OGRSQLiteTableLayer::CreateField( OGRFieldDefn *poFieldIn,
                             osFieldType.c_str());
             if( !oField.IsNullable() )
             {
+                osCommand += " NOT NULL";
+            }
+            if( oField.GetDefault() != NULL && !oField.IsDefaultDriverSpecific() )
+            {
+                osCommand += " DEFAULT ";
+                osCommand += oField.GetDefault();
+            }
+            else if( !oField.IsNullable() )
+            {
                 // This is kind of dumb, but SQLite mandates a DEFAULT value
                 // when adding a NOT NULL column in an ALTER TABLE ADD COLUMN
                 // statement, which defeats the purpose of NOT NULL,
                 // whereas it doesn't in CREATE TABLE
-                osCommand += " NOT NULL DEFAULT ''";
+                osCommand += " DEFAULT ''";
             }
 
         #ifdef DEBUG
@@ -1592,8 +1635,11 @@ void OGRSQLiteTableLayer::InitFieldListForRecrerate(char* & pszNewFieldList,
 
     for( iField = 0; iField < poFeatureDefn->GetFieldCount(); iField++ )
     {
+        OGRFieldDefn* poFieldDefn = poFeatureDefn->GetFieldDefn(iField);
         nFieldListLen +=
-            2 * strlen(poFeatureDefn->GetFieldDefn(iField)->GetNameRef()) + 70;
+            2 * strlen(poFieldDefn->GetNameRef()) + 70;
+        if( poFieldDefn->GetDefault() != NULL )
+            nFieldListLen += 10 + strlen( poFieldDefn->GetDefault() );
     }
 
     nFieldListLen += 50 + (pszFIDColumn ? 2 * strlen(pszFIDColumn) : strlen("OGC_FID"));
@@ -1646,6 +1692,11 @@ void OGRSQLiteTableLayer::AddColumnDef(char* pszNewFieldList,
              FieldDefnToSQliteFieldDefn(poFldDefn).c_str() );
     if( !poFldDefn->IsNullable() )
         sprintf( pszNewFieldList+strlen(pszNewFieldList), " NOT NULL" );
+    if( poFldDefn->GetDefault() != NULL && !poFldDefn->IsDefaultDriverSpecific() )
+    {
+        sprintf( pszNewFieldList+strlen(pszNewFieldList), " DEFAULT %s",
+                 poFldDefn->GetDefault() );
+    }
 }
 
 /************************************************************************/
@@ -2043,7 +2094,10 @@ OGRErr OGRSQLiteTableLayer::AlterFieldDefn( int iFieldToAlter, OGRFieldDefn* poN
     int iField;
     char *pszNewFieldList, *pszFieldListForSelect;
     InitFieldListForRecrerate(pszNewFieldList, pszFieldListForSelect,
-                              strlen(poNewFieldDefn->GetNameRef()));
+                              strlen(poNewFieldDefn->GetNameRef()) +
+                              50 +
+                              (poNewFieldDefn->GetDefault() ? strlen(poNewFieldDefn->GetDefault()) : 0)
+                              );
 
     for( iField = 0; iField < poFeatureDefn->GetFieldCount(); iField++ )
     {
@@ -2065,7 +2119,13 @@ OGRErr OGRSQLiteTableLayer::AlterFieldDefn( int iFieldToAlter, OGRFieldDefn* poN
                 oTmpFieldDefn.SetPrecision(poNewFieldDefn->GetPrecision());
             }
             if( (nFlags & ALTER_NULLABLE_FLAG) )
+            {
                 oTmpFieldDefn.SetNullable(poNewFieldDefn->IsNullable());
+            }
+            if( (nFlags & ALTER_DEFAULT_FLAG) )
+            {
+                oTmpFieldDefn.SetDefault(poNewFieldDefn->GetDefault());
+            }
 
             sprintf( pszNewFieldList+strlen(pszNewFieldList),
                     ", '%s' %s",
@@ -2079,6 +2139,11 @@ OGRErr OGRSQLiteTableLayer::AlterFieldDefn( int iFieldToAlter, OGRFieldDefn* poN
             }
             if( !oTmpFieldDefn.IsNullable() )
                 sprintf( pszNewFieldList+strlen(pszNewFieldList), " NOT NULL" );
+            if( oTmpFieldDefn.GetDefault() )
+            {
+                sprintf( pszNewFieldList+strlen(pszNewFieldList), " DEFAULT %s",
+                         oTmpFieldDefn.GetDefault());
+            }
         }
         else
         {
@@ -2141,6 +2206,8 @@ OGRErr OGRSQLiteTableLayer::AlterFieldDefn( int iFieldToAlter, OGRFieldDefn* poN
     }
     if (nFlags & ALTER_NULLABLE_FLAG)
         poFieldDefn->SetNullable(poNewFieldDefn->IsNullable());
+    if (nFlags & ALTER_DEFAULT_FLAG)
+        poFieldDefn->SetDefault(poNewFieldDefn->GetDefault());
 
     return OGRERR_NONE;
 }
@@ -2793,6 +2860,22 @@ OGRErr OGRSQLiteTableLayer::ICreateFeature( OGRFeature *poFeature )
     }
 
     int bReuseStmt = FALSE;
+
+    /* If there's a unset field with a default value, then we must create */
+    /* a specific INSERT statement to avoid unset fields to be bound to NULL */
+    int bHasDefaultValue = FALSE;
+    int iField;
+    int nFieldCount = poFeatureDefn->GetFieldCount();
+    for( iField = 0; iField < nFieldCount; iField++ )
+    {
+        if( !poFeature->IsFieldSet( iField ) &&
+            poFeature->GetFieldDefnRef(iField)->GetDefault() != NULL )
+        {
+            bHasDefaultValue = TRUE;
+            break;
+        }
+    }
+    
     if( hInsertStmt == NULL || poFeature->GetFID() != OGRNullFID || bHasDefaultValue )
     {
         CPLString      osValues;
@@ -2819,8 +2902,7 @@ OGRErr OGRSQLiteTableLayer::ICreateFeature( OGRFeature *poFeature )
 /* -------------------------------------------------------------------- */
 /*      Add geometry.                                                   */
 /* -------------------------------------------------------------------- */
-        int iField;
-        int nFieldCount = poFeatureDefn->GetGeomFieldCount();
+        nFieldCount = poFeatureDefn->GetGeomFieldCount();
         for( iField = 0; iField < nFieldCount; iField++ )
         {
             OGRSQLiteGeomFormat eGeomFormat =
@@ -2946,9 +3028,12 @@ OGRErr OGRSQLiteTableLayer::ICreateFeature( OGRFeature *poFeature )
     }
 
     sqlite3_reset( hInsertStmt );
+    
+    if( bHasDefaultValue )
+        ClearInsertStmt();
 
-    int nFieldCount = poFeatureDefn->GetGeomFieldCount();
-    for( int iField = 0; iField < nFieldCount; iField++ )
+    nFieldCount = poFeatureDefn->GetGeomFieldCount();
+    for( iField = 0; iField < nFieldCount; iField++ )
     {
         OGRSQLiteGeomFieldDefn* poGeomFieldDefn = 
             poFeatureDefn->myGetGeomFieldDefn(iField);
@@ -3133,6 +3218,16 @@ OGRErr OGRSQLiteTableLayer::RunDeferredCreationIfNecessary()
         if( !poFieldDefn->IsNullable() )
         {
             osCommand += " NOT NULL";
+        }
+        const char* pszDefault = poFieldDefn->GetDefault();
+        if( pszDefault != NULL &&
+            (!poFieldDefn->IsDefaultDriverSpecific() ||
+             (pszDefault[0] == '(' && pszDefault[strlen(pszDefault)-1] == ')' &&
+             (EQUALN(pszDefault+1, "strftime", strlen("strftime")) ||
+              EQUALN(pszDefault+1, " strftime", strlen(" strftime"))))) )
+        {
+            osCommand += " DEFAULT ";
+            osCommand += poFieldDefn->GetDefault();
         }
     }
     osCommand += ")";

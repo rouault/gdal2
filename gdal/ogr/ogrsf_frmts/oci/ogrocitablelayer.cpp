@@ -303,6 +303,25 @@ OGRFeatureDefn *OGROCITableLayer::ReadTableDefinition( const char * pszTable )
         poDefn->AddFieldDefn( &oField );
     }
 
+    CPLString osSQL;
+    osSQL.Printf("SELECT COLUMN_NAME, DATA_DEFAULT FROM user_tab_columns WHERE DATA_DEFAULT IS NOT NULL AND TABLE_NAME = '%s'",
+                 CPLString(pszTable).toupper().c_str());
+    OGRLayer* poSQLLyr = poDS->ExecuteSQL(osSQL, NULL, NULL);
+    if( poSQLLyr != NULL )
+    {
+        OGRFeature* poFeature;
+        while( (poFeature = poSQLLyr->GetNextFeature()) != NULL )
+        {
+            const char* pszColName = poFeature->GetFieldAsString(0);
+            const char* pszDefault = poFeature->GetFieldAsString(1);
+            int nIdx = poDefn->GetFieldIndex(pszColName);
+            if( nIdx >= 0 )
+                poDefn->GetFieldDefn(nIdx)->SetDefault(pszDefault);
+            delete poFeature;
+        }
+        poDS->ReleaseResultSet(poSQLLyr);
+    }
+
     if( EQUAL(pszExpectedFIDName, "OGR_FID") && pszFIDName )
     {
         for(int i=0;i<poDefn->GetFieldCount();i++)
@@ -1815,7 +1834,19 @@ OGRErr OGROCITableLayer::BoundCreateFeature( OGRFeature *poFeature )
     OGRErr             eErr;
     OCINumber          oci_number; 
 
-    if( !poFeature->Validate( OGR_F_VAL_NULL, TRUE ) )
+    /* If an unset field has a default value, the current implementation */
+    /* of BoundCreateFeature() doesn't work. */
+    for( i = 0; i < poFeatureDefn->GetFieldCount(); i++ )
+    { 
+        if( !poFeature->IsFieldSet( i ) &&
+            poFeature->GetFieldDefnRef(i)->GetDefault() != NULL )
+        {
+            FlushPendingFeatures();
+            return UnboundCreateFeature(poFeature);
+        }
+    }
+
+    if( !poFeature->Validate( OGR_F_VAL_NULL | OGR_F_VAL_ALLOW_NULL_WHEN_DEFAULT, TRUE ) )
         return OGRERR_FAILURE;
 
     iCache = nWriteCacheUsed;
