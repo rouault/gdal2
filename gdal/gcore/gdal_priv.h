@@ -57,6 +57,7 @@ class GDALAsyncReader;
 #include "cpl_conv.h"
 #include "cpl_string.h"
 #include "cpl_minixml.h"
+#include "cpl_multiproc.h"
 #include <vector>
 #include <map>
 #include "ogr_core.h"
@@ -417,7 +418,7 @@ class CPL_DLL GDALDataset : public GDALMajorObject
     void ReportError(CPLErr eErrClass, int err_no, const char *fmt, ...)  CPL_PRINT_FUNC_FORMAT (4, 5);
 
 private:
-    void        *m_hMutex;
+    CPLMutex        *m_hMutex;
 
     OGRLayer*       BuildLayerFromSelectInfo(void* psSelectInfo,
                                              OGRGeometry *poSpatialFilter,
@@ -500,6 +501,11 @@ class CPL_DLL GDALRasterBlock
     
     GDALRasterBlock     *poNext;
     GDALRasterBlock     *poPrevious;
+    
+    int                  bMustDetach;
+    
+    void        Touch_unlocked( void );
+    void        Detach_unlocked( void );
 
   public:
                 GDALRasterBlock( GDALRasterBand *, int, int );
@@ -524,6 +530,7 @@ class CPL_DLL GDALRasterBlock
     int         GetLockCount() { return nLockCount; }
 
     void        *GetDataRef( void ) { return pData; }
+    int          GetBlockSize() { return nXSize * nYSize * (GDALGetDataTypeSize(eType) / 8); }
 
     /// @brief Accessor to source GDALRasterBand object.
     /// @return source raster band of the raster block.
@@ -581,6 +588,7 @@ class CPL_DLL GDALRasterBand : public GDALMajorObject
     void           SetFlushBlockErr( CPLErr eErr );
 
     friend class GDALRasterBlock;
+    CPLErr         UnreferenceBlock( int nXBlockOff, int nYBlockOff );
 
   protected:
     GDALDataset *poDS;
@@ -939,6 +947,12 @@ class CPL_DLL GDALDriverManager : public GDALMajorObject
     GDALDriver  **papoDrivers;
     std::map<CPLString, GDALDriver*> oMapNameToDrivers;
     
+    GDALDriver  *GetDriver_unlocked( int iDriver )
+            { return (iDriver >= 0 && iDriver < nDrivers) ? papoDrivers[iDriver] : NULL; }
+    
+    GDALDriver  *GetDriverByName_unlocked( const char * pszName )
+            { return oMapNameToDrivers[CPLString(pszName).toupper()]; }
+    
  public:
                 GDALDriverManager();
                 ~GDALDriverManager();
@@ -1134,8 +1148,8 @@ void CPL_DLL GDALCopyRasterIOExtraArg(GDALRasterIOExtraArg* psDestArg,
 CPL_C_END
 
 void GDALNullifyOpenDatasetsList();
-void** GDALGetphDMMutex();
-void** GDALGetphDLMutex();
+CPLMutex** GDALGetphDMMutex();
+CPLMutex** GDALGetphDLMutex();
 void GDALNullifyProxyPoolSingleton();
 GDALDriver* GDALGetAPIPROXYDriver();
 void GDALSetResponsiblePIDForCurrentThread(GIntBig responsiblePID);

@@ -369,6 +369,11 @@ def rasterio_8_progress_callback_2(pct, message, user_data):
 def rasterio_8():
 
     ds = gdal.Open('data/byte.tif')
+
+    # Progress not implemented yet
+    if gdal.GetConfigOption('GTIFF_DIRECT_IO') == 'YES' or \
+       gdal.GetConfigOption('GTIFF_VIRTUAL_MEM_IO') == 'YES':
+        return 'skip'
     
     # Test RasterBand.ReadRaster
     tab = [ 0, True ]

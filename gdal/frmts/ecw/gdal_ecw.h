@@ -73,7 +73,7 @@
 
 #if ECWSDK_VERSION < 40
 
-#if !defined(NO_COMPRESS)
+#if !defined(NO_COMPRESS) && !defined(HAVE_COMPRESS)
 #  define HAVE_COMPRESS
 #endif
 
@@ -414,7 +414,7 @@ class ECWAsyncReader : public GDALAsyncReader
 {
 private:
     CNCSJP2FileView *poFileView;
-    void            *hMutex;
+    CPLMutex        *hMutex;
     int              bUsingCustomStream;
 
     int              bUpdateReady;

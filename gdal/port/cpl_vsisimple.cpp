@@ -325,7 +325,7 @@ int VSIFPutc( int nChar, FILE * fp )
 #ifdef DEBUG_VSIMALLOC_STATS
 #include "cpl_multiproc.h"
 
-static void* hMemStatMutex = 0;
+static CPLMutex* hMemStatMutex = 0;
 static size_t nCurrentTotalAllocs = 0;
 static size_t nMaxTotalAllocs = 0;
 static GUIntBig nVSIMallocs = 0;
@@ -944,4 +944,76 @@ char *VSIStrerror( int nErrno )
 
 {
     return strerror( nErrno );
+}
+
+
+/************************************************************************/
+/*                        CPLGetPhysicalRAM()                           */
+/************************************************************************/
+
+#if HAVE_SC_PHYS_PAGES
+
+/** Return the total physical RAM in bytes.
+ *
+ * @return the total physical RAM in bytes (or 0 in case of failure).
+ * @since GDAL 2.0
+ */
+GIntBig CPLGetPhysicalRAM(void)
+{
+    return ((GIntBig)sysconf(_SC_PHYS_PAGES)) * sysconf(_SC_PAGESIZE);
+}
+
+#elif defined(WIN32)
+
+/* GlobalMemoryStatusEx requires _WIN32_WINNT >= 0x0500 */
+#ifndef _WIN32_WINNT
+#define _WIN32_WINNT 0x0500
+#endif
+#include <windows.h>
+
+GIntBig CPLGetPhysicalRAM(void)
+{
+    MEMORYSTATUSEX statex;
+    statex.ullTotalPhys = 0;
+    statex.dwLength = sizeof (statex);
+    GlobalMemoryStatusEx (&statex);
+    return (GIntBig) statex.ullTotalPhys;
+}
+
+#else
+
+GIntBig CPLGetPhysicalRAM(void)
+{
+    static int bOnce = FALSE;
+    if( !bOnce )
+    {
+        bOnce = TRUE;
+        CPLDebug("PORT", "No implementation for CPLGetPhysicalRAM()");
+    }
+    return 0;
+}
+#endif
+
+/************************************************************************/
+/*                       CPLGetUsablePhysicalRAM()                      */
+/************************************************************************/
+
+/** Return the total physical RAM, usable by a process, in bytes.
+ *
+ * This is the same as CPLGetPhysicalRAM() except it will limit to 2 GB
+ * for 32 bit processes.
+ *
+ * Note: This memory may already be partly used by other processes.
+ *
+ * @return the total physical RAM, usable by a process, in bytes (or 0 in case of failure).
+ * @since GDAL 2.0
+ */
+GIntBig  CPLGetUsablePhysicalRAM(void)
+{
+    GIntBig nRAM = CPLGetPhysicalRAM();
+#if SIZEOF_VOIDP == 4
+    if( nRAM > INT_MAX )
+        nRAM = INT_MAX;
+#endif
+    return nRAM;
 }

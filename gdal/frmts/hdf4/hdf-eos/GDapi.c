@@ -6319,7 +6319,7 @@ GDll2ij(int32 projcode, int32 zonecode, float64 projparm[],
     float64         xMtr;	/* X value in meters from GCTP */
     float64         yMtr;	/* Y value in meters from GCTP */
     float64         lonrad0;	/* Longitude in radians of upleft point */
-    float64         latrad0;	/* Latitude in radians of upleft point */
+    float64         latrad0 = 0;	/* Latitude in radians of upleft point */
     float64         lonrad;	/* Longitude in radians of point */
     float64         latrad;	/* Latitude in radians of point */
     float64         scaleX;	/* X scale factor */
@@ -6596,8 +6596,8 @@ GDrs2ll(int32 projcode, float64 projparm[],
     float64         yMtr;	    /* Y value in meters from GCTP */
     float64         epsilon;
     float64         beta;
-    float64         qp_cea;
-    float64         kz_cea;
+    float64         qp_cea = 0;
+    float64         kz_cea = 0;
     float64         eccen, eccen_sq;
     float64         phi1, sinphi1, cosphi1;
     float64         scaleX, scaleY;
@@ -7620,10 +7620,10 @@ GDdefboxregion(int32 gridID, float64 cornerlon[], float64 cornerlat[])
     int32           spherecode;	    /* Sphere code */
     int32           row[32];	    /* Row array */
     int32           col[32];	    /* Column array */
-    int32           minCol;	    /* Minimun column value */
-    int32           minRow;	    /* Minimun row value */
-    int32           maxCol;	    /* Maximun column value */
-    int32           maxRow;	    /* Maximun row value */
+    int32           minCol = 0;	    /* Minimun column value */
+    int32           minRow = 0;	    /* Minimun row value */
+    int32           maxCol = 0;	    /* Maximun column value */
+    int32           maxRow = 0;	    /* Maximun row value */
     int32           npnts;	    /* Number of boundary
                                        (edge & tangent) pnts */
 

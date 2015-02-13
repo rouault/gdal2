@@ -7,7 +7,7 @@
  *
  ******************************************************************************
  * Copyright (c) 1998, 2002, Frank Warmerdam <warmerdam@pobox.com>
- * Copyright (c) 2007-2014, Even Rouault <even dot rouault at mines-paris dot org>
+ * Copyright (c) 2007-2015, Even Rouault <even dot rouault at spatialys dot com>
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -158,6 +158,20 @@ class GTiffRGBABand;
 class GTiffBitmapBand;
 class GTiffJPEGOverviewDS;
 class GTiffJPEGOverviewBand;
+
+typedef struct
+{
+    CPLVirtualMem* psVirtualMem;
+    int            nPixelSpace;
+    GIntBig        nLineSpace;
+} GTiffVirtualMem;
+
+typedef enum
+{
+    VIRTUAL_MEM_IO_NO,
+    VIRTUAL_MEM_IO_YES,
+    VIRTUAL_MEM_IO_IF_ENOUGH_RAM
+} VirtualMemIOEnum;
 
 class GTiffDataset : public GDALPamDataset
 {
@@ -335,6 +349,9 @@ class GTiffDataset : public GDALPamDataset
     CPLString     osGeorefFilename;
 
     int           bDirectIO;
+
+    VirtualMemIOEnum eVirtualMemIOUsage;
+    std::vector<GTiffVirtualMem> apsVirtualMem;
     
     int           nSetPhotometricFromBandColorInterp;
 
@@ -348,6 +365,23 @@ class GTiffDataset : public GDALPamDataset
 
     int            GuessJPEGQuality();
 
+    CPLErr         DirectIO( GDALRWFlag eRWFlag,
+                               int nXOff, int nYOff, int nXSize, int nYSize,
+                               void * pData, int nBufXSize, int nBufYSize,
+                               GDALDataType eBufType, 
+                               int nBandCount, int *panBandMap,
+                               GSpacing nPixelSpace, GSpacing nLineSpace,
+                               GSpacing nBandSpace,
+                               GDALRasterIOExtraArg* psExtraArg );
+
+    CPLErr         VirtualMemIO( GDALRWFlag eRWFlag,
+                               int nXOff, int nYOff, int nXSize, int nYSize,
+                               void * pData, int nBufXSize, int nBufYSize,
+                               GDALDataType eBufType, 
+                               int nBandCount, int *panBandMap,
+                               GSpacing nPixelSpace, GSpacing nLineSpace,
+                               GSpacing nBandSpace,
+                               GDALRasterIOExtraArg* psExtraArg );
   protected:
     virtual int         CloseDependentDatasets();
 
@@ -1094,7 +1128,16 @@ CPLErr GTiffRasterBand::DirectIO( GDALRWFlag eRWFlag,
           (poGDS->nBitsPerSample == 8 || (poGDS->nBitsPerSample == 16) ||
            poGDS->nBitsPerSample == 32 || poGDS->nBitsPerSample == 64) &&
           poGDS->nBitsPerSample == GDALGetDataTypeSize(eDataType) &&
+          poGDS->SetDirectory() && /* very important to make hTIFF uptodate! */
           !TIFFIsTiled( poGDS->hTIFF )) )
+    {
+        return CE_Failure;
+    }
+
+    /* we only know how to deal with nearest neighbour in this optimized routine */
+    if( (nXSize != nBufXSize || nYSize != nBufYSize) &&
+        psExtraArg != NULL &&
+        psExtraArg->eResampleAlg != GRIORA_NearestNeighbour )
     {
         return CE_Failure;
     }
@@ -1149,11 +1192,11 @@ CPLErr GTiffRasterBand::DirectIO( GDALRWFlag eRWFlag,
     vsi_l_offset* panOffsets = (vsi_l_offset*)
                             VSIMalloc(nReqYSize * sizeof(vsi_l_offset));
     size_t* panSizes = (size_t*) VSIMalloc(nReqYSize * sizeof(size_t));
-    int eDTSize = GDALGetDataTypeSize(eDataType) / 8;
+    int nDTSize = GDALGetDataTypeSize(eDataType) / 8;
     void* pTmpBuffer = NULL;
     CPLErr eErr = CE_None;
     int nContigBands = ((poGDS->nPlanarConfig == PLANARCONFIG_CONTIG) ? poGDS->nBands : 1);
-    int ePixelSize = eDTSize * nContigBands;
+    int ePixelSize = nDTSize * nContigBands;
 
     if (ppData == NULL || panOffsets == NULL || panSizes == NULL)
         eErr = CE_Failure;
@@ -1214,7 +1257,7 @@ CPLErr GTiffRasterBand::DirectIO( GDALRWFlag eRWFlag,
     {
         for(iLine=0;iLine<nReqYSize;iLine++)
         {
-            GDALSwapWords( ppData[iLine], eDTSize, nReqXSize * nContigBands, eDTSize);
+            GDALSwapWords( ppData[iLine], nDTSize, nReqXSize * nContigBands, nDTSize);
         }
     }
 
@@ -1227,7 +1270,7 @@ CPLErr GTiffRasterBand::DirectIO( GDALRWFlag eRWFlag,
                             (int)((iY + 0.5) * nYSize / nBufYSize);
             if (nBufXSize == nXSize && nContigBands == 1)
             {
-                GDALCopyWords( ppData[iSrcY], eDataType, eDTSize,
+                GDALCopyWords( ppData[iSrcY], eDataType, nDTSize,
                                 ((GByte*)pData) + iY * nLineSpace,
                                 eBufType, nPixelSpace,
                                 nReqXSize);
@@ -1235,16 +1278,26 @@ CPLErr GTiffRasterBand::DirectIO( GDALRWFlag eRWFlag,
             else
             {
                 GByte* pabySrcData = ((GByte*)ppData[iSrcY]) +
-                            ((nContigBands > 1) ? (nBand-1) : 0) * eDTSize;
+                            ((nContigBands > 1) ? (nBand-1) : 0) * nDTSize;
                 GByte* pabyDstData = ((GByte*)pData) + iY * nLineSpace;
-                for(int iX=0;iX<nBufXSize;iX++)
+                if( nBufXSize == nXSize && nDTSize == 1 && eBufType == GDT_Byte )
                 {
-                    int iSrcX = (nBufXSize == nXSize) ? iX :
-                                    (int)((iX+0.5) * nXSize / nBufXSize);
-                    GDALCopyWords( pabySrcData + iSrcX * ePixelSize,
-                                   eDataType, 0,
-                                   pabyDstData + iX * nPixelSpace,
-                                   eBufType, 0, 1);
+                    for(int iX=0;iX<nBufXSize;iX++)
+                    {
+                        pabyDstData[iX * nPixelSpace] = pabySrcData[iX * ePixelSize];
+                    }
+                }
+                else
+                {
+                    for(int iX=0;iX<nBufXSize;iX++)
+                    {
+                        int iSrcX = (nBufXSize == nXSize) ? iX :
+                                        (int)((iX+0.5) * nXSize / nBufXSize);
+                        GDALCopyWords( pabySrcData + iSrcX * ePixelSize,
+                                    eDataType, 0,
+                                    pabyDstData + iX * nPixelSpace,
+                                    eBufType, 0, 1);
+                    }
                 }
             }
         }
@@ -1367,6 +1420,9 @@ CPLVirtualMem* GTiffRasterBand::GetVirtualMemAutoInternal( GDALRWFlag eRWFlag,
           VSIFGetNativeFileDescriptorL(fp) != NULL &&
           nLength == (size_t)nLength &&
           poGDS->nCompression == COMPRESSION_NONE &&
+          (poGDS->nPhotometric == PHOTOMETRIC_MINISBLACK ||
+           poGDS->nPhotometric == PHOTOMETRIC_RGB ||
+           poGDS->nPhotometric == PHOTOMETRIC_PALETTE) &&
           (poGDS->nBitsPerSample == 8 || poGDS->nBitsPerSample == 16 ||
            poGDS->nBitsPerSample == 32 || poGDS->nBitsPerSample == 64) &&
           poGDS->nBitsPerSample == GDALGetDataTypeSize(eDataType) &&
@@ -1586,6 +1642,25 @@ CPLErr GTiffDataset::IRasterIO( GDALRWFlag eRWFlag,
         }
     }
 
+    if( eVirtualMemIOUsage != VIRTUAL_MEM_IO_NO )
+    {
+        eErr = VirtualMemIO(
+                eRWFlag, nXOff, nYOff, nXSize, nYSize,
+                pData, nBufXSize, nBufYSize, eBufType,
+                nBandCount, panBandMap, nPixelSpace, nLineSpace, nBandSpace, psExtraArg);
+        if (eErr == CE_None)
+            return eErr;
+    }
+    if (bDirectIO)
+    {
+        eErr = DirectIO(
+                eRWFlag, nXOff, nYOff, nXSize, nYSize,
+                pData, nBufXSize, nBufYSize, eBufType,
+                nBandCount, panBandMap, nPixelSpace, nLineSpace, nBandSpace, psExtraArg);
+        if (eErr == CE_None)
+            return eErr;
+    }
+
     nJPEGOverviewVisibilityFlag ++;
     eErr =  GDALPamDataset::IRasterIO(
                 eRWFlag, nXOff, nYOff, nXSize, nYSize,
@@ -1594,6 +1669,384 @@ CPLErr GTiffDataset::IRasterIO( GDALRWFlag eRWFlag,
     nJPEGOverviewVisibilityFlag --;
     return eErr;
 }
+
+/************************************************************************/
+/*                         VirtualMemIO()                               */
+/************************************************************************/
+
+CPLErr GTiffDataset::VirtualMemIO( GDALRWFlag eRWFlag,
+                               int nXOff, int nYOff, int nXSize, int nYSize,
+                               void * pData, int nBufXSize, int nBufYSize,
+                               GDALDataType eBufType, 
+                               int nBandCount, int *panBandMap,
+                               GSpacing nPixelSpace, GSpacing nLineSpace,
+                               GSpacing nBandSpace,
+                               GDALRasterIOExtraArg* psExtraArg )
+{
+    GDALDataType eDataType = GetRasterBand(1)->GetRasterDataType();
+
+    if( eRWFlag == GF_Write )
+        return CE_Failure;
+    if( nXSize != nBufXSize || nYSize != nBufYSize )
+    {
+        return CE_Failure;
+    }
+    int nDTSize = GDALGetDataTypeSize(eDataType) / 8;
+    int nBufDTSize = GDALGetDataTypeSize(eBufType) / 8;
+
+    if( eVirtualMemIOUsage == VIRTUAL_MEM_IO_IF_ENOUGH_RAM )
+    {
+        GIntBig nRAM = CPLGetUsablePhysicalRAM();
+        GIntBig nNeeded = (GIntBig)nRasterXSize * nRasterYSize * nBands * nDTSize;
+        if( nNeeded > nRAM )
+        {
+            CPLDebug("GTiff", "Not enough RAM to map whole file into memory.");
+            eVirtualMemIOUsage = VIRTUAL_MEM_IO_NO;
+        }
+        else
+        {
+            eVirtualMemIOUsage = VIRTUAL_MEM_IO_YES;
+        }
+    }
+
+    if( apsVirtualMem.size() == 0 )
+    {
+        apsVirtualMem.resize(nBands);
+        memset(&apsVirtualMem[0], 0, sizeof(GTiffVirtualMem) * nBands);
+    }
+
+    /* Make sure that TIFFTAG_STRIPOFFSETS is up-to-date */
+    if (GetAccess() == GA_Update)
+        FlushCache();
+
+    int iBand;
+    int bUseContigImplementation =
+        ( nPlanarConfig == PLANARCONFIG_CONTIG ) && (nBandCount > 1) && (nBandSpace == nBufDTSize);
+    for(iBand = 0; iBand < nBandCount; iBand ++ )
+    {
+        int nBand = panBandMap[iBand];
+        if( nBand != iBand + 1 )
+        {
+            bUseContigImplementation = FALSE;
+            break;
+        }
+    }
+    
+    for(iBand = 0; iBand < nBandCount; iBand ++ )
+    {
+        int nBand = panBandMap[iBand];
+        GTiffVirtualMem* psVMem = &(apsVirtualMem[nBand-1]);
+        if( psVMem->psVirtualMem == NULL )
+        {
+            psVMem->psVirtualMem =
+                ((GTiffRasterBand*)GetRasterBand(nBand))->GetVirtualMemAutoInternal(
+                    eRWFlag, &(psVMem->nPixelSpace),
+                    &(psVMem->nLineSpace), NULL );
+            /*GByte* pabySrcData= (GByte*)CPLVirtualMemGetAddr(psVMem->psVirtualMem);
+            GByte* pabyEnd = pabySrcData + CPLVirtualMemGetSize(psVMem->psVirtualMem);
+            CPLDebug("GTiff", "For band %d, mapping at address [%p,%p[ pixelspace=%d linespace=" CPL_FRMT_GIB,
+                     nBand, pabySrcData, pabyEnd,
+                     psVMem->nPixelSpace, psVMem->nLineSpace);*/
+        }
+        if( psVMem->psVirtualMem == NULL )
+        {
+            CPLDebug("GTiff", "GetVirtualMemAutoInternal failed");
+            eVirtualMemIOUsage = VIRTUAL_MEM_IO_NO;
+            return CE_Failure;
+        }
+        if( !bUseContigImplementation )
+        {
+            GByte* pabySrcData = (GByte*)CPLVirtualMemGetAddr(psVMem->psVirtualMem);
+            int nVMemPixelSpace = psVMem->nPixelSpace;
+            GIntBig nVMemLineSpace = psVMem->nLineSpace;
+            pabySrcData += nYOff*nVMemLineSpace+nXOff*nVMemPixelSpace;
+            GByte* pabyData = (GByte*)pData + iBand * nBandSpace;
+            for(int y=0;y<nYSize;y++)
+            {
+                GDALCopyWords(pabySrcData + y*nVMemLineSpace,
+                                eDataType, nVMemPixelSpace,
+                                pabyData + y*nLineSpace,
+                                eBufType, nPixelSpace,
+                                nXSize);
+            }
+        }
+    }
+
+    if( bUseContigImplementation )
+    {
+        GTiffVirtualMem* psVMem = &(apsVirtualMem[0]);
+        GByte* pabySrcData = (GByte*)CPLVirtualMemGetAddr(psVMem->psVirtualMem);
+        int nVMemPixelSpace = psVMem->nPixelSpace;
+        GIntBig nVMemLineSpace = psVMem->nLineSpace;
+        pabySrcData += nYOff*nVMemLineSpace+nXOff*nVMemPixelSpace;
+        GByte* pabyData = (GByte*)pData;
+        for(int y=0;y<nYSize;y++)
+        {
+            if( eDataType == eBufType &&
+                nPixelSpace == nVMemPixelSpace && nPixelSpace == nBandCount * nDTSize )
+            {
+                memcpy(pabyData + y*nLineSpace,
+                       pabySrcData + y*nVMemLineSpace,
+                       nXSize * nPixelSpace);
+            }
+            else if( eDataType == eBufType && eDataType == GDT_Byte )
+            {
+                for(int x=0;x<nXSize;x++)
+                {
+                    for(iBand = 0; iBand < nBandCount; iBand ++ )
+                    {
+                        pabyData[y*nLineSpace+x*nPixelSpace+iBand] =
+                            pabySrcData[y*nVMemLineSpace+x*nVMemPixelSpace+iBand];
+                    }
+                }
+            }
+            else
+            {
+                for(int x=0;x<nXSize;x++)
+                {
+                    GDALCopyWords(pabySrcData + y*nVMemLineSpace+x*nVMemPixelSpace,
+                                  eDataType, nDTSize,
+                                  pabyData + y*nLineSpace+x*nPixelSpace,
+                                  eBufType, nBufDTSize,
+                                  nBandCount);
+                }
+            }
+        }
+    }
+
+    return CE_None;
+}
+
+/************************************************************************/
+/*                           DirectIO()                                 */
+/************************************************************************/
+
+/* Reads directly bytes from the file using ReadMultiRange(), and by-pass */
+/* block reading. Restricted to simple TIFF configurations (un-tiled, */
+/* uncompressed data, standard data types). Particularly useful to extract */
+/* sub-windows of data on a large /vsicurl dataset). */
+
+CPLErr GTiffDataset::DirectIO( GDALRWFlag eRWFlag,
+                               int nXOff, int nYOff, int nXSize, int nYSize,
+                               void * pData, int nBufXSize, int nBufYSize,
+                               GDALDataType eBufType, 
+                               int nBandCount, int *panBandMap,
+                               GSpacing nPixelSpace, GSpacing nLineSpace,
+                               GSpacing nBandSpace,
+                               GDALRasterIOExtraArg* psExtraArg )
+{
+    GDALDataType eDataType = GetRasterBand(1)->GetRasterDataType();
+    if( !(eRWFlag == GF_Read &&
+          nCompression == COMPRESSION_NONE &&
+          (nPhotometric == PHOTOMETRIC_MINISBLACK ||
+           nPhotometric == PHOTOMETRIC_RGB ||
+           nPhotometric == PHOTOMETRIC_PALETTE) &&
+          (nBitsPerSample == 8 || (nBitsPerSample == 16) ||
+           nBitsPerSample == 32 || nBitsPerSample == 64) &&
+          nBitsPerSample == GDALGetDataTypeSize(eDataType) &&
+          SetDirectory() && /* very important to make hTIFF uptodate! */
+          !TIFFIsTiled( hTIFF )) )
+    {
+        return CE_Failure;
+    }
+
+    /* we only know how to deal with nearest neighbour in this optimized routine */
+    if( (nXSize != nBufXSize || nYSize != nBufYSize) &&
+        psExtraArg != NULL &&
+        psExtraArg->eResampleAlg != GRIORA_NearestNeighbour )
+    {
+        return CE_Failure;
+    }
+
+    /* if the file is band interleave or only one band is requested, then */
+    /* fallback to band DirectIO */
+    int bUseBandRasterIO = FALSE;
+    if( nPlanarConfig == PLANARCONFIG_SEPARATE || nBandCount == 1 )
+    {
+        bUseBandRasterIO = TRUE;
+    }
+    else
+    {
+        /* For the sake of simplicity, only deals with "naturally ordered" bands */
+        for(int iBand = 0; iBand < nBandCount; iBand ++ )
+        {
+            if( panBandMap[iBand] != iBand + 1)
+            {
+                bUseBandRasterIO = TRUE;
+                break;
+            }
+        }
+    }
+    if( bUseBandRasterIO )
+    {
+        CPLErr eErr = CE_None;
+        for(int iBand = 0; eErr == CE_None && iBand < nBandCount; iBand ++ )
+        {
+            eErr = GetRasterBand(panBandMap[iBand])->RasterIO(
+                                       eRWFlag, nXOff, nYOff, nXSize, nYSize,
+                                       (GByte*)pData + iBand * nBandSpace,
+                                       nBufXSize, nBufYSize,
+                                       eBufType,
+                                       nPixelSpace, nLineSpace,
+                                       psExtraArg);
+        }
+        return eErr;
+    }
+
+    /*CPLDebug("GTiff", "DirectIO(%d,%d,%d,%d -> %dx%d)",
+             nXOff, nYOff, nXSize, nYSize,
+             nBufXSize, nBufYSize);*/
+
+    /* No need to look if overviews can satisfy the request as it has already */
+    /* been done in GTiffDataset::IRasterIO() */
+
+    /* Make sure that TIFFTAG_STRIPOFFSETS is up-to-date */
+    if (GetAccess() == GA_Update)
+        FlushCache();
+
+    /* Get strip offsets */
+    toff_t *panTIFFOffsets = NULL;
+    if ( !TIFFGetField( hTIFF, TIFFTAG_STRIPOFFSETS, &panTIFFOffsets ) ||
+         panTIFFOffsets == NULL )
+    {
+        return CE_Failure;
+    }
+
+    int iLine;
+    int nReqXSize = nXSize; /* sub-sampling or over-sampling can only be done at last stage */
+    int nReqYSize = MIN(nBufYSize, nYSize); /* we can do sub-sampling at the extraction stage */
+    void** ppData = (void**) VSIMalloc(nReqYSize * sizeof(void*));
+    vsi_l_offset* panOffsets = (vsi_l_offset*)
+                            VSIMalloc(nReqYSize * sizeof(vsi_l_offset));
+    size_t* panSizes = (size_t*) VSIMalloc(nReqYSize * sizeof(size_t));
+    int nDTSize = GDALGetDataTypeSize(eDataType) / 8;
+    void* pTmpBuffer = NULL;
+    CPLErr eErr = CE_None;
+    int nContigBands = nBands;
+    int ePixelSize = nDTSize * nContigBands;
+
+    if (ppData == NULL || panOffsets == NULL || panSizes == NULL)
+        eErr = CE_Failure;
+    /* For now we always allocate a temp buffer as it's easier */
+    else /*if (nXSize != nBufXSize || nYSize != nBufYSize ||
+             eBufType != eDataType ||
+             nPixelSpace != GDALGetDataTypeSize(eBufType) / 8 ||
+             check if the user buffer is large enough)*/
+    {
+        /* We need a temporary buffer for over-sampling/sub-sampling */
+        /* and/or data type conversion */
+        pTmpBuffer = VSIMalloc(nReqXSize * nReqYSize * ePixelSize);
+        if (pTmpBuffer == NULL)
+            eErr = CE_Failure;
+    }
+
+    /* Prepare data extraction */
+    for(iLine=0;eErr == CE_None && iLine<nReqYSize;iLine++)
+    {
+        /*if (pTmpBuffer == NULL)
+            ppData[iLine] = ((GByte*)pData) + iLine * nLineSpace;
+        else*/
+            ppData[iLine] = ((GByte*)pTmpBuffer) + iLine * nReqXSize * ePixelSize;
+        int nSrcLine;
+        if (nBufYSize < nYSize) /* Sub-sampling in y */
+            nSrcLine = nYOff + (int)((iLine + 0.5) * nYSize / nBufYSize);
+        else
+            nSrcLine = nYOff + iLine;
+
+        int nBlockXOff = 0;
+        int nBlockYOff = nSrcLine / nBlockYSize;
+        int nYOffsetInBlock = nSrcLine % nBlockYSize;
+        int nBlocksPerRow = DIV_ROUND_UP(nRasterXSize, nBlockXSize);
+        int nBlockId = nBlockXOff + nBlockYOff * nBlocksPerRow;
+
+        panOffsets[iLine] = panTIFFOffsets[nBlockId];
+        if (panOffsets[iLine] == 0) /* We don't support sparse files */
+            eErr = CE_Failure;
+
+        panOffsets[iLine] += (nXOff + nYOffsetInBlock * nBlockXSize) * ePixelSize;
+        panSizes[iLine] = nReqXSize * ePixelSize;
+    }
+
+    /* Extract data from the file */
+    if (eErr == CE_None)
+    {
+        VSILFILE* fp = (VSILFILE*) TIFFClientdata( hTIFF );
+        int nRet = VSIFReadMultiRangeL(nReqYSize, ppData, panOffsets, panSizes, fp);
+        if (nRet != 0)
+            eErr = CE_Failure;
+    }
+
+    /* Byte-swap if necessary */
+    if (eErr == CE_None && TIFFIsByteSwapped(hTIFF))
+    {
+        for(iLine=0;iLine<nReqYSize;iLine++)
+        {
+            GDALSwapWords( ppData[iLine], nDTSize, nReqXSize * nContigBands, nDTSize);
+        }
+    }
+
+    /* Over-sampling/sub-sampling and/or data type conversion */
+    if (eErr == CE_None && pTmpBuffer != NULL)
+    {
+        for(int iY=0;iY<nBufYSize;iY++)
+        {
+            int iSrcY = (nBufYSize <= nYSize) ? iY :
+                            (int)((iY + 0.5) * nYSize / nBufYSize);
+            /* Optimization: no resampling, no data type change, number of bands requested == number of bands */
+            /* and buffer is packed pixel-interleaved */
+            if (nBufXSize == nXSize && nContigBands == nBandCount &&
+                eDataType == eBufType &&
+                nBandSpace == nDTSize && nPixelSpace == nBandCount * nBandSpace )
+            {
+                memcpy( ((GByte*)pData) + iY * nLineSpace, ppData[iSrcY],
+                        nReqXSize * nPixelSpace );
+            }
+            /* Other optimization: no resampling, no data type change, */
+            /* data type is Byte and buffer is pixel-interleaved (with some stridding between pixels) */
+            else if (nBufXSize == nXSize &&
+                     eDataType == eBufType && eDataType == GDT_Byte &&
+                     nBandSpace == 1 && nPixelSpace > nBandCount )
+            {
+                GByte* pabySrcData = ((GByte*)ppData[iSrcY]);
+                GByte* pabyDstData = ((GByte*)pData) + iY * nLineSpace;
+                for(int iX=0;iX<nBufXSize;iX++)
+                {
+                    for(int iBand = 0; iBand < nBandCount; iBand ++ )
+                    {
+                        pabyDstData[iX * nPixelSpace + iBand] = pabySrcData[iX * ePixelSize + iBand];
+                    }
+                }
+            }
+            /* General case */
+            else
+            {
+                for(int iBand = 0; iBand < nBandCount; iBand ++ )
+                {
+                    GByte* pabySrcData = ((GByte*)ppData[iSrcY]) + iBand * nDTSize;
+                    GByte* pabyDstData = ((GByte*)pData) + iBand * nBandSpace + iY * nLineSpace;
+                    for(int iX=0;iX<nBufXSize;iX++)
+                    {
+                        int iSrcX = (nBufXSize == nXSize) ? iX :
+                                        (int)((iX+0.5) * nXSize / nBufXSize);
+                        GDALCopyWords( pabySrcData + iSrcX * ePixelSize,
+                                    eDataType, 0,
+                                    pabyDstData + iX * nPixelSpace,
+                                    eBufType, 0, 1);
+                    }
+                }
+            }
+        }
+    }
+
+    /* Cleanup */
+    CPLFree(pTmpBuffer);
+    CPLFree(ppData);
+    CPLFree(panOffsets);
+    CPLFree(panSizes);
+
+    return eErr;
+}
+
 
 /************************************************************************/
 /*                            IRasterIO()                               */
@@ -1611,6 +2064,15 @@ CPLErr GTiffRasterBand::IRasterIO( GDALRWFlag eRWFlag,
     //CPLDebug("GTiff", "RasterIO(%d, %d, %d, %d, %d, %d)",
     //         nXOff, nYOff, nXSize, nYSize, nBufXSize, nBufYSize);
 
+    if( poGDS->eVirtualMemIOUsage != VIRTUAL_MEM_IO_NO )
+    {
+        eErr = poGDS->VirtualMemIO(
+                eRWFlag, nXOff, nYOff, nXSize, nYSize,
+                pData, nBufXSize, nBufYSize, eBufType,
+                1, &nBand, nPixelSpace, nLineSpace, 0, psExtraArg);
+        if (eErr == CE_None)
+            return eErr;
+    }
     if (poGDS->bDirectIO)
     {
         poGDS->nJPEGOverviewVisibilityFlag ++;
@@ -4066,6 +4528,13 @@ GTiffDataset::GTiffDataset()
     bScanDeferred = TRUE;
 
     bDirectIO = CSLTestBoolean(CPLGetConfigOption("GTIFF_DIRECT_IO", "NO"));
+    const char* pszVirtualMemIO = CPLGetConfigOption("GTIFF_VIRTUAL_MEM_IO", "NO");
+    if( EQUAL(pszVirtualMemIO, "IF_ENOUGH_RAM") )
+        eVirtualMemIOUsage = VIRTUAL_MEM_IO_IF_ENOUGH_RAM;
+    else if( CSLTestBoolean(pszVirtualMemIO) )
+        eVirtualMemIOUsage = VIRTUAL_MEM_IO_YES;
+    else
+        eVirtualMemIOUsage = VIRTUAL_MEM_IO_NO,
     nSetPhotometricFromBandColorInterp = 0;
 
     pBaseMapping = NULL;
@@ -4112,6 +4581,14 @@ int GTiffDataset::Finalize()
         if( papszESRIMD )
         {
             GDALPamDataset::SetMetadata( papszESRIMD, "xml:ESRI");
+        }
+    }
+
+    {
+        for(size_t i=0; i<apsVirtualMem.size();i++)
+        {
+            if( apsVirtualMem[i].psVirtualMem )
+                CPLVirtualMemFree( apsVirtualMem[i].psVirtualMem );
         }
     }
 
@@ -11941,7 +12418,7 @@ static void GTiffTagExtender(TIFF *tif)
 #include <dlfcn.h>
 #endif
 
-static void* hGTiffOneTimeInitMutex = NULL;
+static CPLMutex* hGTiffOneTimeInitMutex = NULL;
 
 int GTiffOneTimeInit()
 
