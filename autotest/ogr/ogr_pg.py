@@ -4266,6 +4266,29 @@ def ogr_pg_76():
 # Scenario 1 : a CreateFeature done in the middle of GetNextFeature()
 def ogr_pg_76_scenario1(lyr1, lyr2):
  
+    (_, level, savepoint, usertransac) = ogr_pg_76_get_transaction_state(gdaltest.pg_ds)
+    if (level, savepoint, usertransac) != (0, 0, 0):
+        gdaltest.post_reason('fail')
+        print(lastcmd, level, savepoint, usertransac)
+        return 'fail'
+        
+    f = lyr1.GetNextFeature()
+    if f is None or f.GetFID() != 1:
+        gdaltest.post_reason('fail')
+        return 'fail'
+    (lastcmd, level, savepoint, usertransac) = ogr_pg_76_get_transaction_state(gdaltest.pg_ds)
+    if (lastcmd, level, savepoint, usertransac) != ('BEGIN', 1, 0, 0):
+        gdaltest.post_reason('fail')
+        print(lastcmd, level, savepoint, usertransac)
+        return 'fail'
+
+    lyr1.SetAttributeFilter("foo is NULL")
+    (lastcmd, level, savepoint, usertransac) = ogr_pg_76_get_transaction_state(gdaltest.pg_ds)
+    if (lastcmd, level, savepoint, usertransac) != ('COMMIT', 0, 0, 0):
+        gdaltest.post_reason('fail')
+        print(lastcmd, level, savepoint, usertransac)
+        return 'fail'
+
     f = lyr1.GetNextFeature()
     if f is None or f.GetFID() != 1:
         gdaltest.post_reason('fail')
@@ -4525,10 +4548,18 @@ def ogr_pg_76_scenario3(lyr1, lyr2):
         print(lastcmd, level, savepoint, usertransac)
         return 'fail'
 
+    lyr2.ResetReading()
+
     return 'success'
 
 # Scenario 4 : GetNextFeature(), StartTransaction(), CreateFeature(), CommitTransaction(), GetNextFeature(), ResetReading()
 def ogr_pg_76_scenario4(lyr1, lyr2):
+
+    (lastcmd, level, savepoint, usertransac) = ogr_pg_76_get_transaction_state(gdaltest.pg_ds)
+    if (lastcmd, level, savepoint, usertransac) != ('', 0, 0, 0):
+        gdaltest.post_reason('fail')
+        print(lastcmd, level, savepoint, usertransac)
+        return 'fail'
 
     f = lyr1.GetNextFeature()
     if f is None or f.GetFID() != 1:
@@ -4551,27 +4582,53 @@ def ogr_pg_76_scenario4(lyr1, lyr2):
 
     lyr1.CreateFeature(ogr.Feature(lyr1.GetLayerDefn()))
 
-    # Check that it doesn't commit the transaction
-    lyr1.SetAttributeFilter("foo is NULL")
-    lyr1.ResetReading()
     f = lyr1.GetNextFeature()
+    if f is None or f.GetFID() != 2:
+        gdaltest.post_reason('fail')
+        return 'fail'
+    f = lyr2.GetNextFeature()
     if f is None or f.GetFID() != 1:
         gdaltest.post_reason('fail')
         return 'fail'
+    (lastcmd, level, savepoint, usertransac) = ogr_pg_76_get_transaction_state(gdaltest.pg_ds)
+    if (lastcmd, level, savepoint, usertransac) != ('', 3, 1, 1):
+        gdaltest.post_reason('fail')
+        print(lastcmd, level, savepoint, usertransac)
+        return 'fail'
+
+    # Check that it doesn't commit the transaction
+    lyr1.SetAttributeFilter("foo is NULL")
     (lastcmd, level, savepoint, usertransac) = ogr_pg_76_get_transaction_state(gdaltest.pg_ds)
     if (lastcmd, level, savepoint, usertransac) != ('', 2, 1, 1):
         gdaltest.post_reason('fail')
         print(lastcmd, level, savepoint, usertransac)
         return 'fail'
 
+    f = lyr1.GetNextFeature()
+    if f is None or f.GetFID() != 1:
+        gdaltest.post_reason('fail')
+        return 'fail'
+    (lastcmd, level, savepoint, usertransac) = ogr_pg_76_get_transaction_state(gdaltest.pg_ds)
+    if (lastcmd, level, savepoint, usertransac) != ('', 3, 1, 1):
+        gdaltest.post_reason('fail')
+        print(lastcmd, level, savepoint, usertransac)
+        return 'fail'
+
+    f = lyr2.GetNextFeature()
+    if f is None or f.GetFID() != 2:
+        gdaltest.post_reason('fail')
+        return 'fail'
+
     if gdaltest.pg_ds.CommitTransaction() != 0:
         gdaltest.post_reason('fail')
         return 'fail'
     (lastcmd, level, savepoint, usertransac) = ogr_pg_76_get_transaction_state(gdaltest.pg_ds)
-    if (lastcmd, level, savepoint, usertransac) != ('RELEASE SAVEPOINT ogr_savepoint', 1, 0, 0):
+    if (lastcmd, level, savepoint, usertransac) != ('RELEASE SAVEPOINT ogr_savepoint', 2, 0, 0):
         gdaltest.post_reason('fail')
         print(lastcmd, level, savepoint, usertransac)
         return 'fail'
+
+    lyr2.ResetReading()
 
     if gdaltest.pg_ds.StartTransaction() != 0:
         gdaltest.post_reason('fail')

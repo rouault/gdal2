@@ -165,12 +165,27 @@ over the layer. When explicitly committing or rolling back the transaction, the
 cursor will become invalid, and ResetReading() should be issued again to restart
 reading from the beginning.</p>
 
+<p>As calling SetAttributeFilter() or SetSpatialFilter() implies an implicit
+ResetReading(), they have the same effect as ResetReading(). That is to say,
+while an implict transaction is in progress, the transaction will be committed
+(if no other layer is being read), and a new one will be started again at the next
+GetNextFeature() call. On the contrary, if they are called within an explicit
+transaction, the transaction is maintained.</p>
+
 <p>With the above rules, the below examples show the SQL instructions that are
 run when using the OGR API in different scenarios.</p>
 <pre>
 
 lyr1->GetNextFeature()             BEGIN (implict)
                                    DECLARE cur1 CURSOR FOR SELECT * FROM lyr1
+                                   FETCH 1 IN cur1
+
+lyr1->SetAttributeFilter('xxx')
+     --> lyr1->ResetReading()      CLOSE cur1
+                                   COMMIT (implicit)
+
+lyr1->GetNextFeature()             BEGIN (implict)
+                                   DECLARE cur1 CURSOR  FOR SELECT * FROM lyr1 WHERE xxx
                                    FETCH 1 IN cur1
 
 lyr2->GetNextFeature()             DECLARE cur2 CURSOR  FOR SELECT * FROM lyr2
@@ -182,12 +197,19 @@ lyr2->GetNextFeature()             FETCH 1 IN cur2
 
 lyr1->CreateFeature(f)             INSERT INTO cur1 ...
 
+lyr1->SetAttributeFilter('xxx')
+     --> lyr1->ResetReading()      CLOSE cur1
+                                   COMMIT (implicit)
+
+lyr1->GetNextFeature()             DECLARE cur1 CURSOR  FOR SELECT * FROM lyr1 WHERE xxx
+                                   FETCH 1 IN cur1
+
 lyr1->ResetReading()               CLOSE cur1
 
 lyr2->ResetReading()               CLOSE cur2
                                    COMMIT (implicit)
 
-
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 ds->StartTransaction()             BEGIN
 
@@ -199,13 +221,20 @@ lyr2->GetNextFeature()             DECLARE cur2 CURSOR FOR SELECT * FROM lyr2
 
 lyr1->CreateFeature(f)             INSERT INTO cur1 ...
 
+lyr1->SetAttributeFilter('xxx')
+     --> lyr1->ResetReading()      CLOSE cur1
+                                   COMMIT (implicit)
+
+lyr1->GetNextFeature()             DECLARE cur1 CURSOR  FOR SELECT * FROM lyr1 WHERE xxx
+                                   FETCH 1 IN cur1
+
 lyr1->ResetReading()               CLOSE cur1
 
 lyr2->ResetReading()               CLOSE cur2
 
 ds->CommitTransaction()            COMMIT
 
-
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 ds->StartTransaction()             BEGIN
 
@@ -219,7 +248,7 @@ ds->CommitTransaction()            CLOSE cur1 (implicit)
 
 lyr1->GetNextFeature()             FETCH 1 IN cur1      ==> Error since the cursor was closed with the commit. Explicit ResetReading() required before
 
-
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 lyr1->GetNextFeature()             BEGIN (implicit)
                                    DECLARE cur1 CURSOR FOR SELECT * FROM lyr1
