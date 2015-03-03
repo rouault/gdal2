@@ -130,12 +130,12 @@ int VSITarReader::GotoNextFile()
         abyHeader[115] != '\0' ||
         abyHeader[123] != '\0' ||
         (abyHeader[135] != '\0' && abyHeader[135] != ' ') ||
-        (abyHeader[147] != '\0' && abyHeader[147] != ' ') ||
-        abyHeader[154] != '\0' ||
-        abyHeader[155] != ' ')
+        (abyHeader[147] != '\0' && abyHeader[147] != ' '))
     {
         return FALSE;
     }
+    if( abyHeader[124] < '0' || abyHeader[124] > '7' )
+        return FALSE;
 
     osNextFileName = abyHeader;
     nNextFileSize = 0;

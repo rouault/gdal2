@@ -1,5 +1,13 @@
 my @pm = qw(lib/Geo/GDAL.pm lib/Geo/OGR.pm lib/Geo/OSR.pm lib/Geo/GDAL/Const.pm);
 
+my %internal_methods = map {$_=>1} qw/TIEHASH CLEAR FIRSTKEY NEXTKEY FETCH STORE 
+                                      DESTROY DISOWN ACQUIRE RELEASE_PARENTS
+                                      UseExceptions DontUseExceptions this AllRegister RegisterAll
+                                      callback_d_cp_vp/;
+my %private_methods = map {$_=>1} qw/PushErrorHandler PopErrorHandler Error ErrorReset 
+                                     GetLastErrorNo GetLastErrorType GetLastErrorMsg/;
+my %constant_prefixes = map {$_=>1} qw/DCAP_/;
+
 my %package;
 my $package;
 my $sub;
@@ -76,7 +84,7 @@ for my $pm (@pm) {
     close $fh;
 }
 
-my @dox = qw(lib/Geo/GDAL.dox lib/Geo/OGR.dox lib/Geo/OSR.dox lib/Geo/GDAL/Const.dox);
+my @dox = qw(lib/Geo/GDAL.dox lib/Geo/OGR.dox lib/Geo/OSR.dox);
 
 my $package;
 my $sub;
@@ -85,8 +93,9 @@ for my $dox (@dox) {
     open(my $fh, "<", $dox) or die "cannot open < $dox: $!";
     while (<$fh>) {
         chomp;
-        s/^[\s#]+//;
         next if $_ eq '';
+        s/^[\s#]+//;
+        #next if $_ eq '';
         ($w) = /^(\S+)\s/;
         if ($w eq '@class') {
             $package = $_;
@@ -101,7 +110,10 @@ for my $dox (@dox) {
         if ($w eq '@ignore') {
             $sub = $_;
             $sub =~ s/^(\S+)\s+//;
-            delete $package{$package}{subs}{$sub};
+            #delete $package{$package}{subs}{$sub};
+            $package{$package}{dox}{$sub}{d} = $sub;
+            $package{$package}{dox}{$sub}{at} = $w;
+            $package{$package}{dox}{$sub}{ignore} = 1;
             next;
         }
         if ($w eq '@cmethod' or $w eq '@method') {
@@ -116,6 +128,7 @@ for my $dox (@dox) {
                 print STDERR "sub?: $_\n";
             }
             $package{$package}{dox}{$sub}{d} = $d;
+            $package{$package}{dox}{$sub}{at} = $w;
             $attr = '';
             next;
         }
@@ -150,6 +163,7 @@ for my $dox (@dox) {
 
 for my $package (sort keys %package) {
     next if $package eq '';
+    next if $package eq 'Geo::GDAL::Const';
     print "#** \@class $package\n";
     for my $l (@{$package{$package}{package_dox}}) {
         print "# $l\n";
@@ -160,6 +174,7 @@ for my $package (sort keys %package) {
     print "use base qw(",join(' ', @{$package{$package}{isas}}),")\n\n";
 
     for my $attr (sort keys %{$package{$package}{attrs}}) {
+        next if $package{$package}{dox}{$attr}{ignore};
         my $d = $package{$package}{dox}{$attr}{d};
         $d = $attr unless $d;
         print "#** \@attr $d \n";
@@ -174,11 +189,76 @@ for my $package (sort keys %package) {
     }
 
     for my $sub (sort keys %{$package{$package}{subs}}) {
+        next if $package{$package}{dox}{$sub}{ignore};
+        next if $sub =~ /^_/; # no use showing these
+        next if $sub =~ /swig_/; # skip attribute setters and getters
+        next if $sub =~ /GDAL_GCP_/; # skip GDAL::GCP class methods from class GDAL
+
+        next if $sub =~ /GT_/; # done in methods geometry type test and modify
+
+        # processed constants (Const.pm is not given to Doxygen at all)
+        # to do: GF_, GRIORA_, GPI_, OF_, DMD_, CPLES_, GMF_, GARIO_, GTO_
+        # OLMD_
+        # SRS_PM_, SRS_WGS84_
+        next if $sub =~ /^wkb/;
+        next if $sub =~ /^OFT/;
+        next if $sub =~ /^OFST/;
+        next if $sub =~ /^OJ/;
+        next if $sub =~ /^ALTER_/;
+        next if $sub =~ /^F_/;
+        next if $sub =~ /^OLC/;
+        next if $sub =~ /^ODsC/;
+        next if $sub =~ /^ODrC/;
+        next if $sub =~ /^SRS_PT_/;
+        next if $sub =~ /^SRS_PP_/;
+        next if $sub =~ /^SRS_UL_/;
+        next if $sub =~ /^SRS_UA_/;
+        next if $sub =~ /^SRS_DN_/;
+        
+        next if $internal_methods{$sub}; # skip internal methods
         my $d = $package{$package}{dox}{$sub}{d};
+        my $nxt = 0;
+        for my $prefix (keys %constant_prefixes) {
+            $nxt = 1 if $sub =~ /^$prefix/;
+        }
+        next if $nxt;
         $d = $sub unless $d;
-        print "#** \@method $d\n";
+        $d =~ s/^\$/scalar /;
+        $d =~ s/^\\\$/scalar_ref /;
+        $d =~ s/^\@/list /;
+        $d =~ s/^\\\@/list_ref /;
+        $d =~ s/^\%/hash /;
+        $d =~ s/^\\\%/hash_ref /;
+        $dp = $d;
+        $dp .= '()' unless $dp =~ /\(/;
+        print "#** \@method $dp\n";
+        if ($private_methods{$d} or $package{$package}{dox}{$sub}{at} eq '@ignore') {
+            print "# Undocumented method, do not call unless you know what you're doing.\n";
+            print "# \@todo Test and document this method.\n";
+        }
+        if ($package{$package}{dox}{$sub}{at} eq '@cmethod') {
+            print "# Class method.\n";
+        }
         for my $c (@{$package{$package}{dox}{$sub}{c}}) {
-            print "# $c\n";
+            if ($c =~ /^\+list/) {
+                $c =~ s/\+list //;
+                my($pkg, $prefix, $exclude) = split / /, $c;
+                #print STDERR "$pkg, $prefix, $exclude\n";
+                my %exclude = map {$_=>1} split /,/, $exclude;
+                print "# ";
+                my @list;
+                for my $l (sort keys %{$package{$pkg}{subs}}) {
+                    next unless $l =~ /^$prefix/;
+                    $l =~ s/^$prefix//;
+                    next if $exclude{$l};
+                    #print STDERR "  $l\n";
+                    push @list, $l;
+                }
+                my $last = pop @list;
+                print join(', ', @list),", and $last.\n";
+            } else {
+                print "# $c\n";
+            }
         }
         print "#*\n";
         print "sub $sub {\n";

@@ -263,7 +263,7 @@ size of the resulting file. If that computed file size is over 4GiB, GDAL will a
 decide to create a BigTIFF file. However, when compression is used, it is not possible in
 advance to known the final size of the file, so classical TIFF will be chosen. In
 that case, the user must explicitly require the creation of a BigTIFF with BIGTIFF=YES
-if he anticipates the final file to be too big for classical TIFF format.
+if the final file is anticipated to be too big for classical TIFF format.
 If BigTIFF creation is not explicitly asked or guessed and the resulting file is too big for classical TIFF,
 libtiff will fail with an error message like "TIFFAppendToStrip:Maximum TIFF file size exceeded".</p></li>
 
@@ -385,8 +385,8 @@ RasterIO() implementations when reading un-tiled un-compressed TIFF files to
 avoid using the block cache. Setting it to YES even when the optimized cases do
 not apply should be safe (generic implementation will be used). Default value:NO
 <li>GTIFF_VIRTUAL_MEM_IO=YES/NO/IF_ENOUGH_RAM: (GDAL &gt;= 2.0) Can be set to YES
-to use specialized RasterIO() implementations when reading un-tiled un-compressed TIFF
-files to avoid using the block cache (and currently limited to no resampling cases).
+to use specialized RasterIO() implementations when reading un-compressed TIFF
+files to avoid using the block cache.
 This implementation relies on memory-mapped file I/O,
 and is currently only supported on Linux (64-bit build strongly recommended).
 Setting it to YES even when the optimized cases do not apply should be safe

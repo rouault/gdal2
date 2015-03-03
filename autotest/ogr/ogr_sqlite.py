@@ -1405,6 +1405,13 @@ def ogr_sqlite_28():
         print(ret)
         return 'fail'
 
+    # Generic test
+    ret = gdaltest.runexternal(test_cli_utilities.get_test_ogrsf_path() + ' -driver SQLite -dsco SPATIALITE=YES')
+
+    if ret.find('INFO') == -1 or ret.find('ERROR') != -1:
+        print(ret)
+        return 'fail'
+
     return 'success'
 
 ###############################################################################
@@ -1843,6 +1850,9 @@ def ogr_spatialite_5(bUseComprGeom = False):
     for wkt in geometries:
         geom = ogr.CreateGeometryFromWkt(wkt)
         lyr = ds.GetLayer(num_layer)
+        if lyr.GetGeomType() != geom.GetGeometryType():
+            gdaltest.post_reason('got %d, expected %d' % (lyr.GetGeomType(), geom.GetGeometryType()))
+            return 'fail'
         feat = lyr.GetNextFeature()
         got_wkt = feat.GetGeometryRef().ExportToWkt()
         # Spatialite < 2.4 only supports 2D geometries
