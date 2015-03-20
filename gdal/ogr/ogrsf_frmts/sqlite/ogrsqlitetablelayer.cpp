@@ -2697,23 +2697,27 @@ OGRErr OGRSQLiteTableLayer::ISetFeature( OGRFeature *poFeature )
 
     sqlite3_finalize( hUpdateStmt );
 
-    nFieldCount = poFeatureDefn->GetGeomFieldCount();
-    for( iField = 0; iField < nFieldCount; iField++ )
+    eErr = (sqlite3_changes(hDB) > 0) ? OGRERR_NONE : OGRERR_NON_EXISTING_FEATURE;
+    if( eErr == OGRERR_NONE )
     {
-        OGRSQLiteGeomFieldDefn* poGeomFieldDefn = 
-            poFeatureDefn->myGetGeomFieldDefn(iField);
-        OGRGeometry *poGeom = poFeature->GetGeomFieldRef(iField);
-        if( poGeomFieldDefn->bCachedExtentIsValid &&
-            poGeom != NULL && !poGeom->IsEmpty() )
+        nFieldCount = poFeatureDefn->GetGeomFieldCount();
+        for( iField = 0; iField < nFieldCount; iField++ )
         {
-            OGREnvelope sGeomEnvelope;
-            poGeom->getEnvelope(&sGeomEnvelope);
-            poGeomFieldDefn->oCachedExtent.Merge(sGeomEnvelope);
+            OGRSQLiteGeomFieldDefn* poGeomFieldDefn = 
+                poFeatureDefn->myGetGeomFieldDefn(iField);
+            OGRGeometry *poGeom = poFeature->GetGeomFieldRef(iField);
+            if( poGeomFieldDefn->bCachedExtentIsValid &&
+                poGeom != NULL && !poGeom->IsEmpty() )
+            {
+                OGREnvelope sGeomEnvelope;
+                poGeom->getEnvelope(&sGeomEnvelope);
+                poGeomFieldDefn->oCachedExtent.Merge(sGeomEnvelope);
+            }
         }
+        bStatisticsNeedsToBeFlushed = TRUE;
     }
-    bStatisticsNeedsToBeFlushed = TRUE;
 
-    return OGRERR_NONE;
+    return eErr;
 }
 
 /************************************************************************/
@@ -3186,9 +3190,8 @@ OGRErr OGRSQLiteTableLayer::DeleteFeature( GIntBig nFID )
         return OGRERR_FAILURE;
     }
 
-    int nChanged = sqlite3_changes( poDS->GetDB() );
-
-    if( nChanged == 1 )
+    OGRErr eErr = (sqlite3_changes(poDS->GetDB()) > 0) ? OGRERR_NONE : OGRERR_NON_EXISTING_FEATURE;
+    if( eErr == OGRERR_NONE )
     {
         int nFieldCount = poFeatureDefn->GetGeomFieldCount();
         for( int iField = 0; iField < nFieldCount; iField++ )
@@ -3201,7 +3204,7 @@ OGRErr OGRSQLiteTableLayer::DeleteFeature( GIntBig nFID )
         bStatisticsNeedsToBeFlushed = TRUE;
     }
 
-    return OGRERR_NONE;
+    return eErr;
 }
 
 /************************************************************************/
