@@ -390,7 +390,7 @@ def ogr_ods_7():
     feat = lyr.GetNextFeature()
     if feat.GetFID() != 2:
         gdaltest.post_reason('did not get expected FID')
-        feat.DumpReadabe()
+        feat.DumpReadable()
         return 'fail'
     feat.SetField(0, 'modified_value')
     lyr.SetFeature(feat)
@@ -402,11 +402,11 @@ def ogr_ods_7():
     feat = lyr.GetNextFeature()
     if feat.GetFID() != 2:
         gdaltest.post_reason('did not get expected FID')
-        feat.DumpReadabe()
+        feat.DumpReadable()
         return 'fail'
     if feat.GetField(0) != 'modified_value':
         gdaltest.post_reason('did not get expected value')
-        feat.DumpReadabe()
+        feat.DumpReadable()
         return 'fail'
     feat = None
     ds = None
@@ -486,12 +486,15 @@ def ogr_ods_9():
     f = lyr.GetNextFeature()
     if f.GetField(0) != '2015/12/23 12:34:56.789':
         gdaltest.post_reason('failure')
+        f.DumpReadable()
         return 'fail'
-    if f.GetField(1) != '2015/12/23 12:34:56.000':
+    if f.GetField(1) != '2015/12/23 12:34:56':
         gdaltest.post_reason('failure')
+        f.DumpReadable()
         return 'fail'
     if f.GetField(2) != '2015/12/23 12:34:56':
         gdaltest.post_reason('failure')
+        f.DumpReadable()
         return 'fail'
     ds = None
 

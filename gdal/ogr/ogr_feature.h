@@ -331,7 +331,7 @@ class CPL_DLL OGRFeature
     int                 GetFieldAsDateTime( int i, 
                                      int *pnYear, int *pnMonth, int *pnDay,
                                      int *pnHour, int *pnMinute, float *pfSecond, 
-                                     int *pnTZFlag, OGRDateTimePrecision* pePrecision = NULL );
+                                     int *pnTZFlag );
 
     int                 GetFieldAsInteger( const char *pszFName )
                       { return GetFieldAsInteger( GetFieldIndex(pszFName) ); }
@@ -368,7 +368,7 @@ class CPL_DLL OGRFeature
     void                SetField( int i, int nCount, GByte * pabyBinary );
     void                SetField( int i, int nYear, int nMonth, int nDay,
                                   int nHour=0, int nMinute=0, float fSecond=0.f, 
-                                  int nTZFlag = 0, OGRDateTimePrecision ePrecision = ODTP_Guess );
+                                  int nTZFlag = 0 );
 
     void                SetField( const char *pszFName, int nValue )
                            { SetField( GetFieldIndex(pszFName), nValue ); }
@@ -394,10 +394,10 @@ class CPL_DLL OGRFeature
     void                SetField( const char *pszFName, 
                                   int nYear, int nMonth, int nDay,
                                   int nHour=0, int nMinute=0, float fSecond=0.f, 
-                                  int nTZFlag = 0, OGRDateTimePrecision ePrecision = ODTP_Guess )
+                                  int nTZFlag = 0 )
                            { SetField( GetFieldIndex(pszFName), 
                                        nYear, nMonth, nDay, 
-                                       nHour, nMinute, fSecond, nTZFlag, ePrecision ); }
+                                       nHour, nMinute, fSecond, nTZFlag ); }
 
     GIntBig             GetFID() { return nFID; }
     virtual OGRErr      SetFID( GIntBig nFIDIn );

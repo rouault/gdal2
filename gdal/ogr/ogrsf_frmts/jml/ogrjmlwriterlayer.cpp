@@ -175,12 +175,11 @@ OGRErr OGRJMLWriterLayer::ICreateFeature( OGRFeature *poFeature )
             {
                 int nYear, nMonth, nDay, nHour, nMinute, nTZFlag;
                 float fSecond;
-                OGRDateTimePrecision ePrecision;
                 poFeature->GetFieldAsDateTime(i, &nYear, &nMonth, &nDay,
-                                            &nHour, &nMinute, &fSecond, &nTZFlag, &ePrecision);
+                                            &nHour, &nMinute, &fSecond, &nTZFlag);
                 /* When writing time zone, OpenJUMP expects .XXX seconds */
                 /* to be written */
-                if( nTZFlag > 1 || ePrecision == ODTP_YMDHMSm )
+                if( nTZFlag > 1 || OGR_GET_MS(fSecond) != 0 )
                     VSIFPrintfL(fp, "%04d-%02d-%02dT%02d:%02d:%06.3f",
                                 nYear, nMonth, nDay,
                                 nHour, nMinute, fSecond);

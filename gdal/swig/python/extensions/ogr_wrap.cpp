@@ -3856,7 +3856,7 @@ SWIG_From_float  (float value)
 SWIGINTERN void OGRFeatureShadow_GetFieldAsDateTime(OGRFeatureShadow *self,int id,int *pnYear,int *pnMonth,int *pnDay,int *pnHour,int *pnMinute,float *pfSecond,int *pnTZFlag){
       OGR_F_GetFieldAsDateTimeEx(self, id, pnYear, pnMonth, pnDay,
 			       pnHour, pnMinute, pfSecond,
-			       pnTZFlag, NULL);
+			       pnTZFlag);
   }
 SWIGINTERN void OGRFeatureShadow_GetFieldAsIntegerList(OGRFeatureShadow *self,int id,int *nLen,int const **pList){
       *pList = OGR_F_GetFieldAsIntegerList(self, id, nLen);
@@ -3969,7 +3969,7 @@ SWIG_AsVal_float (PyObject * obj, float *val)
 SWIGINTERN void OGRFeatureShadow_SetField__SWIG_4(OGRFeatureShadow *self,int id,int year,int month,int day,int hour,int minute,float second,int tzflag){
     OGR_F_SetFieldDateTimeEx(self, id, year, month, day,
                              hour, minute, second, 
-                             tzflag, ODTP_Guess);
+                             tzflag);
   }
 SWIGINTERN void OGRFeatureShadow_SetField__SWIG_5(OGRFeatureShadow *self,char const *name,int year,int month,int day,int hour,int minute,float second,int tzflag){
       int i = OGR_F_GetFieldIndex(self, name);
@@ -3978,7 +3978,7 @@ SWIGINTERN void OGRFeatureShadow_SetField__SWIG_5(OGRFeatureShadow *self,char co
       else
 	  OGR_F_SetFieldDateTimeEx(self, i, year, month, day,
 				 hour, minute, second, 
-				 tzflag, ODTP_Guess);
+				 tzflag);
   }
 SWIGINTERN void OGRFeatureShadow_SetFieldIntegerList(OGRFeatureShadow *self,int id,int nList,int *pList){
       OGR_F_SetFieldIntegerList(self, id, nList, pList);

@@ -518,8 +518,7 @@ int TABFeature::ReadRecordFromDATFile(TABDATFile *poDATFile)
              if ((status = poDATFile->ReadTimeField(poDATFile->GetFieldWidth(iField),
                                                     &nHour, &nMin, &nSec, &nMS)) == 0)
              {
-                SetField(iField, nYear, nMonth, nDay, nHour, nMin, nSec + nMS / 1000.0f, 0,
-                         ODTP_YMDHMSm);
+                SetField(iField, nYear, nMonth, nDay, nHour, nMin, nSec + nMS / 1000.0f, 0);
              }
 #else
              pszValue = poDATFile->ReadTimeField(poDATFile->
@@ -535,8 +534,7 @@ int TABFeature::ReadRecordFromDATFile(TABDATFile *poDATFile)
                                                        &nYear, &nMonth, &nDay,
                                                        &nHour, &nMin, &nSec, &nMS)) == 0)
             {
-               SetField(iField, nYear, nMonth, nDay, nHour, nMin, nSec + nMS / 1000.0f, 0,
-                        ODTP_YMDHMSm);
+               SetField(iField, nYear, nMonth, nDay, nHour, nMin, nSec + nMS / 1000.0f, 0);
             }
 #else
             pszValue = poDATFile->ReadDateTimeField(poDATFile->

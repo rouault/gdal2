@@ -488,8 +488,7 @@ static void SetField(OGRFeature* poFeature,
         {
             double fFracSec = fmod(fmod(dfNumberOfDaysSince1900,1) * 3600 * 24, 1);
             poFeature->SetField(i, sTm.tm_year + 1900, sTm.tm_mon + 1, sTm.tm_mday,
-                                sTm.tm_hour, sTm.tm_min, sTm.tm_sec + fFracSec, 0,
-                                strcmp(pszCellType, "datetime_ms") == 0 ? ODTP_YMDHMSm : ODTP_YMDHMS);
+                                sTm.tm_hour, sTm.tm_min, sTm.tm_sec + fFracSec, 0 );
         }
         else if (strcmp(pszCellType, "time") == 0)
         {
@@ -697,7 +696,7 @@ void OGRXLSXDataSource::startElementRow(const char *pszName,
             XLSXFieldTypeExtended eType = apoStyles[nS];
             if (eType.eType == OFTDateTime)
             {
-                if( eType.ePrecision == ODTP_YMDHMSm )
+                if( eType.bHasMS )
                     osValueType = "datetime_ms";
                 else
                     osValueType = "datetime";
@@ -1266,11 +1265,9 @@ void OGRXLSXDataSource::startElementStylesCbk(const char *pszName,
             int bHasDate = strstr(pszFormatCode, "DD") != NULL ||
                            strstr(pszFormatCode, "YY") != NULL;
             int bHasTime = strstr(pszFormatCode, "HH") != NULL;
-            OGRDateTimePrecision ePrecision = ODTP_YMDHMS;
-            if( strstr(pszFormatCode, "SS.000") )
-                ePrecision = ODTP_YMDHMSm;
             if (bHasDate && bHasTime)
-                apoMapStyleFormats[nNumFmtId] = XLSXFieldTypeExtended(OFTDateTime, ePrecision);
+                apoMapStyleFormats[nNumFmtId] = XLSXFieldTypeExtended(OFTDateTime,
+                                        strstr(pszFormatCode, "SS.000") != NULL );
             else if (bHasDate)
                 apoMapStyleFormats[nNumFmtId] = XLSXFieldTypeExtended(OFTDate);
             else if (bHasTime)
@@ -1779,9 +1776,8 @@ static void WriteLayer(const char* pszName, OGRLayer* poLayer, int iLayer,
                 {
                     int nYear, nMonth, nDay, nHour, nMinute, nTZFlag;
                     float fSecond;
-                    OGRDateTimePrecision ePrecision;
                     poFeature->GetFieldAsDateTime(j, &nYear, &nMonth, &nDay,
-                                                    &nHour, &nMinute, &fSecond, &nTZFlag, &ePrecision);
+                                                    &nHour, &nMinute, &fSecond, &nTZFlag );
                     struct tm brokendowntime;
                     memset(&brokendowntime, 0, sizeof(brokendowntime));
                     brokendowntime.tm_year = (eType == OFTTime) ? 70 : nYear - 1900;
@@ -1794,7 +1790,7 @@ static void WriteLayer(const char* pszName, OGRLayer* poLayer, int iLayer,
                     double dfNumberOfDaysSince1900 = (1.0 * nUnixTime / NUMBER_OF_SECONDS_PER_DAY);
                     dfNumberOfDaysSince1900 += fmod(fSecond,1) / NUMBER_OF_SECONDS_PER_DAY;
                     int s = (eType == OFTDate) ? 1 : (eType == OFTDateTime) ? 2 : 3;
-                    if( eType == OFTDateTime && ePrecision == ODTP_YMDHMSm )
+                    if( eType == OFTDateTime && OGR_GET_MS(fSecond) )
                         s = 4;
                     VSIFPrintfL(fp, "<c r=\"%s%d\" s=\"%d\">\n", szCol, iRow, s);
                     if (eType != OFTTime)

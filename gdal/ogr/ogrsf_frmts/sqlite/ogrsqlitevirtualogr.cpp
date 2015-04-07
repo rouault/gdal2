@@ -1312,14 +1312,11 @@ int OGR2SQLITE_Column(sqlite3_vtab_cursor* pCursor,
         {
             int nYear, nMonth, nDay, nHour, nMinute, nTZ;
             float fSecond;
-            OGRDateTimePrecision ePrecision;
             poFeature->GetFieldAsDateTime(nCol, &nYear, &nMonth, &nDay,
-                                        &nHour, &nMinute, &fSecond, &nTZ, &ePrecision);
+                                        &nHour, &nMinute, &fSecond, &nTZ );
             char szBuffer[64];
-            if( ePrecision == ODTP_YMDHMSm )
+            if( OGR_GET_MS(fSecond) != 0 )
                 sprintf(szBuffer, "%02d:%02d:%06.3f", nHour, nMinute, fSecond);
-            else if( ePrecision == ODTP_YMDHM )
-                sprintf(szBuffer, "%02d:%02d", nHour, nMinute);
             else
                 sprintf(szBuffer, "%02d:%02d:%02d", nHour, nMinute, (int)fSecond);
             sqlite3_result_text(pContext,

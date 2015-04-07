@@ -503,7 +503,7 @@ def ogr_feature_cp_datetime():
     if not check( dst_feature, 'field_binary', None ):
         return 'failure'
 
-    if not check( dst_feature, 'field_date', '2011/11/11' ):
+    if not check( dst_feature, 'field_date', '2011/11/11 00:00:00' ):
         return 'failure'
 
     if not check( dst_feature, 'field_time', '0000/00/00 14:10:35' ):

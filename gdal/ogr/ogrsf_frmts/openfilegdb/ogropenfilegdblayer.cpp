@@ -890,7 +890,7 @@ int FillTargetValueFromSrcExpr( OGRFieldDefn* poFieldDefn,
                     poTargetValue->Date.Minute = (GByte)nMin;
                     poTargetValue->Date.Second = (GByte)nSec;
                     poTargetValue->Date.TZFlag = 0;
-                    poTargetValue->Date.Precision = ODTP_YMDHMS;
+                    poTargetValue->Date.Reserved = 0;
                 }
                 else
                     return FALSE;

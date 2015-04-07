@@ -1446,10 +1446,9 @@ static void WriteLayer(VSILFILE* fp, OGRLayer* poLayer)
                 {
                     int nYear, nMonth, nDay, nHour, nMinute, nTZFlag;
                     float fSecond;
-                    OGRDateTimePrecision ePrecision;
                     poFeature->GetFieldAsDateTime(j, &nYear, &nMonth, &nDay,
-                                                    &nHour, &nMinute, &fSecond, &nTZFlag, &ePrecision);
-                    if( ePrecision == ODTP_YMDHMSm )
+                                                    &nHour, &nMinute, &fSecond, &nTZFlag );
+                    if( OGR_GET_MS(fSecond) )
                     {
                         VSIFPrintfL(fp, "<table:table-cell table:style-name=\"stDateTimeMilliseconds\" "
                                     "office:value-type=\"date\" "

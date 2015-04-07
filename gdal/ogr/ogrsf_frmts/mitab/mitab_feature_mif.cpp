@@ -283,7 +283,7 @@ int TABFeature::ReadRecordFromMIDFile(MIDDATAFile *fp)
                 {
                     sscanf(papszToken[i],"%2d%2d%2d%3d",&nHour, &nMin, &nSec, &nMS);
                     SetField(i, nYear, nMonth, nDay, nHour, nMin, nSec + nMS / 1000.0f,
-                             0, ODTP_YMDHMSm);
+                             0);
                 }
                 break;
             }
@@ -303,7 +303,7 @@ int TABFeature::ReadRecordFromMIDFile(MIDDATAFile *fp)
                     sscanf(papszToken[i], "%4d%2d%2d%2d%2d%2d%3d",
                            &nYear, &nMonth, &nDay, &nHour, &nMin, &nSec, &nMS);
                     SetField(i, nYear, nMonth, nDay, nHour, nMin, nSec + nMS / 1000.0f,
-                             0, ODTP_YMDHMSm);
+                             0);
                 }
                 break;
             }

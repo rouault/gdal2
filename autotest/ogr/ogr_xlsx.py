@@ -412,12 +412,15 @@ def ogr_xlsx_10():
     f = lyr.GetNextFeature()
     if f.GetField(0) != '2015/12/23 12:34:56.789':
         gdaltest.post_reason('failure')
+        f.DumpReadable()
         return 'fail'
-    if f.GetField(1) != '2015/12/23 12:34:56.000':
+    if f.GetField(1) != '2015/12/23 12:34:56':
         gdaltest.post_reason('failure')
+        f.DumpReadable()
         return 'fail'
     if f.GetField(2) != '2015/12/23 12:34:56':
         gdaltest.post_reason('failure')
+        f.DumpReadable()
         return 'fail'
     ds = None
 

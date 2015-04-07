@@ -1298,7 +1298,7 @@ public:
 			  int *pnTZFlag) {
       OGR_F_GetFieldAsDateTimeEx(self, id, pnYear, pnMonth, pnDay,
 			       pnHour, pnMinute, pfSecond,
-			       pnTZFlag, NULL);
+			       pnTZFlag);
   }
   %clear (int *);
   %clear (float *);
@@ -1530,7 +1530,7 @@ public:
                              int tzflag ) {
     OGR_F_SetFieldDateTimeEx(self, id, year, month, day,
                              hour, minute, second, 
-                             tzflag, ODTP_Guess);
+                             tzflag);
   }
 
 #ifndef SWIGPERL  
@@ -1543,7 +1543,7 @@ public:
       else
 	  OGR_F_SetFieldDateTimeEx(self, i, year, month, day,
 				 hour, minute, second, 
-				 tzflag, ODTP_Guess);
+				 tzflag);
   }
 #endif
 

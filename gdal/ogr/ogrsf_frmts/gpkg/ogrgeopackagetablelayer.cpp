@@ -239,11 +239,10 @@ OGRErr OGRGeoPackageTableLayer::FeatureBindParameters( OGRFeature *poFeature,
                     else if( poFieldDefn->GetType() == OFTDateTime )
                     {
                         float fSecond;
-                        OGRDateTimePrecision ePrecision;
-                        poFeature->GetFieldAsDateTime(i, &nYear, &nMonth, &nDay, &nHour, &nMinute, &fSecond, &nTZFlag, &ePrecision);
+                        poFeature->GetFieldAsDateTime(i, &nYear, &nMonth, &nDay, &nHour, &nMinute, &fSecond, &nTZFlag);
                         if( nTZFlag == 0 || nTZFlag == 100 )
                         {
-                            if( ePrecision == ODTP_YMDHMSm )
+                            if( OGR_GET_MS(fSecond) )
                                 snprintf(szVal, sizeof(szVal), "%04d-%02d-%02dT%02d:%02d:%06.3fZ",
                                      nYear, nMonth, nDay, nHour, nMinute, fSecond);
                             else

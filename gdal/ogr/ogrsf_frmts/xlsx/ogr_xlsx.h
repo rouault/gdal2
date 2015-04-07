@@ -139,12 +139,12 @@ class XLSXFieldTypeExtended
 {
 public:
     OGRFieldType      eType;
-    OGRDateTimePrecision ePrecision;
+    int               bHasMS;
 
-                    XLSXFieldTypeExtended() : eType(OFTMaxType), ePrecision(ODTP_Undefined) {}
+                    XLSXFieldTypeExtended() : eType(OFTMaxType), bHasMS(FALSE) {}
                     XLSXFieldTypeExtended(OGRFieldType eType,
-                                          OGRDateTimePrecision ePrecision = ODTP_Undefined) :
-                                    eType(eType), ePrecision(ePrecision) {}
+                                          int bHasMS = FALSE) :
+                                    eType(eType), bHasMS(bHasMS) {}
 };
 
 class OGRXLSXDataSource : public OGRDataSource

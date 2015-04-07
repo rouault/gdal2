@@ -615,26 +615,10 @@ typedef union {
         GByte   Minute;
         GByte   TZFlag; /* 0=unknown, 1=localtime(ambiguous), 
                            100=GMT, 104=GMT+1, 80=GMT-5, etc */
-        GByte   Precision; /* value in OGRDateTimePrecision */
+        GByte   Reserved; /* must be set to 0 */
         float   Second; /* with millisecond accuracy. at the end of the structure, so as to keep it 12 bytes on 32 bit */
     } Date;
 } OGRField;
-
-/** Enumeration that defines the precision of a DateTime.
-  * @since GDAL 2.0
-  */
-typedef enum
-{
-    ODTP_Undefined,     /**< Undefined */
-    ODTP_Guess,         /**< Only valid on setting. OGR is let to guess */
-    ODTP_Y,             /**< Year is significant */
-    ODTP_YM,            /**< Year and month are significant*/
-    ODTP_YMD,           /**< Year, month and day are significant */
-    ODTP_YMDH,          /**< Year, month, day (if OFTDateTime) and hour are significant */
-    ODTP_YMDHM,         /**< Year, month, day (if OFTDateTime), hour and minute are significant */
-    ODTP_YMDHMS,        /**< Year, month, day (if OFTDateTime), hour, minute and integral second are significant */
-    ODTP_YMDHMSm,       /**< Year, month, day (if OFTDateTime), hour, minute and second with microseconds are significant */
-} OGRDateTimePrecision;
 
 #define OGR_GET_MS(floatingpoint_sec)   (int)(((floatingpoint_sec) - (int)(floatingpoint_sec)) * 1000 + 0.5)
 
