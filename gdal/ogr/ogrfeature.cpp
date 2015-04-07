@@ -1710,15 +1710,54 @@ const char *OGRFeature::GetFieldAsString( int iField )
     }
     else if( eType == OFTDateTime )
     {
-        snprintf( szTempBuffer, TEMP_BUFFER_SIZE,
-                  "%04d/%02d/%02d %02d:%02d:%02d", 
-                  pauFields[iField].Date.Year,
-                  pauFields[iField].Date.Month,
-                  pauFields[iField].Date.Day,
-                  pauFields[iField].Date.Hour,
-                  pauFields[iField].Date.Minute,
-                  pauFields[iField].Date.Second );
-        
+        if( pauFields[iField].Date.Precision == ODTP_Y )
+            snprintf( szTempBuffer, TEMP_BUFFER_SIZE, "%04d", 
+                      pauFields[iField].Date.Year );
+        else if( pauFields[iField].Date.Precision == ODTP_YM )
+            snprintf( szTempBuffer, TEMP_BUFFER_SIZE, "%04d/%02d", 
+                      pauFields[iField].Date.Year,
+                      pauFields[iField].Date.Month );
+        else if( pauFields[iField].Date.Precision == ODTP_YMD )
+            snprintf( szTempBuffer, TEMP_BUFFER_SIZE,
+                    "%04d/%02d/%02d", 
+                    pauFields[iField].Date.Year,
+                    pauFields[iField].Date.Month,
+                    pauFields[iField].Date.Day );
+        else if( pauFields[iField].Date.Precision == ODTP_YMDH )
+            snprintf( szTempBuffer, TEMP_BUFFER_SIZE,
+                    "%04d/%02d/%02d %02d", 
+                    pauFields[iField].Date.Year,
+                    pauFields[iField].Date.Month,
+                    pauFields[iField].Date.Day,
+                    pauFields[iField].Date.Hour );
+        else if( pauFields[iField].Date.Precision == ODTP_YMDHM )
+            snprintf( szTempBuffer, TEMP_BUFFER_SIZE,
+                    "%04d/%02d/%02d %02d:%02d", 
+                    pauFields[iField].Date.Year,
+                    pauFields[iField].Date.Month,
+                    pauFields[iField].Date.Day,
+                    pauFields[iField].Date.Hour,
+                    pauFields[iField].Date.Minute );
+        else if( pauFields[iField].Date.Precision == ODTP_YMDHMSm )
+            snprintf( szTempBuffer, TEMP_BUFFER_SIZE,
+                    "%04d/%02d/%02d %02d:%02d:%06.3f", 
+                    pauFields[iField].Date.Year,
+                    pauFields[iField].Date.Month,
+                    pauFields[iField].Date.Day,
+                    pauFields[iField].Date.Hour,
+                    pauFields[iField].Date.Minute,
+                    pauFields[iField].Date.Second );
+        else /* default format */
+            snprintf( szTempBuffer, TEMP_BUFFER_SIZE,
+                    "%04d/%02d/%02d %02d:%02d:%02d", 
+                    pauFields[iField].Date.Year,
+                    pauFields[iField].Date.Month,
+                    pauFields[iField].Date.Day,
+                    pauFields[iField].Date.Hour,
+                    pauFields[iField].Date.Minute,
+                    (int)pauFields[iField].Date.Second );
+
+
         if( pauFields[iField].Date.TZFlag > 1 )
         {
             int nOffset = (pauFields[iField].Date.TZFlag - 100) * 15;
@@ -1754,10 +1793,20 @@ const char *OGRFeature::GetFieldAsString( int iField )
     }
     else if( eType == OFTTime )
     {
-        snprintf( szTempBuffer, TEMP_BUFFER_SIZE, "%2d:%02d:%02d", 
+        if( pauFields[iField].Date.Precision == ODTP_YMDHMSm )
+            snprintf( szTempBuffer, TEMP_BUFFER_SIZE, "%02d:%02d:%06.3f", 
                   pauFields[iField].Date.Hour,
                   pauFields[iField].Date.Minute,
                   pauFields[iField].Date.Second );
+        else if( pauFields[iField].Date.Precision == ODTP_YMDHM )
+            snprintf( szTempBuffer, TEMP_BUFFER_SIZE, "%02d:%02d", 
+                  pauFields[iField].Date.Hour,
+                  pauFields[iField].Date.Minute );
+        else
+            snprintf( szTempBuffer, TEMP_BUFFER_SIZE, "%02d:%02d:%02d", 
+                  pauFields[iField].Date.Hour,
+                  pauFields[iField].Date.Minute,
+                  (int)pauFields[iField].Date.Second );
         
         return m_pszTmpFieldValue = CPLStrdup( szTempBuffer );
     }
@@ -2316,16 +2365,17 @@ GByte *OGR_F_GetFieldAsBinary( OGRFeatureH hFeat, int iField, int *pnBytes )
  * @param pnDay (1-31)
  * @param pnHour (0-23)
  * @param pnMinute (0-59)
- * @param pnSecond (0-59)
+ * @param pfSecond (0-59 with millisecond accuracy)
  * @param pnTZFlag (0=unknown, 1=localtime, 100=GMT, see data model for details)
+ * @param pePrecision Enumerated value that defines the precision of a DateTime 
  *
  * @return TRUE on success or FALSE on failure.
  */
 
 int OGRFeature::GetFieldAsDateTime( int iField,
                                     int *pnYear, int *pnMonth, int *pnDay,
-                                    int *pnHour, int *pnMinute, int *pnSecond,
-                                    int *pnTZFlag )
+                                    int *pnHour, int *pnMinute, float *pfSecond,
+                                    int *pnTZFlag, OGRDateTimePrecision* pePrecision )
 
 {
     OGRFieldDefn        *poFDefn = poDefn->GetFieldDefn( iField );
@@ -2351,17 +2401,31 @@ int OGRFeature::GetFieldAsDateTime( int iField,
             *pnHour = pauFields[iField].Date.Hour;
         if( pnMinute )
             *pnMinute = pauFields[iField].Date.Minute;
-        if( pnSecond )
-            *pnSecond = pauFields[iField].Date.Second;
+        if( pfSecond )
+            *pfSecond = pauFields[iField].Date.Second;
         if( pnTZFlag )
             *pnTZFlag = pauFields[iField].Date.TZFlag;
-        
+        if( pePrecision )
+            *pePrecision = (OGRDateTimePrecision)pauFields[iField].Date.Precision;
+
         return TRUE;
     }
     else
     {
         return FALSE;
     }
+}
+
+int OGRFeature::GetFieldAsDateTime( int iField,
+                                    int *pnYear, int *pnMonth, int *pnDay,
+                                    int *pnHour, int *pnMinute, int *pnSecond,
+                                    int *pnTZFlag )
+{
+    float fSecond;
+    int nRet = GetFieldAsDateTime( iField, pnYear, pnMonth, pnDay, pnHour, pnMinute,
+                                   &fSecond, pnTZFlag);
+    if( pnSecond ) *pnSecond = (int)fSecond;
+    return nRet;
 }
 
 /************************************************************************/
@@ -2397,10 +2461,54 @@ int OGR_F_GetFieldAsDateTime( OGRFeatureH hFeat, int iField,
 {
     VALIDATE_POINTER1( hFeat, "OGR_F_GetFieldAsDateTime", 0 );
 
+    float fSecond;
+    int nRet =((OGRFeature *)hFeat)->GetFieldAsDateTime( iField,
+                                                      pnYear, pnMonth, pnDay,
+                                                      pnHour, pnMinute,&fSecond,
+                                                      pnTZFlag );
+    if( pnSecond ) *pnSecond = (int)fSecond;
+    return nRet;
+}
+
+/************************************************************************/
+/*                      OGR_F_GetFieldAsDateTime()                      */
+/************************************************************************/
+
+/**
+ * \brief Fetch field value as date and time.
+ *
+ * Currently this method only works for OFTDate, OFTTime and OFTDateTime fields.
+ *
+ * This function is the same as the C++ method 
+ * OGRFeature::GetFieldAsDateTime().
+ *
+ * @param hFeat handle to the feature that owned the field.
+ * @param iField the field to fetch, from 0 to GetFieldCount()-1.
+ * @param pnYear (including century)
+ * @param pnMonth (1-12)
+ * @param pnDay (1-31)
+ * @param pnHour (0-23)
+ * @param pnMinute (0-59)
+ * @param pfSecond (0-59 with millisecond accuracy)
+ * @param pnTZFlag (0=unknown, 1=localtime, 100=GMT, see data model for details)*
+ * @param pePrecision Enumerated value that defines the precision of a DateTime 
+ *
+ * @return TRUE on success or FALSE on failure.
+ * @since GDAL 2.0
+ */
+
+int OGR_F_GetFieldAsDateTimeEx( OGRFeatureH hFeat, int iField,
+                                int *pnYear, int *pnMonth, int *pnDay,
+                                int *pnHour, int *pnMinute, float *pfSecond,
+                                int *pnTZFlag, OGRDateTimePrecision* pePrecision )
+    
+{
+    VALIDATE_POINTER1( hFeat, "OGR_F_GetFieldAsDateTimeEx", 0 );
+
     return ((OGRFeature *)hFeat)->GetFieldAsDateTime( iField,
                                                       pnYear, pnMonth, pnDay,
-                                                      pnHour, pnMinute,pnSecond,
-                                                      pnTZFlag );
+                                                      pnHour, pnMinute,pfSecond,
+                                                      pnTZFlag, pePrecision );
 }
 
 /************************************************************************/
@@ -3389,13 +3497,14 @@ void OGR_F_SetFieldBinary( OGRFeatureH hFeat, int iField,
  * @param nDay (1-31)
  * @param nHour (0-23)
  * @param nMinute (0-59)
- * @param nSecond (0-59)
+ * @param fSecond (0-59)
  * @param nTZFlag (0=unknown, 1=localtime, 100=GMT, see data model for details)
+ * @param ePrecision Enumerated value that defines the precision of a DateTime 
  */
 
 void OGRFeature::SetField( int iField, int nYear, int nMonth, int nDay,
-                           int nHour, int nMinute, int nSecond, 
-                           int nTZFlag )
+                           int nHour, int nMinute, float fSecond, 
+                           int nTZFlag, OGRDateTimePrecision ePrecision  )
 
 {
     OGRFieldDefn        *poFDefn = poDefn->GetFieldDefn( iField );
@@ -3414,13 +3523,21 @@ void OGRFeature::SetField( int iField, int nYear, int nMonth, int nDay,
             return;
         }
 
+        if( ePrecision == ODTP_Guess && (nHour == 0 && nMinute == 0 && fSecond == 0.0f) )
+            ePrecision = ODTP_YMD;
+        else if( ePrecision == ODTP_Guess && fabs(fSecond  - (int)(fSecond+0.5)) < 1e-3 )
+            ePrecision = ODTP_YMDHMS;
+        else if( ePrecision == ODTP_Guess )
+            ePrecision = ODTP_YMDHMSm;
+
         pauFields[iField].Date.Year = (GInt16)nYear;
         pauFields[iField].Date.Month = (GByte)nMonth;
         pauFields[iField].Date.Day = (GByte)nDay;
         pauFields[iField].Date.Hour = (GByte)nHour;
         pauFields[iField].Date.Minute = (GByte)nMinute;
-        pauFields[iField].Date.Second = (GByte)nSecond;
+        pauFields[iField].Date.Second = fSecond;
         pauFields[iField].Date.TZFlag = (GByte)nTZFlag;
+        pauFields[iField].Date.Precision = (GByte)ePrecision;
     }
 }
 
@@ -3456,6 +3573,43 @@ void OGR_F_SetFieldDateTime( OGRFeatureH hFeat, int iField,
 
     ((OGRFeature *)hFeat)->SetField( iField, nYear, nMonth, nDay,
                                      nHour, nMinute, nSecond, nTZFlag );
+}
+
+/************************************************************************/
+/*                      OGR_F_SetFieldDateTimeEx()                      */
+/************************************************************************/
+
+/**
+ * \brief Set field to datetime.
+ *
+ * This method currently only has an effect for OFTDate, OFTTime and OFTDateTime
+ * fields.
+ *
+ * @param hFeat handle to the feature that owned the field.
+ * @param iField the field to set, from 0 to GetFieldCount()-1.
+ * @param nYear (including century)
+ * @param nMonth (1-12)
+ * @param nDay (1-31)
+ * @param nHour (0-23)
+ * @param nMinute (0-59)
+ * @param fSecond (0-59)
+ * @param nTZFlag (0=unknown, 1=localtime, 100=GMT, see data model for details)
+ * @param ePrecision Enumerated value that defines the precision of a DateTime
+ *
+ * @since GDAL 2.0
+ */
+
+void OGR_F_SetFieldDateTimeEx( OGRFeatureH hFeat, int iField, 
+                             int nYear, int nMonth, int nDay,
+                             int nHour, int nMinute, float fSecond, 
+                             int nTZFlag, OGRDateTimePrecision ePrecision )
+
+
+{
+    VALIDATE_POINTER0( hFeat, "OGR_F_SetFieldDateTimeEx" );
+
+    ((OGRFeature *)hFeat)->SetField( iField, nYear, nMonth, nDay,
+                                     nHour, nMinute, fSecond, nTZFlag, ePrecision );
 }
 
 /************************************************************************/
@@ -4013,17 +4167,19 @@ OGRBoolean OGRFeature::Equal( OGRFeature * poFeature )
             case OFTDateTime:
             {
                 int nYear1, nMonth1, nDay1, nHour1,
-                    nMinute1, nSecond1, nTZFlag1;
+                    nMinute1, nTZFlag1;
                 int nYear2, nMonth2, nDay2, nHour2,
-                    nMinute2, nSecond2, nTZFlag2;
+                    nMinute2, nTZFlag2;
+                float fSecond1, fSecond2;
+                OGRDateTimePrecision ePrecision1, ePrecision2;
                 GetFieldAsDateTime(i, &nYear1, &nMonth1, &nDay1,
-                              &nHour1, &nMinute1, &nSecond1, &nTZFlag1);
+                              &nHour1, &nMinute1, &fSecond1, &nTZFlag1, &ePrecision1);
                 poFeature->GetFieldAsDateTime(i, &nYear2, &nMonth2, &nDay2,
-                              &nHour2, &nMinute2, &nSecond2, &nTZFlag2);
+                              &nHour2, &nMinute2, &fSecond2, &nTZFlag2, &ePrecision2);
 
                 if( !(nYear1 == nYear2 && nMonth1 == nMonth2 &&
                       nDay1 == nDay2 && nHour1 == nHour2 &&
-                      nMinute1 == nMinute2 && nSecond1 == nSecond2 &&
+                      nMinute1 == nMinute2 && fSecond1 == fSecond2 &&
                       nTZFlag1 == nTZFlag2) )
                     return FALSE;
                 break;
@@ -4847,8 +5003,9 @@ void OGRFeature::FillUnsetWithDefault(int bNotNullableOnly,
                                &nYear, &nMonth, &nDay,
                                &nHour, &nMinute, &fSecond) == 6 )
                     {
+                        OGRDateTimePrecision ePrecision = strchr(pszDefault, '.') ? ODTP_YMDHMSm : ODTP_YMDHMS;
                         SetField(i, nYear, nMonth, nDay, nHour, nMinute,
-                                 (int)(fSecond + 0.5), 100);
+                                 fSecond, 100, ePrecision );
                     }
                 }
             }

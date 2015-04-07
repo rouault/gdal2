@@ -553,7 +553,7 @@ int OGROpenFileGDBLayer::BuildLayerDefinition()
                                                  psDefault->Date.Day,
                                                  psDefault->Date.Hour,
                                                  psDefault->Date.Minute,
-                                                 psDefault->Date.Second));
+                                                 (int)psDefault->Date.Second));
         }
         m_poFeatureDefn->AddFieldDefn(&oFieldDefn);
     }
@@ -890,6 +890,7 @@ int FillTargetValueFromSrcExpr( OGRFieldDefn* poFieldDefn,
                     poTargetValue->Date.Minute = (GByte)nMin;
                     poTargetValue->Date.Second = (GByte)nSec;
                     poTargetValue->Date.TZFlag = 0;
+                    poTargetValue->Date.Precision = ODTP_YMDHMS;
                 }
                 else
                     return FALSE;

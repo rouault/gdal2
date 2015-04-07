@@ -31,6 +31,7 @@
 #include "ogr_geopackage.h"
 #include "ogrgeopackageutility.h"
 #include "cpl_time.h"
+#include "ogr_p.h"
 
 //----------------------------------------------------------------------
 // SaveExtent()
@@ -233,15 +234,23 @@ OGRErr OGRGeoPackageTableLayer::FeatureBindParameters( OGRFeature *poFeature,
                         poFeature->GetFieldAsDateTime(i, &nYear, &nMonth, &nDay, &nHour, &nMinute, &nSecond, &nTZFlag);
                         snprintf(szVal, sizeof(szVal), "%04d-%02d-%02d", nYear, nMonth, nDay);
                         pszVal = szVal;
+                        nValLengthBytes = (int)strlen(pszVal);
                     }
                     else if( poFieldDefn->GetType() == OFTDateTime )
                     {
-                        poFeature->GetFieldAsDateTime(i, &nYear, &nMonth, &nDay, &nHour, &nMinute, &nSecond, &nTZFlag);
+                        float fSecond;
+                        OGRDateTimePrecision ePrecision;
+                        poFeature->GetFieldAsDateTime(i, &nYear, &nMonth, &nDay, &nHour, &nMinute, &fSecond, &nTZFlag, &ePrecision);
                         if( nTZFlag == 0 || nTZFlag == 100 )
                         {
-                            snprintf(szVal, sizeof(szVal), "%04d-%02d-%02dT%02d:%02d:%02dZ",
-                                     nYear, nMonth, nDay, nHour, nMinute, nSecond);
+                            if( ePrecision == ODTP_YMDHMSm )
+                                snprintf(szVal, sizeof(szVal), "%04d-%02d-%02dT%02d:%02d:%06.3fZ",
+                                     nYear, nMonth, nDay, nHour, nMinute, fSecond);
+                            else
+                                snprintf(szVal, sizeof(szVal), "%04d-%02d-%02dT%02d:%02d:%02dZ",
+                                     nYear, nMonth, nDay, nHour, nMinute, (int)fSecond);
                             pszVal = szVal;
+                            nValLengthBytes = (int)strlen(pszVal);
                         }
                     }
                     else if( poFieldDefn->GetType() == OFTString &&
@@ -734,11 +743,11 @@ OGRErr OGRGeoPackageTableLayer::ReadTableDefinition(int bIsSpatial)
                              sscanf(pszDefault, "'%d-%d-%dT%d:%d:%fZ'", &nYear, &nMonth, &nDay,
                                         &nHour, &nMinute, &fSecond) == 6 )
                     {
-                        if( fabs(fSecond - (int)(fSecond+0.5)) < 1e-3 )
+                        if( strchr(pszDefault, '.') == NULL )
                             oField.SetDefault(CPLSPrintf("'%04d/%02d/%02d %02d:%02d:%02d'",
                                                       nYear, nMonth, nDay, nHour, nMinute, (int)(fSecond+0.5)));
                         else
-                            oField.SetDefault(CPLSPrintf("'%04d/%02d/%02d %02d:%02d:%02.3f'",
+                            oField.SetDefault(CPLSPrintf("'%04d/%02d/%02d %02d:%02d:%06.3f'",
                                                             nYear, nMonth, nDay, nHour, nMinute, fSecond));
                     }
                     else if( (oField.GetType() == OFTDate || oField.GetType() == OFTDateTime) &&
@@ -932,11 +941,11 @@ OGRErr OGRGeoPackageTableLayer::CreateField( OGRFieldDefn *poField,
                 sscanf(poField->GetDefault(), "'%d/%d/%d %d:%d:%f'", &nYear, &nMonth, &nDay,
                                         &nHour, &nMinute, &fSecond) == 6 )
             {
-                if( fabs(fSecond - (int)(fSecond+0.5)) < 1e-3 )
+                if( strchr(poField->GetDefault(), '.') == NULL )
                     osCommand += CPLSPrintf("'%04d-%02d-%02dT%02d:%02d:%02dZ'",
                                         nYear, nMonth, nDay, nHour, nMinute, (int)(fSecond+0.5));
                 else
-                    osCommand += CPLSPrintf("'%04d-%02d-%02dT%02d:%02d:%02.3fZ'",
+                    osCommand += CPLSPrintf("'%04d-%02d-%02dT%02d:%02d:%06.3fZ'",
                                             nYear, nMonth, nDay, nHour, nMinute, fSecond);
             }
             else
@@ -2410,18 +2419,11 @@ OGRErr OGRGeoPackageTableLayer::RunDeferredCreationIfNecessary()
               EQUALN(pszDefault+1, " strftime", strlen(" strftime"))))) )
         {
             osCommand += " DEFAULT ";
-            int nYear, nMonth, nDay, nHour, nMinute;
-            float fSecond;
+            OGRField sField;
             if( poFieldDefn->GetType() == OFTDateTime &&
-                sscanf(pszDefault, "'%d/%d/%d %d:%d:%f'", &nYear, &nMonth, &nDay,
-                                        &nHour, &nMinute, &fSecond) == 6 )
+                OGRParseDate(pszDefault, &sField, 0) )
             {
-                if( fabs(fSecond - (int)(fSecond+0.5)) < 1e-3 )
-                    osCommand += CPLSPrintf("'%04d-%02d-%02dT%02d:%02d:%02dZ'",
-                                        nYear, nMonth, nDay, nHour, nMinute, (int)(fSecond+0.5));
-                else
-                    osCommand += CPLSPrintf("'%04d-%02d-%02dT%02d:%02d:%02.3fZ'",
-                                            nYear, nMonth, nDay, nHour, nMinute, fSecond);
+                osCommand += OGRGetXMLDateTime(&sField);
             }
             /* Make sure CURRENT_TIMESTAMP is translated into appropriate format for GeoPackage */
             else if( poFieldDefn->GetType() == OFTDateTime &&

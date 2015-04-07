@@ -1349,7 +1349,7 @@ def ogr_csv_32():
     col_type = [ ogr.OFTString, ogr.OFTReal, ogr.OFTReal, ogr.OFTReal, ogr.OFTInteger, ogr.OFTInteger,
                  ogr.OFTDateTime, ogr.OFTDateTime, ogr.OFTDateTime, ogr.OFTDate, ogr.OFTTime,
                  ogr.OFTString, ogr.OFTString, ogr.OFTString, ogr.OFTString, ogr.OFTString, ogr.OFTString, ogr.OFTString, ogr.OFTString, ogr.OFTDateTime ]
-    col_values = [ '', 1.5, 1, 1.5, 2, None, '2014/09/27 19:01:00', '2014/09/27 00:00:00', '2014/09/27 20:00:00',
+    col_values = [ '', 1.5, 1, 1.5, 2, None, '2014/09/27 19:01:00', '2014/09/27', '2014/09/27 20:00:00',
                    '2014/09/27', '12:34:56', 'a', 'a', '1', '1', '1.5', '2014-09-27 19:01:00', '2014-09-27', '19:01:00', '2014/09/27 00:00:00+00' ]
     for i in range(lyr.GetLayerDefn().GetFieldCount()):
         if lyr.GetLayerDefn().GetFieldDefn(i).GetType() != col_type[i] or \
@@ -1419,7 +1419,7 @@ def ogr_csv_32():
     lyr = ds.GetLayer(0)
     f = lyr.GetNextFeature()
     col_values = [ '', 1.5, '1.5', 1, '1', 1.5, '1.5', 2, '2', None, None, \
-                   '2014/09/27 19:01:00', '2014-09-27 19:01:00', '2014/09/27 00:00:00', '2014-09-27', '2014/09/27 20:00:00', '2014-09-27 20:00:00',
+                   '2014/09/27 19:01:00', '2014-09-27 19:01:00', '2014/09/27', '2014-09-27', '2014/09/27 20:00:00', '2014-09-27 20:00:00',
                    '2014/09/27', '2014-09-27', '12:34:56', '12:34:56', 'a', 'a', '1', '1', '1.5', '2014-09-27 19:01:00', '2014-09-27', '19:01:00',
                    '2014/09/27 00:00:00+00', '2014-09-27T00:00:00Z' ]
 

@@ -135,6 +135,18 @@ typedef struct
     int               nBeginDepth;
 } HandlerState;
 
+class XLSXFieldTypeExtended
+{
+public:
+    OGRFieldType      eType;
+    OGRDateTimePrecision ePrecision;
+
+                    XLSXFieldTypeExtended() : eType(OFTMaxType), ePrecision(ODTP_Undefined) {}
+                    XLSXFieldTypeExtended(OGRFieldType eType,
+                                          OGRDateTimePrecision ePrecision = ODTP_Undefined) :
+                                    eType(eType), ePrecision(ePrecision) {}
+};
+
 class OGRXLSXDataSource : public OGRDataSource
 {
     char*               pszName;
@@ -176,8 +188,8 @@ class OGRXLSXDataSource : public OGRDataSource
     std::vector<std::string>  apoCurLineTypes;
 
     int                        bInCellXFS;
-    std::map<int,OGRFieldType> apoMapStyleFormats;
-    std::vector<OGRFieldType>  apoStyles;
+    std::map<int,XLSXFieldTypeExtended> apoMapStyleFormats;
+    std::vector<XLSXFieldTypeExtended>  apoStyles;
 
     void                PushState(HandlerStateEnum eVal);
     void                startElementDefault(const char *pszName, const char **ppszAttr);

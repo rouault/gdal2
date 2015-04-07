@@ -102,7 +102,7 @@ def ogr_jml_1():
        feat.GetField('attr3') != 'baz' or \
        feat.GetField('int') != 123 or \
        feat.GetField('double') != 1.23 or \
-       feat.GetFieldAsString('date') != '2014/10/18 00:00:00' or \
+       feat.GetFieldAsString('date') != '2014/10/18' or \
        feat.GetFieldAsString('datetime') != '2014/10/18 21:36:45' or \
        feat.GetField('R_G_B') != '0000FF' or \
        feat.IsFieldSet('not_ignored') or \
@@ -113,7 +113,7 @@ def ogr_jml_1():
             return 'fail'
 
     feat = lyr.GetNextFeature()
-    if feat.GetFieldAsString('datetime') != '2014/10/18 21:36:45+02' or \
+    if feat.GetFieldAsString('datetime') != '2014/10/18 21:36:45.000+02' or \
        feat.GetField('R_G_B') != 'FF00FF' or \
        feat.GetStyleString() != 'PEN(c:#FF00FF)' or \
        feat.GetGeometryRef().ExportToWkt() != 'POINT (-1 -1)':

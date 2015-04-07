@@ -539,11 +539,11 @@ int OGRGeneralCmdLineProcessor( int nArgc, char ***ppapszArgv, int nOptions )
  * into the OGRField.Date format suitable for use with OGR.  Generally 
  * speaking this function is expecting values like:
  * 
- *   YYYY-MM-DD HH:MM:SS+nn
- *   or YYYY-MM-DDTHH:MM:SSZ (ISO 8601 format)
+ *   YYYY-MM-DD HH:MM:SS[.sss]+nn
+ *   or YYYY-MM-DDTHH:MM:SS[.sss]Z (ISO 8601 format)
  *
  * The seconds may also have a decimal portion (which is ignored).  And
- * just dates (YYYY-MM-DD) or just times (HH:MM:SS) are also supported. 
+ * just dates (YYYY-MM-DD) or just times (HH:MM:SS[.sss]) are also supported. 
  * The date may also be in YYYY/MM/DD format.  If the year is less than 100
  * and greater than 30 a "1900" century value will be set.  If it is less than
  * 30 and greater than -1 then a "2000" century value will be set.  In 
@@ -574,6 +574,7 @@ int OGRParseDate( const char *pszInput,
     psField->Date.Minute = 0;
     psField->Date.Second = 0;
     psField->Date.TZFlag = 0;
+    psField->Date.Precision = ODTP_YMD;
 
 /* -------------------------------------------------------------------- */
 /*      Do we have a date?                                              */
@@ -636,6 +637,8 @@ int OGRParseDate( const char *pszInput,
     
     if( strstr(pszInput,":") != NULL )
     {
+        psField->Date.Precision = ODTP_YMDHMS;
+
         psField->Date.Hour = (GByte)atoi(pszInput);
         if( psField->Date.Hour > 23 )
             return FALSE;
@@ -654,22 +657,28 @@ int OGRParseDate( const char *pszInput,
         while( *pszInput >= '0' && *pszInput <= '9' ) 
             pszInput++;
         if( *pszInput != ':' )
-            return FALSE;
+            psField->Date.Precision = ODTP_YMDHM;
         else 
-            pszInput++;
-
-        psField->Date.Second = (GByte)atoi(pszInput);
-        if( psField->Date.Second > 59 )
-            return FALSE;
-
-        while( (*pszInput >= '0' && *pszInput <= '9')
-               || *pszInput == '.' )
-            pszInput++;
-
-        /* If ISO 8601 format */
-        if( *pszInput == 'Z' )
         {
-            psField->Date.TZFlag = 100;
+            pszInput++;
+
+            psField->Date.Second = (float)CPLAtof(pszInput);
+            if( psField->Date.Second > 61 )
+                return FALSE;
+
+            while( (*pszInput >= '0' && *pszInput <= '9')
+                || *pszInput == '.' )
+            {
+                if( *pszInput == '.' )
+                    psField->Date.Precision = ODTP_YMDHMSm;
+                pszInput++;
+            }
+
+            /* If ISO 8601 format */
+            if( *pszInput == 'Z' )
+            {
+                psField->Date.TZFlag = 100;
+            }
         }
 
         bGotSomething = TRUE;
@@ -733,53 +742,107 @@ int OGRParseDate( const char *pszInput,
 /************************************************************************/
 
 int OGRParseXMLDateTime( const char* pszXMLDateTime,
-                               int *pnYear, int *pnMonth, int *pnDay,
-                               int *pnHour, int *pnMinute, float* pfSecond, int *pnTZ)
+                         OGRField* psField)
 {
     int year = 0, month = 0, day = 0, hour = 0, minute = 0, TZHour, TZMinute;
+    int nSecond = 0;
     float second = 0;
     char c;
     int TZ = 0;
     int bRet = FALSE;
+    OGRDateTimePrecision ePrecision = ODTP_Undefined;
 
     /* Date is expressed as a UTC date */
-    if (sscanf(pszXMLDateTime, "%04d-%02d-%02dT%02d:%02d:%f%c",
+    if (sscanf(pszXMLDateTime, "%04d-%02d-%02dT%02d:%02d:%02d%c",
+                &year, &month, &day, &hour, &minute, &nSecond, &c) == 7 && c == 'Z')
+    {
+        TZ = 100;
+        second = nSecond;
+        ePrecision = ODTP_YMDHMS;
+        bRet = TRUE;
+    }
+    else if (sscanf(pszXMLDateTime, "%04d-%02d-%02dT%02d:%02d:%f%c",
                 &year, &month, &day, &hour, &minute, &second, &c) == 7 && c == 'Z')
     {
         TZ = 100;
+        ePrecision = ODTP_YMDHMSm;
         bRet = TRUE;
     }
     /* Date is expressed as a UTC date, with a timezone */
+    else if (sscanf(pszXMLDateTime, "%04d-%02d-%02dT%02d:%02d:%02d%c%02d:%02d",
+                &year, &month, &day, &hour, &minute, &nSecond, &c, &TZHour, &TZMinute) == 9 &&
+                (c == '+' || c == '-'))
+    {
+        TZ = 100 + ((c == '+') ? 1 : -1) * ((TZHour * 60 + TZMinute) / 15);
+        second = nSecond;
+        ePrecision = ODTP_YMDHMS;
+        bRet = TRUE;
+    }
     else if (sscanf(pszXMLDateTime, "%04d-%02d-%02dT%02d:%02d:%f%c%02d:%02d",
                 &year, &month, &day, &hour, &minute, &second, &c, &TZHour, &TZMinute) == 9 &&
                 (c == '+' || c == '-'))
     {
         TZ = 100 + ((c == '+') ? 1 : -1) * ((TZHour * 60 + TZMinute) / 15);
+        ePrecision = ODTP_YMDHMSm;
         bRet = TRUE;
     }
     /* Date is expressed into an unknown timezone */
-    else if (sscanf(pszXMLDateTime, "%04d-%02d-%02dT%02d:%02d:%f",
+    else if (sscanf(pszXMLDateTime, "%04d-%02d-%02dT%02d:%02d:%02d",
+                    &year, &month, &day, &hour, &minute, &nSecond) == 6 &&
+             pszXMLDateTime[19] != '.' )
+    {
+        TZ = 0;
+        second = nSecond;
+        ePrecision = ODTP_YMDHMS;
+        bRet = TRUE;
+    }else if (sscanf(pszXMLDateTime, "%04d-%02d-%02dT%02d:%02d:%f",
                     &year, &month, &day, &hour, &minute, &second) == 6)
     {
         TZ = 0;
+        ePrecision = ODTP_YMDHMSm;
+        bRet = TRUE;
+    }
+    /* no seconds */
+    else if (sscanf(pszXMLDateTime, "%04d-%02d-%02dT%02d:%02d%c",
+                    &year, &month, &day, &hour, &minute, &c) == 6 && c == 'Z' )
+    {
+        TZ = 100;
+        ePrecision = ODTP_YMDHM;
+        bRet = TRUE;
+    }
+    else if (sscanf(pszXMLDateTime, "%04d-%02d-%02dT%02d:%02d%c%02d:%02d",
+                    &year, &month, &day, &hour, &minute, &c, &TZHour, &TZMinute) == 8 &&
+             (c == '+' || c == '-'))
+    {
+        TZ = 100 + ((c == '+') ? 1 : -1) * ((TZHour * 60 + TZMinute) / 15);
+        ePrecision = ODTP_YMDHM;
+        bRet = TRUE;
+    }
+    else if (sscanf(pszXMLDateTime, "%04d-%02d-%02dT%02d:%02d",
+                    &year, &month, &day, &hour, &minute) == 5 )
+    {
+        TZ = 0;
+        ePrecision = ODTP_YMDHM;
         bRet = TRUE;
     }
     /* Date is expressed as a UTC date with only year:month:day */
     else if (sscanf(pszXMLDateTime, "%04d-%02d-%02d", &year, &month, &day) == 3)
     {
         TZ = 0;
+        ePrecision = ODTP_YMD;
         bRet = TRUE;
     }
 
     if (bRet)
     {
-        if (pnYear) *pnYear = year;
-        if (pnMonth) *pnMonth = month;
-        if (pnDay) *pnDay = day;
-        if (pnHour) *pnHour = hour;
-        if (pnMinute) *pnMinute = minute;
-        if (pfSecond) *pfSecond = second;
-        if (pnTZ) *pnTZ = TZ;
+        psField->Date.Year = (GInt16)year;
+        psField->Date.Month = (GByte)month;
+        psField->Date.Day = (GByte)day;
+        psField->Date.Hour = (GByte)hour;
+        psField->Date.Minute = (GByte)minute;
+        psField->Date.Second = second;
+        psField->Date.TZFlag = (GByte)TZ;
+        psField->Date.Precision = (OGRDateTimePrecision) ePrecision;
     }
 
     return bRet;
@@ -792,9 +855,7 @@ int OGRParseXMLDateTime( const char* pszXMLDateTime,
 static const char* aszMonthStr[] = { "Jan", "Feb", "Mar", "Apr", "May", "Jun",
                                      "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
 
-int OGRParseRFC822DateTime( const char* pszRFC822DateTime,
-                                  int *pnYear, int *pnMonth, int *pnDay,
-                                  int *pnHour, int *pnMinute, int *pnSecond, int *pnTZ)
+int OGRParseRFC822DateTime( const char* pszRFC822DateTime, OGRField* psField )
 {
     /* Following http://asg.web.cmu.edu/rfc/rfc822.html#sec-5 : [Fri,] 28 Dec 2007 05:24[:17] GMT */
     char** papszTokens = CSLTokenizeStringComplex( pszRFC822DateTime, " ,:", TRUE, FALSE );
@@ -803,6 +864,7 @@ int OGRParseRFC822DateTime( const char* pszRFC822DateTime,
     int nTokens = CSLCount(papszTokens);
     if (nTokens >= 6)
     {
+        OGRDateTimePrecision ePrecision = ODTP_YMDHM;
         if ( ! ((*papszVal)[0] >= '0' && (*papszVal)[0] <= '9') )
         {
             /* Ignore day of week */
@@ -837,6 +899,7 @@ int OGRParseRFC822DateTime( const char* pszRFC822DateTime,
         int second = 0;
         if (*papszVal != NULL && (*papszVal)[0] >= '0' && (*papszVal)[0] <= '9')
         {
+            ePrecision = ODTP_YMDHMS;
             second = atoi(*papszVal);
             papszVal ++;
         }
@@ -877,13 +940,14 @@ int OGRParseRFC822DateTime( const char* pszRFC822DateTime,
                 }
             }
 
-            if (pnYear) *pnYear = year;
-            if (pnMonth) *pnMonth = month;
-            if (pnDay) *pnDay = day;
-            if (pnHour) *pnHour = hour;
-            if (pnMinute) *pnMinute = minute;
-            if (pnSecond) *pnSecond = second;
-            if (pnTZ) *pnTZ = TZ;
+            psField->Date.Year = (GInt16)year;
+            psField->Date.Month = (GByte)month;
+            psField->Date.Day = (GByte)day;
+            psField->Date.Hour = (GByte)hour;
+            psField->Date.Minute = (GByte)minute;
+            psField->Date.Second = second;
+            psField->Date.TZFlag = (GByte)TZ;
+            psField->Date.Precision = (GByte)ePrecision;
         }
     }
     CSLDestroy(papszTokens);
@@ -924,16 +988,19 @@ int OGRGetDayOfWeek(int day, int month, int year)
 /*                         OGRGetRFC822DateTime()                       */
 /************************************************************************/
 
-char* OGRGetRFC822DateTime(int year, int month, int day, int hour, int minute, int second, int TZFlag)
+char* OGRGetRFC822DateTime(const OGRField* psField)
 {
     char* pszTZ = NULL;
     const char* aszDayOfWeek[] = { "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun" };
 
-    int dayofweek = OGRGetDayOfWeek(day, month, year);
+    int dayofweek = OGRGetDayOfWeek(psField->Date.Day, psField->Date.Month,
+                                    psField->Date.Year);
 
+    int month = psField->Date.Month;
     if (month < 1 || month > 12)
         month = 1;
 
+    int TZFlag = psField->Date.TZFlag;
     if (TZFlag == 0 || TZFlag == 100)
     {
         pszTZ = CPLStrdup("GMT");
@@ -947,7 +1014,9 @@ char* OGRGetRFC822DateTime(int year, int month, int day, int hour, int minute, i
                                         TZHour, TZMinute));
     }
     char* pszRet = CPLStrdup(CPLSPrintf("%s, %02d %s %04d %02d:%02d:%02d %s",
-                     aszDayOfWeek[dayofweek], day, aszMonthStr[month - 1], year, hour, minute, second, pszTZ));
+                     aszDayOfWeek[dayofweek], psField->Date.Day, aszMonthStr[month - 1],
+                     psField->Date.Year, psField->Date.Hour,
+                     psField->Date.Minute, (int)psField->Date.Second, pszTZ));
     CPLFree(pszTZ);
     return pszRet;
 }
@@ -956,22 +1025,42 @@ char* OGRGetRFC822DateTime(int year, int month, int day, int hour, int minute, i
 /*                            OGRGetXMLDateTime()                       */
 /************************************************************************/
 
-char* OGRGetXMLDateTime(int year, int month, int day, int hour, int minute, int second, int TZFlag)
+char* OGRGetXMLDateTime(const OGRField* psField)
 {
     char* pszRet;
+    int year = psField->Date.Year;
+    int month = psField->Date.Month;
+    int day = psField->Date.Day;
+    int hour = psField->Date.Hour;
+    int minute = psField->Date.Minute;
+    float second = psField->Date.Second;
+    OGRDateTimePrecision ePrecision = (OGRDateTimePrecision)psField->Date.Precision;
+    int TZFlag = psField->Date.TZFlag;
     if (TZFlag == 0 || TZFlag == 100)
     {
-        pszRet = CPLStrdup(CPLSPrintf("%04d-%02d-%02dT%02d:%02d:%02dZ",
-                           year, month, day, hour, minute, second));
+        if( ePrecision == ODTP_YMDHMSm )
+            pszRet = CPLStrdup(CPLSPrintf("%04d-%02d-%02dT%02d:%02d:%06.3fZ",
+                                    year, month, day, hour, minute, second));
+        else if( ePrecision == ODTP_YMDHM )
+            pszRet = CPLStrdup(CPLSPrintf("%04d-%02d-%02dT%02d:%02dZ",
+                                    year, month, day, hour, minute));
+        else
+            pszRet = CPLStrdup(CPLSPrintf("%04d-%02d-%02dT%02d:%02d:%02dZ",
+                                    year, month, day, hour, minute, (int)second));
     }
     else
     {
         int TZOffset = ABS(TZFlag - 100) * 15;
         int TZHour = TZOffset / 60;
         int TZMinute = TZOffset - TZHour * 60;
-        pszRet = CPLStrdup(CPLSPrintf("%04d-%02d-%02dT%02d:%02d:%02d%c%02d:%02d",
+        if( ePrecision == ODTP_YMDHMSm )
+            pszRet = CPLStrdup(CPLSPrintf("%04d-%02d-%02dT%02d:%02d:%06.3f%c%02d:%02d",
                            year, month, day, hour, minute, second,
                            (TZFlag > 100) ? '+' : '-', TZHour, TZMinute));
+        else
+            pszRet = CPLStrdup(CPLSPrintf("%04d-%02d-%02dT%02d:%02d:%02d%c%02d:%02d",
+                            year, month, day, hour, minute, (int)second,
+                            (TZFlag > 100) ? '+' : '-', TZHour, TZMinute));
     }
     return pszRet;
 }

@@ -1213,6 +1213,7 @@ int FileGDBDoubleDateToOGRDate(double dfVal, OGRField* psField)
     psField->Date.Minute = (GByte)brokendowntime.tm_min;
     psField->Date.Second = (GByte)brokendowntime.tm_sec;
     psField->Date.TZFlag = 0;
+    psField->Date.Precision = ODTP_YMDHMS;
 
     return TRUE;
 }

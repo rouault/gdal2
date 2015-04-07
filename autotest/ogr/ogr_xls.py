@@ -103,7 +103,7 @@ def ogr_xls_1():
        feat.GetFieldAsDouble(1) != 1.0 or \
        feat.IsFieldSet(2) or \
        feat.GetFieldAsString(3) != '1980/01/01' or \
-       feat.GetFieldAsString(4) != '1980/01/01 00:00:00':
+       feat.GetFieldAsString(4) != '1980/01/01':
         gdaltest.post_reason('fail')
         feat.DumpReadable()
         return 'fail'

@@ -130,9 +130,9 @@ def ogr_sql_sqlite_1():
            feat.GetField('doublefield') != 2.34 or \
            feat.GetField('strfield') != 'foo' or \
            feat.GetField('binaryfield') != '0001FF' or \
-           feat.GetField('datetimefield') != '2012/08/23 21:24:00' or \
+           feat.GetField('datetimefield') != '2012/08/23 21:24' or \
            feat.GetField('datefield') != '2012/08/23' or \
-           feat.GetField('timefield') != '21:24:00' or \
+           feat.GetField('timefield') != '21:24' or \
            feat.GetField('from') != 'from_val':
             gdaltest.post_reason('failure')
             feat.DumpReadable()
@@ -149,9 +149,9 @@ def ogr_sql_sqlite_1():
            feat.GetField('int64field') != 234567890123 or \
            feat.GetField('doublefield') != 3.45 or \
            feat.GetField('strfield') != 'bar' or \
-           feat.GetField('datetimefield') != '2012/08/23 21:24:00' or \
+           feat.GetField('datetimefield') != '2012/08/23 21:24' or \
            feat.GetField('datefield') != '2012/08/23' or \
-           feat.GetField('timefield') != '12:34:00':
+           feat.GetField('timefield') != '12:34':
             gdaltest.post_reason('failure')
             feat.DumpReadable()
             return 'fail'
@@ -187,9 +187,9 @@ def ogr_sql_sqlite_1():
            feat.GetField('nullablefield') is not None or \
            feat.GetField('doublefield') != 3.45 or \
            feat.GetField('strfield') != 'bar' or \
-           feat.GetField('datetimefield') != '2012/08/23 21:24:00' or \
+           feat.GetField('datetimefield') != '2012/08/23 21:24' or \
            feat.GetField('datefield') != '2012/08/23' or \
-           feat.GetField('timefield') != '12:34:00' or \
+           feat.GetField('timefield') != '12:34' or \
            feat.GetField('boolfield') != 1 or \
            feat.GetField('int16field') != -32768 or \
            feat.GetField('float32field') != 1.23 or \
@@ -1648,7 +1648,6 @@ def ogr_sql_sqlite_27():
     if lyr.GetLayerDefn().GetFieldDefn(1).GetType() != ogr.OFTDateTime:
         gdaltest.post_reason('fail')
         return 'fail'
-
     tr = ogrtest.check_features_against_list( lyr, 'MIN(DATE)', ['2013/01/01 00:00:00'] )
     lyr.ResetReading()
     tr2 = ogrtest.check_features_against_list( lyr, 'MAX(DATE)', ['2013/12/31 23:59:59'] )
