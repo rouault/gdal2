@@ -395,7 +395,7 @@ class HFARasterBand : public GDALPamRasterBand
                                    GDALProgressFunc, void * );
 
     virtual CPLErr GetDefaultHistogram( double *pdfMin, double *pdfMax,
-                                        int *pnBuckets, int ** ppanHistogram,
+                                        int *pnBuckets, GUIntBig ** ppanHistogram,
                                         int bForce,
                                         GDALProgressFunc, void *pProgressData);
 
@@ -2971,7 +2971,7 @@ CPLErr HFARasterBand::BuildOverviews( const char *pszResampling,
 
 CPLErr 
 HFARasterBand::GetDefaultHistogram( double *pdfMin, double *pdfMax,
-                                    int *pnBuckets, int ** ppanHistogram,
+                                    int *pnBuckets, GUIntBig ** ppanHistogram,
                                     int bForce,
                                     GDALProgressFunc pfnProgress, 
                                     void *pProgressData)
@@ -2996,7 +2996,7 @@ HFARasterBand::GetDefaultHistogram( double *pdfMin, double *pdfMax,
                 (*pnBuckets)++;
         }
 
-        *ppanHistogram = (int *) CPLCalloc(sizeof(int),*pnBuckets);
+        *ppanHistogram = (GUIntBig *) CPLCalloc(sizeof(GUIntBig),*pnBuckets);
 
         pszNextBin = pszBinValues;
         for( i = 0; i < *pnBuckets; i++ )
@@ -5993,7 +5993,8 @@ HFADataset::CreateCopy( const char * pszFilename, GDALDataset *poSrcDS,
             // Histogram
             // -----------------------------------------------------------
 
-            int nBuckets, *panHistogram = NULL;
+            int nBuckets;
+            GUIntBig *panHistogram = NULL;
 
             if( poSrcBand->GetDefaultHistogram( &dfMin, &dfMax, 
                                                 &nBuckets, &panHistogram, 
@@ -6020,7 +6021,7 @@ HFADataset::CreateCopy( const char * pszFilename, GDALDataset *poSrcDS,
                 {
                     
                     strcat( pszBinValues+nBinValuesLen, 
-                            osValue.Printf( "%d", panHistogram[iBin]) );
+                            osValue.Printf( CPL_FRMT_GUIB, panHistogram[iBin]) );
                     strcat( pszBinValues+nBinValuesLen, "|" );
                     nBinValuesLen += strlen(pszBinValues+nBinValuesLen);
                 }

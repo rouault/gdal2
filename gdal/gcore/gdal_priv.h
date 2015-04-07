@@ -730,16 +730,16 @@ class CPL_DLL GDALRasterBand : public GDALMajorObject
                                GDALDataType eDT, char **papszOptions );
 
     virtual CPLErr  GetHistogram( double dfMin, double dfMax,
-                          int nBuckets, int * panHistogram,
+                          int nBuckets, GUIntBig * panHistogram,
                           int bIncludeOutOfRange, int bApproxOK,
                           GDALProgressFunc, void *pProgressData );
 
     virtual CPLErr GetDefaultHistogram( double *pdfMin, double *pdfMax,
-                                        int *pnBuckets, int ** ppanHistogram,
+                                        int *pnBuckets, GUIntBig ** ppanHistogram,
                                         int bForce,
                                         GDALProgressFunc, void *pProgressData);
     virtual CPLErr SetDefaultHistogram( double dfMin, double dfMax,
-                                        int nBuckets, int *panHistogram );
+                                        int nBuckets, GUIntBig *panHistogram );
 
     virtual GDALRasterAttributeTable *GetDefaultRAT();
     virtual CPLErr SetDefaultRAT( const GDALRasterAttributeTable * );
