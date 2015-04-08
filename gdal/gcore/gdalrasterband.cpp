@@ -2224,7 +2224,8 @@ GDALRasterBandH CPL_STDCALL GDALGetOverview( GDALRasterBandH hBand, int i )
  * The same band as was passed in will be returned if it has not overviews,
  * or if none of the overviews have enough samples.
  *
- * This method is the same as the C function GDALGetRasterSampleOverview().
+ * This method is the same as the C functions GDALGetRasterSampleOverview()
+ * and GDALGetRasterSampleOverviewEx().
  *
  * @param nDesiredSamples the returned band will have at least this many 
  * pixels.
@@ -2232,7 +2233,7 @@ GDALRasterBandH CPL_STDCALL GDALGetOverview( GDALRasterBandH hBand, int i )
  * @return optimal overview or the band itself. 
  */
 
-GDALRasterBand *GDALRasterBand::GetRasterSampleOverview( int nDesiredSamples )
+GDALRasterBand *GDALRasterBand::GetRasterSampleOverview( GUIntBig nDesiredSamples )
 
 {
     double dfBestSamples = 0; 
@@ -2267,7 +2268,11 @@ GDALRasterBand *GDALRasterBand::GetRasterSampleOverview( int nDesiredSamples )
 /**
  * \brief Fetch best sampling overview.
  *
+ * Use GDALGetRasterSampleOverviewEx() to be able to specify more than 2
+ * billion samples.
+ *
  * @see GDALRasterBand::GetRasterSampleOverview()
+ * @see GDALGetRasterSampleOverviewEx()
  */
 
 GDALRasterBandH CPL_STDCALL 
@@ -2275,6 +2280,28 @@ GDALGetRasterSampleOverview( GDALRasterBandH hBand, int nDesiredSamples )
 
 {
     VALIDATE_POINTER1( hBand, "GDALGetRasterSampleOverview", NULL );
+
+    GDALRasterBand *poBand = static_cast<GDALRasterBand*>(hBand);
+    return (GDALRasterBandH)
+        poBand->GetRasterSampleOverview( nDesiredSamples < 0 ? 0 : (GUIntBig)nDesiredSamples );
+}
+
+/************************************************************************/
+/*                    GDALGetRasterSampleOverviewEx()                   */
+/************************************************************************/
+
+/**
+ * \brief Fetch best sampling overview.
+ *
+ * @see GDALRasterBand::GetRasterSampleOverview()
+ * @since GDAL 2.0
+ */
+
+GDALRasterBandH CPL_STDCALL 
+GDALGetRasterSampleOverviewEx( GDALRasterBandH hBand, GUIntBig nDesiredSamples )
+
+{
+    VALIDATE_POINTER1( hBand, "GDALGetRasterSampleOverviewEx", NULL );
 
     GDALRasterBand *poBand = static_cast<GDALRasterBand*>(hBand);
     return (GDALRasterBandH)

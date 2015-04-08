@@ -731,6 +731,8 @@ int CPL_DLL CPL_STDCALL
 GDALGetRandomRasterSample( GDALRasterBandH, int, float * );
 GDALRasterBandH CPL_DLL CPL_STDCALL
 GDALGetRasterSampleOverview( GDALRasterBandH, int );
+GDALRasterBandH CPL_DLL CPL_STDCALL
+GDALGetRasterSampleOverviewEx( GDALRasterBandH, GUIntBig );
 CPLErr CPL_DLL CPL_STDCALL GDALFillRaster( GDALRasterBandH hBand,
                           double dfRealValue, double dfImaginaryValue );
 CPLErr CPL_DLL CPL_STDCALL

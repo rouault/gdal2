@@ -642,7 +642,7 @@ class GDALClientRasterBand : public GDALPamRasterBand
                                 int nBufXSize, int nBufYSize, 
                                 GDALDataType eDT, char **papszOptions );
         /*
-        virtual GDALRasterBand *GetRasterSampleOverview( int );
+        virtual GDALRasterBand *GetRasterSampleOverview( GUIntBig );
         */
 
 };

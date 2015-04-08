@@ -154,7 +154,7 @@ class CPL_DLL GDALProxyRasterBand : public GDALRasterBand
         virtual int HasArbitraryOverviews();
         virtual int GetOverviewCount();
         virtual GDALRasterBand *GetOverview(int);
-        virtual GDALRasterBand *GetRasterSampleOverview( int );
+        virtual GDALRasterBand *GetRasterSampleOverview( GUIntBig );
         virtual CPLErr BuildOverviews( const char *, int, int *,
                                     GDALProgressFunc, void * );
 
@@ -298,7 +298,7 @@ class CPL_DLL GDALProxyPoolRasterBand : public GDALProxyRasterBand
         virtual const char *GetUnitType();
         virtual GDALColorTable *GetColorTable();
         virtual GDALRasterBand *GetOverview(int);
-        virtual GDALRasterBand *GetRasterSampleOverview( int nDesiredSamples); // TODO
+        virtual GDALRasterBand *GetRasterSampleOverview( GUIntBig nDesiredSamples); // TODO
         virtual GDALRasterBand *GetMaskBand();
 
 };

@@ -721,7 +721,7 @@ class CPL_DLL GDALRasterBand : public GDALMajorObject
     virtual int HasArbitraryOverviews();
     virtual int GetOverviewCount();
     virtual GDALRasterBand *GetOverview(int);
-    virtual GDALRasterBand *GetRasterSampleOverview( int );
+    virtual GDALRasterBand *GetRasterSampleOverview( GUIntBig );
     virtual CPLErr BuildOverviews( const char *, int, int *,
                                    GDALProgressFunc, void * );
 
