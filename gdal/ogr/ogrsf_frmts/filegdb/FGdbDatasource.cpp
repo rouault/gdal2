@@ -49,7 +49,8 @@ using std::wstring;
 FGdbDataSource::FGdbDataSource(FGdbDriver* poDriver, 
                                FGdbDatabaseConnection* pConnection):
 OGRDataSource(),
-m_poDriver(poDriver), m_pConnection(pConnection), m_pszName(0), m_pGeodatabase(NULL), m_bUpdate(false)
+m_poDriver(poDriver), m_pConnection(pConnection), m_pszName(0), m_pGeodatabase(NULL), m_bUpdate(false),
+m_poOpenFileGDBDrv(NULL)
 {
 }
 
@@ -59,19 +60,92 @@ m_poDriver(poDriver), m_pConnection(pConnection), m_pszName(0), m_pGeodatabase(N
 
 FGdbDataSource::~FGdbDataSource()
 {
-    CPLMutexHolderOptionalLockD(m_poDriver->GetMutex());
+    CPLMutexHolderOptionalLockD(m_poDriver ? m_poDriver->GetMutex() : NULL);
     
-    if( m_pConnection->IsLocked() )
+    if( m_pConnection && m_pConnection->IsLocked() )
         CommitTransaction();
 
     size_t count = m_layers.size();
     for(size_t i = 0; i < count; ++i )
-        delete m_layers[i];
+    {
+        m_layers[i]->CloseGDBObjects();
+    }
 
-    m_poDriver->Release( m_pszName );
+    FixIndexes();
+
+    if( m_poDriver )
+        m_poDriver->Release( m_pszName );
+
+    for(size_t i = 0; i < count; ++i )
+    {
+        delete m_layers[i];
+    }
+
     CPLFree( m_pszName );
 }
 
+/************************************************************************/
+/*                             FixIndexes()                             */
+/************************************************************************/
+
+int FGdbDataSource::FixIndexes()
+{
+    int bRet = TRUE;
+    if( m_pConnection && m_pConnection->IsFIDHackInProgress() )
+    {
+        m_pConnection->CloseGeodatabase();
+
+        char* apszDrivers[2];
+        apszDrivers[0] = (char*) "OpenFileGDB";
+        apszDrivers[1] = NULL;
+        const char* pszSystemCatalog = CPLFormFilename(m_pszName, "a00000001.gdbtable", NULL);
+        GDALDataset* poOpenFileGDBDS = (GDALDataset*)
+            GDALOpenEx(pszSystemCatalog, GDAL_OF_VECTOR,
+                       apszDrivers, NULL, NULL);
+        if( poOpenFileGDBDS == NULL || poOpenFileGDBDS->GetLayer(0) == NULL )
+        {
+            CPLError(CE_Failure, CPLE_AppDefined,
+                     "Cannot open %s with OpenFileGDB driver. Shouldn't happen. Some layers will be corrupted",
+                     pszSystemCatalog);
+            bRet = FALSE;
+        }
+        else
+        {
+            OGRLayer* poLayer = poOpenFileGDBDS->GetLayer(0);
+            size_t count = m_layers.size();
+            for(size_t i = 0; i < count; ++i )
+            {
+                if( m_layers[i]->m_oMapOGRFIDToFGDBFID.size() == 0)
+                    continue;
+                CPLString osFilter = "name = '";
+                osFilter += m_layers[i]->GetName();
+                osFilter += "'";
+                poLayer->SetAttributeFilter(osFilter);
+                poLayer->ResetReading();
+                OGRFeature* poF = poLayer->GetNextFeature();
+                if( poF == NULL )
+                {
+                    CPLError(CE_Failure, CPLE_AppDefined, "Cannot find filename for layer %s",
+                             m_layers[i]->GetName());
+                    bRet = FALSE;
+                }
+                else
+                {
+                    if( !m_layers[i]->EditIndexesForFIDHack(CPLFormFilename(m_pszName,
+                                        CPLSPrintf("a%08x", (int)poF->GetFID()), NULL)) )
+                    {
+                        bRet = FALSE;
+                    }
+                }
+                delete poF;
+            }
+        }
+        GDALClose(poOpenFileGDBDS);
+
+        m_pConnection->SetFIDHackInProgress(FALSE);
+    }
+    return bRet;
+}
 
 /************************************************************************/
 /*                                Open()                                */
@@ -82,6 +156,7 @@ int FGdbDataSource::Open(const char * pszNewName, int bUpdate )
     m_pszName = CPLStrdup( pszNewName );
     m_pGeodatabase = m_pConnection->GetGDB();
     m_bUpdate = bUpdate;
+    m_poOpenFileGDBDrv = (GDALDriver*) GDALGetDriverByName("OpenFileGDB");
 
     std::vector<std::wstring> typesRequested;
 
@@ -93,6 +168,72 @@ int FGdbDataSource::Open(const char * pszNewName, int bUpdate )
     bool rv = LoadLayers(L"\\");
 
     return rv;
+}
+
+/************************************************************************/
+/*                               ReOpen()                               */
+/************************************************************************/
+
+int FGdbDataSource::ReOpen()
+{
+    size_t count = m_layers.size();
+    for(size_t i = 0; i < count; ++i )
+    {
+        m_layers[i]->CloseGDBObjects();
+    }
+
+    int bRet = FixIndexes();
+    m_pGeodatabase = NULL;
+    if( !bRet )
+        return FALSE;
+
+    if( EQUAL(CPLGetConfigOption("FGDB_SIMUL_FAIL_REOPEN", ""), "CASE1") ||
+        !m_pConnection->OpenGeodatabase() )
+    {
+        CPLError(CE_Failure, CPLE_AppDefined, "Cannot reopen %s", m_pszName);
+        return FALSE;
+    }
+
+    FGdbDataSource* pDS = new FGdbDataSource(m_poDriver, m_pConnection);
+    if( EQUAL(CPLGetConfigOption("FGDB_SIMUL_FAIL_REOPEN", ""), "CASE2") ||
+        !pDS->Open(m_pszName, TRUE) )
+    {
+        pDS->m_poDriver = NULL;
+        delete pDS;
+        CPLError(CE_Failure, CPLE_AppDefined, "Cannot reopen %s", m_pszName);
+        return FALSE;
+    }
+    
+    bRet = TRUE;
+    for(size_t i = 0; i < count; ++i )
+    {
+        FGdbLayer* pNewLayer = (FGdbLayer*)pDS->GetLayerByName(m_layers[i]->GetName());
+        if( pNewLayer &&
+            !EQUAL(CPLGetConfigOption("FGDB_SIMUL_FAIL_REOPEN", ""), "CASE3") )
+        {
+            m_layers[i]->m_pTable = pNewLayer->m_pTable;
+            pNewLayer->m_pTable = NULL;
+            m_layers[i]->m_pEnumRows = pNewLayer->m_pEnumRows;
+            pNewLayer->m_pEnumRows = NULL;
+        }
+        else
+        {
+            CPLError(CE_Failure, CPLE_AppDefined, "Cannot reopen %s",
+                     m_layers[i]->GetName());
+            bRet = FALSE;
+        }
+        m_layers[i]->m_oMapOGRFIDToFGDBFID.clear();
+        m_layers[i]->m_oMapFGDBFIDToOGRFID.clear();
+    }
+    
+    m_pGeodatabase = pDS->m_pGeodatabase;
+    pDS->m_pGeodatabase = NULL;
+
+    pDS->m_poDriver = NULL;
+    pDS->m_pConnection = NULL;
+    delete pDS;
+    
+    return bRet;
 }
 
 /************************************************************************/
@@ -260,7 +401,7 @@ bool FGdbDataSource::LoadLayersOld(const std::vector<wstring> & datasetTypes,
 
 OGRErr FGdbDataSource::DeleteLayer( int iLayer )
 {
-    if( !m_bUpdate )
+    if( !m_bUpdate || m_pGeodatabase == NULL )
         return OGRERR_FAILURE;
 
     if( iLayer < 0 || iLayer >= static_cast<int>(m_layers.size()) )
@@ -338,7 +479,7 @@ FGdbDataSource::ICreateLayer( const char * pszLayerName,
                               OGRwkbGeometryType eType,
                               char ** papszOptions )
 {
-    if( !m_bUpdate )
+    if( !m_bUpdate || m_pGeodatabase == NULL )
         return NULL;
 
     FGdbLayer* pLayer = new FGdbLayer();
@@ -430,6 +571,11 @@ OGRLayer * FGdbDataSource::ExecuteSQL( const char *pszSQLCommand,
                                        const char *pszDialect )
 
 {
+    if( m_pConnection && m_pConnection->IsFIDHackInProgress() )
+        ReOpen();
+    if( m_pGeodatabase == NULL )
+         return NULL;
+
 /* -------------------------------------------------------------------- */
 /*      Use generic implementation for recognized dialects              */
 /* -------------------------------------------------------------------- */
@@ -483,9 +629,12 @@ OGRLayer * FGdbDataSource::ExecuteSQL( const char *pszSQLCommand,
                          "So for now, we use default OGR SQL engine. "
                          "Explicitely specify -dialect FileGDB\n"
                          "to use the SQL engine from the FileGDB SDK API");
-        return OGRDataSource::ExecuteSQL( pszSQLCommand,
+        OGRLayer* poLayer = OGRDataSource::ExecuteSQL( pszSQLCommand,
                                         poSpatialFilter,
                                         pszDialect );
+        if( poLayer )
+            m_oSetSelectLayers.insert(poLayer);
+        return poLayer;
     }
 
 /* -------------------------------------------------------------------- */
@@ -515,7 +664,9 @@ OGRLayer * FGdbDataSource::ExecuteSQL( const char *pszSQLCommand,
 
     if( EQUALN(pszSQLCommand, "SELECT ", 7) )
     {
-        return new FGdbResultLayer(this, pszSQLCommand, pEnumRows);
+        OGRLayer* poLayer = new FGdbResultLayer(this, pszSQLCommand, pEnumRows);
+        m_oSetSelectLayers.insert(poLayer);
+        return poLayer;
     }
     else
     {
@@ -530,5 +681,7 @@ OGRLayer * FGdbDataSource::ExecuteSQL( const char *pszSQLCommand,
 
 void FGdbDataSource::ReleaseResultSet( OGRLayer * poResultsSet )
 {
+    if( poResultsSet )
+        m_oSetSelectLayers.erase(poResultsSet);
     delete poResultsSet;
 }

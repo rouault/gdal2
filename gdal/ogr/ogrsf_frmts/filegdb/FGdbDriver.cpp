@@ -103,6 +103,13 @@ OGRDataSource *FGdbDriver::Open( const char* pszFilename, int bUpdate )
     FGdbDatabaseConnection* pConnection = oMapConnections[pszFilename];
     if( pConnection != NULL )
     {
+        if( pConnection->IsFIDHackInProgress() )
+        {
+            CPLError(CE_Failure, CPLE_AppDefined,
+                     "Cannot open geodatabase at the moment since it is in 'FID hack mode'");
+            return NULL;
+        }
+
         pGeoDatabase = pConnection->m_pGeodatabase;
         pConnection->m_nRefCount ++;
         CPLDebug("FileGDB", "ref_count of %s = %d now", pszFilename,
@@ -113,7 +120,7 @@ OGRDataSource *FGdbDriver::Open( const char* pszFilename, int bUpdate )
         pGeoDatabase = new Geodatabase;
         hr = ::OpenGeodatabase(StringToWString(pszFilename), *pGeoDatabase);
 
-        if (FAILED(hr) || pGeoDatabase == NULL)
+        if (FAILED(hr))
         {
             delete pGeoDatabase;
             
@@ -140,7 +147,7 @@ OGRDataSource *FGdbDriver::Open( const char* pszFilename, int bUpdate )
         }
 
         CPLDebug("FileGDB", "Really opening %s", pszFilename);
-        pConnection = new FGdbDatabaseConnection(pGeoDatabase);
+        pConnection = new FGdbDatabaseConnection(pszFilename, pGeoDatabase);
         oMapConnections[pszFilename] = pConnection;
     }
 
@@ -218,7 +225,7 @@ OGRDataSource* FGdbDriver::CreateDataSource( const char * conn,
         return NULL;
     }
 
-    FGdbDatabaseConnection* pConnection = new FGdbDatabaseConnection(pGeodatabase);
+    FGdbDatabaseConnection* pConnection = new FGdbDatabaseConnection(conn, pGeodatabase);
     oMapConnections[conn] = pConnection;
 
     /* Ready to embed the Geodatabase in an OGR Datasource */
@@ -274,9 +281,7 @@ OGRErr FGdbDriver::StartTransaction(OGRDataSource*& poDSInOut, int& bOutHasReope
     poMutexedDS = NULL;
     poDS = NULL;
 
-    ::CloseGeodatabase(*(pConnection->m_pGeodatabase));
-    delete pConnection->m_pGeodatabase;
-    pConnection->m_pGeodatabase = NULL;
+    pConnection->CloseGeodatabase();
 
     CPLString osBackupName(osName);
     osBackupName += ".ogrbak";
@@ -383,9 +388,7 @@ OGRErr FGdbDriver::RollbackTransaction(OGRDataSource*& poDSInOut, int& bOutHasRe
     poMutexedDS = NULL;
     poDS = NULL;
 
-    ::CloseGeodatabase(*(pConnection->m_pGeodatabase));
-    delete pConnection->m_pGeodatabase;
-    pConnection->m_pGeodatabase = NULL;
+    pConnection->CloseGeodatabase();
 
     CPLString osBackupName(osName);
     osBackupName += ".ogrbak";
@@ -473,17 +476,43 @@ void FGdbDriver::Release(const char* pszName)
                  pConnection->m_nRefCount);
         if( pConnection->m_nRefCount == 0 )
         {
-            if( pConnection->m_pGeodatabase != NULL )
-            {
-                CPLDebug("FileGDB", "Really closing %s now", pszName);
-                ::CloseGeodatabase(*(pConnection->m_pGeodatabase));
-                delete pConnection->m_pGeodatabase;
-                pConnection->m_pGeodatabase = NULL;
-            }
+            pConnection->CloseGeodatabase();
             delete pConnection;
             oMapConnections.erase(pszName);
         }
     }
+}
+
+/***********************************************************************/
+/*                         CloseGeodatabase()                          */
+/***********************************************************************/
+
+void FGdbDatabaseConnection::CloseGeodatabase()
+{
+    if( m_pGeodatabase != NULL )
+    {
+        CPLDebug("FileGDB", "Really closing %s now", m_osName.c_str());
+        ::CloseGeodatabase(*m_pGeodatabase);
+        delete m_pGeodatabase;
+        m_pGeodatabase = NULL;
+    }
+}
+
+/***********************************************************************/
+/*                         OpenGeodatabase()                           */
+/***********************************************************************/
+
+int FGdbDatabaseConnection::OpenGeodatabase()
+{
+    m_pGeodatabase = new Geodatabase;
+    long hr = ::OpenGeodatabase(StringToWString(m_osName), *m_pGeodatabase);
+    if (FAILED(hr))
+    {
+        delete m_pGeodatabase;
+        m_pGeodatabase = NULL;
+        return FALSE;
+    }
+    return TRUE;
 }
 
 /***********************************************************************/

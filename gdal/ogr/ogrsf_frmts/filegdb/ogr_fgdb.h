@@ -32,6 +32,7 @@
 #define _OGR_FGDB_H_INCLUDED
 
 #include <vector>
+#include <set>
 #include "ogrsf_frmts.h"
 #include "ogremulatedtransaction.h"
 
@@ -86,6 +87,8 @@ protected:
   bool  m_forceMulti;
 
   bool OGRFeatureFromGdbRow(Row* pRow, OGRFeature** ppFeature);
+  
+  virtual void       CloseGDBObjects();
 
 public:
           virtual OGRFeature* GetNextFeature();
@@ -99,8 +102,17 @@ class FGdbDataSource;
 
 class FGdbLayer : public FGdbBaseLayer
 {
+  friend class FGdbDataSource;
+
   int                 m_bBulkLoadAllowed;
   int                 m_bBulkLoadInProgress;
+
+  virtual void        CloseGDBObjects();
+  int                 EditIndexesForFIDHack(const char* pszRadixTablename);
+  int                 EditGDBTablX(const CPLString& osGDBTablX,
+                                   const CPLString& osNewGDBTablX);
+  int                 EditATXOrSPX(const CPLString& osIndex);
+  int                 EditATXOrSPX(VSILFILE* fp, int nDepth);
 
   void                StartBulkLoad();
   void                EndBulkLoad();
@@ -120,6 +132,11 @@ class FGdbLayer : public FGdbBaseLayer
   char              **m_papszOptions;
   
   int                 m_bCreateMultipatch;
+
+  std::map<int,int>   m_oMapOGRFIDToFGDBFID;
+  std::map<int,int>   m_oMapFGDBFIDToOGRFID;
+  int                 m_nResyncThreshold;
+  void                ResyncIDs();
 
   char*               CreateFieldDefn(OGRFieldDefn& oField,
                                       int bApproxOK,
@@ -178,6 +195,8 @@ public:
   OGRErr              GetLayerMetadataXML ( char **poXmlMeta );
   
   void                ReadoptOldFeatureDefn(OGRFeatureDefn* poFeatureDefn);
+  
+  virtual const char* GetMetadataItem(const char* pszName, const char* pszDomain);
   
 protected:
 
@@ -238,6 +257,9 @@ class FGdbDatabaseConnection;
 
 class FGdbDataSource : public OGRDataSource
 {
+  std::set<OGRLayer*>   m_oSetSelectLayers;
+
+  int        FixIndexes();
 
 public:
   FGdbDataSource(FGdbDriver* poDriver, FGdbDatabaseConnection* pConnection);
@@ -264,6 +286,11 @@ public:
   Geodatabase* GetGDB() { return m_pGeodatabase; }
   bool         GetUpdate() { return m_bUpdate; }
   FGdbDatabaseConnection* GetConnection() { return m_pConnection; }
+  
+  GDALDriver* GetOpenFileGDBDrv() { return m_poOpenFileGDBDrv; }
+  int         HasSelectLayers() { return m_oSetSelectLayers.size() != 0; }
+  
+  int         ReOpen();
 
   /*
   protected:
@@ -282,6 +309,7 @@ protected:
   std::vector <FGdbLayer*> m_layers;
   Geodatabase* m_pGeodatabase;
   bool m_bUpdate;
+  GDALDriver* m_poOpenFileGDBDrv;
 };
 
 /************************************************************************/
@@ -291,17 +319,25 @@ protected:
 class FGdbDatabaseConnection
 {
 public:
-    FGdbDatabaseConnection(Geodatabase* pGeodatabase) :
-        m_pGeodatabase(pGeodatabase), m_nRefCount(1), m_bLocked(FALSE) {}
+    FGdbDatabaseConnection(CPLString osName, Geodatabase* pGeodatabase) :
+        m_osName(osName), m_pGeodatabase(pGeodatabase), m_nRefCount(1), m_bLocked(FALSE),
+        m_bFIDHackInProgress(FALSE) {}
 
+    CPLString    m_osName;
     Geodatabase* m_pGeodatabase;
     int          m_nRefCount;
     int          m_bLocked;
+    int          m_bFIDHackInProgress;
     
     Geodatabase* GetGDB() { return m_pGeodatabase; }
     void         SetLocked(int bLockedIn) { m_bLocked = bLockedIn; }
     int          GetRefCount() const { return m_nRefCount; }
     int          IsLocked() const { return m_bLocked; }
+    
+    int          IsFIDHackInProgress() const { return m_bFIDHackInProgress; }
+    void         SetFIDHackInProgress(int bFlag) { m_bFIDHackInProgress = bFlag; }
+    int          OpenGeodatabase();
+    void         CloseGeodatabase();
 };
 
 class FGdbDriver : public OGRSFDriver, public IOGRTransactionBehaviour
