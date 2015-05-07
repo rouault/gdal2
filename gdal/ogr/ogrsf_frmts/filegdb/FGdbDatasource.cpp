@@ -49,9 +49,10 @@ using std::wstring;
 FGdbDataSource::FGdbDataSource(FGdbDriver* poDriver, 
                                FGdbDatabaseConnection* pConnection):
 OGRDataSource(),
-m_poDriver(poDriver), m_pConnection(pConnection), m_pszName(0), m_pGeodatabase(NULL), m_bUpdate(false),
+m_poDriver(poDriver), m_pConnection(pConnection), m_pGeodatabase(NULL), m_bUpdate(false),
 m_poOpenFileGDBDrv(NULL)
 {
+    bPerLayerCopyingForTransaction = -1;
 }
 
 /************************************************************************/
@@ -65,6 +66,7 @@ FGdbDataSource::~FGdbDataSource()
     if( m_pConnection && m_pConnection->IsLocked() )
         CommitTransaction();
 
+    //Close();
     size_t count = m_layers.size();
     for(size_t i = 0; i < count; ++i )
     {
@@ -74,14 +76,13 @@ FGdbDataSource::~FGdbDataSource()
     FixIndexes();
 
     if( m_poDriver )
-        m_poDriver->Release( m_pszName );
+        m_poDriver->Release( m_osPublicName );
 
+    //size_t count = m_layers.size();
     for(size_t i = 0; i < count; ++i )
     {
         delete m_layers[i];
     }
-
-    CPLFree( m_pszName );
 }
 
 /************************************************************************/
@@ -98,7 +99,7 @@ int FGdbDataSource::FixIndexes()
         char* apszDrivers[2];
         apszDrivers[0] = (char*) "OpenFileGDB";
         apszDrivers[1] = NULL;
-        const char* pszSystemCatalog = CPLFormFilename(m_pszName, "a00000001.gdbtable", NULL);
+        const char* pszSystemCatalog = CPLFormFilename(m_osFSName, "a00000001.gdbtable", NULL);
         GDALDataset* poOpenFileGDBDS = (GDALDataset*)
             GDALOpenEx(pszSystemCatalog, GDAL_OF_VECTOR,
                        apszDrivers, NULL, NULL);
@@ -131,7 +132,7 @@ int FGdbDataSource::FixIndexes()
                 }
                 else
                 {
-                    if( !m_layers[i]->EditIndexesForFIDHack(CPLFormFilename(m_pszName,
+                    if( !m_layers[i]->EditIndexesForFIDHack(CPLFormFilename(m_osFSName,
                                         CPLSPrintf("a%08x", (int)poF->GetFID()), NULL)) )
                     {
                         bRet = FALSE;
@@ -151,9 +152,11 @@ int FGdbDataSource::FixIndexes()
 /*                                Open()                                */
 /************************************************************************/
 
-int FGdbDataSource::Open(const char * pszNewName, int bUpdate )
+int FGdbDataSource::Open(const char * pszNewName, int bUpdate,
+                         const char* pszPublicName )
 {
-    m_pszName = CPLStrdup( pszNewName );
+    m_osFSName = pszNewName;
+    m_osPublicName = (pszPublicName) ? pszPublicName : pszNewName;
     m_pGeodatabase = m_pConnection->GetGDB();
     m_bUpdate = bUpdate;
     m_poOpenFileGDBDrv = (GDALDriver*) GDALGetDriverByName("OpenFileGDB");
@@ -171,10 +174,10 @@ int FGdbDataSource::Open(const char * pszNewName, int bUpdate )
 }
 
 /************************************************************************/
-/*                               ReOpen()                               */
+/*                               Close()                                */
 /************************************************************************/
 
-int FGdbDataSource::ReOpen()
+int FGdbDataSource::Close(int bCloseGeodatabase)
 {
     size_t count = m_layers.size();
     for(size_t i = 0; i < count; ++i )
@@ -183,28 +186,41 @@ int FGdbDataSource::ReOpen()
     }
 
     int bRet = FixIndexes();
+    if( m_pConnection && bCloseGeodatabase )
+        m_pConnection->CloseGeodatabase();
     m_pGeodatabase = NULL;
-    if( !bRet )
-        return FALSE;
+    return bRet;
+}
+
+/************************************************************************/
+/*                               ReOpen()                               */
+/************************************************************************/
+
+int FGdbDataSource::ReOpen()
+{
+    CPLAssert(m_pGeodatabase == NULL);
 
     if( EQUAL(CPLGetConfigOption("FGDB_SIMUL_FAIL_REOPEN", ""), "CASE1") ||
-        !m_pConnection->OpenGeodatabase() )
+        !m_pConnection->OpenGeodatabase(m_osFSName) )
     {
-        CPLError(CE_Failure, CPLE_AppDefined, "Cannot reopen %s", m_pszName);
+        CPLError(CE_Failure, CPLE_AppDefined, "Cannot reopen %s",
+                 m_osFSName.c_str());
         return FALSE;
     }
 
     FGdbDataSource* pDS = new FGdbDataSource(m_poDriver, m_pConnection);
     if( EQUAL(CPLGetConfigOption("FGDB_SIMUL_FAIL_REOPEN", ""), "CASE2") ||
-        !pDS->Open(m_pszName, TRUE) )
+        !pDS->Open(m_osPublicName, TRUE, m_osFSName) )
     {
         pDS->m_poDriver = NULL;
         delete pDS;
-        CPLError(CE_Failure, CPLE_AppDefined, "Cannot reopen %s", m_pszName);
+        CPLError(CE_Failure, CPLE_AppDefined, "Cannot reopen %s",
+                 m_osFSName.c_str());
         return FALSE;
     }
     
-    bRet = TRUE;
+    int bRet = TRUE;
+    size_t count = m_layers.size();
     for(size_t i = 0; i < count; ++i )
     {
         FGdbLayer* pNewLayer = (FGdbLayer*)pDS->GetLayerByName(m_layers[i]->GetName());
@@ -572,7 +588,10 @@ OGRLayer * FGdbDataSource::ExecuteSQL( const char *pszSQLCommand,
 
 {
     if( m_pConnection && m_pConnection->IsFIDHackInProgress() )
-        ReOpen();
+    {
+        if( Close() )
+            ReOpen();
+    }
     if( m_pGeodatabase == NULL )
          return NULL;
 
@@ -684,4 +703,35 @@ void FGdbDataSource::ReleaseResultSet( OGRLayer * poResultsSet )
     if( poResultsSet )
         m_oSetSelectLayers.erase(poResultsSet);
     delete poResultsSet;
+}
+
+/************************************************************************/
+/*                      HasPerLayerCopyingForTransaction()              */
+/************************************************************************/
+
+int FGdbDataSource::HasPerLayerCopyingForTransaction()
+{
+    if( bPerLayerCopyingForTransaction >= 0 )
+        return bPerLayerCopyingForTransaction;
+#ifdef WIN32
+    bPerLayerCopyingForTransaction = FALSE;
+#else
+    bPerLayerCopyingForTransaction =
+        m_poOpenFileGDBDrv != NULL &&
+        CSLTestBoolean(CPLGetConfigOption("FGDB_PER_LAYER_COPYING_TRANSACTION", "TRUE"));
+#endif
+    return bPerLayerCopyingForTransaction;
+}
+
+/************************************************************************/
+/*                        SetSymlinkFlagOnAllLayers()                    */
+/************************************************************************/
+
+void FGdbDataSource::SetSymlinkFlagOnAllLayers()
+{
+    size_t count = m_layers.size();
+    for(size_t i = 0; i < count; ++i )
+    {
+        m_layers[i]->SetSymlinkFlag();
+    }
 }

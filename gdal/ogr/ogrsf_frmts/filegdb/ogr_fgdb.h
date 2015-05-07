@@ -137,6 +137,9 @@ class FGdbLayer : public FGdbBaseLayer
   std::map<int,int>   m_oMapFGDBFIDToOGRFID;
   int                 m_nResyncThreshold;
   void                ResyncIDs();
+  
+  int                 m_bSymlinkFlag;
+  int                 CreateRealCopy();
 
   char*               CreateFieldDefn(OGRFieldDefn& oField,
                                       int bApproxOK,
@@ -195,6 +198,8 @@ public:
   OGRErr              GetLayerMetadataXML ( char **poXmlMeta );
   
   void                ReadoptOldFeatureDefn(OGRFeatureDefn* poFeatureDefn);
+  
+  void                SetSymlinkFlag() { m_bSymlinkFlag = TRUE; }
   
   virtual const char* GetMetadataItem(const char* pszName, const char* pszDomain);
   
@@ -257,17 +262,23 @@ class FGdbDatabaseConnection;
 
 class FGdbDataSource : public OGRDataSource
 {
+  CPLString             m_osFSName;
+  CPLString             m_osPublicName;
   std::set<OGRLayer*>   m_oSetSelectLayers;
 
   int        FixIndexes();
+  int        bPerLayerCopyingForTransaction;
 
 public:
   FGdbDataSource(FGdbDriver* poDriver, FGdbDatabaseConnection* pConnection);
   virtual ~FGdbDataSource();
 
-  int         Open(const char *, int );
+  int         Open(const char* pszFSName, int bUpdate,
+                   const char* pszPublicName);
 
-  const char* GetName() { return m_pszName; }
+  const char* GetName() { return m_osPublicName.c_str(); }
+  const char* GetFSName() { return m_osFSName.c_str(); }
+
   int         GetLayerCount() { return static_cast<int>(m_layers.size()); }
 
   OGRLayer*   GetLayer( int );
@@ -290,7 +301,13 @@ public:
   GDALDriver* GetOpenFileGDBDrv() { return m_poOpenFileGDBDrv; }
   int         HasSelectLayers() { return m_oSetSelectLayers.size() != 0; }
   
+  int         Close(int bCloseGeodatabase = FALSE);
   int         ReOpen();
+  
+  
+  int         HasPerLayerCopyingForTransaction();
+  void        SetPerLayerCopyingForTransaction(int bFlag) { bPerLayerCopyingForTransaction = bFlag; }
+  void        SetSymlinkFlagOnAllLayers();
 
   /*
   protected:
@@ -305,7 +322,6 @@ protected:
 
   FGdbDriver* m_poDriver;
   FGdbDatabaseConnection* m_pConnection;
-  char* m_pszName;
   std::vector <FGdbLayer*> m_layers;
   Geodatabase* m_pGeodatabase;
   bool m_bUpdate;
@@ -336,7 +352,7 @@ public:
     
     int          IsFIDHackInProgress() const { return m_bFIDHackInProgress; }
     void         SetFIDHackInProgress(int bFlag) { m_bFIDHackInProgress = bFlag; }
-    int          OpenGeodatabase();
+    int          OpenGeodatabase(const char* pszOveriddenName);
     void         CloseGeodatabase();
 };
 

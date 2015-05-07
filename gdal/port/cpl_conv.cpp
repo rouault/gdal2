@@ -2547,6 +2547,19 @@ int CPLMoveFile( const char *pszNewPath, const char *pszOldPath )
 }
 
 /************************************************************************/
+/*                             CPLSymlink()                             */
+/************************************************************************/
+
+int CPLSymlink( const char* pszOldPath, const char* pszNewPath, char** papszOptions )
+{
+#ifdef WIN32
+    return -1;
+#else
+    return symlink(pszOldPath, pszNewPath);
+#endif
+}
+
+/************************************************************************/
 /* ==================================================================== */
 /*                              CPLLocaleC                              */
 /* ==================================================================== */

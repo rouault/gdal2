@@ -147,6 +147,7 @@ FGdbLayer::FGdbLayer():
     m_papszOptions = NULL;
     m_bCreateMultipatch = FALSE;
     m_nResyncThreshold = atoi(CPLGetConfigOption("FGDB_RESYNC_THRESHOLD", "1000000"));
+    m_bSymlinkFlag = FALSE;
 }
 
 /************************************************************************/
@@ -881,6 +882,9 @@ OGRErr FGdbLayer::ICreateFeature( OGRFeature *poFeature )
             ResyncIDs();
     }
 
+    if( m_bSymlinkFlag && !CreateRealCopy() )
+        return OGRERR_FAILURE;
+
     if (m_bBulkLoadAllowed < 0)
         m_bBulkLoadAllowed = CSLTestBoolean(CPLGetConfigOption("FGDB_BULK_LOAD", "NO"));
 
@@ -1213,6 +1217,9 @@ OGRErr FGdbLayer::DeleteFeature( GIntBig nFID )
     if( (GIntBig)(int)nFID != nFID )
         return OGRERR_NON_EXISTING_FEATURE;
 
+    if( m_bSymlinkFlag && !CreateRealCopy() )
+        return OGRERR_FAILURE;
+
     int nFID32 = (int)nFID;
     std::map<int,int>::iterator oIter = m_oMapOGRFIDToFGDBFID.find(nFID32);
     if( oIter != m_oMapOGRFIDToFGDBFID.end() )
@@ -1261,7 +1268,10 @@ OGRErr FGdbLayer::ISetFeature( OGRFeature* poFeature )
         return OGRERR_NON_EXISTING_FEATURE;
 
     EndBulkLoad();
-    
+
+    if( m_bSymlinkFlag && !CreateRealCopy() )
+        return OGRERR_FAILURE;
+
     int nFID = (int)poFeature->GetFID();
     std::map<int,int>::iterator oIter = m_oMapOGRFIDToFGDBFID.find(nFID);
     if( oIter != m_oMapOGRFIDToFGDBFID.end() )
@@ -2712,7 +2722,7 @@ bool FGdbLayer::GDBToOGRFields(CPLXMLNode* psRoot)
     if( bShouldQueryOpenFileGDB )
     {
         const char* apszDrivers[] = { "OpenFileGDB", NULL };
-        GDALDataset* poDS = (GDALDataset*) GDALOpenEx(m_pDS->GetName(),
+        GDALDataset* poDS = (GDALDataset*) GDALOpenEx(m_pDS->GetFSName(),
                             GDAL_OF_VECTOR, (char**)apszDrivers, NULL, NULL);
         if( poDS != NULL )
         {
@@ -2847,7 +2857,8 @@ void  FGdbLayer::ResyncIDs()
 {
     if( m_oMapOGRFIDToFGDBFID.size() == 0 )
         return;
-    m_pDS->ReOpen();
+    if( m_pDS->Close() )
+        m_pDS->ReOpen();
 }
 
 /************************************************************************/
@@ -3488,4 +3499,90 @@ void FGdbLayer::ReadoptOldFeatureDefn(OGRFeatureDefn* poFeatureDefn)
     m_pFeatureDefn->Release();
     m_pFeatureDefn = poFeatureDefn;
     m_pFeatureDefn->Reference();
+}
+
+/************************************************************************/
+/*                           CreateRealCopy()                           */
+/************************************************************************/
+
+int FGdbLayer::CreateRealCopy()
+{
+    CPLAssert( m_bSymlinkFlag );
+
+    // Find the FID of the layer in the system catalog
+    char* apszDrivers[2];
+    apszDrivers[0] = (char*) "OpenFileGDB";
+    apszDrivers[1] = NULL;
+    const char* pszSystemCatalog = CPLFormFilename(m_pDS->GetFSName(), "a00000001.gdbtable", NULL);
+    GDALDataset* poOpenFileGDBDS = (GDALDataset*)
+        GDALOpenEx(pszSystemCatalog, GDAL_OF_VECTOR,
+                    apszDrivers, NULL, NULL);
+    if( poOpenFileGDBDS == NULL || poOpenFileGDBDS->GetLayer(0) == NULL )
+    {
+        CPLError(CE_Failure, CPLE_AppDefined,
+                    "Cannot open %s with OpenFileGDB driver. Shouldn't happen.",
+                    pszSystemCatalog);
+        GDALClose(poOpenFileGDBDS);
+        return FALSE;
+    }
+
+    OGRLayer* poLayer = poOpenFileGDBDS->GetLayer(0);
+    CPLString osFilter = "name = '";
+    osFilter += GetName();
+    osFilter += "'";
+    poLayer->SetAttributeFilter(osFilter);
+    poLayer->ResetReading();
+    OGRFeature* poF = poLayer->GetNextFeature();
+    if( poF == NULL )
+    {
+        CPLError(CE_Failure, CPLE_AppDefined, "Cannot find filename for layer %s",
+                    GetName());
+        GDALClose(poOpenFileGDBDS);
+        return FALSE;
+    }
+    int nLayerFID = (int)poF->GetFID();
+    delete poF;
+    GDALClose(poOpenFileGDBDS);
+
+    if( !m_pDS->Close(TRUE) )
+        return FALSE;
+
+    // Create real copies (in .tmp files now) instead of symlinks
+    char** papszFiles = VSIReadDir(m_pDS->GetFSName());
+    CPLString osBasename(CPLSPrintf("a%08x", nLayerFID));
+    int bError = FALSE;
+    std::vector<CPLString> aoFiles;
+    for(char** papszIter = papszFiles; !bError && papszIter && *papszIter; papszIter++)
+    {
+        if( strncmp(*papszIter, osBasename.c_str(), osBasename.size()) == 0 )
+        {
+            if(CPLCopyFile( CPLFormFilename(m_pDS->GetFSName(), *papszIter, "tmp"),
+                            CPLFormFilename(m_pDS->GetFSName(), *papszIter, NULL) ) != 0 )
+            {
+                CPLError(CE_Failure, CPLE_AppDefined,
+                             "Cannot copy %s", *papszIter);
+                bError = TRUE;
+            }
+            else
+                aoFiles.push_back(*papszIter);
+        }
+    }
+    CSLDestroy(papszFiles);
+    
+    // Rename the .tmp into normal filenames
+    for(size_t i=0; !bError && i<aoFiles.size(); i++ )
+    {
+        if( VSIUnlink( CPLFormFilename(m_pDS->GetFSName(), aoFiles[i], NULL) ) != 0 ||
+            VSIRename( CPLFormFilename(m_pDS->GetFSName(), aoFiles[i], "tmp"),
+                       CPLFormFilename(m_pDS->GetFSName(), aoFiles[i], NULL) ) != 0 )
+        {
+            CPLError(CE_Failure, CPLE_AppDefined, "Cannot renamte %s.tmp", aoFiles[i].c_str());
+            bError = TRUE;
+        }
+    }
+
+    int bRet = !bError && m_pDS->ReOpen();
+    if( bRet )
+        m_bSymlinkFlag = FALSE;
+    return bRet;
 }
