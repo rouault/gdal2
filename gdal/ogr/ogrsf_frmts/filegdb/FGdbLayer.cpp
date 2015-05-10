@@ -3490,18 +3490,6 @@ int FGdbLayer::TestCapability( const char* pszCap )
 }
 
 /************************************************************************/
-/*                       ReadoptOldFeatureDefn()                        */
-/************************************************************************/
-
-void FGdbLayer::ReadoptOldFeatureDefn(OGRFeatureDefn* poFeatureDefn)
-{
-    CPLAssert(m_pFeatureDefn->IsSame(poFeatureDefn));
-    m_pFeatureDefn->Release();
-    m_pFeatureDefn = poFeatureDefn;
-    m_pFeatureDefn->Reference();
-}
-
-/************************************************************************/
 /*                           CreateRealCopy()                           */
 /************************************************************************/
 
@@ -3576,7 +3564,7 @@ int FGdbLayer::CreateRealCopy()
             VSIRename( CPLFormFilename(m_pDS->GetFSName(), aoFiles[i], "tmp"),
                        CPLFormFilename(m_pDS->GetFSName(), aoFiles[i], NULL) ) != 0 )
         {
-            CPLError(CE_Failure, CPLE_AppDefined, "Cannot renamte %s.tmp", aoFiles[i].c_str());
+            CPLError(CE_Failure, CPLE_AppDefined, "Cannot rename %s.tmp", aoFiles[i].c_str());
             bError = TRUE;
         }
     }

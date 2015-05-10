@@ -1231,23 +1231,23 @@ def ogr_fgdb_19():
     except:
         pass
 
-    # Cannot modify the layer structure if the layer defn has already been fetched by user
-    gdal.PushErrorHandler()
     ret = lyr.CreateField(ogr.FieldDefn('foobar', ogr.OFTString))
-    gdal.PopErrorHandler()
-    if ret == 0:
+    if ret != 0:
         gdaltest.post_reason('fail')
         return 'fail'
 
-    # Cannot modify the layer structure if the layer defn has already been fetched by user
+    ret = lyr.DeleteField(lyr.GetLayerDefn().GetFieldIndex('foobar'))
+    if ret != 0:
+        gdaltest.post_reason('fail')
+        return 'fail'
+
     gdal.PushErrorHandler()
-    ret = lyr.DeleteField(0)
+    ret = lyr.CreateGeomField(ogr.GeomFieldDefn('foobar', ogr.wkbPoint))
     gdal.PopErrorHandler()
     if ret == 0:
         gdaltest.post_reason('fail')
         return 'fail'
 
-    # Cannot modify the layer structure if the layer defn has already been fetched by user
     gdal.PushErrorHandler()
     ret = lyr.ReorderFields([i for i in range(lyr.GetLayerDefn().GetFieldCount())])
     gdal.PopErrorHandler()
@@ -1255,7 +1255,6 @@ def ogr_fgdb_19():
         gdaltest.post_reason('fail')
         return 'fail'
 
-    # Cannot modify the layer structure if the layer defn has already been fetched by user
     gdal.PushErrorHandler()
     ret = lyr.AlterFieldDefn(0, ogr.FieldDefn('foo', ogr.OFTString), 0)
     gdal.PopErrorHandler()
@@ -1264,7 +1263,24 @@ def ogr_fgdb_19():
         return 'fail'
 
     f = ogr.Feature(lyr_defn)
+    f.SetField('field_string', 'foo')
     lyr.CreateFeature(f)
+    lyr.SetFeature(f)
+    fid = f.GetFID()
+    if fid <= 0:
+        gdaltest.post_reason('fail')
+        print(fid)
+        return 'fail'
+    lyr.ResetReading()
+    for i in range(fid):
+        f = lyr.GetNextFeature()
+    if f.GetFID() != fid or f.GetField('field_string') != 'foo':
+        gdaltest.post_reason('fail')
+        return 'fail'
+    f = lyr.GetFeature(fid)
+    if f.GetFID() != fid or f.GetField('field_string') != 'foo':
+        gdaltest.post_reason('fail')
+        return 'fail'
     
     f = ogr.Feature(layer_created_before_transaction_defn)
     layer_created_before_transaction.CreateFeature(f)
@@ -1524,6 +1540,13 @@ def ogr_fgdb_19():
 
         shutil.rmtree('tmp/test.gdb.ogredited')
 
+        lst = gdal.ReadDir('tmp/test.gdb')
+        for filename in lst:
+            if filename.find('.tmp') >= 0:
+                gdaltest.post_reason('fail')
+                print(lst)
+                return 'fail'
+        
         # Test an error case where we simulate a failure in renaming
         # a file in original directory
         (bPerLayerCopyingForTransaction, ds) = ogr_fgdb_19_open_update('tmp/test.gdb')
@@ -1555,6 +1578,13 @@ def ogr_fgdb_19():
 
         shutil.rmtree('tmp/test.gdb.ogredited')
 
+        lst = gdal.ReadDir('tmp/test.gdb')
+        for filename in lst:
+            if filename.find('.tmp') >= 0:
+                gdaltest.post_reason('fail')
+                print(lst)
+                return 'fail'
+
         # Test an error case where we simulate a failure in moving
         # a file into original directory
         (bPerLayerCopyingForTransaction, ds) = ogr_fgdb_19_open_update('tmp/test.gdb')
@@ -1580,6 +1610,12 @@ def ogr_fgdb_19():
         ds = None
 
         shutil.rmtree('tmp/test.gdb.ogredited')
+        
+        # Remove left over .tmp files
+        lst = gdal.ReadDir('tmp/test.gdb')
+        for filename in lst:
+            if filename.find('.tmp') >= 0:
+                os.remove('tmp/test.gdb/' + filename)
 
         # Test not critical error in removing a temporary file
         for case in ('CASE4', 'CASE5'):
@@ -1617,11 +1653,11 @@ def ogr_fgdb_19():
             else:
                 shutil.rmtree('tmp/test.gdb.ogredited')
 
-                # Remove left over .tmp files
-                lst = gdal.ReadDir('tmp/test.gdb')
-                for filename in lst:
-                    if filename.find('.tmp') >= 0:
-                        os.remove('tmp/test.gdb/' + filename)
+            # Remove left over .tmp files
+            lst = gdal.ReadDir('tmp/test.gdb')
+            for filename in lst:
+                if filename.find('.tmp') >= 0:
+                    os.remove('tmp/test.gdb/' + filename)
 
     else:
         # Test an error case where we simulate a failure of rename from .gdb to .gdb.ogrtmp during commit

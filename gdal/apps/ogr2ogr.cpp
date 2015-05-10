@@ -43,6 +43,7 @@ CPL_CVSID("$Id$");
 
 static int bSkipFailures = FALSE;
 static int bLayerTransaction = -1;
+static int bForceTransaction = FALSE;
 static int nGroupTransactions = 20000;
 static GIntBig nFIDToFetch = OGRNullFID;
 
@@ -1174,10 +1175,10 @@ int main( int nArgc, char ** papszArgv )
             else
                 nGroupTransactions = atoi(papszArgv[iArg]);
         }
-        /* Undocumented. Just a provision. Default behaviour should be OK */
         else if ( EQUAL(papszArgv[iArg],"-ds_transaction") )
         {
             bLayerTransaction = FALSE;
+            bForceTransaction = TRUE;
         }
         /* Undocumented. Just a provision. Default behaviour should be OK */
         else if ( EQUAL(papszArgv[iArg],"-lyr_transaction") )
@@ -1930,7 +1931,7 @@ int main( int nArgc, char ** papszArgv )
     if( nGroupTransactions )
     {
         if( !bLayerTransaction )
-            poODS->StartTransaction();
+            poODS->StartTransaction(bForceTransaction);
     }
 
 /* -------------------------------------------------------------------- */
@@ -2510,7 +2511,7 @@ static void Usage(const char* pszAdditionalMsg, int bShort)
             "               [-dim 2|3|layer_dim] [layer [layer ...]]\n"
             "\n"
             "Advanced options :\n"
-            "               [-gt n]\n"
+            "               [-gt n] [-ds_transaction]\n"
             "               [[-oo NAME=VALUE] ...] [[-doo NAME=VALUE] ...]\n"
             "               [-clipsrc [xmin ymin xmax ymax]|WKT|datasource|spat_extent]\n"
             "               [-clipsrcsql sql_statement] [-clipsrclayer layer]\n"
@@ -2564,7 +2565,7 @@ static void Usage(const char* pszAdditionalMsg, int bShort)
             " -sql statement: Execute given SQL statement and save result.\n"
             " -dialect value: select a dialect, usually OGRSQL to avoid native sql.\n"
             " -skipfailures: skip features or layers that fail to convert\n"
-            " -gt n: group n features per transaction (default 20000)\n"
+            " -gt n: group n features per transaction (default 20000). n can be set to unlimited\n"
             " -spat xmin ymin xmax ymax: spatial query extents\n"
             " -simplify tolerance: distance tolerance for simplification.\n"
             " -segmentize max_dist: maximum distance between 2 nodes.\n"
@@ -3779,7 +3780,7 @@ int LayerTranslator::Translate( TargetLayerInfo* psInfo,
                 else
                 {
                     poODS->CommitTransaction();
-                    poODS->StartTransaction();
+                    poODS->StartTransaction(bForceTransaction);
                 }
                 nFeaturesInTransaction = 0;
             }

@@ -197,8 +197,6 @@ public:
   OGRErr              GetLayerXML ( char **poXml );
   OGRErr              GetLayerMetadataXML ( char **poXmlMeta );
   
-  void                ReadoptOldFeatureDefn(OGRFeatureDefn* poFeatureDefn);
-  
   void                SetSymlinkFlag() { m_bSymlinkFlag = TRUE; }
   
   virtual const char* GetMetadataItem(const char* pszName, const char* pszDomain);
@@ -375,7 +373,6 @@ public:
   virtual OGRErr StartTransaction(OGRDataSource*& poDSInOut, int& bOutHasReopenedDS);
   virtual OGRErr CommitTransaction(OGRDataSource*& poDSInOut, int& bOutHasReopenedDS);
   virtual OGRErr RollbackTransaction(OGRDataSource*& poDSInOut, int& bOutHasReopenedDS);
-  virtual void   ReadoptOldFeatureDefn(OGRDataSource* poDS, OGRLayer* poLayer, OGRFeatureDefn* poFeatureDefn);
 
   void Release(const char* pszName);
   CPLMutex* GetMutex() { return hMutex; }
