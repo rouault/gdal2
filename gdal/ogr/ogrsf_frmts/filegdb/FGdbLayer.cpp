@@ -639,7 +639,7 @@ end:
     VSIFCloseL(fpNew);
     VSIFCloseL(fp);
 
-    return TRUE;
+    return bRet;
 }
 
 #ifdef EXTENT_WORKAROUND
@@ -924,7 +924,29 @@ OGRErr FGdbLayer::ICreateFeature( OGRFeature *poFeature )
     if (!FAILED(hr = fgdb_row.GetOID(oid)))
     {
         if( poFeature->GetFID() < 0 )
+        {
+            // Avoid colliding with a user set FID
+            while( m_oMapOGRFIDToFGDBFID.find(oid) != m_oMapOGRFIDToFGDBFID.end() )
+            {
+                CPLDebug("FGDB", "Collision with user set FID %d", oid);
+                if (FAILED(hr = m_pTable->Delete(fgdb_row)))
+                {
+                    GDBErr(hr, "Failed deleting row ");
+                    return OGRERR_FAILURE;
+                }
+                hr = m_pTable->Insert(fgdb_row);
+                if (FAILED(hr))
+                {
+                    GDBErr(hr, "Failed at writing Row to Table in CreateFeature.");
+                    return OGRERR_FAILURE;
+                }
+                if (FAILED(hr = fgdb_row.GetOID(oid)))
+                {
+                    return OGRERR_FAILURE;
+                }
+            }
             poFeature->SetFID(oid);
+        }
         else if( (int)poFeature->GetFID() != oid )
         {
             m_pDS->GetConnection()->SetFIDHackInProgress(TRUE);
@@ -1228,6 +1250,8 @@ OGRErr FGdbLayer::DeleteFeature( GIntBig nFID )
         m_oMapFGDBFIDToOGRFID.erase(nFID32);
         m_oMapOGRFIDToFGDBFID.erase(oIter);
     }
+    else if( m_oMapFGDBFIDToOGRFID.find(nFID32) != m_oMapFGDBFIDToOGRFID.end() )
+        return OGRERR_NON_EXISTING_FEATURE;
 
     EndBulkLoad();
 
@@ -1276,6 +1300,8 @@ OGRErr FGdbLayer::ISetFeature( OGRFeature* poFeature )
     std::map<int,int>::iterator oIter = m_oMapOGRFIDToFGDBFID.find(nFID);
     if( oIter != m_oMapOGRFIDToFGDBFID.end() )
         nFID = oIter->second;
+    else if( m_oMapFGDBFIDToOGRFID.find((int)poFeature->GetFID()) != m_oMapFGDBFIDToOGRFID.end() )
+        return OGRERR_NON_EXISTING_FEATURE;
 
     OGRErr eErr = GetRow(enumRows, row, nFID);
     if( eErr != OGRERR_NONE)
@@ -3172,6 +3198,8 @@ OGRFeature *FGdbLayer::GetFeature( GIntBig oid )
     std::map<int,int>::iterator oIter = m_oMapOGRFIDToFGDBFID.find(nFID32);
     if( oIter != m_oMapOGRFIDToFGDBFID.end() )
         nFID32 = oIter->second;
+    else if( m_oMapFGDBFIDToOGRFID.find(nFID32) != m_oMapFGDBFIDToOGRFID.end() )
+        return NULL;
 
     if (GetRow(enumRows, row, nFID32) != OGRERR_NONE)
         return NULL;

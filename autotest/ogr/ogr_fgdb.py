@@ -1917,6 +1917,21 @@ def ogr_fgdb_20():
         gdaltest.post_reason('fail')
         return 'fail'
 
+    # This FID exists as a FGDB ID, but shouldn't be user visible
+    f.SetFID(3)
+    ret = lyr.SetFeature(f)
+    if ret != ogr.OGRERR_NON_EXISTING_FEATURE:
+        gdaltest.post_reason('fail')
+        return 'fail'
+    ret = lyr.DeleteFeature(3)
+    if ret != ogr.OGRERR_NON_EXISTING_FEATURE:
+        gdaltest.post_reason('fail')
+        return 'fail'
+    ret = lyr.GetFeature(3)
+    if ret is not None:
+        gdaltest.post_reason('fail')
+        return 'fail'
+
     # Trying to set OGR FID = 3 --> FileGDB FID = 4
     f = ogr.Feature(lyr.GetLayerDefn())
     f.SetFID(3)
@@ -1997,7 +2012,7 @@ def ogr_fgdb_20():
         return 'fail'
 
     
-    for (fid, fgdb_fid) in [ (3, 5), (2049,6), (10,7), (7,8), (9, None), (8, 10) ]:
+    for (fid, fgdb_fid) in [ (3, 5), (2049,6), (10,7), (7,8), (9, None), (8, 10), (12, 11) ]:
         f = ogr.Feature(lyr.GetLayerDefn())
         f.SetFID(fid)
         f.SetField('id', fid)
@@ -2009,6 +2024,16 @@ def ogr_fgdb_20():
             print(lyr.GetMetadataItem(str(fid), 'MAP_OGR_FID_TO_FGDB_FID'))
             return 'fail'
 
+    # Normally 12 should be attributed, but it has already been reserved
+    f = ogr.Feature(lyr.GetLayerDefn())
+    ret = lyr.CreateFeature(f)
+    if ret != 0 or f.GetFID() != 13:
+        gdaltest.post_reason('fail')
+        f.DumpReadable()
+        return 'fail'
+    f.SetField('id', f.GetFID())
+    lyr.SetFeature(f)
+    
     lyr.ResetReading()
     expected = [ (2, None), (4, 3), (3, 5), (2049,6), (10,7), (7,8), (9, None), (8, 10) ]
     for (fid, fgdb_fid) in expected:
@@ -2104,12 +2129,12 @@ def ogr_fgdb_20():
     for update in [0,1]:
         ds = ogr.Open('tmp/test.gdb', update = update)
         lyr = ds.GetLayerByName('ogr_fgdb_20')
-        if lyr.GetFeatureCount() != 8:
+        if lyr.GetFeatureCount() != 10:
             gdaltest.post_reason('fail')
             print(lyr.GetFeatureCount())
             return 'fail'
         lyr.ResetReading()
-        expected = [ 2, 3, 4, 7, 8, 9, 10, 2049 ]
+        expected = [ 2, 3, 4, 7, 8, 9, 10, 12, 13, 2049 ]
         for fid in expected:
             f = lyr.GetNextFeature()
             if gdal.GetLastErrorType() != 0:
@@ -2209,12 +2234,12 @@ def ogr_fgdb_20():
     for update in [0,1]:
         ds = ogr.Open('tmp/test.gdb', update = update)
         lyr = ds.GetLayerByName('ogr_fgdb_20')
-        if lyr.GetFeatureCount() != 14:
+        if lyr.GetFeatureCount() != 16:
             gdaltest.post_reason('fail')
             print(lyr.GetFeatureCount())
             return 'fail'
         lyr.ResetReading()
-        expected = [ 2, 3, 4, 7, 8, 9, 10, 2049, 8191, 16384, 1000000, 1000001, 10000000, 10000001 ]
+        expected = [ 2, 3, 4, 7, 8, 9, 10, 12, 13, 2049, 8191, 16384, 1000000, 1000001, 10000000, 10000001 ]
         for fid in expected:
             f = lyr.GetNextFeature()
             if gdal.GetLastErrorType() != 0:
