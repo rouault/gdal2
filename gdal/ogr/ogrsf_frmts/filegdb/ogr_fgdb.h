@@ -112,7 +112,17 @@ class FGdbLayer : public FGdbBaseLayer
   int                 EditGDBTablX(const CPLString& osGDBTablX,
                                    const CPLString& osNewGDBTablX);
   int                 EditATXOrSPX(const CPLString& osIndex);
-  int                 EditATXOrSPX(VSILFILE* fp, int nDepth);
+  int                 EditATXOrSPX( VSILFILE* fp,
+                                    int nThisPage,
+                                    int& nLastPageVisited,
+                                    int nDepth,
+                                    int nSizeIndexedValue,
+                                    GByte* pabyLastIndexedValue,
+                                    int& bIndexedValueIsValid,
+                                    int& nFirstIndexAtThisValue,
+                                    std::vector<int>& anPagesAtThisValue,
+                                    int& bSortThisValue,
+                                    int& bInvalidateIndex );
 
   void                StartBulkLoad();
   void                EndBulkLoad();

@@ -254,55 +254,244 @@ int FGdbLayer::EditATXOrSPX( const CPLString& osIndex )
     VSIFSeekL(fp, 0, SEEK_END);
     vsi_l_offset nPos = VSIFTellL(fp);
     int bRet = FALSE;
+    int bInvalidateIndex = FALSE;
     if( nPos > 22 )
     {
-        VSIFSeekL(fp, nPos - 22 + 6, SEEK_SET);
-        int nDepth;
-        if( VSIFReadL(&nDepth, 1, 4, fp) == 4 )
+        VSIFSeekL(fp, nPos - 22, SEEK_SET);
+        GByte nSizeIndexedValue;
+        if( VSIFReadL(&nSizeIndexedValue, 1, 1, fp) == 1 &&
+            nSizeIndexedValue > 0 )
         {
-            nDepth = CPL_LSBWORD32(nDepth);
-            VSIFSeekL(fp, 0, SEEK_SET);
-            bRet = EditATXOrSPX(fp, nDepth);
+            GByte abyIndexedValue[255];
+            VSIFSeekL(fp, nPos - 22 + 6, SEEK_SET);
+            int nDepth;
+            if( VSIFReadL(&nDepth, 1, 4, fp) == 4 )
+            {
+                nDepth = CPL_LSBWORD32(nDepth);
+
+                int bIndexedValueIsValid = FALSE;
+                int nFirstIndexAtThisValue = -1;
+                std::vector<int> anPagesAtThisValue;
+                int bSortThisValue = FALSE;
+                int nLastPageVisited = 0;
+                bRet = EditATXOrSPX(fp,
+                                    1,
+                                    nLastPageVisited,
+                                    nDepth,
+                                    nSizeIndexedValue,
+                                    abyIndexedValue,
+                                    bIndexedValueIsValid,
+                                    nFirstIndexAtThisValue,
+                                    anPagesAtThisValue,
+                                    bSortThisValue,
+                                    bInvalidateIndex);
+            }
         }
     }
     VSIFCloseL(fp);
+    if( bInvalidateIndex )
+    {
+        //CPLDebug("FGDB", "Invalidate %s", osIndex.c_str());
+        CPLError(CE_Warning, CPLE_AppDefined, "Invalidate %s", osIndex.c_str());
+        VSIUnlink(osIndex);
+    }
     return bRet;
 }
 
-int FGdbLayer::EditATXOrSPX(VSILFILE* fp, int nDepth)
+static int FGdbLayerSortATX(const void* _pa, const void* _pb)
+{
+    int a = CPL_LSBWORD32(*(int*)_pa);
+    int b = CPL_LSBWORD32(*(int*)_pb);
+    if( a < b )
+        return -1;
+    else if( a > b )
+        return 1;
+    CPLAssert(FALSE);
+    return 0;
+}
+
+int FGdbLayer::EditATXOrSPX(VSILFILE* fp,
+                            int nThisPage,
+                            int& nLastPageVisited,
+                            int nDepth,
+                            int nSizeIndexedValue,
+                            GByte* pabyLastIndexedValue,
+                            int& bIndexedValueIsValid,
+                            int& nFirstIndexAtThisValue,
+                            std::vector<int>& anPagesAtThisValue,
+                            int& bSortThisValue,
+                            int& bInvalidateIndex)
 {
     GByte abyBuffer[4096];
+    
+    VSIFSeekL(fp, (nThisPage - 1) * 4096, SEEK_SET);
+
     if( nDepth == 1 )
     {
+        if( nThisPage == nLastPageVisited )
+            return TRUE;
+
         /* This page directly references features */
         int bRewritePage = FALSE;
-        vsi_l_offset nPos = VSIFTellL(fp);
         if( VSIFReadL(abyBuffer, 1, 4096, fp) != 4096 )
             return FALSE;
+        int nNextPageID;
+        memcpy(&nNextPageID, abyBuffer, 4);
         int nFeatures;
         memcpy(&nFeatures, abyBuffer + 4, 4);
         nFeatures = CPL_LSBWORD32(nFeatures);
-        if( nFeatures > (4096 - 12) / 4 )
+        
+        //if( nLastPageVisited == 0 )
+        //    printf("nFeatures = %d\n", nFeatures);
+        
+        const int nMaxPerPages = (4096 - 12) / (4 + nSizeIndexedValue);
+        const int nOffsetFirstValInPage = 12 + nMaxPerPages * 4;
+        if( nFeatures > nMaxPerPages )
             return FALSE;
         for(int i=0; i < nFeatures; i++)
         {
+            int bNewVal = ( !bIndexedValueIsValid ||
+                            memcmp(pabyLastIndexedValue,
+                                   abyBuffer + nOffsetFirstValInPage + i * nSizeIndexedValue,
+                                   nSizeIndexedValue) != 0 );
+
             int nFID;
             memcpy(&nFID, abyBuffer + 12 + 4 * i, 4);
             nFID = CPL_LSBWORD32(nFID);
             int nOGRFID = m_oMapFGDBFIDToOGRFID[nFID];
             if( nOGRFID )
             {
+                nFID = nOGRFID;
                 nOGRFID = CPL_LSBWORD32(nOGRFID);
                 memcpy(abyBuffer + 12 + 4 * i, &nOGRFID, 4);
                 bRewritePage = TRUE;
+                
+                if( bIndexedValueIsValid && i == nFeatures - 1 && nNextPageID == 0 )
+                    bSortThisValue = TRUE;
             }
+             
+            // We must make sure that features with same indexed values are
+            // sorted by increasing FID, even when that spans over several
+            // pages           
+            if( bSortThisValue && (bNewVal || (i == nFeatures - 1 && nNextPageID == 0)) )
+            {
+                if( anPagesAtThisValue[0] == nThisPage )
+                {
+                    CPLAssert(anPagesAtThisValue.size() == 1);
+                    int nFeaturesToSortThisPage = i - nFirstIndexAtThisValue;
+                    if( !bNewVal && i == nFeatures - 1 && nNextPageID == 0 )
+                        nFeaturesToSortThisPage ++;
+                    CPLAssert(nFeaturesToSortThisPage > 0);
+                    
+                    bRewritePage = TRUE;
+                    qsort(abyBuffer + 12 + 4 * nFirstIndexAtThisValue,
+                          nFeaturesToSortThisPage, 4, FGdbLayerSortATX);
+                }
+                else
+                {
+                    std::vector<int> anValues;
+                    int nFeaturesToSort = 0;
+                    anValues.resize(anPagesAtThisValue.size() * nMaxPerPages);
+                    
+                    int nFeaturesToSortLastPage = i;
+                    if( !bNewVal && i == nFeatures - 1 && nNextPageID == 0 )
+                        nFeaturesToSortLastPage ++;
+                    
+                    for(size_t j=0;j<anPagesAtThisValue.size();j++)
+                    {
+                        int nFeaturesPrevPage;
+                        VSIFSeekL(fp, (anPagesAtThisValue[j]-1) * 4096 + 4, SEEK_SET);
+                        VSIFReadL(&nFeaturesPrevPage, 1, 4, fp);
+                        nFeaturesPrevPage = CPL_LSBWORD32(nFeaturesPrevPage);
+                        if( j == 0 )
+                        {
+                            VSIFSeekL(fp, (anPagesAtThisValue[j]-1) * 4096 + 12 + 4 * nFirstIndexAtThisValue, SEEK_SET);
+                            VSIFReadL(&anValues[nFeaturesToSort], 4, nFeaturesPrevPage - nFirstIndexAtThisValue, fp);
+                            nFeaturesToSort += nFeaturesPrevPage - nFirstIndexAtThisValue;
+                        }
+                        else if( j == anPagesAtThisValue.size() - 1 && anPagesAtThisValue[j] == nThisPage )
+                        {
+                            bRewritePage = TRUE;
+                            memcpy(&anValues[nFeaturesToSort], abyBuffer + 12, nFeaturesToSortLastPage * 4);
+                            nFeaturesToSort += nFeaturesToSortLastPage;
+                        }
+                        else
+                        {
+                            VSIFSeekL(fp, (anPagesAtThisValue[j]-1) * 4096 + 12, SEEK_SET);
+                            VSIFReadL(&anValues[nFeaturesToSort], 4, nFeaturesPrevPage, fp);
+                            nFeaturesToSort += nFeaturesPrevPage;
+                        }
+                    }
+
+                    qsort(&anValues[0], nFeaturesToSort, 4, FGdbLayerSortATX);
+                    
+                    nFeaturesToSort = 0;
+                    for(size_t j=0;j<anPagesAtThisValue.size();j++)
+                    {
+                        int nFeaturesPrevPage;
+                        VSIFSeekL(fp, (anPagesAtThisValue[j]-1) * 4096 + 4, SEEK_SET);
+                        VSIFReadL(&nFeaturesPrevPage, 1, 4, fp);
+                        nFeaturesPrevPage = CPL_LSBWORD32(nFeaturesPrevPage);
+                        if( j == 0 )
+                        {
+                            VSIFSeekL(fp, (anPagesAtThisValue[j]-1) * 4096 + 12 + 4 * nFirstIndexAtThisValue, SEEK_SET);
+                            VSIFWriteL(&anValues[nFeaturesToSort], 4, nFeaturesPrevPage - nFirstIndexAtThisValue, fp);
+                            nFeaturesToSort += nFeaturesPrevPage - nFirstIndexAtThisValue;
+                        }
+                        else if( j == anPagesAtThisValue.size() - 1 && anPagesAtThisValue[j] == nThisPage )
+                        {
+                            memcpy(abyBuffer + 12, &anValues[nFeaturesToSort], nFeaturesToSortLastPage * 4);
+                            nFeaturesToSort += nFeaturesToSortLastPage;
+                        }
+                        else
+                        {
+                            VSIFSeekL(fp, (anPagesAtThisValue[j]-1) * 4096 + 12, SEEK_SET);
+                            VSIFWriteL(&anValues[nFeaturesToSort], 4, nFeaturesPrevPage, fp);
+                            nFeaturesToSort += nFeaturesPrevPage;
+                        }
+                    }
+                }
+            }
+            
+            if( bNewVal )
+            {
+                nFirstIndexAtThisValue = i;
+                anPagesAtThisValue.clear();
+                anPagesAtThisValue.push_back(nThisPage);
+                
+                memcpy(pabyLastIndexedValue,
+                       abyBuffer + nOffsetFirstValInPage + i * nSizeIndexedValue,
+                       nSizeIndexedValue);
+                bSortThisValue = FALSE;
+            }
+            else if( i == 0 )
+            {
+                if( anPagesAtThisValue.size() > 100000 )
+                {
+                    bInvalidateIndex = TRUE;
+                    return FALSE;
+                }
+                else
+                {
+                    anPagesAtThisValue.push_back(nThisPage);
+                }
+            }
+
+            if( nOGRFID )
+                bSortThisValue = TRUE;
+
+            bIndexedValueIsValid = TRUE;
         }
+        
         if( bRewritePage )
         {
-            VSIFSeekL(fp, nPos, SEEK_SET);
+            VSIFSeekL(fp, (nThisPage - 1) * 4096, SEEK_SET);
             if( VSIFWriteL(abyBuffer, 1, 4096, fp) != 4096 )
                 return FALSE;
         }
+        
+        nLastPageVisited = nThisPage;
+
         return TRUE;
     }
     else
@@ -323,10 +512,22 @@ int FGdbLayer::EditATXOrSPX(VSILFILE* fp, int nDepth)
             nSubPageID = CPL_LSBWORD32(nSubPageID);
             if( nSubPageID < 1 )
                 return FALSE;
-            VSIFSeekL(fp, (nSubPageID - 1) * 4096, SEEK_SET);
-            if( !EditATXOrSPX(fp, nDepth - 1) )
+            if( !EditATXOrSPX(fp,
+                              nSubPageID,
+                              nLastPageVisited,
+                              nDepth - 1,
+                              nSizeIndexedValue,
+                              pabyLastIndexedValue,
+                              bIndexedValueIsValid,
+                              nFirstIndexAtThisValue,
+                              anPagesAtThisValue,
+                              bSortThisValue,
+                              bInvalidateIndex) )
+            {
                 return FALSE;
+            }
         }
+        
         return TRUE;
     }
 }
@@ -928,6 +1129,8 @@ OGRErr FGdbLayer::ICreateFeature( OGRFeature *poFeature )
             // Avoid colliding with a user set FID
             while( m_oMapOGRFIDToFGDBFID.find(oid) != m_oMapOGRFIDToFGDBFID.end() )
             {
+                EndBulkLoad();
+
                 CPLDebug("FGDB", "Collision with user set FID %d", oid);
                 if (FAILED(hr = m_pTable->Delete(fgdb_row)))
                 {
