@@ -1474,8 +1474,10 @@ int FileGDBIndexIterator::SortRows()
     if( nSortedCount == 0 )
         return FALSE;
     std::sort(panSortedRows, panSortedRows + nSortedCount);
+#ifdef nValueCountInIdx_reliable
     if( eOp == FGSO_ISNOTNULL && (int)nValueCountInIdx != nSortedCount )
         PrintError();
+#endif
     return TRUE;
 }
 
@@ -1509,8 +1511,15 @@ int FileGDBIndexIterator::GetNextRowSortedByFID()
 
 int FileGDBIndexIterator::GetRowCount()
 {
+    // The nValueCountInIdx value has been found to be unreliable when the index is built
+    // as features are inserted (and when they are not in increasing order)
+    // (with FileGDB SDK 1.3)
+    // So disable this optimization as there's no fast way to know
+    // if the value is reliable or not.
+#ifdef nValueCountInIdx_reliable
     if( eOp == FGSO_ISNOTNULL )
         return (int)nValueCountInIdx;
+#endif
 
     if( nSortedCount >= 0 )
         return nSortedCount;
