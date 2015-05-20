@@ -523,6 +523,10 @@ void CPL_STDCALL GDALAllRegister()
     GDALRegister_PLMOSAIC();
 #endif
 
+#ifdef FRMT_wmts
+    GDALRegister_WMTS();
+#endif
+
     OGRRegisterAllInternal();
 
 #ifdef FRMT_wcs
