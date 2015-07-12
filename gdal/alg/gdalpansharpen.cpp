@@ -635,11 +635,25 @@ CPLErr GDALPansharpenOperation::ProcessRegion(int nXOff, int nYOff,
         VSIFree(pPanBuffer);
         return CE_Failure;
     }
-    
+
+    GDALRasterIOArgs sArgs;
+    sArgs.eRWFlag = GF_Read;
+    sArgs.nXOff = nXOff;
+    sArgs.nYOff = nYOff;
+    sArgs.nXSize = nXSize;
+    sArgs.nYSize = nYSize;
+    sArgs.pData = pPanBuffer;
+    sArgs.nBufXSize = nXSize;
+    sArgs.nBufYSize = nYSize;
+    sArgs.eBufType = eWorkDataType;
+    sArgs.nPixelSpace = 0;
+    sArgs.nLineSpace = 0;
+    sArgs.nBandCount = 0;
+    sArgs.panBandMap = NULL;
+    sArgs.psExtraArg = NULL;
+
     CPLErr eErr = 
-        poPanchroBand->RasterIO(GF_Read,
-                nXOff, nYOff, nXSize, nYSize, pPanBuffer, nXSize, nYSize,
-                eWorkDataType, 0, 0, NULL);
+        poPanchroBand->RasterIO(&sArgs);
 
     GDALRasterIOExtraArg sExtraArg;
     INIT_RASTERIO_EXTRA_ARG(sExtraArg);
@@ -662,27 +676,31 @@ CPLErr GDALPansharpenOperation::ProcessRegion(int nXOff, int nYOff,
         nSpectralXSize = 1;
     if( nSpectralYSize == 0 )
         nSpectralYSize = 1;
-    
+
+    sArgs.nXOff = nSpectralXOff;
+    sArgs.nYOff = nSpectralYOff;
+    sArgs.nXSize = nSpectralXSize;
+    sArgs.nYSize = nSpectralYSize;
+    sArgs.nPixelSpace = 0;
+    sArgs.nLineSpace = 0;
+    sArgs.nBandSpace = 0;
+    sArgs.psExtraArg = &sExtraArg;
+
     if( anInputBands.size() )
     {
+        sArgs.pData = pUpsampledSpectralBuffer;
+        sArgs.nBandCount = (int)anInputBands.size();
+        sArgs.panBandMap = &anInputBands[0];
+
         // Use dataset RasterIO when possible
-        eErr = aMSBands[0]->GetDataset()->RasterIO(GF_Read,
-                    nSpectralXOff, nSpectralYOff, nSpectralXSize, nSpectralYSize,
-                    pUpsampledSpectralBuffer,
-                    nXSize, nYSize,
-                    eWorkDataType,
-                    (int)anInputBands.size(), &anInputBands[0],
-                    0, 0, 0, &sExtraArg);
+        eErr = aMSBands[0]->GetDataset()->RasterIO(&sArgs);
     }
     else
     {
         for(int i=0; eErr == CE_None && i < psOptions->nInputSpectralBands; i++)
         {
-            eErr = aMSBands[i]->RasterIO(GF_Read,
-                    nSpectralXOff, nSpectralYOff, nSpectralXSize, nSpectralYSize,
-                    pUpsampledSpectralBuffer + i * nXSize * nYSize * nDataTypeSize,
-                    nXSize, nYSize,
-                    eWorkDataType, 0, 0, &sExtraArg);
+            sArgs.pData = pUpsampledSpectralBuffer + i * nXSize * nYSize * nDataTypeSize;
+            eErr = aMSBands[i]->RasterIO(&sArgs);
         }
     }
 

@@ -768,8 +768,7 @@ void VRTSimpleSource::DstToSrc( double dfX, double dfY,
 /************************************************************************/
 
 int 
-VRTSimpleSource::GetSrcDstWindow( int nXOff, int nYOff, int nXSize, int nYSize,
-                                  int nBufXSize, int nBufYSize,
+VRTSimpleSource::GetSrcDstWindow( const GDALRasterIOArgs* psArgs,
                                   double *pdfReqXOff, double *pdfReqYOff,
                                   double *pdfReqXSize, double *pdfReqYSize,
                                   int *pnReqXOff, int *pnReqYOff,
@@ -778,6 +777,13 @@ VRTSimpleSource::GetSrcDstWindow( int nXOff, int nYOff, int nXSize, int nYSize,
                                   int *pnOutXSize, int *pnOutYSize )
 
 {
+    const int& nXOff = psArgs->nXOff;
+    const int& nYOff = psArgs->nYOff;
+    const int& nXSize = psArgs->nXSize;
+    const int& nYSize = psArgs->nYSize;
+    const int& nBufXSize = psArgs->nBufXSize;
+    const int& nBufYSize = psArgs->nBufYSize;
+    
     int bDstWinSet = nDstXOff != -1 || nDstXSize != -1 
         || nDstYOff != -1 || nDstYSize != -1;
 
@@ -1004,12 +1010,7 @@ int VRTSimpleSource::NeedMaxValAdjustment() const
 /************************************************************************/
 
 CPLErr 
-VRTSimpleSource::RasterIO( int nXOff, int nYOff, int nXSize, int nYSize,
-                           void *pData, int nBufXSize, int nBufYSize, 
-                           GDALDataType eBufType, 
-                           GSpacing nPixelSpace,
-                           GSpacing nLineSpace,
-                           GDALRasterIOExtraArg* psExtraArgIn )
+VRTSimpleSource::RasterIO( const GDALRasterIOArgs* psArgs )
 
 {
     GDALRasterIOExtraArg sExtraArg;
@@ -1024,8 +1025,7 @@ VRTSimpleSource::RasterIO( int nXOff, int nYOff, int nXSize, int nYSize,
     // The window we will actual set _within_ the pData buffer.
     int nOutXOff, nOutYOff, nOutXSize, nOutYSize;
 
-    if( !GetSrcDstWindow( nXOff, nYOff, nXSize, nYSize,
-                          nBufXSize, nBufYSize, 
+    if( !GetSrcDstWindow( psArgs, 
                           &dfReqXOff, &dfReqYOff, &dfReqXSize, &dfReqYSize,
                           &nReqXOff, &nReqYOff, &nReqXSize, &nReqYSize,
                           &nOutXOff, &nOutYOff, &nOutXSize, &nOutYSize ) )
@@ -1042,9 +1042,9 @@ VRTSimpleSource::RasterIO( int nXOff, int nYOff, int nXSize, int nYSize,
     {
         psExtraArg->eResampleAlg = GDALRasterIOGetResampleAlg(osResampling);
     }
-    else if( psExtraArgIn != NULL )
+    else if(  psArgs->psExtraArg != NULL )
     {
-        psExtraArg->eResampleAlg = psExtraArgIn->eResampleAlg;
+        psExtraArg->eResampleAlg = psArgs->psExtraArg->eResampleAlg;
     }
     psExtraArg->bFloatingPointWindowValidity = TRUE;
     psExtraArg->dfXOff = dfReqXOff;
@@ -1052,15 +1052,24 @@ VRTSimpleSource::RasterIO( int nXOff, int nYOff, int nXSize, int nYSize,
     psExtraArg->dfXSize = dfReqXSize;
     psExtraArg->dfYSize = dfReqYSize;
 
-    GByte* pabyOut = ((unsigned char *) pData) 
-                                + nOutXOff * nPixelSpace
-                                + (GPtrDiff_t)nOutYOff * nLineSpace;
-    eErr = 
-        poRasterBand->RasterIO( GF_Read, 
-                                nReqXOff, nReqYOff, nReqXSize, nReqYSize,
-                                pabyOut,
-                                nOutXSize, nOutYSize, 
-                                eBufType, nPixelSpace, nLineSpace, psExtraArg );
+    GByte* pabyOut = ((unsigned char *) psArgs->pData) 
+                                + nOutXOff * psArgs->nPixelSpace
+                                + (GPtrDiff_t)nOutYOff * psArgs->nLineSpace;
+
+    GDALRasterIOArgs sArgs;
+    sArgs.eRWFlag = GF_Read;
+    sArgs.nXOff = nReqXOff;
+    sArgs.nYOff = nReqYOff;
+    sArgs.nXSize = nReqXSize;
+    sArgs.nYSize = nReqYSize;
+    sArgs.pData = pabyOut;
+    sArgs.nBufXSize = nOutXSize;
+    sArgs.nBufYSize = nOutYSize;
+    sArgs.eBufType = psArgs->eBufType;
+    sArgs.nPixelSpace = psArgs->nPixelSpace;
+    sArgs.nLineSpace = psArgs->nLineSpace;
+    sArgs.psExtraArg = psExtraArg;
+    eErr = poRasterBand->RasterIO( &sArgs );
 
     if( NeedMaxValAdjustment() )
     {
@@ -1069,15 +1078,15 @@ VRTSimpleSource::RasterIO( int nXOff, int nYOff, int nXSize, int nYSize,
             for(int i=0;i<nOutXSize;i++)
             {
                 int nVal;
-                GDALCopyWords(pabyOut + j * nLineSpace + i * nPixelSpace,
-                                eBufType, 0,
+                GDALCopyWords(pabyOut + j * psArgs->nLineSpace + i * psArgs->nPixelSpace,
+                                psArgs->eBufType, 0,
                                 &nVal, GDT_Int32, 0,
                                 1);
                 if( nVal > nMaxValue )
                     nVal = nMaxValue;
                 GDALCopyWords(&nVal, GDT_Int32, 0,
-                                pabyOut + j * nLineSpace + i * nPixelSpace,
-                                eBufType, 0,
+                                pabyOut + j * psArgs->nLineSpace + i * psArgs->nPixelSpace,
+                                psArgs->eBufType, 0,
                                 1);
             }
         }
@@ -1099,8 +1108,14 @@ double VRTSimpleSource::GetMinimum( int nXSize, int nYSize, int *pbSuccess )
     // The window we will actual set _within_ the pData buffer.
     int nOutXOff, nOutYOff, nOutXSize, nOutYSize;
 
-    if( !GetSrcDstWindow( 0, 0, nXSize, nYSize,
-                          nXSize, nYSize,
+    GDALRasterIOArgs sArgs;
+    sArgs.nXOff = 0;
+    sArgs.nYOff = 0;
+    sArgs.nXSize = nXSize;
+    sArgs.nYSize = nYSize;
+    sArgs.nBufXSize = nXSize;
+    sArgs.nBufYSize = nYSize;
+    if( !GetSrcDstWindow( &sArgs,
                           &dfReqXOff, &dfReqYOff, &dfReqXSize, &dfReqYSize,
                           &nReqXOff, &nReqYOff, &nReqXSize, &nReqYSize,
                           &nOutXOff, &nOutYOff, &nOutXSize, &nOutYSize ) ||
@@ -1131,8 +1146,14 @@ double VRTSimpleSource::GetMaximum( int nXSize, int nYSize, int *pbSuccess )
     // The window we will actual set _within_ the pData buffer.
     int nOutXOff, nOutYOff, nOutXSize, nOutYSize;
 
-    if( !GetSrcDstWindow( 0, 0, nXSize, nYSize,
-                          nXSize, nYSize,
+    GDALRasterIOArgs sArgs;
+    sArgs.nXOff = 0;
+    sArgs.nYOff = 0;
+    sArgs.nXSize = nXSize;
+    sArgs.nYSize = nYSize;
+    sArgs.nBufXSize = nXSize;
+    sArgs.nBufYSize = nYSize;
+    if( !GetSrcDstWindow( &sArgs,
                           &dfReqXOff, &dfReqYOff, &dfReqXSize, &dfReqYSize,
                           &nReqXOff, &nReqYOff, &nReqXSize, &nReqYSize,
                           &nOutXOff, &nOutYOff, &nOutXSize, &nOutYSize ) ||
@@ -1163,8 +1184,14 @@ CPLErr VRTSimpleSource::ComputeRasterMinMax( int nXSize, int nYSize, int bApprox
     // The window we will actual set _within_ the pData buffer.
     int nOutXOff, nOutYOff, nOutXSize, nOutYSize;
 
-    if( !GetSrcDstWindow( 0, 0, nXSize, nYSize,
-                          nXSize, nYSize,
+    GDALRasterIOArgs sArgs;
+    sArgs.nXOff = 0;
+    sArgs.nYOff = 0;
+    sArgs.nXSize = nXSize;
+    sArgs.nYSize = nYSize;
+    sArgs.nBufXSize = nXSize;
+    sArgs.nBufYSize = nYSize;
+    if( !GetSrcDstWindow( &sArgs,
                           &dfReqXOff, &dfReqYOff, &dfReqXSize, &dfReqYSize,
                           &nReqXOff, &nReqYOff, &nReqXSize, &nReqYSize,
                           &nOutXOff, &nOutYOff, &nOutXSize, &nOutYSize ) ||
@@ -1202,10 +1229,16 @@ CPLErr VRTSimpleSource::ComputeStatistics( int nXSize, int nYSize,
 
     // The window we will actual set _within_ the pData buffer.
     int nOutXOff, nOutYOff, nOutXSize, nOutYSize;
+    GDALRasterIOArgs sArgs;
+    sArgs.nXOff = 0;
+    sArgs.nYOff = 0;
+    sArgs.nXSize = nXSize;
+    sArgs.nYSize = nYSize;
+    sArgs.nBufXSize = nXSize;
+    sArgs.nBufYSize = nYSize;
 
     if( NeedMaxValAdjustment() ||
-        !GetSrcDstWindow( 0, 0, nXSize, nYSize,
-                          nXSize, nYSize,
+        !GetSrcDstWindow( &sArgs,
                           &dfReqXOff, &dfReqYOff, &dfReqXSize, &dfReqYSize,
                           &nReqXOff, &nReqYOff, &nReqXSize, &nReqYSize,
                           &nOutXOff, &nOutYOff, &nOutXSize, &nOutYSize ) ||
@@ -1237,10 +1270,16 @@ CPLErr VRTSimpleSource::GetHistogram( int nXSize, int nYSize,
 
     // The window we will actual set _within_ the pData buffer.
     int nOutXOff, nOutYOff, nOutXSize, nOutYSize;
+    GDALRasterIOArgs sArgs;
+    sArgs.nXOff = 0;
+    sArgs.nYOff = 0;
+    sArgs.nXSize = nXSize;
+    sArgs.nYSize = nYSize;
+    sArgs.nBufXSize = nXSize;
+    sArgs.nBufYSize = nYSize;
 
     if( NeedMaxValAdjustment() ||
-        !GetSrcDstWindow( 0, 0, nXSize, nYSize,
-                          nXSize, nYSize,
+        !GetSrcDstWindow( &sArgs,
                           &dfReqXOff, &dfReqYOff, &dfReqXSize, &dfReqYSize,
                           &nReqXOff, &nReqYOff, &nReqXSize, &nReqYSize,
                           &nOutXOff, &nOutYOff, &nOutXSize, &nOutYSize ) ||
@@ -1261,14 +1300,7 @@ CPLErr VRTSimpleSource::GetHistogram( int nXSize, int nYSize,
 /*                          DatasetRasterIO()                           */
 /************************************************************************/
 
-CPLErr VRTSimpleSource::DatasetRasterIO(
-                               int nXOff, int nYOff, int nXSize, int nYSize,
-                               void * pData, int nBufXSize, int nBufYSize,
-                               GDALDataType eBufType,
-                               int nBandCount, int *panBandMap,
-                               GSpacing nPixelSpace, GSpacing nLineSpace,
-                               GSpacing nBandSpace,
-                               GDALRasterIOExtraArg* psExtraArgIn)
+CPLErr VRTSimpleSource::DatasetRasterIO(const GDALRasterIOArgs* psArgs)
 {
     if (!EQUAL(GetType(), "SimpleSource"))
     {
@@ -1289,8 +1321,7 @@ CPLErr VRTSimpleSource::DatasetRasterIO(
     // The window we will actual set _within_ the pData buffer.
     int nOutXOff, nOutYOff, nOutXSize, nOutYSize;
 
-    if( !GetSrcDstWindow( nXOff, nYOff, nXSize, nYSize,
-                          nBufXSize, nBufYSize,
+    if( !GetSrcDstWindow( psArgs,
                           &dfReqXOff, &dfReqYOff, &dfReqXSize, &dfReqYSize,
                           &nReqXOff, &nReqYOff, &nReqXSize, &nReqYSize,
                           &nOutXOff, &nOutYOff, &nOutXSize, &nOutYSize ) )
@@ -1306,9 +1337,9 @@ CPLErr VRTSimpleSource::DatasetRasterIO(
     {
         psExtraArg->eResampleAlg = GDALRasterIOGetResampleAlg(osResampling);
     }
-    else if( psExtraArgIn != NULL )
+    else if( psArgs->psExtraArg != NULL )
     {
-        psExtraArg->eResampleAlg = psExtraArgIn->eResampleAlg;
+        psExtraArg->eResampleAlg = psArgs->psExtraArg->eResampleAlg;
     }
     psExtraArg->bFloatingPointWindowValidity = TRUE;
     psExtraArg->dfXOff = dfReqXOff;
@@ -1316,34 +1347,39 @@ CPLErr VRTSimpleSource::DatasetRasterIO(
     psExtraArg->dfXSize = dfReqXSize;
     psExtraArg->dfYSize = dfReqYSize;
 
-    GByte* pabyOut = ((unsigned char *) pData)
-                           + nOutXOff * nPixelSpace
-                           + (GPtrDiff_t)nOutYOff * nLineSpace;
-    CPLErr eErr = poDS->RasterIO( GF_Read,
-                           nReqXOff, nReqYOff, nReqXSize, nReqYSize,
-                           pabyOut,
-                           nOutXSize, nOutYSize,
-                           eBufType, nBandCount, panBandMap,
-                           nPixelSpace, nLineSpace, nBandSpace, psExtraArg );
+    GByte* pabyOut = ((unsigned char *) psArgs->pData)
+                           + nOutXOff * psArgs->nPixelSpace
+                           + (GPtrDiff_t)nOutYOff * psArgs->nLineSpace;
+
+    GDALRasterIOArgs sArgs = *psArgs;
+    sArgs.nXOff = nReqXOff;
+    sArgs.nYOff = nReqYOff;
+    sArgs.nXSize = nReqXSize;
+    sArgs.nYSize = nReqYSize;
+    sArgs.pData = pabyOut;
+    sArgs.nBufXSize = nOutXSize;
+    sArgs.nBufYSize = nOutYSize;
+    sArgs.psExtraArg = psExtraArg;
+    CPLErr eErr = poDS->RasterIO(&sArgs);
 
     if( NeedMaxValAdjustment() )
     {
-        for(int k=0;k<nBandCount;k++)
+        for(int k=0;k<psArgs->nBandCount;k++)
         {
             for(int j=0;j<nOutYSize;j++)
             {
                 for(int i=0;i<nOutXSize;i++)
                 {
                     int nVal;
-                    GDALCopyWords(pabyOut + k * nBandSpace + j * nLineSpace + i * nPixelSpace,
-                                eBufType, 0,
+                    GDALCopyWords(pabyOut + k * psArgs->nBandSpace + j * psArgs->nLineSpace + i * psArgs->nPixelSpace,
+                                psArgs->eBufType, 0,
                                 &nVal, GDT_Int32, 0,
                                 1);
                     if( nVal > nMaxValue )
                         nVal = nMaxValue;
                     GDALCopyWords(&nVal, GDT_Int32, 0,
-                                pabyOut + k * nBandSpace + j * nLineSpace + i * nPixelSpace,
-                                eBufType, 0,
+                                pabyOut + k * psArgs->nBandSpace + j * psArgs->nLineSpace + i * psArgs->nPixelSpace,
+                                psArgs->eBufType, 0,
                                 1);
                 }
             }
@@ -1399,12 +1435,7 @@ CPLXMLNode *VRTAveragedSource::SerializeToXML( const char *pszVRTPath )
 /************************************************************************/
 
 CPLErr 
-VRTAveragedSource::RasterIO( int nXOff, int nYOff, int nXSize, int nYSize,
-                           void *pData, int nBufXSize, int nBufYSize, 
-                           GDALDataType eBufType, 
-                           GSpacing nPixelSpace,
-                           GSpacing nLineSpace,
-                           GDALRasterIOExtraArg* psExtraArgIn )
+VRTAveragedSource::RasterIO( const GDALRasterIOArgs* psArgs )
 
 {
     GDALRasterIOExtraArg sExtraArg;
@@ -1419,7 +1450,7 @@ VRTAveragedSource::RasterIO( int nXOff, int nYOff, int nXSize, int nYSize,
     // The window we will actual set _within_ the pData buffer.
     int nOutXOff, nOutYOff, nOutXSize, nOutYSize;
 
-    if( !GetSrcDstWindow( nXOff, nYOff, nXSize, nYSize, nBufXSize, nBufYSize, 
+    if( !GetSrcDstWindow( psArgs, 
                           &dfReqXOff, &dfReqYOff, &dfReqXSize, &dfReqYSize,
                           &nReqXOff, &nReqYOff, &nReqXSize, &nReqYSize,
                           &nOutXOff, &nOutYOff, &nOutXSize, &nOutYSize ) )
@@ -1448,9 +1479,9 @@ VRTAveragedSource::RasterIO( int nXOff, int nYOff, int nXSize, int nYSize,
     {
         psExtraArg->eResampleAlg = GDALRasterIOGetResampleAlg(osResampling);
     }
-    else if( psExtraArgIn != NULL )
+    else if( psArgs->psExtraArg != NULL )
     {
-        psExtraArg->eResampleAlg = psExtraArgIn->eResampleAlg;
+        psExtraArg->eResampleAlg = psArgs->psExtraArg->eResampleAlg;
     }
 
     psExtraArg->bFloatingPointWindowValidity = TRUE;
@@ -1477,7 +1508,7 @@ VRTAveragedSource::RasterIO( int nXOff, int nYOff, int nXSize, int nYSize,
     {
         double  dfYDst;
 
-        dfYDst = (iBufLine / (double) nBufYSize) * nYSize + nYOff;
+        dfYDst = (iBufLine / (double) psArgs->nBufYSize) * psArgs->nYSize + psArgs->nYOff;
         
         for( int iBufPixel = nOutXOff; 
              iBufPixel < nOutXOff + nOutXSize; 
@@ -1487,7 +1518,7 @@ VRTAveragedSource::RasterIO( int nXOff, int nYOff, int nXSize, int nYSize,
             double dfXSrcStart, dfXSrcEnd, dfYSrcStart, dfYSrcEnd;
             int    iXSrcStart, iYSrcStart, iXSrcEnd, iYSrcEnd;
 
-            dfXDst = (iBufPixel / (double) nBufXSize) * nXSize + nXOff;
+            dfXDst = (iBufPixel / (double) psArgs->nBufXSize) * psArgs->nXSize + psArgs->nXOff;
 
             // Compute the source image rectangle needed for this pixel.
             DstToSrc( dfXDst, dfYDst, dfXSrcStart, dfYSrcStart );
@@ -1559,15 +1590,15 @@ VRTAveragedSource::RasterIO( int nXOff, int nYOff, int nXSize, int nYSize,
             // Put it in the output buffer.
             GByte *pDstLocation;
 
-            pDstLocation = ((GByte *)pData) 
-                + nPixelSpace * iBufPixel
-                + (GPtrDiff_t)nLineSpace * iBufLine;
+            pDstLocation = ((GByte *)psArgs->pData) 
+                + psArgs->nPixelSpace * iBufPixel
+                + (GPtrDiff_t)psArgs->nLineSpace * iBufLine;
 
-            if( eBufType == GDT_Byte )
+            if( psArgs->eBufType == GDT_Byte )
                 *pDstLocation = (GByte) MIN(255,MAX(0,dfOutputValue + 0.5));
             else
                 GDALCopyWords( &dfOutputValue, GDT_Float32, 4, 
-                               pDstLocation, eBufType, 8, 1 );
+                               pDstLocation, psArgs->eBufType, 8, 1 );
         }
     }
 
@@ -1979,12 +2010,7 @@ void VRTComplexSource::SetColorTableComponent(int nComponent)
 /************************************************************************/
 
 CPLErr 
-VRTComplexSource::RasterIO( int nXOff, int nYOff, int nXSize, int nYSize,
-                            void *pData, int nBufXSize, int nBufYSize, 
-                            GDALDataType eBufType, 
-                            GSpacing nPixelSpace,
-                            GSpacing nLineSpace,
-                            GDALRasterIOExtraArg* psExtraArgIn)
+VRTComplexSource::RasterIO( const GDALRasterIOArgs* psArgs )
     
 {
     GDALRasterIOExtraArg sExtraArg;
@@ -1999,7 +2025,7 @@ VRTComplexSource::RasterIO( int nXOff, int nYOff, int nXSize, int nYSize,
     // The window we will actual set _within_ the pData buffer.
     int nOutXOff, nOutYOff, nOutXSize, nOutYSize;
 
-    if( !GetSrcDstWindow( nXOff, nYOff, nXSize, nYSize, nBufXSize, nBufYSize, 
+    if( !GetSrcDstWindow( psArgs, 
                           &dfReqXOff, &dfReqYOff, &dfReqXSize, &dfReqYSize,
                           &nReqXOff, &nReqYOff, &nReqXSize, &nReqYSize,
                           &nOutXOff, &nOutYOff, &nOutXSize, &nOutYSize ) )
@@ -2009,9 +2035,9 @@ VRTComplexSource::RasterIO( int nXOff, int nYOff, int nXSize, int nYSize,
     {
         psExtraArg->eResampleAlg = GDALRasterIOGetResampleAlg(osResampling);
     }
-    else if( psExtraArgIn != NULL )
+    else if( psArgs->psExtraArg != NULL )
     {
-        psExtraArg->eResampleAlg = psExtraArgIn->eResampleAlg;
+        psExtraArg->eResampleAlg = psArgs->psExtraArg->eResampleAlg;
     }
     psExtraArg->bFloatingPointWindowValidity = TRUE;
     psExtraArg->dfXOff = dfReqXOff;
@@ -2020,12 +2046,12 @@ VRTComplexSource::RasterIO( int nXOff, int nYOff, int nXSize, int nYSize,
     psExtraArg->dfYSize = dfReqYSize;
 
     CPLErr eErr = RasterIOInternal(nReqXOff, nReqYOff, nReqXSize, nReqYSize,
-                       ((GByte *)pData)
-                            + nPixelSpace * nOutXOff
-                            + (GPtrDiff_t)nLineSpace * nOutYOff,
+                       ((GByte *)psArgs->pData)
+                            + psArgs->nPixelSpace * nOutXOff
+                            + (GPtrDiff_t)psArgs->nLineSpace * nOutYOff,
                        nOutXSize, nOutYSize,
-                       eBufType,
-                       nPixelSpace, nLineSpace, psExtraArg );
+                       psArgs->eBufType,
+                       psArgs->nPixelSpace, psArgs->nLineSpace, psExtraArg );
 
     return eErr;
 }
@@ -2382,30 +2408,25 @@ CPLXMLNode *VRTFuncSource::SerializeToXML( CPL_UNUSED const char * pszVRTPath )
 /************************************************************************/
 
 CPLErr
-VRTFuncSource::RasterIO( int nXOff, int nYOff, int nXSize, int nYSize,
-                         void *pData, int nBufXSize, int nBufYSize,
-                         GDALDataType eBufType,
-                         GSpacing nPixelSpace,
-                         GSpacing nLineSpace,
-                         CPL_UNUSED GDALRasterIOExtraArg* psExtraArg )
+VRTFuncSource::RasterIO( const GDALRasterIOArgs* psArgs )
 {
-    if( nPixelSpace*8 == GDALGetDataTypeSize( eBufType )
-        && nLineSpace == nPixelSpace * nXSize
-        && nBufXSize == nXSize && nBufYSize == nYSize
-        && eBufType == eType )
+    if( psArgs->nPixelSpace*8 == GDALGetDataTypeSize( psArgs->eBufType )
+        && psArgs->nLineSpace == psArgs->nPixelSpace * psArgs->nXSize
+        && psArgs->nBufXSize == psArgs->nXSize && psArgs->nBufYSize == psArgs->nYSize
+        && psArgs->eBufType == eType )
     {
         return pfnReadFunc( pCBData,
-                            nXOff, nYOff, nXSize, nYSize,
-                            pData );
+                            psArgs->nXOff, psArgs->nYOff, psArgs->nXSize, psArgs->nYSize,
+                            psArgs->pData );
     }
     else
     {
         printf( "%d,%d  %d,%d, %d,%d %d,%d %d,%d\n",
-                (int)nPixelSpace*8, GDALGetDataTypeSize(eBufType),
-                (int)nLineSpace, (int)nPixelSpace * nXSize,
-                nBufXSize, nXSize,
-                nBufYSize, nYSize,
-                (int) eBufType, (int) eType );
+                (int)psArgs->nPixelSpace*8, GDALGetDataTypeSize(psArgs->eBufType),
+                (int)psArgs->nLineSpace, (int)psArgs->nPixelSpace * psArgs->nXSize,
+                psArgs->nBufXSize, psArgs->nXSize,
+                psArgs->nBufYSize, psArgs->nYSize,
+                (int) psArgs->eBufType, (int) eType );
         CPLError( CE_Failure, CPLE_AppDefined,
                   "VRTFuncSource::RasterIO() - Irregular request." );
         return CE_Failure;

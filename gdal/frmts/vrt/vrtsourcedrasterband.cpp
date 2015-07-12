@@ -111,16 +111,10 @@ VRTSourcedRasterBand::~VRTSourcedRasterBand()
 }
 
 /************************************************************************/
-/*                             IRasterIO()                              */
+/*                          ICompactRasterIO()                          */
 /************************************************************************/
 
-CPLErr VRTSourcedRasterBand::IRasterIO( GDALRWFlag eRWFlag,
-                                 int nXOff, int nYOff, int nXSize, int nYSize,
-                                 void * pData, int nBufXSize, int nBufYSize,
-                                 GDALDataType eBufType,
-                                 GSpacing nPixelSpace,
-                                 GSpacing nLineSpace,
-                                 GDALRasterIOExtraArg* psExtraArg )
+CPLErr VRTSourcedRasterBand::ICompactRasterIO( const GDALRasterIOArgs* psArgs )
 
 {
     int         iSource;
@@ -128,9 +122,9 @@ CPLErr VRTSourcedRasterBand::IRasterIO( GDALRWFlag eRWFlag,
 
     // If resampling with non-nearest neighbour, we need to be carefull
     // if the VRT band exposes a nodata value, but the sources do not have it
-    if (eRWFlag == GF_Read &&
-        (nXSize != nBufXSize || nYSize != nBufYSize) &&
-        psExtraArg->eResampleAlg != GRIORA_NearestNeighbour &&
+    if (psArgs->eRWFlag == GF_Read &&
+        (psArgs->nXSize != psArgs->nBufXSize || psArgs->nYSize != psArgs->nBufYSize) &&
+        psArgs->psExtraArg->eResampleAlg != GRIORA_NearestNeighbour &&
         bNoDataValueSet )
     {
         for( int i = 0; i < nSources; i++ )
@@ -148,18 +142,12 @@ CPLErr VRTSourcedRasterBand::IRasterIO( GDALRWFlag eRWFlag,
             }
             if( bFallbackToBase )
             {
-                return GDALRasterBand::IRasterIO( eRWFlag,
-                                                nXOff, nYOff, nXSize, nYSize,
-                                                pData, nBufXSize, nBufYSize,
-                                                eBufType,
-                                                nPixelSpace,
-                                                nLineSpace,
-                                                psExtraArg );
+                return GDALRasterBand::ICompactRasterIO( psArgs );
             }
         }
     }
 
-    if( eRWFlag == GF_Write )
+    if( psArgs->eRWFlag == GF_Write )
     {
         CPLError( CE_Failure, CPLE_AppDefined, 
                   "Writing through VRTSourcedRasterBand is not supported." );
@@ -183,12 +171,10 @@ CPLErr VRTSourcedRasterBand::IRasterIO( GDALRWFlag eRWFlag,
 /*      Do we have overviews that would be appropriate to satisfy       */
 /*      this request?                                                   */
 /* ==================================================================== */
-    if( (nBufXSize < nXSize || nBufYSize < nYSize)
+    if( (psArgs->nBufXSize < psArgs->nXSize || psArgs->nBufYSize < psArgs->nYSize)
         && GetOverviewCount() > 0 )
     {
-        if( OverviewRasterIO( eRWFlag, nXOff, nYOff, nXSize, nYSize, 
-                              pData, nBufXSize, nBufYSize, 
-                              eBufType, nPixelSpace, nLineSpace, psExtraArg ) == CE_None )
+        if( OverviewRasterIO( psArgs ) == CE_None )
             return CE_None;
     }
 
@@ -196,19 +182,19 @@ CPLErr VRTSourcedRasterBand::IRasterIO( GDALRWFlag eRWFlag,
 /*      Initialize the buffer to some background value. Use the         */
 /*      nodata value if available.                                      */
 /* -------------------------------------------------------------------- */
-    if ( nPixelSpace == GDALGetDataTypeSize(eBufType)/8 &&
+    if ( psArgs->nPixelSpace == GDALGetDataTypeSize(psArgs->eBufType)/8 &&
          (!bNoDataValueSet || (!CPLIsNan(dfNoDataValue) && dfNoDataValue == 0)) )
     {
-        if (nLineSpace == nBufXSize * nPixelSpace)
+        if (psArgs->nLineSpace == psArgs->nBufXSize * psArgs->nPixelSpace)
         {
-             memset( pData, 0, (GIntBig)nBufYSize * nLineSpace );
+             memset( psArgs->pData, 0, (GIntBig)psArgs->nBufYSize * psArgs->nLineSpace );
         }
         else
         {
             int    iLine;
-            for( iLine = 0; iLine < nBufYSize; iLine++ )
+            for( iLine = 0; iLine < psArgs->nBufYSize; iLine++ )
             {
-                memset( ((GByte*)pData) + (GIntBig)iLine * nLineSpace, 0, nBufXSize * nPixelSpace );
+                memset( ((GByte*)psArgs->pData) + (GIntBig)iLine * psArgs->nLineSpace, 0, psArgs->nBufXSize * psArgs->nPixelSpace );
             }
         }
     }
@@ -220,44 +206,41 @@ CPLErr VRTSourcedRasterBand::IRasterIO( GDALRWFlag eRWFlag,
         if( bNoDataValueSet )
             dfWriteValue = dfNoDataValue;
         
-        for( iLine = 0; iLine < nBufYSize; iLine++ )
+        for( iLine = 0; iLine < psArgs->nBufYSize; iLine++ )
         {
             GDALCopyWords( &dfWriteValue, GDT_Float64, 0, 
-                           ((GByte *)pData) + (GIntBig)nLineSpace * iLine, 
-                           eBufType, nPixelSpace, nBufXSize );
+                           ((GByte *)psArgs->pData) + (GIntBig)psArgs->nLineSpace * iLine, 
+                           psArgs->eBufType, psArgs->nPixelSpace, psArgs->nBufXSize );
         }
     }
     
     nRecursionCounter ++;
 
-    GDALProgressFunc  pfnProgressGlobal = psExtraArg->pfnProgress;
-    void             *pProgressDataGlobal = psExtraArg->pProgressData;
+    GDALProgressFunc  pfnProgressGlobal = psArgs->psExtraArg->pfnProgress;
+    void             *pProgressDataGlobal = psArgs->psExtraArg->pProgressData;
 
 /* -------------------------------------------------------------------- */
 /*      Overlay each source in turn over top this.                      */
 /* -------------------------------------------------------------------- */
     for( iSource = 0; eErr == CE_None && iSource < nSources; iSource++ )
     {
-        psExtraArg->pfnProgress = GDALScaledProgress;
-        psExtraArg->pProgressData = 
+        psArgs->psExtraArg->pfnProgress = GDALScaledProgress;
+        psArgs->psExtraArg->pProgressData = 
                 GDALCreateScaledProgress( 1.0 * iSource / nSources,
                                         1.0 * (iSource + 1) / nSources,
                                         pfnProgressGlobal,
                                         pProgressDataGlobal );
-        if( psExtraArg->pProgressData == NULL )
-            psExtraArg->pfnProgress = NULL;
+        if( psArgs->psExtraArg->pProgressData == NULL )
+            psArgs->psExtraArg->pfnProgress = NULL;
 
         eErr = 
-            papoSources[iSource]->RasterIO( nXOff, nYOff, nXSize, nYSize, 
-                                            pData, nBufXSize, nBufYSize, 
-                                            eBufType, nPixelSpace, nLineSpace,
-                                            psExtraArg);
+            papoSources[iSource]->RasterIO( psArgs );
 
-        GDALDestroyScaledProgress( psExtraArg->pProgressData );
+        GDALDestroyScaledProgress( psArgs->psExtraArg->pProgressData );
     }
 
-    psExtraArg->pfnProgress = pfnProgressGlobal;
-    psExtraArg->pProgressData = pProgressDataGlobal;
+    psArgs->psExtraArg->pfnProgress = pfnProgressGlobal;
+    psArgs->psExtraArg->pProgressData = pProgressDataGlobal;
 
     nRecursionCounter --;
     
@@ -287,12 +270,25 @@ CPLErr VRTSourcedRasterBand::IReadBlock( int nBlockXOff, int nBlockYOff,
 
     GDALRasterIOExtraArg sExtraArg;
     INIT_RASTERIO_EXTRA_ARG(sExtraArg);
-
-    return IRasterIO( GF_Read, 
-                      nBlockXOff * nBlockXSize, nBlockYOff * nBlockYSize, 
-                      nReadXSize, nReadYSize, 
-                      pImage, nReadXSize, nReadYSize, eDataType, 
-                      nPixelSize, nPixelSize * nBlockXSize, &sExtraArg );
+    
+    GDALRasterIOArgs sArgs;
+    sArgs.eRWFlag = GF_Read;
+    sArgs.nXOff = nBlockXOff * nBlockXSize;
+    sArgs.nYOff = nBlockYOff * nBlockYSize;
+    sArgs.nXSize = nReadXSize;
+    sArgs.nYSize = nReadYSize;
+    sArgs.pData = pImage;
+    sArgs.nBufXSize = nReadXSize;
+    sArgs.nBufYSize = nReadYSize;
+    sArgs.eBufType = eDataType;
+    sArgs.nBandCount = 0;
+    sArgs.panBandMap = NULL;
+    sArgs.nPixelSpace = nPixelSize;
+    sArgs.nLineSpace = nPixelSize * nBlockXSize;
+    sArgs.nBandSpace = 0;
+    sArgs.psExtraArg = &sExtraArg;
+    
+    return ICompactRasterIO( &sArgs );
 }
 
 
@@ -1202,7 +1198,14 @@ const char *VRTSourcedRasterBand::GetMetadataItem( const char * pszName,
 
             VRTSimpleSource *poSrc = (VRTSimpleSource *) papoSources[iSource];
 
-            if( !poSrc->GetSrcDstWindow( iPixel, iLine, 1, 1, 1, 1,
+            GDALRasterIOArgs sArgs;
+            sArgs.nXOff = iPixel;
+            sArgs.nYOff = iLine;
+            sArgs.nXSize = 1;
+            sArgs.nYSize = 1;
+            sArgs.nBufXSize = 1;
+            sArgs.nBufYSize = 1;
+            if( !poSrc->GetSrcDstWindow( &sArgs,
                                          &dfReqXOff, &dfReqYOff, &dfReqXSize, &dfReqYSize,
                                          &nReqXOff, &nReqYOff, 
                                          &nReqXSize, &nReqYSize,

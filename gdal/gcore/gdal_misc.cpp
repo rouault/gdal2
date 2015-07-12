@@ -3404,6 +3404,19 @@ void GDALRasterIOExtraArgSetResampleAlg(GDALRasterIOExtraArg* psExtraArg,
     }
 }
 
+void GDALRasterIOExtraArgSetResampleAlg( const GDALRasterIOArgs* psArgs )
+{
+    if( (psArgs->nBufXSize != psArgs->nXSize || psArgs->nBufYSize != psArgs->nYSize) &&
+        psArgs->psExtraArg->eResampleAlg == GRIORA_NearestNeighbour  )
+    {
+        const char* pszResampling = CPLGetConfigOption("GDAL_RASTERIO_RESAMPLING", NULL);
+        if( pszResampling != NULL )
+        {
+            psArgs->psExtraArg->eResampleAlg = GDALRasterIOGetResampleAlg(pszResampling);
+        }
+    }
+}
+
 /************************************************************************/
 /*                     GDALCanFileAcceptSidecarFile()                   */
 /************************************************************************/

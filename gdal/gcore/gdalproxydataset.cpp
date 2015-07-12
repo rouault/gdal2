@@ -43,6 +43,7 @@ retType GDALProxyDataset::methodName argList \
     GDALDataset* poUnderlyingDataset = RefUnderlyingDataset(); \
     if (poUnderlyingDataset) \
     { \
+        bHasCompactRasterIO = poUnderlyingDataset->HasCompactRasterIO(); \
         ret = poUnderlyingDataset->methodName argParams; \
         UnrefUnderlyingDataset(poUnderlyingDataset); \
     } \
@@ -66,6 +67,11 @@ D_PROXY_METHOD_WITH_RET(CPLErr, CE_Failure, IRasterIO,
                         pData, nBufXSize, nBufYSize,
                         eBufType, nBandCount, panBandMap,
                         nPixelSpace, nLineSpace, nBandSpace, psExtraArg ))
+
+
+D_PROXY_METHOD_WITH_RET(CPLErr, CE_Failure, ICompactRasterIO,
+                        ( const GDALRasterIOArgs* psArgs ),
+                        ( psArgs ))
 
 
 D_PROXY_METHOD_WITH_RET(CPLErr, CE_Failure, IBuildOverviews,
@@ -191,6 +197,10 @@ RB_PROXY_METHOD_WITH_RET(CPLErr, CE_Failure, IRasterIO,
                         (eRWFlag, nXOff, nYOff, nXSize, nYSize,
                                 pData, nBufXSize, nBufYSize, eBufType,
                                 nPixelSpace, nLineSpace, psExtraArg ) )
+
+RB_PROXY_METHOD_WITH_RET(CPLErr, CE_Failure, ICompactRasterIO,
+                        ( const GDALRasterIOArgs* psArgs ),
+                        ( psArgs ))
 
 RB_PROXY_METHOD_WITH_RET(char**, NULL, GetMetadataDomainList, (), ())
 RB_PROXY_METHOD_WITH_RET(char**, NULL, GetMetadata, (const char * pszDomain), (pszDomain))

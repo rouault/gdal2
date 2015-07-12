@@ -257,13 +257,7 @@ void VRTDerivedRasterBand::SetSourceTransferType(GDALDataType eDataType)
  *
  * @return CE_Failure if the access fails, otherwise CE_None.
  */
-CPLErr VRTDerivedRasterBand::IRasterIO(GDALRWFlag eRWFlag,
-				       int nXOff, int nYOff, int nXSize, 
-				       int nYSize, void * pData, int nBufXSize,
-				       int nBufYSize, GDALDataType eBufType,
-				       GSpacing nPixelSpace,
-                       GSpacing nLineSpace,
-                       GDALRasterIOExtraArg* psExtraArg )
+CPLErr VRTDerivedRasterBand::ICompactRasterIO(const GDALRasterIOArgs* psArgs)
 {
     GDALDerivedPixelFunc pfnPixelFunc;
     void **pBuffers;
@@ -271,18 +265,18 @@ CPLErr VRTDerivedRasterBand::IRasterIO(GDALRWFlag eRWFlag,
     int iSource, ii, typesize, sourcesize;
     GDALDataType eSrcType;
 
-    if( eRWFlag == GF_Write )
+    if( psArgs->eRWFlag == GF_Write )
     {
         CPLError( CE_Failure, CPLE_AppDefined, 
                   "Writing through VRTSourcedRasterBand is not supported." );
         return CE_Failure;
     }
 
-    typesize = GDALGetDataTypeSize(eBufType) / 8;
-    if (GDALGetDataTypeSize(eBufType) % 8 > 0) typesize++;
+    typesize = GDALGetDataTypeSize(psArgs->eBufType) / 8;
+    if (GDALGetDataTypeSize(psArgs->eBufType) % 8 > 0) typesize++;
     eSrcType = this->eSourceTransferType;
     if ((eSrcType == GDT_Unknown) || (eSrcType >= GDT_TypeCount)) {
-	eSrcType = eBufType;
+	eSrcType = psArgs->eBufType;
     }
     sourcesize = GDALGetDataTypeSize(eSrcType) / 8;
 
@@ -290,9 +284,9 @@ CPLErr VRTDerivedRasterBand::IRasterIO(GDALRWFlag eRWFlag,
 /*      Initialize the buffer to some background value. Use the         */
 /*      nodata value if available.                                      */
 /* -------------------------------------------------------------------- */
-    if ( nPixelSpace == typesize &&
+    if ( psArgs->nPixelSpace == typesize &&
          (!bNoDataValueSet || dfNoDataValue == 0) ) {
-        memset( pData, 0, nBufXSize * nBufYSize * nPixelSpace );
+        memset( psArgs->pData, 0, psArgs->nBufXSize * psArgs->nBufYSize * psArgs->nPixelSpace );
     }
     else if ( !bEqualAreas || bNoDataValueSet )
     {
@@ -302,11 +296,11 @@ CPLErr VRTDerivedRasterBand::IRasterIO(GDALRWFlag eRWFlag,
         if( bNoDataValueSet )
             dfWriteValue = dfNoDataValue;
 
-        for( iLine = 0; iLine < nBufYSize; iLine++ )
+        for( iLine = 0; iLine < psArgs->nBufYSize; iLine++ )
         {
             GDALCopyWords( &dfWriteValue, GDT_Float64, 0, 
-                           ((GByte *)pData) + nLineSpace * iLine, 
-                           eBufType, nPixelSpace, nBufXSize );
+                           ((GByte *)psArgs->pData) + psArgs->nLineSpace * iLine, 
+                           psArgs->eBufType, psArgs->nPixelSpace, psArgs->nBufXSize );
         }
     }
 
@@ -314,12 +308,10 @@ CPLErr VRTDerivedRasterBand::IRasterIO(GDALRWFlag eRWFlag,
 /*      Do we have overviews that would be appropriate to satisfy       */
 /*      this request?                                                   */
 /* -------------------------------------------------------------------- */
-    if( (nBufXSize < nXSize || nBufYSize < nYSize)
+    if( (psArgs->nBufXSize < psArgs->nXSize || psArgs->nBufYSize < psArgs->nYSize)
         && GetOverviewCount() > 0 )
     {
-        if( OverviewRasterIO( eRWFlag, nXOff, nYOff, nXSize, nYSize, 
-                              pData, nBufXSize, nBufYSize, 
-                              eBufType, nPixelSpace, nLineSpace, psExtraArg ) == CE_None )
+        if( OverviewRasterIO( psArgs ) == CE_None )
             return CE_None;
     }
 
@@ -344,7 +336,7 @@ CPLErr VRTDerivedRasterBand::IRasterIO(GDALRWFlag eRWFlag,
     pBuffers = (void **) CPLMalloc(sizeof(void *) * nSources);
     for (iSource = 0; iSource < nSources; iSource++) {
         pBuffers[iSource] = (void *) 
-            VSIMalloc(sourcesize * nBufXSize * nBufYSize);
+            VSIMalloc(sourcesize * psArgs->nBufXSize * psArgs->nBufYSize);
         if (pBuffers[iSource] == NULL)
         {
             for (ii = 0; ii < iSource; ii++) {
@@ -353,7 +345,7 @@ CPLErr VRTDerivedRasterBand::IRasterIO(GDALRWFlag eRWFlag,
             CPLError( CE_Failure, CPLE_OutOfMemory,
                 "VRTDerivedRasterBand::IRasterIO:" \
                 "Out of memory allocating " CPL_FRMT_GIB " bytes.\n",
-                (GIntBig)nPixelSpace * nBufXSize * nBufYSize);
+                (GIntBig)psArgs->nPixelSpace * psArgs->nBufXSize * psArgs->nBufYSize);
             return CE_Failure;
         }
 
@@ -365,13 +357,13 @@ CPLErr VRTDerivedRasterBand::IRasterIO(GDALRWFlag eRWFlag,
         /* ------------------------------------------------------------ */
         if ( !bNoDataValueSet || dfNoDataValue == 0 )
         {
-            memset( pBuffers[iSource], 0, sourcesize * nBufXSize * nBufYSize );
+            memset( pBuffers[iSource], 0, sourcesize * psArgs->nBufXSize * psArgs->nBufYSize );
         }
         else
         {
             GDALCopyWords( &dfNoDataValue, GDT_Float64, 0,
                            (GByte *) pBuffers[iSource], eSrcType, sourcesize,
-                           nBufXSize * nBufYSize);
+                           psArgs->nBufXSize * psArgs->nBufYSize);
         }
     }
 
@@ -379,19 +371,34 @@ CPLErr VRTDerivedRasterBand::IRasterIO(GDALRWFlag eRWFlag,
     INIT_RASTERIO_EXTRA_ARG(sExtraArg);
 
     /* ---- Load values for sources into packed buffers ---- */
+    
+    GDALRasterIOArgs sArgs;
+    sArgs.eRWFlag = GF_Read;
+    sArgs.nXOff = psArgs->nXOff;
+    sArgs.nYOff = psArgs->nYOff;
+    sArgs.nXSize = psArgs->nXSize;
+    sArgs.nYSize = psArgs->nYSize;
+    sArgs.nBufXSize = psArgs->nBufXSize;
+    sArgs.nBufYSize = psArgs->nBufYSize;
+    sArgs.eBufType = eSrcType;
+    sArgs.nBandCount = 0;
+    sArgs.panBandMap = NULL;
+    sArgs.nPixelSpace = GDALGetDataTypeSize( eSrcType ) / 8;
+    sArgs.nLineSpace = (GDALGetDataTypeSize( eSrcType ) / 8) * psArgs->nBufXSize;
+    sArgs.nBandSpace = 0;
+    sArgs.psExtraArg = &sExtraArg;
+
     for(iSource = 0; iSource < nSources; iSource++) {
-        eErr = ((VRTSource *)papoSources[iSource])->RasterIO
-	    (nXOff, nYOff, nXSize, nYSize, 
-	     pBuffers[iSource], nBufXSize, nBufYSize, 
-	     eSrcType, GDALGetDataTypeSize( eSrcType ) / 8,
-             (GDALGetDataTypeSize( eSrcType ) / 8) * nBufXSize, &sExtraArg);
+        sArgs.pData = pBuffers[iSource];
+
+        eErr = ((VRTSource *)papoSources[iSource])->RasterIO(&sArgs);
     }
 
     /* ---- Apply pixel function ---- */
     if (eErr == CE_None) {
 	eErr = pfnPixelFunc((void **)pBuffers, nSources,
-			    pData, nBufXSize, nBufYSize,
-			    eSrcType, eBufType, nPixelSpace, nLineSpace);
+			    psArgs->pData, psArgs->nBufXSize, psArgs->nBufYSize,
+			    eSrcType, psArgs->eBufType, psArgs->nPixelSpace, psArgs->nLineSpace);
     }
 
     /* ---- Release buffers ---- */

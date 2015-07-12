@@ -73,16 +73,10 @@ VRTRawRasterBand::~VRTRawRasterBand()
 }
 
 /************************************************************************/
-/*                             IRasterIO()                              */
+/*                          ICompactRasterIO()                          */
 /************************************************************************/
 
-CPLErr VRTRawRasterBand::IRasterIO( GDALRWFlag eRWFlag,
-                                 int nXOff, int nYOff, int nXSize, int nYSize,
-                                 void * pData, int nBufXSize, int nBufYSize,
-                                 GDALDataType eBufType,
-                                 GSpacing nPixelSpace,
-                                 GSpacing nLineSpace,
-                                 GDALRasterIOExtraArg* psExtraArg)
+CPLErr VRTRawRasterBand::ICompactRasterIO( const GDALRasterIOArgs* psArgs )
 {
     if( poRawRaster == NULL )
     {
@@ -91,7 +85,7 @@ CPLErr VRTRawRasterBand::IRasterIO( GDALRWFlag eRWFlag,
         return CE_Failure;
     }
 
-    if( eRWFlag == GF_Write && eAccess == GA_ReadOnly )
+    if( psArgs->eRWFlag == GF_Write && eAccess == GA_ReadOnly )
     {
         CPLError( CE_Failure, CPLE_NoWriteAccess,
                   "Attempt to write to read only dataset in"
@@ -104,20 +98,16 @@ CPLErr VRTRawRasterBand::IRasterIO( GDALRWFlag eRWFlag,
 /*      Do we have overviews that would be appropriate to satisfy       */
 /*      this request?                                                   */
 /* -------------------------------------------------------------------- */
-    if( (nBufXSize < nXSize || nBufYSize < nYSize)
+    if( (psArgs->nBufXSize < psArgs->nXSize || psArgs->nBufYSize < psArgs->nYSize)
         && GetOverviewCount() > 0 )
     {
-        if( OverviewRasterIO( eRWFlag, nXOff, nYOff, nXSize, nYSize, 
-                              pData, nBufXSize, nBufYSize, 
-                              eBufType, nPixelSpace, nLineSpace, psExtraArg ) == CE_None )
+        if( OverviewRasterIO( psArgs ) == CE_None )
             return CE_None;
     }
     
     poRawRaster->SetAccess(eAccess);
 
-    return poRawRaster->RasterIO( eRWFlag, nXOff, nYOff, nXSize, nYSize, 
-                                  pData, nBufXSize, nBufYSize, 
-                                  eBufType, nPixelSpace, nLineSpace, psExtraArg );
+    return poRawRaster->RasterIO( psArgs );
 }
 
 /************************************************************************/

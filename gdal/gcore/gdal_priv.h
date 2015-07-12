@@ -1,5 +1,5 @@
 /******************************************************************************
- * $Id$
+ * $Id: gdal_priv.h 29519 2015-07-11 16:37:43Z rouault $
  *
  * Name:     gdal_priv.h
  * Project:  GDAL Core
@@ -274,6 +274,26 @@ typedef void signature_changed;
 
 //! A set of associated raster bands, usually from one file.
 
+typedef struct
+{
+    GDALRWFlag eRWFlag;
+    int nXOff;
+    int nYOff;
+    int nXSize;
+    int nYSize;
+    void * pData;
+    int nBufXSize;
+    int nBufYSize;
+    GDALDataType eBufType;
+    int nBandCount;
+    int *panBandMap;
+    GSpacing nPixelSpace;
+    GSpacing nLineSpace;
+    GSpacing nBandSpace;
+    GDALRasterIOExtraArg* psExtraArg;
+} GDALRasterIOArgs;
+
+
 class CPL_DLL GDALDataset : public GDALMajorObject
 {
     friend GDALDatasetH CPL_STDCALL GDALOpenEx( const char* pszFilename,
@@ -307,6 +327,7 @@ class CPL_DLL GDALDataset : public GDALMajorObject
     GByte       bShared;
     GByte       bIsInternal;
     GByte       bSuppressOnClose;
+    GByte       bHasCompactRasterIO;
 
                 GDALDataset(void);
 
@@ -329,36 +350,48 @@ class CPL_DLL GDALDataset : public GDALMajorObject
                               int, int *, GSpacing, GSpacing, GSpacing,
                               GDALRasterIOExtraArg* psExtraArg );
 
-    CPLErr BlockBasedRasterIO( GDALRWFlag, int, int, int, int,
-                               void *, int, int, GDALDataType,
-                               int, int *, GSpacing, GSpacing, GSpacing,
-                               GDALRasterIOExtraArg* psExtraArg );
-    void   BlockBasedFlushCache();
-    
-    CPLErr BandBasedRasterIO( GDALRWFlag eRWFlag,
+    virtual CPLErr ICompactRasterIO( const GDALRasterIOArgs* psArgs );
+
+    CPLErr BlockBasedRasterIO( GDALRWFlag eRWFlag,
                                int nXOff, int nYOff, int nXSize, int nYSize,
                                void * pData, int nBufXSize, int nBufYSize,
                                GDALDataType eBufType, 
                                int nBandCount, int *panBandMap,
                                GSpacing nPixelSpace, GSpacing nLineSpace,
                                GSpacing nBandSpace,
-                               GDALRasterIOExtraArg* psExtraArg );
+                               GDALRasterIOExtraArg* psExtraArg )
+    {
+        GDALRasterIOArgs sArgs;
+        sArgs.eRWFlag = eRWFlag;
+        sArgs.nXOff = nXOff;
+        sArgs.nYOff = nYOff;
+        sArgs.nXSize = nXSize;
+        sArgs.nYSize = nYSize;
+        sArgs.pData = pData;
+        sArgs.nBufXSize = nBufXSize;
+        sArgs.nBufYSize = nBufYSize;
+        sArgs.eBufType = eBufType;
+        sArgs.nBandCount = nBandCount;
+        sArgs.panBandMap = panBandMap;
+        sArgs.nPixelSpace = nPixelSpace;
+        sArgs.nLineSpace = nLineSpace;
+        sArgs.nBandSpace = nBandSpace;
+        sArgs.psExtraArg = psExtraArg;
+        return BandBasedRasterIO(&sArgs);
+    }
+
+    CPLErr BlockBasedRasterIO( const GDALRasterIOArgs* psArgs );
+
+    void   BlockBasedFlushCache();
+    
+    CPLErr BandBasedRasterIO( const GDALRasterIOArgs* psArgs );
 
     CPLErr ValidateRasterIOOrAdviseReadParameters(
                                const char* pszCallingFunc,
                                int* pbStopProcessingOnCENone,
-                               int nXOff, int nYOff, int nXSize, int nYSize,
-                               int nBufXSize, int nBufYSize, 
-                               int nBandCount, int *panBandMap);
+                               const GDALRasterIOArgs* psArgs);
 
-    CPLErr TryOverviewRasterIO( GDALRWFlag eRWFlag,
-                                int nXOff, int nYOff, int nXSize, int nYSize,
-                                void * pData, int nBufXSize, int nBufYSize,
-                                GDALDataType eBufType,
-                                int nBandCount, int *panBandMap,
-                                GSpacing nPixelSpace, GSpacing nLineSpace,
-                                GSpacing nBandSpace,
-                                GDALRasterIOExtraArg* psExtraArg,
+    CPLErr TryOverviewRasterIO( const GDALRasterIOArgs* psArgs,
                                 int* pbTried);
 
     virtual int         CloseDependentDatasets();
@@ -432,6 +465,8 @@ class CPL_DLL GDALDataset : public GDALMajorObject
 #endif
                           );
 
+    CPLErr      RasterIO( const GDALRasterIOArgs* psArgs );
+
     int           Reference();
     int           Dereference();
     GDALAccess    GetAccess() { return eAccess; }
@@ -449,6 +484,8 @@ class CPL_DLL GDALDataset : public GDALMajorObject
                            int, int *, GDALProgressFunc, void * );
 
     void ReportError(CPLErr eErrClass, int err_no, const char *fmt, ...)  CPL_PRINT_FUNC_FORMAT (4, 5);
+    
+    int             HasCompactRasterIO() const { return bHasCompactRasterIO; }
 
 private:
     CPLMutex        *m_hMutex;
@@ -729,9 +766,7 @@ class CPL_DLL GDALRasterBand : public GDALMajorObject
     friend class GDALProxyRasterBand;
     friend class GDALDefaultOverviews;
 
-    CPLErr RasterIOResampled( GDALRWFlag, int, int, int, int,
-                              void *, int, int, GDALDataType,
-                              GSpacing, GSpacing, GDALRasterIOExtraArg* psExtraArg );
+    CPLErr RasterIOResampled( const GDALRasterIOArgs* psArgs );
 
     int          EnterReadWrite(GDALRWFlag eRWFlag);
     void         LeaveReadWrite();
@@ -749,9 +784,39 @@ class CPL_DLL GDALRasterBand : public GDALMajorObject
     virtual CPLErr IRasterIO( GDALRWFlag, int, int, int, int,
                               void *, int, int, GDALDataType,
                               GSpacing, GSpacing, GDALRasterIOExtraArg* psExtraArg );
-    CPLErr         OverviewRasterIO( GDALRWFlag, int, int, int, int,
-                                     void *, int, int, GDALDataType,
-                                     GSpacing, GSpacing, GDALRasterIOExtraArg* psExtraArg );
+
+    virtual CPLErr ICompactRasterIO( const GDALRasterIOArgs* psArgs );
+
+    CPLErr         OverviewRasterIO( GDALRWFlag eRWFlag,
+                                    int nXOff, int nYOff, int nXSize, int nYSize,
+                                    void * pData, int nBufXSize, int nBufYSize,
+                                    GDALDataType eBufType,
+                                    GSpacing nPixelSpace, GSpacing nLineSpace,
+                                    GDALRasterIOExtraArg* psExtraArg )
+    {
+        GDALRasterIOArgs sArgs;
+        sArgs.eRWFlag = eRWFlag;
+        sArgs.nXOff = nXOff;
+        sArgs.nYOff = nYOff;
+        sArgs.nXSize = nXSize;
+        sArgs.nYSize = nYSize;
+        sArgs.pData = pData;
+        sArgs.nBufXSize = nBufXSize;
+        sArgs.nBufYSize = nBufYSize;
+        sArgs.eBufType = eBufType;
+        sArgs.nBandCount = 0;
+        sArgs.panBandMap = NULL;
+        sArgs.nPixelSpace = nPixelSpace;
+        sArgs.nLineSpace = nLineSpace;
+        sArgs.nBandSpace = 0;
+        sArgs.psExtraArg = psExtraArg;
+        return OverviewRasterIO(&sArgs);
+    }
+
+    CPLErr         OverviewRasterIO( const GDALRasterIOArgs* psArgs );
+
+    CPLErr TryOverviewRasterIO( const GDALRasterIOArgs* psArgs,
+                                int* pbTried );
 
     CPLErr TryOverviewRasterIO( GDALRWFlag eRWFlag,
                                 int nXOff, int nYOff, int nXSize, int nYSize,
@@ -759,7 +824,26 @@ class CPL_DLL GDALRasterBand : public GDALMajorObject
                                 GDALDataType eBufType,
                                 GSpacing nPixelSpace, GSpacing nLineSpace,
                                 GDALRasterIOExtraArg* psExtraArg,
-                                int* pbTried );
+                                int* pbTried )
+    {
+        GDALRasterIOArgs sArgs;
+        sArgs.eRWFlag = eRWFlag;
+        sArgs.nXOff = nXOff;
+        sArgs.nYOff = nYOff;
+        sArgs.nXSize = nXSize;
+        sArgs.nYSize = nYSize;
+        sArgs.pData = pData;
+        sArgs.nBufXSize = nBufXSize;
+        sArgs.nBufYSize = nBufYSize;
+        sArgs.eBufType = eBufType;
+        sArgs.nBandCount = 0;
+        sArgs.panBandMap = NULL;
+        sArgs.nPixelSpace = nPixelSpace;
+        sArgs.nLineSpace = nLineSpace;
+        sArgs.nBandSpace = 0;
+        sArgs.psExtraArg = psExtraArg;
+        return TryOverviewRasterIO(&sArgs, pbTried);
+    }
 
     int            InitBlockInfo();
 
@@ -788,6 +872,9 @@ class CPL_DLL GDALRasterBand : public GDALMajorObject
                           OPTIONAL_OUTSIDE_GDAL(NULL)
 #endif
                           );
+
+    CPLErr      RasterIO( const GDALRasterIOArgs* psArgs );
+
     CPLErr      ReadBlock( int, int, void * );
 
     CPLErr      WriteBlock( int, int, void * );
@@ -1262,7 +1349,7 @@ int GDALReadTabFile2( const char * pszBaseFilename,
                       char** papszSiblingFiles, char** ppszTabFileNameOut );
 
 void CPL_DLL GDALCopyRasterIOExtraArg(GDALRasterIOExtraArg* psDestArg,
-                                      GDALRasterIOExtraArg* psSrcArg);
+                                      const GDALRasterIOExtraArg* psSrcArg);
 
 CPL_C_END
 
@@ -1295,6 +1382,7 @@ const char* GDALRasterIOGetResampleAlg(GDALRIOResampleAlg eResampleAlg);
 void GDALRasterIOExtraArgSetResampleAlg(GDALRasterIOExtraArg* psExtraArg,
                                         int nXSize, int nYSize,
                                         int nBufXSize, int nBufYSize);
+void GDALRasterIOExtraArgSetResampleAlg( const GDALRasterIOArgs* psArgs );
 
 /* CPL_DLL exported, but only for gdalwarp */
 GDALDataset CPL_DLL* GDALCreateOverviewDataset(GDALDataset* poDS, int nOvrLevel,

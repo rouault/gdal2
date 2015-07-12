@@ -177,23 +177,45 @@ CPLErr GDALRasterBand::RasterIO( GDALRWFlag eRWFlag,
                                  GDALRasterIOExtraArg* psExtraArg )
 
 {
+    GDALRasterIOArgs sArgs;
+    sArgs.eRWFlag = eRWFlag;
+    sArgs.nXOff = nXOff;
+    sArgs.nYOff = nYOff;
+    sArgs.nXSize = nXSize;
+    sArgs.nYSize = nYSize;
+    sArgs.pData = pData;
+    sArgs.nBufXSize = nBufXSize;
+    sArgs.nBufYSize = nBufYSize;
+    sArgs.eBufType = eBufType;
+    sArgs.nBandCount = 0;
+    sArgs.panBandMap = NULL;
+    sArgs.nPixelSpace = nPixelSpace;
+    sArgs.nLineSpace = nLineSpace;
+    sArgs.nBandSpace = 0;
+    sArgs.psExtraArg = psExtraArg;
+
+    return RasterIO(&sArgs);
+}
+
+CPLErr GDALRasterBand::RasterIO( const GDALRasterIOArgs* psArgs )
+{
     GDALRasterIOExtraArg sExtraArg;
-    if( psExtraArg == NULL )
+    GDALRasterIOExtraArg* psExtraArgIni = psArgs->psExtraArg;
+    if( psExtraArgIni == NULL )
     {
         INIT_RASTERIO_EXTRA_ARG(sExtraArg);
-        psExtraArg = &sExtraArg;
+        ((GDALRasterIOArgs*)psArgs)->psExtraArg = &sExtraArg;
     }
-    else if( psExtraArg->nVersion != RASTERIO_EXTRA_ARG_CURRENT_VERSION )
+    else if( psArgs->psExtraArg->nVersion != RASTERIO_EXTRA_ARG_CURRENT_VERSION )
     {
         ReportError( CE_Failure, CPLE_AppDefined,
                      "Unhandled version of GDALRasterIOExtraArg" );
         return CE_Failure;
     }
 
-    GDALRasterIOExtraArgSetResampleAlg(psExtraArg, nXSize, nYSize,
-                                       nBufXSize, nBufYSize);
+    GDALRasterIOExtraArgSetResampleAlg(psArgs);
 
-    if( NULL == pData )
+    if( NULL == psArgs->pData )
     {
         ReportError( CE_Failure, CPLE_AppDefined,
                   "The buffer into which the data should be read is null" );
@@ -204,24 +226,25 @@ CPLErr GDALRasterBand::RasterIO( GDALRWFlag eRWFlag,
 /*      Some size values are "noop".  Lets just return to avoid         */
 /*      stressing lower level functions.                                */
 /* -------------------------------------------------------------------- */
-    if( nXSize < 1 || nYSize < 1 || nBufXSize < 1 || nBufYSize < 1 )
+    if( psArgs->nXSize < 1 || psArgs->nYSize < 1 || psArgs->nBufXSize < 1 || psArgs->nBufYSize < 1 )
     {
         CPLDebug( "GDAL", 
                   "RasterIO() skipped for odd window or buffer size.\n"
                   "  Window = (%d,%d)x%dx%d\n"
                   "  Buffer = %dx%d\n",
-                  nXOff, nYOff, nXSize, nYSize, 
-                  nBufXSize, nBufYSize );
-
+                  psArgs->nXOff, psArgs->nYOff, psArgs->nXSize, psArgs->nYSize, 
+                  psArgs->nBufXSize, psArgs->nBufYSize );
+        ((GDALRasterIOArgs*)psArgs)->psExtraArg = psExtraArgIni;
         return CE_None;
     }
 
-    if( eRWFlag == GF_Write && eFlushBlockErr != CE_None )
+    if( psArgs->eRWFlag == GF_Write && eFlushBlockErr != CE_None )
     {
         ReportError(eFlushBlockErr, CPLE_AppDefined,
                  "An error occured while writing a dirty block");
         CPLErr eErr = eFlushBlockErr;
         eFlushBlockErr = CE_None;
+        ((GDALRasterIOArgs*)psArgs)->psExtraArg = psExtraArgIni;
         return eErr;
     }
 
@@ -229,32 +252,34 @@ CPLErr GDALRasterBand::RasterIO( GDALRWFlag eRWFlag,
 /*      If pixel and line spaceing are defaulted assign reasonable      */
 /*      value assuming a packed buffer.                                 */
 /* -------------------------------------------------------------------- */
-    if( nPixelSpace == 0 )
-        nPixelSpace = GDALGetDataTypeSize( eBufType ) / 8;
+    if( psArgs->nPixelSpace == 0 )
+        ((GDALRasterIOArgs*)psArgs)->nPixelSpace = GDALGetDataTypeSize( psArgs->eBufType ) / 8;
     
-    if( nLineSpace == 0 )
+    if( psArgs->nLineSpace == 0 )
     {
-        nLineSpace = nPixelSpace * nBufXSize;
+        ((GDALRasterIOArgs*)psArgs)->nLineSpace = psArgs->nPixelSpace * psArgs->nBufXSize;
     }
     
 /* -------------------------------------------------------------------- */
 /*      Do some validation of parameters.                               */
 /* -------------------------------------------------------------------- */
-    if( nXOff < 0 || nXOff > INT_MAX - nXSize || nXOff + nXSize > nRasterXSize
-        || nYOff < 0 || nYOff > INT_MAX - nYSize || nYOff + nYSize > nRasterYSize )
+    if( psArgs->nXOff < 0 || psArgs->nXOff > INT_MAX - psArgs->nXSize || psArgs->nXOff + psArgs->nXSize > nRasterXSize
+        || psArgs->nYOff < 0 || psArgs->nYOff > INT_MAX - psArgs->nYSize || psArgs->nYOff + psArgs->nYSize > nRasterYSize )
     {
         ReportError( CE_Failure, CPLE_IllegalArg,
                   "Access window out of range in RasterIO().  Requested\n"
                   "(%d,%d) of size %dx%d on raster of %dx%d.",
-                  nXOff, nYOff, nXSize, nYSize, nRasterXSize, nRasterYSize );
+                  psArgs->nXOff, psArgs->nYOff, psArgs->nXSize, psArgs->nYSize, nRasterXSize, nRasterYSize );
+        ((GDALRasterIOArgs*)psArgs)->psExtraArg = psExtraArgIni;   
         return CE_Failure;
     }
 
-    if( eRWFlag != GF_Read && eRWFlag != GF_Write )
+    if( psArgs->eRWFlag != GF_Read && psArgs->eRWFlag != GF_Write )
     {
         ReportError( CE_Failure, CPLE_IllegalArg,
                   "eRWFlag = %d, only GF_Read (0) and GF_Write (1) are legal.",
-                  eRWFlag );
+                  psArgs->eRWFlag );
+        ((GDALRasterIOArgs*)psArgs)->psExtraArg = psExtraArgIni;
         return CE_Failure;
     }
 
@@ -263,19 +288,20 @@ CPLErr GDALRasterBand::RasterIO( GDALRWFlag eRWFlag,
 /* -------------------------------------------------------------------- */
     CPLErr eErr;
 
-    int bCallLeaveReadWrite = EnterReadWrite(eRWFlag);
+    int bCallLeaveReadWrite = EnterReadWrite(psArgs->eRWFlag);
 
     if( bForceCachedIO )
-        eErr = GDALRasterBand::IRasterIO(eRWFlag, nXOff, nYOff, nXSize, nYSize,
-                                         pData, nBufXSize, nBufYSize, eBufType,
-                                         nPixelSpace, nLineSpace, psExtraArg );
+        eErr = GDALRasterBand::ICompactRasterIO(psArgs);
+    else if( poDS && poDS->bHasCompactRasterIO )
+        eErr = ICompactRasterIO(psArgs);
     else
-        eErr = IRasterIO( eRWFlag, nXOff, nYOff, nXSize, nYSize,
-                          pData, nBufXSize, nBufYSize, eBufType,
-                          nPixelSpace, nLineSpace, psExtraArg ) ;
+        eErr = IRasterIO( psArgs->eRWFlag, psArgs->nXOff, psArgs->nYOff, psArgs->nXSize, psArgs->nYSize,
+                          psArgs->pData, psArgs->nBufXSize, psArgs->nBufYSize, psArgs->eBufType,
+                          psArgs->nPixelSpace, psArgs->nLineSpace, psArgs->psExtraArg ) ;
 
     if( bCallLeaveReadWrite) LeaveReadWrite();
 
+    ((GDALRasterIOArgs*)psArgs)->psExtraArg = psExtraArgIni;
     return eErr;
 }
 
@@ -304,9 +330,24 @@ GDALRasterIO( GDALRasterBandH hBand, GDALRWFlag eRWFlag,
 
     GDALRasterBand *poBand = static_cast<GDALRasterBand*>(hBand);
 
-    return( poBand->RasterIO( eRWFlag, nXOff, nYOff, nXSize, nYSize,
-                              pData, nBufXSize, nBufYSize, eBufType,
-                              nPixelSpace, nLineSpace, NULL) );
+    GDALRasterIOArgs sArgs;
+    sArgs.eRWFlag = eRWFlag;
+    sArgs.nXOff = nXOff;
+    sArgs.nYOff = nYOff;
+    sArgs.nXSize = nXSize;
+    sArgs.nYSize = nYSize;
+    sArgs.pData = pData;
+    sArgs.nBufXSize = nBufXSize;
+    sArgs.nBufYSize = nBufYSize;
+    sArgs.eBufType = eBufType;
+    sArgs.nBandCount = 0;
+    sArgs.panBandMap = NULL;
+    sArgs.nPixelSpace = nPixelSpace;
+    sArgs.nLineSpace = nLineSpace;
+    sArgs.nBandSpace = 0;
+    sArgs.psExtraArg = NULL;
+
+    return( poBand->RasterIO( &sArgs ) );
 }
 
 /************************************************************************/
@@ -333,9 +374,24 @@ GDALRasterIOEx( GDALRasterBandH hBand, GDALRWFlag eRWFlag,
 
     GDALRasterBand *poBand = static_cast<GDALRasterBand*>(hBand);
 
-    return( poBand->RasterIO( eRWFlag, nXOff, nYOff, nXSize, nYSize,
-                              pData, nBufXSize, nBufYSize, eBufType,
-                              nPixelSpace, nLineSpace, psExtraArg) );
+    GDALRasterIOArgs sArgs;
+    sArgs.eRWFlag = eRWFlag;
+    sArgs.nXOff = nXOff;
+    sArgs.nYOff = nYOff;
+    sArgs.nXSize = nXSize;
+    sArgs.nYSize = nYSize;
+    sArgs.pData = pData;
+    sArgs.nBufXSize = nBufXSize;
+    sArgs.nBufYSize = nBufYSize;
+    sArgs.eBufType = eBufType;
+    sArgs.nBandCount = 0;
+    sArgs.panBandMap = NULL;
+    sArgs.nPixelSpace = nPixelSpace;
+    sArgs.nLineSpace = nLineSpace;
+    sArgs.nBandSpace = 0;
+    sArgs.psExtraArg = psExtraArg;
+
+    return( poBand->RasterIO( &sArgs ) );
 }
 /************************************************************************/
 /*                             ReadBlock()                              */

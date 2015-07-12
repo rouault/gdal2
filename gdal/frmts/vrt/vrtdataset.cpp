@@ -69,6 +69,7 @@ VRTDataset::VRTDataset( int nXSize, int nYSize )
     poDriver = (GDALDriver *) GDALGetDriverByName( "VRT" );
 
     bCompatibleForDatasetIO = -1;
+    bHasCompactRasterIO = TRUE;
 }
 
 /************************************************************************/
@@ -1285,9 +1286,16 @@ GDALDataset* VRTDataset::GetSingleSimpleSource()
     double dfReqXOff, dfReqYOff, dfReqXSize, dfReqYSize;
     int nReqXOff, nReqYOff, nReqXSize, nReqYSize;
     int nOutXOff, nOutYOff, nOutXSize, nOutYSize;
-    poSource->GetSrcDstWindow( 0, 0,
-                               poSrcDS->GetRasterXSize(), poSrcDS->GetRasterYSize(),
-                               poSrcDS->GetRasterXSize(), poSrcDS->GetRasterYSize(),
+    
+    GDALRasterIOArgs sArgs;
+    sArgs.nXOff = 0;
+    sArgs.nYOff = 0;
+    sArgs.nXSize = poSrcDS->GetRasterXSize();
+    sArgs.nYSize = poSrcDS->GetRasterYSize();
+    sArgs.nBufXSize = poSrcDS->GetRasterXSize();
+    sArgs.nBufYSize = poSrcDS->GetRasterYSize();
+
+    poSource->GetSrcDstWindow( &sArgs,
                                &dfReqXOff, &dfReqYOff, &dfReqXSize, &dfReqYSize,
                                &nReqXOff, &nReqYOff,
                                &nReqXSize, &nReqYSize,
@@ -1308,17 +1316,10 @@ GDALDataset* VRTDataset::GetSingleSimpleSource()
 }
 
 /************************************************************************/
-/*                              IRasterIO()                             */
+/*                           ICompactRasterIO()                         */
 /************************************************************************/
 
-CPLErr VRTDataset::IRasterIO( GDALRWFlag eRWFlag,
-                               int nXOff, int nYOff, int nXSize, int nYSize,
-                               void * pData, int nBufXSize, int nBufYSize,
-                               GDALDataType eBufType,
-                               int nBandCount, int *panBandMap,
-                               GSpacing nPixelSpace, GSpacing nLineSpace,
-                               GSpacing nBandSpace,
-                               GDALRasterIOExtraArg* psExtraArg)
+CPLErr VRTDataset::ICompactRasterIO( const GDALRasterIOArgs* psArgs )
 {
     if (bCompatibleForDatasetIO < 0)
     {
@@ -1326,19 +1327,11 @@ CPLErr VRTDataset::IRasterIO( GDALRWFlag eRWFlag,
     }
 
     int bLocalCompatibleForDatasetIO = bCompatibleForDatasetIO;
-    if (bLocalCompatibleForDatasetIO && eRWFlag == GF_Read &&
-        (nBufXSize < nXSize || nBufYSize < nYSize))
+    if (bLocalCompatibleForDatasetIO && psArgs->eRWFlag == GF_Read &&
+        (psArgs->nBufXSize < psArgs->nXSize || psArgs->nBufYSize < psArgs->nYSize))
     {
         int bTried;
-        CPLErr eErr = TryOverviewRasterIO( eRWFlag,
-                                    nXOff, nYOff, nXSize, nYSize,
-                                    pData, nBufXSize, nBufYSize,
-                                    eBufType,
-                                    nBandCount, panBandMap,
-                                    nPixelSpace, nLineSpace,
-                                    nBandSpace,
-                                    psExtraArg,
-                                    &bTried );
+        CPLErr eErr = TryOverviewRasterIO( psArgs, &bTried );
         if( bTried )
             return eErr;
 
@@ -1358,14 +1351,14 @@ CPLErr VRTDataset::IRasterIO( GDALRWFlag eRWFlag,
 
     // If resampling with non-nearest neighbour, we need to be carefull
     // if the VRT band exposes a nodata value, but the sources do not have it
-    if (bLocalCompatibleForDatasetIO && eRWFlag == GF_Read &&
-        (nXSize != nBufXSize || nYSize != nBufYSize) &&
-        psExtraArg->eResampleAlg != GRIORA_NearestNeighbour )
+    if (bLocalCompatibleForDatasetIO && psArgs->eRWFlag == GF_Read &&
+        (psArgs->nXSize != psArgs->nBufXSize || psArgs->nYSize != psArgs->nBufYSize) &&
+        psArgs->psExtraArg->eResampleAlg != GRIORA_NearestNeighbour )
     {
-        for(int iBandIndex=0; iBandIndex<nBandCount; iBandIndex++)
+        for(int iBandIndex=0; iBandIndex<psArgs->nBandCount; iBandIndex++)
         {
             VRTSourcedRasterBand* poBand =
-                    (VRTSourcedRasterBand*)GetRasterBand(panBandMap[iBandIndex]);
+                    (VRTSourcedRasterBand*)GetRasterBand(psArgs->panBandMap[iBandIndex]);
             int bHasNoData = FALSE;
             double dfNoDataValue = poBand->GetNoDataValue(&bHasNoData);
             if( bHasNoData )
@@ -1388,66 +1381,56 @@ CPLErr VRTDataset::IRasterIO( GDALRWFlag eRWFlag,
     }
 
 
-    if (bLocalCompatibleForDatasetIO && eRWFlag == GF_Read)
+    if (bLocalCompatibleForDatasetIO && psArgs->eRWFlag == GF_Read)
     {
-        for(int iBandIndex=0; iBandIndex<nBandCount; iBandIndex++)
+        for(int iBandIndex=0; iBandIndex<psArgs->nBandCount; iBandIndex++)
         {
             VRTSourcedRasterBand* poBand =
-                    (VRTSourcedRasterBand*)GetRasterBand(panBandMap[iBandIndex]);
+                    (VRTSourcedRasterBand*)GetRasterBand(psArgs->panBandMap[iBandIndex]);
 
             /* Dirty little trick to initialize the buffer without doing */
             /* any real I/O */
             int nSavedSources = poBand->nSources;
             poBand->nSources = 0;
 
-            GByte *pabyBandData = ((GByte *) pData) + iBandIndex * nBandSpace;
-            poBand->IRasterIO(GF_Read, nXOff, nYOff, nXSize, nYSize,
-                                pabyBandData, nBufXSize, nBufYSize,
-                                eBufType,
-                                nPixelSpace, nLineSpace, psExtraArg);
-
+            void* pData = psArgs->pData;
+            GByte *pabyBandData = ((GByte *) pData) + iBandIndex * psArgs->nBandSpace;
+            ((GDALRasterIOArgs*)psArgs)->pData = pabyBandData;
+            poBand->ICompactRasterIO(psArgs);
+            ((GDALRasterIOArgs*)psArgs)->pData = pData;
             poBand->nSources = nSavedSources;
         }
 
         CPLErr eErr = CE_None;
 
-        GDALProgressFunc  pfnProgressGlobal = psExtraArg->pfnProgress;
-        void             *pProgressDataGlobal = psExtraArg->pProgressData;
+        GDALProgressFunc  pfnProgressGlobal = psArgs->psExtraArg->pfnProgress;
+        void             *pProgressDataGlobal = psArgs->psExtraArg->pProgressData;
 
         /* Use the last band, because when sources reference a GDALProxyDataset, they */
         /* don't necessary instanciate all underlying rasterbands */
         VRTSourcedRasterBand* poBand = (VRTSourcedRasterBand* )papoBands[nBands - 1];
         for(int iSource = 0; eErr == CE_None && iSource < poBand->nSources; iSource++)
         {
-            psExtraArg->pfnProgress = GDALScaledProgress;
-            psExtraArg->pProgressData = 
+            psArgs->psExtraArg->pfnProgress = GDALScaledProgress;
+            psArgs->psExtraArg->pProgressData = 
                 GDALCreateScaledProgress( 1.0 * iSource / poBand->nSources,
                                         1.0 * (iSource + 1) / poBand->nSources,
                                         pfnProgressGlobal,
                                         pProgressDataGlobal );
 
             VRTSimpleSource* poSource = (VRTSimpleSource* )poBand->papoSources[iSource];
-            eErr = poSource->DatasetRasterIO( nXOff, nYOff, nXSize, nYSize,
-                                              pData, nBufXSize, nBufYSize,
-                                              eBufType,
-                                              nBandCount, panBandMap,
-                                              nPixelSpace, nLineSpace, nBandSpace,
-                                              psExtraArg);
+            eErr = poSource->DatasetRasterIO( psArgs );
 
-            GDALDestroyScaledProgress( psExtraArg->pProgressData );
+            GDALDestroyScaledProgress( psArgs->psExtraArg->pProgressData );
         }
 
-        psExtraArg->pfnProgress = pfnProgressGlobal;
-        psExtraArg->pProgressData = pProgressDataGlobal;
+        psArgs->psExtraArg->pfnProgress = pfnProgressGlobal;
+        psArgs->psExtraArg->pProgressData = pProgressDataGlobal;
 
         return eErr;
     }
 
-    return GDALDataset::IRasterIO(eRWFlag, nXOff, nYOff, nXSize, nYSize,
-                                  pData, nBufXSize, nBufYSize,
-                                  eBufType,
-                                  nBandCount, panBandMap,
-                                  nPixelSpace, nLineSpace, nBandSpace, psExtraArg);
+    return GDALDataset::ICompactRasterIO(psArgs);
 }
 
 /************************************************************************/

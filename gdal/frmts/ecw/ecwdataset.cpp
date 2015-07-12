@@ -1513,10 +1513,17 @@ CPLErr ECWDataset::AdviseRead( int nXOff, int nYOff, int nXSize, int nYSize,
 
     CPLErr eErr;
     int bStopProcessing = FALSE;
+    GDALRasterIOArgs sArgs;
+    sArgs.nXOff = nXOff;
+    sArgs.nYOff = nYOff;
+    sArgs.nXSize = nXSize;
+    sArgs.nYSize = nYSize;
+    sArgs.nBufXSize = nBufXSize;
+    sArgs.nBufYSize = nBufYSize;
+    sArgs.nBandCount = nBandCount;
+    sArgs.panBandMap = panBandList;
     eErr = ValidateRasterIOOrAdviseReadParameters( "AdviseRead()", &bStopProcessing,
-                                                    nXOff, nYOff, nXSize, nYSize,
-                                                    nBufXSize, nBufYSize, 
-                                                    nBandCount, panBandList);
+                                                    &sArgs);
     if( eErr != CE_None || bStopProcessing )
         return eErr;
     

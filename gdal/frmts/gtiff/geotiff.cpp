@@ -388,23 +388,9 @@ class GTiffDataset : public GDALPamDataset
     int            GuessJPEGQuality(int& bOutHasQuantizationTable,
                                     int& bOutHasHuffmanTable);
 
-    CPLErr         DirectIO( GDALRWFlag eRWFlag,
-                               int nXOff, int nYOff, int nXSize, int nYSize,
-                               void * pData, int nBufXSize, int nBufYSize,
-                               GDALDataType eBufType, 
-                               int nBandCount, int *panBandMap,
-                               GSpacing nPixelSpace, GSpacing nLineSpace,
-                               GSpacing nBandSpace,
-                               GDALRasterIOExtraArg* psExtraArg );
+    CPLErr         DirectIO( const GDALRasterIOArgs* psArgs );
 
-    int            VirtualMemIO( GDALRWFlag eRWFlag,
-                               int nXOff, int nYOff, int nXSize, int nYSize,
-                               void * pData, int nBufXSize, int nBufYSize,
-                               GDALDataType eBufType, 
-                               int nBandCount, int *panBandMap,
-                               GSpacing nPixelSpace, GSpacing nLineSpace,
-                               GSpacing nBandSpace,
-                               GDALRasterIOExtraArg* psExtraArg );
+    int            VirtualMemIO( const GDALRasterIOArgs* psArgs );
   protected:
     virtual int         CloseDependentDatasets();
 
@@ -422,14 +408,7 @@ class GTiffDataset : public GDALPamDataset
     virtual const GDAL_GCP *GetGCPs();
     CPLErr         SetGCPs( int, const GDAL_GCP *, const char * );
 
-    virtual CPLErr IRasterIO( GDALRWFlag eRWFlag,
-                               int nXOff, int nYOff, int nXSize, int nYSize,
-                               void * pData, int nBufXSize, int nBufYSize,
-                               GDALDataType eBufType, 
-                               int nBandCount, int *panBandMap,
-                               GSpacing nPixelSpace, GSpacing nLineSpace,
-                               GSpacing nBandSpace,
-                               GDALRasterIOExtraArg* psExtraArg);
+    virtual CPLErr ICompactRasterIO( const GDALRasterIOArgs* psArgs );
     virtual char **GetFileList(void);
 
     virtual CPLErr IBuildOverviews( const char *, int, int *, int, int *, 
@@ -511,14 +490,7 @@ class GTiffJPEGOverviewDS : public GDALDataset
                             const void* pJPEGTable, int nJPEGTableSize);
        ~GTiffJPEGOverviewDS();
 
-       virtual CPLErr IRasterIO( GDALRWFlag eRWFlag,
-                               int nXOff, int nYOff, int nXSize, int nYSize,
-                               void * pData, int nBufXSize, int nBufYSize,
-                               GDALDataType eBufType, 
-                               int nBandCount, int *panBandMap,
-                               GSpacing nPixelSpace, GSpacing nLineSpace,
-                               GSpacing nBandSpace,
-                               GDALRasterIOExtraArg* psExtraArg);
+       virtual CPLErr ICompactRasterIO( const GDALRasterIOArgs* psArgs );
 };
 
 class GTiffJPEGOverviewBand : public GDALRasterBand
@@ -536,6 +508,7 @@ class GTiffJPEGOverviewBand : public GDALRasterBand
 GTiffJPEGOverviewDS::GTiffJPEGOverviewDS(GTiffDataset* poParentDS, int nOverviewLevel,
                                          const void* pJPEGTable, int nJPEGTableSizeIn)
 {
+    bHasCompactRasterIO = TRUE;
     this->poParentDS = poParentDS;
     this->nOverviewLevel = nOverviewLevel;
     poJPEGDS = NULL;
@@ -587,37 +560,24 @@ GTiffJPEGOverviewDS::~GTiffJPEGOverviewDS()
 }
 
 /************************************************************************/
-/*                            IRasterIO()                               */
+/*                       ICompactRasterIO()                             */
 /************************************************************************/
 
-CPLErr GTiffJPEGOverviewDS::IRasterIO( GDALRWFlag eRWFlag,
-                               int nXOff, int nYOff, int nXSize, int nYSize,
-                               void * pData, int nBufXSize, int nBufYSize,
-                               GDALDataType eBufType, 
-                               int nBandCount, int *panBandMap,
-                               GSpacing nPixelSpace, GSpacing nLineSpace,
-                               GSpacing nBandSpace,
-                               GDALRasterIOExtraArg* psExtraArg)
+CPLErr GTiffJPEGOverviewDS::ICompactRasterIO( const GDALRasterIOArgs* psArgs )
 
 {
     /* For non-single strip JPEG-IN-TIFF, the block based strategy will */
     /* be the most efficient one, to avoid decompressing the JPEG content */
     /* for each requested band */
-    if( nBandCount > 1 && poParentDS->nPlanarConfig == PLANARCONFIG_CONTIG &&
+    if( psArgs->nBandCount > 1 && poParentDS->nPlanarConfig == PLANARCONFIG_CONTIG &&
         ((int)poParentDS->nBlockXSize < poParentDS->nRasterXSize ||
         poParentDS->nBlockYSize > 1) )
     {
-        return BlockBasedRasterIO( eRWFlag, nXOff, nYOff, nXSize, nYSize, 
-                                   pData, nBufXSize, nBufYSize,
-                                   eBufType, nBandCount, panBandMap,
-                                   nPixelSpace, nLineSpace, nBandSpace, psExtraArg );
+        return BlockBasedRasterIO( psArgs );
     }
     else
     {
-        return GDALDataset::IRasterIO(
-                eRWFlag, nXOff, nYOff, nXSize, nYSize,
-                pData, nBufXSize, nBufYSize, eBufType,
-                nBandCount, panBandMap, nPixelSpace, nLineSpace, nBandSpace, psExtraArg);
+        return GDALDataset::ICompactRasterIO(psArgs);
     }
 
 }
@@ -894,12 +854,7 @@ class GTiffRasterBand : public GDALPamRasterBand
     CPLString          osUnitType;
     CPLString          osDescription;
 
-    CPLErr DirectIO( GDALRWFlag eRWFlag,
-                                  int nXOff, int nYOff, int nXSize, int nYSize,
-                                  void * pData, int nBufXSize, int nBufYSize,
-                                  GDALDataType eBufType,
-                                  GSpacing nPixelSpace, GSpacing nLineSpace,
-                                  GDALRasterIOExtraArg* psExtraArg );
+    CPLErr DirectIO( const GDALRasterIOArgs* psArgs );
 
     std::set<GTiffRasterBand **> aSetPSelf;
     static void     DropReferenceVirtualMem(void* pUserData);
@@ -924,12 +879,7 @@ public:
     virtual CPLErr IReadBlock( int, int, void * );
     virtual CPLErr IWriteBlock( int, int, void * );
 
-    virtual CPLErr IRasterIO( GDALRWFlag eRWFlag,
-                                  int nXOff, int nYOff, int nXSize, int nYSize,
-                                  void * pData, int nBufXSize, int nBufYSize,
-                                  GDALDataType eBufType,
-                                  GSpacing nPixelSpace, GSpacing nLineSpace,
-                                  GDALRasterIOExtraArg* psExtraArg );
+    virtual CPLErr ICompactRasterIO( const GDALRasterIOArgs* psArgs );
 
     virtual const char *GetDescription() const;
     virtual void        SetDescription( const char * );
@@ -1141,13 +1091,21 @@ GTiffRasterBand::~GTiffRasterBand()
 /* uncompressed data, standard data types). Particularly useful to extract */
 /* sub-windows of data on a large /vsicurl dataset). */
 
-CPLErr GTiffRasterBand::DirectIO( GDALRWFlag eRWFlag,
-                                  int nXOff, int nYOff, int nXSize, int nYSize,
-                                  void * pData, int nBufXSize, int nBufYSize,
-                                  GDALDataType eBufType,
-                                  GSpacing nPixelSpace, GSpacing nLineSpace,
-                                  GDALRasterIOExtraArg* psExtraArg )
+CPLErr GTiffRasterBand::DirectIO( const GDALRasterIOArgs* psArgs )
 {
+    const GDALRWFlag& eRWFlag = psArgs->eRWFlag;
+    const int& nXOff = psArgs->nXOff;
+    const int& nYOff = psArgs->nYOff;
+    const int& nXSize = psArgs->nXSize;
+    const int& nYSize = psArgs->nYSize;
+    void * const& pData = psArgs->pData;
+    const int& nBufXSize = psArgs->nBufXSize;
+    const int& nBufYSize = psArgs->nBufYSize;
+    const GDALDataType& eBufType = psArgs->eBufType;
+    const GSpacing& nPixelSpace = psArgs->nPixelSpace;
+    const GSpacing& nLineSpace = psArgs->nLineSpace;
+    GDALRasterIOExtraArg* const& psExtraArg = psArgs->psExtraArg;
+
     if( !(eRWFlag == GF_Read &&
           poGDS->nCompression == COMPRESSION_NONE &&
           (poGDS->nPhotometric == PHOTOMETRIC_MINISBLACK ||
@@ -1606,33 +1564,19 @@ CPLVirtualMem* GTiffRasterBand::GetVirtualMemAutoInternal( GDALRWFlag eRWFlag,
 }
 
 /************************************************************************/
-/*                            IRasterIO()                               */
+/*                          ICompactRasterIO()                          */
 /************************************************************************/
 
-CPLErr GTiffDataset::IRasterIO( GDALRWFlag eRWFlag,
-                               int nXOff, int nYOff, int nXSize, int nYSize,
-                               void * pData, int nBufXSize, int nBufYSize,
-                               GDALDataType eBufType, 
-                               int nBandCount, int *panBandMap,
-                               GSpacing nPixelSpace, GSpacing nLineSpace,
-                               GSpacing nBandSpace,
-                               GDALRasterIOExtraArg* psExtraArg)
+CPLErr GTiffDataset::ICompactRasterIO( const GDALRasterIOArgs* psArgs )
 
 {
     CPLErr eErr;
     /* Try to pass the request to the most appropriate overview dataset */
-    if( nBufXSize < nXSize && nBufYSize < nYSize )
+    if( psArgs->nBufXSize < psArgs->nXSize && psArgs->nBufYSize < psArgs->nYSize )
     {
         int bTried;
         nJPEGOverviewVisibilityFlag ++;
-        eErr = TryOverviewRasterIO( eRWFlag,
-                                    nXOff, nYOff, nXSize, nYSize,
-                                    pData, nBufXSize, nBufYSize,
-                                    eBufType,
-                                    nBandCount, panBandMap,
-                                    nPixelSpace, nLineSpace,
-                                    nBandSpace,
-                                    psExtraArg,
+        eErr = TryOverviewRasterIO( psArgs,
                                     &bTried );
         nJPEGOverviewVisibilityFlag --;
         if( bTried )
@@ -1641,28 +1585,19 @@ CPLErr GTiffDataset::IRasterIO( GDALRWFlag eRWFlag,
 
     if( eVirtualMemIOUsage != VIRTUAL_MEM_IO_NO )
     {
-        int nErr = VirtualMemIO(
-                eRWFlag, nXOff, nYOff, nXSize, nYSize,
-                pData, nBufXSize, nBufYSize, eBufType,
-                nBandCount, panBandMap, nPixelSpace, nLineSpace, nBandSpace, psExtraArg);
+        int nErr = VirtualMemIO(psArgs);
         if (nErr >= 0)
             return (CPLErr)nErr;
     }
     if (bDirectIO)
     {
-        eErr = DirectIO(
-                eRWFlag, nXOff, nYOff, nXSize, nYSize,
-                pData, nBufXSize, nBufYSize, eBufType,
-                nBandCount, panBandMap, nPixelSpace, nLineSpace, nBandSpace, psExtraArg);
+        eErr = DirectIO(psArgs);
         if (eErr == CE_None)
             return eErr;
     }
 
     nJPEGOverviewVisibilityFlag ++;
-    eErr =  GDALPamDataset::IRasterIO(
-                eRWFlag, nXOff, nYOff, nXSize, nYSize,
-                pData, nBufXSize, nBufYSize, eBufType,
-                nBandCount, panBandMap, nPixelSpace, nLineSpace, nBandSpace, psExtraArg);
+    eErr =  GDALPamDataset::ICompactRasterIO(psArgs);
     nJPEGOverviewVisibilityFlag --;
     return eErr;
 }
@@ -1679,15 +1614,24 @@ static int anReachedVirtualMemIO[32] = { 0 };
 #define REACHED(x)
 #endif
 
-int GTiffDataset::VirtualMemIO( GDALRWFlag eRWFlag,
-                               int nXOff, int nYOff, int nXSize, int nYSize,
-                               void * pData, int nBufXSize, int nBufYSize,
-                               GDALDataType eBufType, 
-                               int nBandCount, int *panBandMap,
-                               GSpacing nPixelSpace, GSpacing nLineSpace,
-                               GSpacing nBandSpace,
-                               GDALRasterIOExtraArg* psExtraArg )
+int GTiffDataset::VirtualMemIO( const GDALRasterIOArgs* psArgs )
 {
+    const GDALRWFlag& eRWFlag = psArgs->eRWFlag;
+    const int& nXOff = psArgs->nXOff;
+    const int& nYOff = psArgs->nYOff;
+    const int& nXSize = psArgs->nXSize;
+    const int& nYSize = psArgs->nYSize;
+    void * const& pData = psArgs->pData;
+    const int& nBandCount = psArgs->nBandCount;
+    const int* panBandMap = psArgs->panBandMap;
+    const int& nBufXSize = psArgs->nBufXSize;
+    const int& nBufYSize = psArgs->nBufYSize;
+    const GDALDataType& eBufType = psArgs->eBufType;
+    const GSpacing& nPixelSpace = psArgs->nPixelSpace;
+    const GSpacing& nLineSpace = psArgs->nLineSpace;
+    const GSpacing& nBandSpace = psArgs->nBandSpace;
+    GDALRasterIOExtraArg* const& psExtraArg = psArgs->psExtraArg;
+
     GDALDataType eDataType = GetRasterBand(1)->GetRasterDataType();
     if( eAccess == GA_Update || eRWFlag == GF_Write || bStreamingIn )
         return -1;
@@ -2212,15 +2156,24 @@ int GTiffDataset::VirtualMemIO( GDALRWFlag eRWFlag,
 /* uncompressed data, standard data types). Particularly useful to extract */
 /* sub-windows of data on a large /vsicurl dataset). */
 
-CPLErr GTiffDataset::DirectIO( GDALRWFlag eRWFlag,
-                               int nXOff, int nYOff, int nXSize, int nYSize,
-                               void * pData, int nBufXSize, int nBufYSize,
-                               GDALDataType eBufType, 
-                               int nBandCount, int *panBandMap,
-                               GSpacing nPixelSpace, GSpacing nLineSpace,
-                               GSpacing nBandSpace,
-                               GDALRasterIOExtraArg* psExtraArg )
+CPLErr GTiffDataset::DirectIO( const GDALRasterIOArgs* psArgs )
 {
+    const GDALRWFlag& eRWFlag = psArgs->eRWFlag;
+    const int& nXOff = psArgs->nXOff;
+    const int& nYOff = psArgs->nYOff;
+    const int& nXSize = psArgs->nXSize;
+    const int& nYSize = psArgs->nYSize;
+    void * const& pData = psArgs->pData;
+    const int& nBandCount = psArgs->nBandCount;
+    const int* panBandMap = psArgs->panBandMap;
+    const int& nBufXSize = psArgs->nBufXSize;
+    const int& nBufYSize = psArgs->nBufYSize;
+    const GDALDataType& eBufType = psArgs->eBufType;
+    const GSpacing& nPixelSpace = psArgs->nPixelSpace;
+    const GSpacing& nLineSpace = psArgs->nLineSpace;
+    const GSpacing& nBandSpace = psArgs->nBandSpace;
+    GDALRasterIOExtraArg* const& psExtraArg = psArgs->psExtraArg;
+
     GDALDataType eDataType = GetRasterBand(1)->GetRasterDataType();
     if( !(eRWFlag == GF_Read &&
           nCompression == COMPRESSION_NONE &&
@@ -2274,7 +2227,7 @@ CPLErr GTiffDataset::DirectIO( GDALRWFlag eRWFlag,
                                        nBufXSize, nBufYSize,
                                        eBufType,
                                        nPixelSpace, nLineSpace,
-                                       psExtraArg);
+                                       (GDALRasterIOExtraArg*)psExtraArg);
         }
         return eErr;
     }
@@ -2435,17 +2388,20 @@ CPLErr GTiffDataset::DirectIO( GDALRWFlag eRWFlag,
 
 
 /************************************************************************/
-/*                            IRasterIO()                               */
+/*                         ICompactRasterIO()                           */
 /************************************************************************/
 
-CPLErr GTiffRasterBand::IRasterIO( GDALRWFlag eRWFlag,
-                                  int nXOff, int nYOff, int nXSize, int nYSize,
-                                  void * pData, int nBufXSize, int nBufYSize,
-                                  GDALDataType eBufType,
-                                  GSpacing nPixelSpace, GSpacing nLineSpace,
-                                  GDALRasterIOExtraArg* psExtraArg )
+CPLErr GTiffRasterBand::ICompactRasterIO( const GDALRasterIOArgs* psArgs )
 {
     CPLErr eErr;
+    const GDALRWFlag& eRWFlag = psArgs->eRWFlag;
+    const int& nXOff = psArgs->nXOff;
+    const int& nYOff = psArgs->nYOff;
+    const int& nXSize = psArgs->nXSize;
+    const int& nYSize = psArgs->nYSize;
+    const int& nBufXSize = psArgs->nBufXSize;
+    const int& nBufYSize = psArgs->nBufYSize;
+    const GDALDataType& eBufType = psArgs->eBufType;
 
     //CPLDebug("GTiff", "RasterIO(%d, %d, %d, %d, %d, %d)",
     //         nXOff, nYOff, nXSize, nYSize, nBufXSize, nBufYSize);
@@ -2455,12 +2411,7 @@ CPLErr GTiffRasterBand::IRasterIO( GDALRWFlag eRWFlag,
     {
         int bTried;
         poGDS->nJPEGOverviewVisibilityFlag ++;
-        eErr = TryOverviewRasterIO( eRWFlag,
-                                    nXOff, nYOff, nXSize, nYSize,
-                                    pData, nBufXSize, nBufYSize,
-                                    eBufType,
-                                    nPixelSpace, nLineSpace,
-                                    psExtraArg,
+        eErr = TryOverviewRasterIO( psArgs,
                                     &bTried );
         poGDS->nJPEGOverviewVisibilityFlag --;
         if( bTried )
@@ -2470,18 +2421,19 @@ CPLErr GTiffRasterBand::IRasterIO( GDALRWFlag eRWFlag,
 
     if( poGDS->eVirtualMemIOUsage != VIRTUAL_MEM_IO_NO )
     {
-        int nErr = poGDS->VirtualMemIO(
-                eRWFlag, nXOff, nYOff, nXSize, nYSize,
-                pData, nBufXSize, nBufYSize, eBufType,
-                1, &nBand, nPixelSpace, nLineSpace, 0, psExtraArg);
+        int nBandCountBak = psArgs->nBandCount;
+        int* panBandMapBak = psArgs->panBandMap;
+        ((GDALRasterIOArgs*)psArgs)->nBandCount = 1;
+        ((GDALRasterIOArgs*)psArgs)->panBandMap = &nBand;
+        int nErr = poGDS->VirtualMemIO(psArgs);
+        ((GDALRasterIOArgs*)psArgs)->nBandCount = nBandCountBak;
+        ((GDALRasterIOArgs*)psArgs)->panBandMap = panBandMapBak;
         if (nErr >= 0)
             return (CPLErr)nErr;
     }
     if (poGDS->bDirectIO)
     {
-        eErr = DirectIO(eRWFlag, nXOff, nYOff, nXSize, nYSize,
-                        pData, nBufXSize, nBufYSize, eBufType,
-                        nPixelSpace, nLineSpace, psExtraArg);
+        eErr = DirectIO(psArgs);
         if (eErr == CE_None)
             return eErr;
     }
@@ -2499,7 +2451,7 @@ CPLErr GTiffRasterBand::IRasterIO( GDALRWFlag eRWFlag,
         int nYBlocks = nBlockY2 - nBlockY1 + 1;
         GIntBig nRequiredMem = (GIntBig)poGDS->nBands * nXBlocks * nYBlocks *
                                 nBlockXSize * nBlockYSize *
-                               (GDALGetDataTypeSize(eDataType) / 8);
+                               (GDALGetDataTypeSize(eBufType) / 8);
         if (nRequiredMem > GDALGetCacheMax64())
         {
             if (!poGDS->bHasWarnedDisableAggressiveBandCaching)
@@ -2513,9 +2465,7 @@ CPLErr GTiffRasterBand::IRasterIO( GDALRWFlag eRWFlag,
     }
 
     poGDS->nJPEGOverviewVisibilityFlag ++;
-    eErr = GDALPamRasterBand::IRasterIO(eRWFlag, nXOff, nYOff, nXSize, nYSize,
-                                        pData, nBufXSize, nBufYSize, eBufType,
-                                        nPixelSpace, nLineSpace, psExtraArg);
+    eErr = GDALPamRasterBand::ICompactRasterIO(psArgs);
     poGDS->nJPEGOverviewVisibilityFlag --;
 
     poGDS->bLoadingOtherBands = FALSE;
@@ -4907,6 +4857,8 @@ CPLErr GTiffSplitBitmapBand::IWriteBlock( int nBlockXOff, int nBlockYOff,
 GTiffDataset::GTiffDataset()
 
 {
+    bHasCompactRasterIO = TRUE;
+
     nLoadedBlock = -1;
     bLoadedBlockDirty = FALSE;
     pabyBlockBuf = NULL;

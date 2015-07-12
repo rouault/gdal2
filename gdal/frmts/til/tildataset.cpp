@@ -82,10 +82,7 @@ class TILRasterBand : public GDALPamRasterBand
     virtual       ~TILRasterBand() {};
 
     virtual CPLErr IReadBlock( int, int, void * );
-    virtual CPLErr IRasterIO( GDALRWFlag, int, int, int, int,
-                              void *, int, int, GDALDataType,
-                              GSpacing nPixelSpace, GSpacing nLineSpace,
-                              GDALRasterIOExtraArg* psExtraArg );
+    virtual CPLErr ICompactRasterIO( const GDALRasterIOArgs* psArgs );
 };
 
 /************************************************************************/
@@ -118,25 +115,16 @@ CPLErr TILRasterBand::IReadBlock( int iBlockX, int iBlockY, void *pBuffer )
 /*                             IRasterIO()                              */
 /************************************************************************/
 
-CPLErr TILRasterBand::IRasterIO( GDALRWFlag eRWFlag,
-                                 int nXOff, int nYOff, int nXSize, int nYSize,
-                                 void * pData, int nBufXSize, int nBufYSize,
-                                 GDALDataType eBufType,
-                                 GSpacing nPixelSpace, GSpacing nLineSpace,
-                                GDALRasterIOExtraArg* psExtraArg )
+CPLErr TILRasterBand::ICompactRasterIO( const GDALRasterIOArgs* psArgs )
 
 {
     if(GetOverviewCount() > 0)
     {
-        return GDALPamRasterBand::IRasterIO( eRWFlag, nXOff, nYOff, nXSize, nYSize,
-                                 pData, nBufXSize, nBufYSize, eBufType,
-                                 nPixelSpace, nLineSpace, psExtraArg );
+        return GDALPamRasterBand::ICompactRasterIO( psArgs );
     }
     else //if not exist TIL overviews, try to use band source overviews
     {
-        return poVRTBand->IRasterIO( eRWFlag, nXOff, nYOff, nXSize, nYSize,
-                                 pData, nBufXSize, nBufYSize, eBufType,
-                                 nPixelSpace, nLineSpace, psExtraArg );
+        return poVRTBand->ICompactRasterIO( psArgs );
     }
 }
 
@@ -153,6 +141,7 @@ CPLErr TILRasterBand::IRasterIO( GDALRWFlag eRWFlag,
 TILDataset::TILDataset()
 
 {
+    bHasCompactRasterIO = TRUE;
     poVRTDS = NULL;
     papszMetadataFiles = NULL;
 }

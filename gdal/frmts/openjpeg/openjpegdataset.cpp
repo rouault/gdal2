@@ -220,14 +220,7 @@ class JP2OpenJPEGDataset : public GDALJP2AbstractDataset
                                  const char * pszValue,
                                  const char * pszDomain = "" );
 
-    virtual CPLErr  IRasterIO( GDALRWFlag eRWFlag,
-                               int nXOff, int nYOff, int nXSize, int nYSize,
-                               void * pData, int nBufXSize, int nBufYSize,
-                               GDALDataType eBufType, 
-                               int nBandCount, int *panBandMap,
-                               GSpacing nPixelSpace, GSpacing nLineSpace,
-                               GSpacing nBandSpace,
-                               GDALRasterIOExtraArg* psExtraArg);
+    virtual CPLErr  ICompactRasterIO( const GDALRasterIOArgs* psArgs );
 
     static void         WriteBox(VSILFILE* fp, GDALJP2Box* poBox);
     static void         WriteGDALMetadataBox( VSILFILE* fp, GDALDataset* poSrcDS,
@@ -244,8 +237,7 @@ class JP2OpenJPEGDataset : public GDALJP2AbstractDataset
                            int nBandCount, int *panBandMap );
 
     int         PreloadBlocks( JP2OpenJPEGRasterBand* poBand,
-                               int nXOff, int nYOff, int nXSize, int nYSize,
-                               int nBandCount, int *panBandMap );
+                               const GDALRasterIOArgs* psArgs );
 
     static void JP2OpenJPEGReadBlockInThread(void* userdata);
 };
@@ -271,12 +263,7 @@ class JP2OpenJPEGRasterBand : public GDALPamRasterBand
                 ~JP2OpenJPEGRasterBand();
 
     virtual CPLErr          IReadBlock( int, int, void * );
-    virtual CPLErr          IRasterIO( GDALRWFlag eRWFlag,
-                                  int nXOff, int nYOff, int nXSize, int nYSize,
-                                  void * pData, int nBufXSize, int nBufYSize,
-                                  GDALDataType eBufType,
-                                  GSpacing nPixelSpace, GSpacing nLineSpace,
-                                  GDALRasterIOExtraArg* psExtraArg);
+    virtual CPLErr          ICompactRasterIO( const GDALRasterIOArgs* psArgs );
 
     virtual GDALColorInterp GetColorInterpretation();
     virtual GDALColorTable* GetColorTable() { return poCT; }
@@ -354,45 +341,32 @@ CPLErr JP2OpenJPEGRasterBand::IReadBlock( int nBlockXOff, int nBlockYOff,
 }
 
 /************************************************************************/
-/*                             IRasterIO()                              */
+/*                          ICompactRasterIO()                          */
 /************************************************************************/
 
-CPLErr JP2OpenJPEGRasterBand::IRasterIO( GDALRWFlag eRWFlag,
-                                         int nXOff, int nYOff, int nXSize, int nYSize,
-                                         void * pData, int nBufXSize, int nBufYSize,
-                                         GDALDataType eBufType,
-                                         GSpacing nPixelSpace, GSpacing nLineSpace,
-                                         GDALRasterIOExtraArg* psExtraArg )
+CPLErr JP2OpenJPEGRasterBand::ICompactRasterIO( const GDALRasterIOArgs* psArgs )
 {
     JP2OpenJPEGDataset *poGDS = (JP2OpenJPEGDataset *) poDS;
 
-    if( eRWFlag != GF_Read )
+    if( psArgs->eRWFlag != GF_Read )
         return CE_Failure;
 
 /* ==================================================================== */
 /*      Do we have overviews that would be appropriate to satisfy       */
 /*      this request?                                                   */
 /* ==================================================================== */
-    if( (nBufXSize < nXSize || nBufYSize < nYSize)
-        && GetOverviewCount() > 0 && eRWFlag == GF_Read )
+    if( (psArgs->nBufXSize < psArgs->nXSize || psArgs->nBufYSize < psArgs->nYSize)
+        && GetOverviewCount() > 0 && psArgs->eRWFlag == GF_Read )
     {
         int bTried;
-        CPLErr eErr = TryOverviewRasterIO( eRWFlag,
-                                    nXOff, nYOff, nXSize, nYSize,
-                                    pData, nBufXSize, nBufYSize,
-                                    eBufType,
-                                    nPixelSpace, nLineSpace,
-                                    psExtraArg,
-                                    &bTried );
+        CPLErr eErr = TryOverviewRasterIO( psArgs, &bTried );
         if( bTried )
             return eErr;
     }
 
-    poGDS->bEnoughMemoryToLoadOtherBands = poGDS->PreloadBlocks(this, nXOff, nYOff, nXSize, nYSize, 0, NULL);
+    poGDS->bEnoughMemoryToLoadOtherBands = poGDS->PreloadBlocks(this, psArgs);
 
-    CPLErr eErr = GDALPamRasterBand::IRasterIO( eRWFlag, nXOff, nYOff, nXSize, nYSize,
-                                         pData, nBufXSize, nBufYSize, eBufType,
-                                         nPixelSpace, nLineSpace, psExtraArg );
+    CPLErr eErr = GDALPamRasterBand::ICompactRasterIO( psArgs );
 
     poGDS->bEnoughMemoryToLoadOtherBands = TRUE;
     return eErr;
@@ -483,21 +457,20 @@ void JP2OpenJPEGDataset::JP2OpenJPEGReadBlockInThread(void* userdata)
 /************************************************************************/
 
 int JP2OpenJPEGDataset::PreloadBlocks(JP2OpenJPEGRasterBand* poBand,
-                                      int nXOff, int nYOff, int nXSize, int nYSize,
-                                      int nBandCount, int *panBandMap)
+                                      const GDALRasterIOArgs* psArgs)
 {
     int bRet = TRUE;
-    int nXStart = nXOff / poBand->nBlockXSize;
-    int nXEnd = (nXOff + nXSize - 1) / poBand->nBlockXSize;
-    int nYStart = nYOff / poBand->nBlockYSize;
-    int nYEnd = (nYOff + nYSize - 1) / poBand->nBlockYSize;
+    int nXStart = psArgs->nXOff / poBand->nBlockXSize;
+    int nXEnd = (psArgs->nXOff + psArgs->nXSize - 1) / poBand->nBlockXSize;
+    int nYStart = psArgs->nYOff / poBand->nBlockYSize;
+    int nYEnd = (psArgs->nYOff + psArgs->nYSize - 1) / poBand->nBlockYSize;
     GIntBig nReqMem = (GIntBig)(nXEnd - nXStart + 1) * (nYEnd - nYStart + 1) *
                       poBand->nBlockXSize * poBand->nBlockYSize * (GDALGetDataTypeSize(poBand->eDataType) / 8);
 
     int nMaxThreads = GetNumThreads();
     if( !bUseSetDecodeArea && nMaxThreads > 1 )
     {
-        if( nReqMem > GDALGetCacheMax64() / (nBandCount == 0 ? 1 : nBandCount) )
+        if( nReqMem > GDALGetCacheMax64() / (psArgs->nBandCount == 0 ? 1 : psArgs->nBandCount) )
             return FALSE;
 
         int nBlocksToLoad = 0;
@@ -530,10 +503,10 @@ int JP2OpenJPEGDataset::PreloadBlocks(JP2OpenJPEGRasterBand* poBand,
             oJob.nBand = poBand->GetBand();
             oJob.oPairs = oPairs;
             oJob.nCurPair = -1;
-            if( nBandCount > 0 )
+            if( psArgs->nBandCount > 0 )
             {
-                oJob.nBandCount = nBandCount;
-                oJob.panBandMap = panBandMap;
+                oJob.nBandCount = psArgs->nBandCount;
+                oJob.panBandMap = psArgs->panBandMap;
             }
             else
             {
@@ -568,57 +541,36 @@ int JP2OpenJPEGDataset::PreloadBlocks(JP2OpenJPEGRasterBand* poBand,
 }
 
 /************************************************************************/
-/*                             IRasterIO()                              */
+/*                          ICompactRasterIO()                          */
 /************************************************************************/
 
-CPLErr  JP2OpenJPEGDataset::IRasterIO( GDALRWFlag eRWFlag,
-                               int nXOff, int nYOff, int nXSize, int nYSize,
-                               void * pData, int nBufXSize, int nBufYSize,
-                               GDALDataType eBufType, 
-                               int nBandCount, int *panBandMap,
-                               GSpacing nPixelSpace, GSpacing nLineSpace,
-                               GSpacing nBandSpace,
-                               GDALRasterIOExtraArg* psExtraArg)
+CPLErr  JP2OpenJPEGDataset::ICompactRasterIO( const GDALRasterIOArgs* psArgs )
 {
-    if( eRWFlag != GF_Read )
+    if( psArgs->eRWFlag != GF_Read )
         return CE_Failure;
 
-    if( nBandCount < 1 )
+    if( psArgs->nBandCount < 1 )
         return CE_Failure;
 
-    JP2OpenJPEGRasterBand* poBand = (JP2OpenJPEGRasterBand*) GetRasterBand(panBandMap[0]);
+    JP2OpenJPEGRasterBand* poBand = (JP2OpenJPEGRasterBand*) GetRasterBand(psArgs->panBandMap[0]);
 
 /* ==================================================================== */
 /*      Do we have overviews that would be appropriate to satisfy       */
 /*      this request?                                                   */
 /* ==================================================================== */
 
-    if( (nBufXSize < nXSize || nBufYSize < nYSize)
-        && poBand->GetOverviewCount() > 0 && eRWFlag == GF_Read )
+    if( (psArgs->nBufXSize <psArgs-> nXSize || psArgs->nBufYSize < psArgs->nYSize)
+        && poBand->GetOverviewCount() > 0 && psArgs->eRWFlag == GF_Read )
     {
         int bTried;
-        CPLErr eErr = TryOverviewRasterIO( eRWFlag,
-                                    nXOff, nYOff, nXSize, nYSize,
-                                    pData, nBufXSize, nBufYSize,
-                                    eBufType,
-                                    nBandCount, panBandMap,
-                                    nPixelSpace, nLineSpace,
-                                    nBandSpace,
-                                    psExtraArg,
-                                    &bTried );
+        CPLErr eErr = TryOverviewRasterIO( psArgs, &bTried );
         if( bTried )
             return eErr;
     }
 
-    bEnoughMemoryToLoadOtherBands = PreloadBlocks(poBand, nXOff, nYOff, nXSize, nYSize, nBandCount, panBandMap);
+    bEnoughMemoryToLoadOtherBands = PreloadBlocks(poBand, psArgs);
 
-    CPLErr eErr = GDALPamDataset::IRasterIO(   eRWFlag,
-                                        nXOff, nYOff, nXSize, nYSize,
-                                        pData, nBufXSize, nBufYSize,
-                                        eBufType, 
-                                        nBandCount, panBandMap,
-                                        nPixelSpace, nLineSpace, nBandSpace,
-                                        psExtraArg );
+    CPLErr eErr = GDALPamDataset::ICompactRasterIO( psArgs );
 
     bEnoughMemoryToLoadOtherBands = TRUE;
     return eErr;
@@ -931,6 +883,7 @@ GDALColorInterp JP2OpenJPEGRasterBand::GetColorInterpretation()
 
 JP2OpenJPEGDataset::JP2OpenJPEGDataset()
 {
+    bHasCompactRasterIO = TRUE;
     fp = NULL;
     nCodeStreamStart = 0;
     nCodeStreamLength = 0;

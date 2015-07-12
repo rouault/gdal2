@@ -181,6 +181,7 @@ GDALDataset::GDALDataset()
     bIsInternal = TRUE;
     bSuppressOnClose = FALSE;
     papszOpenOptions = NULL;
+    bHasCompactRasterIO = FALSE;
 
 /* -------------------------------------------------------------------- */
 /*      Set forced caching flag.                                        */
@@ -1492,27 +1493,38 @@ CPLErr GDALDataset::IRasterIO( GDALRWFlag eRWFlag,
                                GDALRasterIOExtraArg* psExtraArg )
     
 {
+    GDALRasterIOArgs sArgs;
+    sArgs.eRWFlag = eRWFlag;
+    sArgs.nXOff = nXOff;
+    sArgs.nYOff = nYOff;
+    sArgs.nXSize = nXSize;
+    sArgs.nYSize = nYSize;
+    sArgs.pData = pData;
+    sArgs.nBufXSize = nBufXSize;
+    sArgs.nBufYSize = nBufYSize;
+    sArgs.eBufType = eBufType;
+    sArgs.nBandCount = nBandCount;
+    sArgs.panBandMap = panBandMap;
+    sArgs.nPixelSpace = nPixelSpace;
+    sArgs.nLineSpace = nLineSpace;
+    sArgs.nBandSpace = nBandSpace;
+    sArgs.psExtraArg = psExtraArg;
+    
+    return GDALDataset::ICompactRasterIO(&sArgs);
+}
 
+CPLErr GDALDataset::ICompactRasterIO( const GDALRasterIOArgs* psArgs )
+{
     const char* pszInterleave = NULL;
 
-    CPLAssert( NULL != pData );
-
-    if (nXSize == nBufXSize && nYSize == nBufYSize && nBandCount > 1 &&
+    if (psArgs->nXSize == psArgs->nBufXSize && psArgs->nYSize == psArgs->nBufYSize && psArgs->nBandCount > 1 &&
         (pszInterleave = GetMetadataItem("INTERLEAVE", "IMAGE_STRUCTURE")) != NULL &&
         EQUAL(pszInterleave, "PIXEL"))
     {
-        return BlockBasedRasterIO( eRWFlag, nXOff, nYOff, nXSize, nYSize, 
-                                   pData, nBufXSize, nBufYSize,
-                                   eBufType, nBandCount, panBandMap,
-                                   nPixelSpace, nLineSpace, nBandSpace,
-                                   psExtraArg );
+        return BlockBasedRasterIO( psArgs );
     }
     
-    return BandBasedRasterIO( eRWFlag, nXOff, nYOff, nXSize, nYSize, 
-                                   pData, nBufXSize, nBufYSize,
-                                   eBufType, nBandCount, panBandMap,
-                                   nPixelSpace, nLineSpace, nBandSpace,
-                                   psExtraArg );
+    return BandBasedRasterIO( psArgs );
 }
 
 /************************************************************************/
@@ -1522,27 +1534,40 @@ CPLErr GDALDataset::IRasterIO( GDALRWFlag eRWFlag,
 /*      appropriate arguments.                                          */
 /************************************************************************/
 
-CPLErr GDALDataset::BandBasedRasterIO( GDALRWFlag eRWFlag,
-                               int nXOff, int nYOff, int nXSize, int nYSize,
-                               void * pData, int nBufXSize, int nBufYSize,
-                               GDALDataType eBufType, 
-                               int nBandCount, int *panBandMap,
-                               GSpacing nPixelSpace, GSpacing nLineSpace,
-                               GSpacing nBandSpace,
-                               GDALRasterIOExtraArg* psExtraArg )
+CPLErr GDALDataset::BandBasedRasterIO( const GDALRasterIOArgs* psArgs )
     
 {
     int iBandIndex; 
     CPLErr eErr = CE_None;
     
-    GDALProgressFunc  pfnProgressGlobal = psExtraArg->pfnProgress;
-    void             *pProgressDataGlobal = psExtraArg->pProgressData;
+    if( psArgs->nBandCount == 1 )
+    {
+        GDALRasterBand *poBand = GetRasterBand(psArgs->panBandMap[0]);
+        if (poBand == NULL)
+            eErr = CE_Failure;
+        else if( bHasCompactRasterIO )
+        {
+            eErr = poBand->ICompactRasterIO(psArgs);
+        }
+        else
+        {
+            eErr = poBand->IRasterIO( psArgs->eRWFlag, psArgs->nXOff, psArgs->nYOff, psArgs->nXSize, psArgs->nYSize, 
+                                    psArgs->pData, psArgs->nBufXSize, psArgs->nBufYSize,
+                                    psArgs->eBufType, psArgs->nPixelSpace, psArgs->nLineSpace,
+                                    psArgs->psExtraArg );
+        }
+        return eErr;
+    }
 
+    GDALProgressFunc  pfnProgressGlobal = psArgs->psExtraArg->pfnProgress;
+    void             *pProgressDataGlobal = psArgs->psExtraArg->pProgressData;
+
+    void* pData = psArgs->pData;
     for( iBandIndex = 0; 
-         iBandIndex < nBandCount && eErr == CE_None; 
+         iBandIndex < psArgs->nBandCount && eErr == CE_None; 
          iBandIndex++ )
     {
-        GDALRasterBand *poBand = GetRasterBand(panBandMap[iBandIndex]);
+        GDALRasterBand *poBand = GetRasterBand(psArgs->panBandMap[iBandIndex]);
         GByte *pabyBandData;
 
         if (poBand == NULL)
@@ -1551,31 +1576,36 @@ CPLErr GDALDataset::BandBasedRasterIO( GDALRWFlag eRWFlag,
             break;
         }
 
-        pabyBandData = ((GByte *) pData) + iBandIndex * nBandSpace;
+        psArgs->psExtraArg->pfnProgress = GDALScaledProgress;
+        psArgs->psExtraArg->pProgressData = 
+            GDALCreateScaledProgress( 1.0 * iBandIndex / psArgs->nBandCount,
+                                    1.0 * (iBandIndex + 1) / psArgs->nBandCount,
+                                    pfnProgressGlobal,
+                                    pProgressDataGlobal );
+        if( psArgs->psExtraArg->pProgressData == NULL )
+            psArgs->psExtraArg->pfnProgress = NULL;
 
-        if( nBandCount > 1 )
+        pabyBandData = ((GByte *) pData) + iBandIndex * psArgs->nBandSpace;
+
+        if( bHasCompactRasterIO )
         {
-            psExtraArg->pfnProgress = GDALScaledProgress;
-            psExtraArg->pProgressData = 
-                GDALCreateScaledProgress( 1.0 * iBandIndex / nBandCount,
-                                        1.0 * (iBandIndex + 1) / nBandCount,
-                                        pfnProgressGlobal,
-                                        pProgressDataGlobal );
-            if( psExtraArg->pProgressData == NULL )
-                psExtraArg->pfnProgress = NULL;
+            ((GDALRasterIOArgs*)psArgs)->pData = pabyBandData;
+            eErr = poBand->ICompactRasterIO(psArgs);
+        }
+        else
+        {
+            eErr = poBand->IRasterIO( psArgs->eRWFlag, psArgs->nXOff, psArgs->nYOff, psArgs->nXSize, psArgs->nYSize, 
+                                    (void *) pabyBandData, psArgs->nBufXSize, psArgs->nBufYSize,
+                                    psArgs->eBufType, psArgs->nPixelSpace, psArgs->nLineSpace,
+                                    psArgs->psExtraArg );
         }
 
-        eErr = poBand->IRasterIO( eRWFlag, nXOff, nYOff, nXSize, nYSize, 
-                                  (void *) pabyBandData, nBufXSize, nBufYSize,
-                                  eBufType, nPixelSpace, nLineSpace,
-                                  psExtraArg );
-
-        if( nBandCount > 1 )
-            GDALDestroyScaledProgress( psExtraArg->pProgressData );
+        GDALDestroyScaledProgress( psArgs->psExtraArg->pProgressData );
     }
+    ((GDALRasterIOArgs*)psArgs)->pData = pData;
     
-    psExtraArg->pfnProgress = pfnProgressGlobal;
-    psExtraArg->pProgressData = pProgressDataGlobal;
+    psArgs->psExtraArg->pfnProgress = pfnProgressGlobal;
+    psArgs->psExtraArg->pProgressData = pProgressDataGlobal;
 
     return eErr;
 }
@@ -1587,24 +1617,22 @@ CPLErr GDALDataset::BandBasedRasterIO( GDALRWFlag eRWFlag,
 CPLErr GDALDataset::ValidateRasterIOOrAdviseReadParameters(
                                const char* pszCallingFunc,
                                int* pbStopProcessingOnCENone,
-                               int nXOff, int nYOff, int nXSize, int nYSize,
-                               int nBufXSize, int nBufYSize, 
-                               int nBandCount, int *panBandMap)
+                               const GDALRasterIOArgs* psArgs)
 {
 
 /* -------------------------------------------------------------------- */
 /*      Some size values are "noop".  Lets just return to avoid         */
 /*      stressing lower level functions.                                */
 /* -------------------------------------------------------------------- */
-    if( nXSize < 1 || nYSize < 1 || nBufXSize < 1 || nBufYSize < 1 )
+    if( psArgs->nXSize < 1 || psArgs->nYSize < 1 || psArgs->nBufXSize < 1 || psArgs->nBufYSize < 1 )
     {
         CPLDebug( "GDAL", 
                   "%s skipped for odd window or buffer size.\n"
                   "  Window = (%d,%d)x%dx%d\n"
                   "  Buffer = %dx%d\n",
                   pszCallingFunc,
-                  nXOff, nYOff, nXSize, nYSize, 
-                  nBufXSize, nBufYSize );
+                  psArgs->nXOff, psArgs->nYOff, psArgs->nXSize, psArgs->nYSize, 
+                  psArgs->nBufXSize, psArgs->nBufYSize );
 
         *pbStopProcessingOnCENone = TRUE;
         return CE_None;
@@ -1613,17 +1641,17 @@ CPLErr GDALDataset::ValidateRasterIOOrAdviseReadParameters(
     CPLErr eErr = CE_None;
     *pbStopProcessingOnCENone = FALSE;
 
-    if( nXOff < 0 || nXOff > INT_MAX - nXSize || nXOff + nXSize > nRasterXSize
-        || nYOff < 0 || nYOff > INT_MAX - nYSize || nYOff + nYSize > nRasterYSize )
+    if( psArgs->nXOff < 0 || psArgs->nXOff > INT_MAX - psArgs->nXSize || psArgs->nXOff + psArgs->nXSize > nRasterXSize
+        || psArgs->nYOff < 0 || psArgs->nYOff > INT_MAX - psArgs->nYSize || psArgs->nYOff + psArgs->nYSize > nRasterYSize )
     {
         ReportError( CE_Failure, CPLE_IllegalArg,
                   "Access window out of range in %s.  Requested\n"
                   "(%d,%d) of size %dx%d on raster of %dx%d.",
-                  pszCallingFunc, nXOff, nYOff, nXSize, nYSize, nRasterXSize, nRasterYSize );
+                  pszCallingFunc, psArgs->nXOff, psArgs->nYOff, psArgs->nXSize, psArgs->nYSize, nRasterXSize, nRasterYSize );
         eErr = CE_Failure;
     }
 
-    if( panBandMap == NULL && nBandCount > GetRasterCount() )
+    if( psArgs->panBandMap == NULL && psArgs->nBandCount > GetRasterCount() )
     {
         ReportError( CE_Failure, CPLE_IllegalArg,
                     "%s: nBandCount cannot be greater than %d",
@@ -1631,9 +1659,9 @@ CPLErr GDALDataset::ValidateRasterIOOrAdviseReadParameters(
         eErr = CE_Failure;
     }
 
-    for( int i = 0; i < nBandCount && eErr == CE_None; i++ )
+    for( int i = 0; i < psArgs->nBandCount && eErr == CE_None; i++ )
     {
-        int iBand = (panBandMap != NULL) ? panBandMap[i] : i + 1;
+        int iBand = (psArgs->panBandMap != NULL) ? psArgs->panBandMap[i] : i + 1;
         if( iBand < 1 || iBand > GetRasterCount() )
         {
             ReportError( CE_Failure, CPLE_IllegalArg,
@@ -1747,30 +1775,53 @@ CPLErr GDALDataset::RasterIO( GDALRWFlag eRWFlag,
                               GDALRasterIOExtraArg* psExtraArg )
 
 {
+    GDALRasterIOArgs sArgs;
+    sArgs.eRWFlag = eRWFlag;
+    sArgs.nXOff = nXOff;
+    sArgs.nYOff = nYOff;
+    sArgs.nXSize = nXSize;
+    sArgs.nYSize = nYSize;
+    sArgs.pData = pData;
+    sArgs.nBufXSize = nBufXSize;
+    sArgs.nBufYSize = nBufYSize;
+    sArgs.eBufType = eBufType;
+    sArgs.nBandCount = nBandCount;
+    sArgs.panBandMap = panBandMap;
+    sArgs.nPixelSpace = nPixelSpace;
+    sArgs.nLineSpace = nLineSpace;
+    sArgs.nBandSpace = nBandSpace;
+    sArgs.psExtraArg = psExtraArg;
+
+    return RasterIO(&sArgs);
+}
+
+CPLErr GDALDataset::RasterIO( const GDALRasterIOArgs* psArgs )
+{
     int i = 0;
     int bNeedToFreeBandMap = FALSE;
     CPLErr eErr = CE_None;
     
     GDALRasterIOExtraArg sExtraArg;
-    if( psExtraArg == NULL )
+    GDALRasterIOExtraArg* psExtraArgIni = psArgs->psExtraArg;
+    if( psExtraArgIni == NULL )
     {
         INIT_RASTERIO_EXTRA_ARG(sExtraArg);
-        psExtraArg = &sExtraArg;
+        ((GDALRasterIOArgs*)psArgs)->psExtraArg = &sExtraArg;
     }
-    else if( psExtraArg->nVersion != RASTERIO_EXTRA_ARG_CURRENT_VERSION )
+    else if( psArgs->psExtraArg->nVersion != RASTERIO_EXTRA_ARG_CURRENT_VERSION )
     {
         ReportError( CE_Failure, CPLE_AppDefined,
                      "Unhandled version of GDALRasterIOExtraArg" );
         return CE_Failure;
     }
 
-    GDALRasterIOExtraArgSetResampleAlg(psExtraArg, nXSize, nYSize,
-                                       nBufXSize, nBufYSize);
+    GDALRasterIOExtraArgSetResampleAlg(psArgs);
 
-    if( NULL == pData )
+    if( NULL == psArgs->pData )
     {
         ReportError( CE_Failure, CPLE_AppDefined,
                   "The buffer into which the data should be read is null" );
+        ((GDALRasterIOArgs*)psArgs)->psExtraArg = psExtraArgIni;
         return CE_Failure;
     }
     
@@ -1778,56 +1829,58 @@ CPLErr GDALDataset::RasterIO( GDALRWFlag eRWFlag,
 /*      Do some validation of parameters.                               */
 /* -------------------------------------------------------------------- */
 
-    if( eRWFlag != GF_Read && eRWFlag != GF_Write )
+    if( psArgs->eRWFlag != GF_Read && psArgs->eRWFlag != GF_Write )
     {
         ReportError( CE_Failure, CPLE_IllegalArg,
                   "eRWFlag = %d, only GF_Read (0) and GF_Write (1) are legal.",
-                  eRWFlag );
+                  psArgs->eRWFlag );
+        ((GDALRasterIOArgs*)psArgs)->psExtraArg = psExtraArgIni;
         return CE_Failure;
     }
 
     int bStopProcessing = FALSE;
     eErr = ValidateRasterIOOrAdviseReadParameters( "RasterIO()", &bStopProcessing,
-                                                    nXOff, nYOff, nXSize, nYSize,
-                                                    nBufXSize, nBufYSize, 
-                                                    nBandCount, panBandMap);
+                                                    psArgs );
     if( eErr != CE_None || bStopProcessing )
+    {
+        ((GDALRasterIOArgs*)psArgs)->psExtraArg = psExtraArgIni;
         return eErr;
+    }
 
 /* -------------------------------------------------------------------- */
 /*      If pixel and line spacing are defaulted assign reasonable      */
 /*      value assuming a packed buffer.                                 */
 /* -------------------------------------------------------------------- */
-    if( nPixelSpace == 0 )
-        nPixelSpace = GDALGetDataTypeSize( eBufType ) / 8;
+    if( psArgs->nPixelSpace == 0 )
+        ((GDALRasterIOArgs*)psArgs)->nPixelSpace = GDALGetDataTypeSize( psArgs->eBufType ) / 8;
     
-    if( nLineSpace == 0 )
+    if( psArgs->nLineSpace == 0 )
     {
-        nLineSpace = nPixelSpace * nBufXSize;
+        ((GDALRasterIOArgs*)psArgs)->nLineSpace = psArgs->nPixelSpace * psArgs->nBufXSize;
     }
 
-    if( nBandSpace == 0 && nBandCount > 1 )
+    if( psArgs->nBandSpace == 0 && psArgs->nBandCount > 1 )
     {
-        nBandSpace = nLineSpace * nBufYSize;
+        ((GDALRasterIOArgs*)psArgs)->nBandSpace = psArgs->nLineSpace * psArgs->nBufYSize;
     }
 
-    if( panBandMap == NULL )
+    if(psArgs->panBandMap == NULL )
     {
-        panBandMap = (int *) VSIMalloc2(sizeof(int), nBandCount);
-        if (panBandMap == NULL)
+        ((GDALRasterIOArgs*)psArgs)->panBandMap = (int *) VSIMalloc2(sizeof(int), psArgs->nBandCount);
+        if (psArgs->panBandMap == NULL)
         {
             ReportError( CE_Failure, CPLE_OutOfMemory,
                       "Out of memory while allocating band map array" );
             return CE_Failure;
         }
-        for( i = 0; i < nBandCount; i++ )
-            panBandMap[i] = i+1;
+        for( i = 0; i < psArgs->nBandCount; i++ )
+            ((GDALRasterIOArgs*)psArgs)->panBandMap[i] = i+1;
 
         bNeedToFreeBandMap = TRUE;
     }
 
 
-    int bCallLeaveReadWrite = EnterReadWrite(eRWFlag);
+    int bCallLeaveReadWrite = EnterReadWrite(psArgs->eRWFlag);
 
 /* -------------------------------------------------------------------- */
 /*      We are being forced to use cached IO instead of a driver        */
@@ -1836,11 +1889,7 @@ CPLErr GDALDataset::RasterIO( GDALRWFlag eRWFlag,
     if( bForceCachedIO )
     {
         eErr = 
-            BlockBasedRasterIO( eRWFlag, nXOff, nYOff, nXSize, nYSize,
-                                pData, nBufXSize, nBufYSize, eBufType,
-                                nBandCount, panBandMap,
-                                nPixelSpace, nLineSpace, nBandSpace,
-                                psExtraArg );
+            BlockBasedRasterIO( psArgs );
     }
 
 /* -------------------------------------------------------------------- */
@@ -1848,12 +1897,15 @@ CPLErr GDALDataset::RasterIO( GDALRWFlag eRWFlag,
 /* -------------------------------------------------------------------- */
     else if( eErr == CE_None )
     {
-        eErr = 
-            IRasterIO( eRWFlag, nXOff, nYOff, nXSize, nYSize,
-                       pData, nBufXSize, nBufYSize, eBufType,
-                       nBandCount, panBandMap,
-                       nPixelSpace, nLineSpace, nBandSpace,
-                       psExtraArg );
+        if( bHasCompactRasterIO )
+            eErr = ICompactRasterIO(psArgs);
+        else
+            eErr = 
+                IRasterIO( psArgs->eRWFlag, psArgs->nXOff, psArgs->nYOff, psArgs->nXSize, psArgs->nYSize,
+                       psArgs->pData, psArgs->nBufXSize, psArgs->nBufYSize, psArgs->eBufType,
+                       psArgs->nBandCount, psArgs->panBandMap,
+                       psArgs->nPixelSpace, psArgs->nLineSpace, psArgs->nBandSpace,
+                       psArgs->psExtraArg );
     }
 
     if( bCallLeaveReadWrite ) LeaveReadWrite();
@@ -1862,7 +1914,11 @@ CPLErr GDALDataset::RasterIO( GDALRWFlag eRWFlag,
 /*      Cleanup                                                         */
 /* -------------------------------------------------------------------- */
     if( bNeedToFreeBandMap )
-        CPLFree( panBandMap );
+    {
+        CPLFree( psArgs->panBandMap );
+        ((GDALRasterIOArgs*)psArgs)->panBandMap = NULL;
+    }
+    ((GDALRasterIOArgs*)psArgs)->psExtraArg = psExtraArgIni;
 
     return eErr;
 }
@@ -1893,10 +1949,24 @@ GDALDatasetRasterIO( GDALDatasetH hDS, GDALRWFlag eRWFlag,
 
     GDALDataset    *poDS = (GDALDataset *) hDS;
 
-    return( poDS->RasterIO( eRWFlag, nXOff, nYOff, nXSize, nYSize,
-                            pData, nBufXSize, nBufYSize, eBufType,
-                            nBandCount, panBandMap, 
-                            nPixelSpace, nLineSpace, nBandSpace, NULL ) );
+    GDALRasterIOArgs sArgs;
+    sArgs.eRWFlag = eRWFlag;
+    sArgs.nXOff = nXOff;
+    sArgs.nYOff = nYOff;
+    sArgs.nXSize = nXSize;
+    sArgs.nYSize = nYSize;
+    sArgs.pData = pData;
+    sArgs.nBufXSize = nBufXSize;
+    sArgs.nBufYSize = nBufYSize;
+    sArgs.eBufType = eBufType;
+    sArgs.nBandCount = nBandCount;
+    sArgs.panBandMap = panBandMap;
+    sArgs.nPixelSpace = nPixelSpace;
+    sArgs.nLineSpace = nLineSpace;
+    sArgs.nBandSpace = nBandSpace;
+    sArgs.psExtraArg = NULL;
+
+    return poDS->RasterIO( &sArgs );
 }
 
 /************************************************************************/
@@ -1925,11 +1995,26 @@ GDALDatasetRasterIOEx( GDALDatasetH hDS, GDALRWFlag eRWFlag,
 
     GDALDataset    *poDS = (GDALDataset *) hDS;
 
-    return( poDS->RasterIO( eRWFlag, nXOff, nYOff, nXSize, nYSize,
-                            pData, nBufXSize, nBufYSize, eBufType,
-                            nBandCount, panBandMap, 
-                            nPixelSpace, nLineSpace, nBandSpace, psExtraArg ) );
+    GDALRasterIOArgs sArgs;
+    sArgs.eRWFlag = eRWFlag;
+    sArgs.nXOff = nXOff;
+    sArgs.nYOff = nYOff;
+    sArgs.nXSize = nXSize;
+    sArgs.nYSize = nYSize;
+    sArgs.pData = pData;
+    sArgs.nBufXSize = nBufXSize;
+    sArgs.nBufYSize = nBufYSize;
+    sArgs.eBufType = eBufType;
+    sArgs.nBandCount = nBandCount;
+    sArgs.panBandMap = panBandMap;
+    sArgs.nPixelSpace = nPixelSpace;
+    sArgs.nLineSpace = nLineSpace;
+    sArgs.nBandSpace = nBandSpace;
+    sArgs.psExtraArg = psExtraArg;
+
+    return poDS->RasterIO( &sArgs );
 }
+
 /************************************************************************/
 /*                          GetOpenDatasets()                           */
 /************************************************************************/
@@ -2082,10 +2167,17 @@ CPLErr GDALDataset::AdviseRead( int nXOff, int nYOff, int nXSize, int nYSize,
 /*      Do some validation of parameters.                               */
 /* -------------------------------------------------------------------- */
     int bStopProcessing = FALSE;
+    GDALRasterIOArgs sArgs;
+    sArgs.nXOff = nXOff;
+    sArgs.nYOff = nYOff;
+    sArgs.nXSize = nXSize;
+    sArgs.nYSize = nYSize;
+    sArgs.nBufXSize = nBufXSize;
+    sArgs.nBufYSize = nBufYSize;
+    sArgs.nBandCount = nBandCount;
+    sArgs.panBandMap = panBandMap;
     CPLErr eErr = ValidateRasterIOOrAdviseReadParameters( "AdviseRead()", &bStopProcessing,
-                                                    nXOff, nYOff, nXSize, nYSize,
-                                                    nBufXSize, nBufYSize, 
-                                                    nBandCount, panBandMap);
+                                                          &sArgs);
     if( eErr != CE_None || bStopProcessing )
         return eErr;
 

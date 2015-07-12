@@ -736,15 +736,29 @@ CPLErr PostGISRasterRasterBand::IRasterIO(GDALRWFlag eRWFlag, int nXOff,
               SortTilesByPKID);
     }
 
+    GDALRasterIOArgs sArgs;
+    sArgs.eRWFlag = GF_Read;
+    sArgs.nXOff = nXOff;
+    sArgs.nYOff = nYOff;
+    sArgs.nXSize = nXSize;
+    sArgs.nYSize = nYSize;
+    sArgs.pData = pData;
+    sArgs.nBufXSize = nBufXSize;
+    sArgs.nBufYSize = nBufYSize;
+    sArgs.eBufType = eBufType;
+    sArgs.nBandCount = 0;
+    sArgs.panBandMap = NULL;
+    sArgs.nPixelSpace = nPixelSpace;
+    sArgs.nLineSpace = nLineSpace;
+    sArgs.nBandSpace = 0;
+    sArgs.psExtraArg = NULL;
     for(i = 0; i < nFeatureCount && eErr == CE_None; i++)
     {
         PostGISRasterTileDataset *poTile = papsMatchingTiles[i];
         PostGISRasterTileRasterBand* poTileBand = 
             (PostGISRasterTileRasterBand *)poTile->GetRasterBand(nBand);
         eErr = 
-            poTileBand->poSource->RasterIO( nXOff, nYOff, nXSize, nYSize, 
-                                            pData, nBufXSize, nBufYSize, 
-                                            eBufType, nPixelSpace, nLineSpace, NULL);
+            poTileBand->poSource->RasterIO( &sArgs );
     }
     
     // Free the object that holds pointers to matching tiles

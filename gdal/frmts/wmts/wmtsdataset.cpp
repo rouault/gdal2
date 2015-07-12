@@ -159,14 +159,7 @@ class WMTSDataset : public GDALPamDataset
   protected:
     virtual int         CloseDependentDatasets();
 
-    virtual CPLErr  IRasterIO( GDALRWFlag eRWFlag,
-                               int nXOff, int nYOff, int nXSize, int nYSize,
-                               void * pData, int nBufXSize, int nBufYSize,
-                               GDALDataType eBufType, 
-                               int nBandCount, int *panBandMap,
-                               GSpacing nPixelSpace, GSpacing nLineSpace,
-                               GSpacing nBandSpace,
-                               GDALRasterIOExtraArg* psExtraArg);
+    virtual CPLErr  ICompactRasterIO( const GDALRasterIOArgs* psArgs );
 };
 
 /************************************************************************/
@@ -409,6 +402,7 @@ const char *WMTSBand::GetMetadataItem( const char * pszName,
 
 WMTSDataset::WMTSDataset()
 {
+    bHasCompactRasterIO = TRUE;
     adfGT[0] = 0;
     adfGT[1] = 1;
     adfGT[2] = 0;
@@ -446,40 +440,21 @@ int WMTSDataset::CloseDependentDatasets()
 }
 
 /************************************************************************/
-/*                             IRasterIO()                              */
+/*                      ICompactRasterIO()                              */
 /************************************************************************/
 
-CPLErr  WMTSDataset::IRasterIO( GDALRWFlag eRWFlag,
-                               int nXOff, int nYOff, int nXSize, int nYSize,
-                               void * pData, int nBufXSize, int nBufYSize,
-                               GDALDataType eBufType, 
-                               int nBandCount, int *panBandMap,
-                               GSpacing nPixelSpace, GSpacing nLineSpace,
-                               GSpacing nBandSpace,
-                               GDALRasterIOExtraArg* psExtraArg)
+CPLErr  WMTSDataset::ICompactRasterIO( const GDALRasterIOArgs* psArgs )
 {
-    if( (nBufXSize < nXSize || nBufYSize < nYSize)
-        && apoDatasets.size() > 1 && eRWFlag == GF_Read )
+    if( (psArgs->nBufXSize < psArgs->nXSize || psArgs->nBufYSize < psArgs->nYSize)
+        && apoDatasets.size() > 1 && psArgs->eRWFlag == GF_Read )
     {
         int bTried;
-        CPLErr eErr = TryOverviewRasterIO( eRWFlag,
-                                    nXOff, nYOff, nXSize, nYSize,
-                                    pData, nBufXSize, nBufYSize,
-                                    eBufType,
-                                    nBandCount, panBandMap,
-                                    nPixelSpace, nLineSpace,
-                                    nBandSpace,
-                                    psExtraArg,
-                                    &bTried );
+        CPLErr eErr = TryOverviewRasterIO( psArgs, &bTried );
         if( bTried )
             return eErr;
     }
 
-    return apoDatasets[0]->RasterIO( eRWFlag, nXOff, nYOff, nXSize, nYSize, 
-                                  pData, nBufXSize, nBufYSize,
-                                  eBufType, nBandCount, panBandMap,
-                                  nPixelSpace, nLineSpace, nBandSpace,
-                                  psExtraArg );
+    return apoDatasets[0]->RasterIO( psArgs );
 }
 
 /************************************************************************/

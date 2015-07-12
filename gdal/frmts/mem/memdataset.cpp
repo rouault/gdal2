@@ -242,19 +242,80 @@ CPLErr MEMRasterBand::IRasterIO( GDALRWFlag eRWFlag,
 }
 
 /************************************************************************/
+/*                         ICompactRasterIO()                           */
+/************************************************************************/
+
+CPLErr MEMRasterBand::ICompactRasterIO( const GDALRasterIOArgs* psArgs )
+{
+    const GDALRWFlag& eRWFlag = psArgs->eRWFlag;
+    const int& nXOff = psArgs->nXOff;
+    const int& nYOff = psArgs->nYOff;
+    const int& nXSize = psArgs->nXSize;
+    const int& nYSize = psArgs->nYSize;
+    void * const& pData = psArgs->pData;
+    const int& nBufXSize = psArgs->nBufXSize;
+    const int& nBufYSize = psArgs->nBufYSize;
+    const GDALDataType& eBufType = psArgs->eBufType;
+    const GSpacing& nPixelSpaceBuf = psArgs->nPixelSpace;
+    const GSpacing& nLineSpaceBuf = psArgs->nLineSpace;
+    
+    if( nXSize != nBufXSize || nYSize != nBufYSize )
+    {
+        return GDALRasterBand::ICompactRasterIO(psArgs);
+    }
+
+    // In case block based I/O has been done before
+    FlushCache();
+
+    if( eRWFlag == GF_Read )
+    {
+        for(int iLine=0;iLine<nYSize;iLine++)
+        {
+            GDALCopyWords( pabyData + nLineOffset*(size_t)(iLine + nYOff) + nXOff*nPixelOffset,
+                           eDataType,
+                           nPixelOffset,
+                           ((GByte*)pData) + nLineSpaceBuf*(size_t)iLine,
+                           eBufType,
+                           nPixelSpaceBuf,
+                           nXSize);
+        }
+    }
+    else
+    {
+        for(int iLine=0;iLine<nYSize;iLine++)
+        {
+            GDALCopyWords( ((GByte*)pData) + nLineSpaceBuf*(size_t)iLine,
+                           eBufType,
+                           nPixelSpaceBuf,
+                           pabyData + nLineOffset*(size_t)(iLine + nYOff) + nXOff*nPixelOffset,
+                           eDataType,
+                           nPixelOffset,
+                           nXSize);
+        }
+    }
+    return CE_None;
+}
+
+/************************************************************************/
 /*                             IRasterIO()                              */
 /************************************************************************/
 
-CPLErr MEMDataset::IRasterIO( GDALRWFlag eRWFlag,
-                              int nXOff, int nYOff, int nXSize, int nYSize,
-                              void * pData, int nBufXSize, int nBufYSize,
-                              GDALDataType eBufType, 
-                              int nBandCount, int *panBandMap,
-                              GSpacing nPixelSpaceBuf,
-                              GSpacing nLineSpaceBuf,
-                              GSpacing nBandSpaceBuf,
-                              GDALRasterIOExtraArg* psExtraArg)
+CPLErr MEMDataset::ICompactRasterIO( const GDALRasterIOArgs* psArgs )
 {
+    const GDALRWFlag& eRWFlag = psArgs->eRWFlag;
+    int nXOff = psArgs->nXOff;
+    int nYOff = psArgs->nYOff;
+    int nXSize = psArgs->nXSize;
+    int nYSize = psArgs->nYSize;
+    const int& nBandCount = psArgs->nBandCount;
+    const int* const& panBandMap = psArgs->panBandMap;
+    const int& nBufXSize = psArgs->nBufXSize;
+    const int& nBufYSize = psArgs->nBufYSize;
+    const GDALDataType& eBufType = psArgs->eBufType;
+    const GSpacing& nPixelSpaceBuf = psArgs->nPixelSpace;
+    const GSpacing& nLineSpaceBuf = psArgs->nLineSpace;
+    const GSpacing& nBandSpaceBuf = psArgs->nBandSpace;
+    GDALRasterIOExtraArg* const& psExtraArg = psArgs->psExtraArg;
     int eBufTypeSize = GDALGetDataTypeSize(eBufType) / 8;
 
     /* Detect if we have a pixel-interleaved buffer and a pixel-interleaved dataset */
@@ -294,6 +355,7 @@ CPLErr MEMDataset::IRasterIO( GDALRWFlag eRWFlag,
         }
         if( iBandIndex == nBandCount )
         {
+            void * const& pData = psArgs->pData;
             FlushCache();
             if( eRWFlag == GF_Read )
             {
@@ -327,6 +389,7 @@ CPLErr MEMDataset::IRasterIO( GDALRWFlag eRWFlag,
     
     GDALProgressFunc  pfnProgressGlobal = psExtraArg->pfnProgress;
     void             *pProgressDataGlobal = psExtraArg->pProgressData;
+    void             *pData = psArgs->pData;
 
     CPLErr eErr = CE_None;
     for( int iBandIndex = 0; 
@@ -351,13 +414,13 @@ CPLErr MEMDataset::IRasterIO( GDALRWFlag eRWFlag,
                                       pfnProgressGlobal,
                                       pProgressDataGlobal );
 
-        eErr = poBand->RasterIO( eRWFlag, nXOff, nYOff, nXSize, nYSize, 
-                                  (void *) pabyBandData, nBufXSize, nBufYSize,
-                                  eBufType, nPixelSpaceBuf, nLineSpaceBuf,
-                                 psExtraArg);
+        ((GDALRasterIOArgs*)psArgs)->pData = pabyBandData;
+        eErr = ((MEMRasterBand*)poBand)->ICompactRasterIO(psArgs);
 
         GDALDestroyScaledProgress( psExtraArg->pProgressData );
     }
+    
+    ((GDALRasterIOArgs*)psArgs)->pData = pData;
     
     psExtraArg->pfnProgress = pfnProgressGlobal;
     psExtraArg->pProgressData = pProgressDataGlobal;
@@ -657,6 +720,7 @@ MEMRasterBand::GetDefaultHistogram( double *pdfMin, double *pdfMax,
 MEMDataset::MEMDataset()
 
 {
+    bHasCompactRasterIO = TRUE;
     pszProjection = NULL;
     bGeoTransformSet = FALSE;
     adfGeoTransform[0] = 0.0;

@@ -1109,49 +1109,34 @@ CPLErr VRTPansharpenedDataset::AddBand( CPL_UNUSED GDALDataType eType,
 
 
 /************************************************************************/
-/*                              IRasterIO()                             */
+/*                        ICompactRasterIO()                            */
 /************************************************************************/
 
-CPLErr VRTPansharpenedDataset::IRasterIO( GDALRWFlag eRWFlag,
-                               int nXOff, int nYOff, int nXSize, int nYSize,
-                               void * pData, int nBufXSize, int nBufYSize,
-                               GDALDataType eBufType,
-                               int nBandCount, int *panBandMap,
-                               GSpacing nPixelSpace, GSpacing nLineSpace,
-                               GSpacing nBandSpace,
-                               GDALRasterIOExtraArg* psExtraArg)
+CPLErr VRTPansharpenedDataset::ICompactRasterIO( const GDALRasterIOArgs* psArgs )
 {
-    if( eRWFlag == GF_Write )
+    if( psArgs->eRWFlag == GF_Write )
         return CE_Failure;
 
     /* Try to pass the request to the most appropriate overview dataset */
-    if( nBufXSize < nXSize && nBufYSize < nYSize )
+    if( psArgs->nBufXSize < psArgs->nXSize && psArgs->nBufYSize < psArgs->nYSize )
     {
         int bTried;
-        CPLErr eErr = TryOverviewRasterIO( eRWFlag,
-                                    nXOff, nYOff, nXSize, nYSize,
-                                    pData, nBufXSize, nBufYSize,
-                                    eBufType,
-                                    nBandCount, panBandMap,
-                                    nPixelSpace, nLineSpace,
-                                    nBandSpace,
-                                    psExtraArg,
-                                    &bTried );
+        CPLErr eErr = TryOverviewRasterIO( psArgs, &bTried );
         if( bTried )
             return eErr;
     }
 
-    int nDataTypeSize = GDALGetDataTypeSize(eBufType) / 8;
-    if( nXSize == nBufXSize &&
-        nYSize == nBufYSize &&
-        nDataTypeSize == nPixelSpace &&
-        nLineSpace == nPixelSpace * nBufXSize &&
-        nBandSpace == nLineSpace * nBufYSize &&
-        nBandCount == nBands )
+    int nDataTypeSize = GDALGetDataTypeSize(psArgs->eBufType) / 8;
+    if( psArgs->nXSize == psArgs->nBufXSize &&
+        psArgs->nYSize == psArgs->nBufYSize &&
+        nDataTypeSize == psArgs->nPixelSpace &&
+        psArgs->nLineSpace == psArgs->nPixelSpace * psArgs->nBufXSize &&
+        psArgs->nBandSpace == psArgs->nLineSpace * psArgs->nBufYSize &&
+        psArgs->nBandCount == nBands )
     {
         for(int i=0;i<nBands;i++)
         {
-            if( panBandMap[i] != i + 1 ||
+            if( psArgs->panBandMap[i] != i + 1 ||
                 !((VRTRasterBand*)GetRasterBand(i+1))->IsPansharpenRasterBand() )
             {
                 goto default_path;
@@ -1160,16 +1145,13 @@ CPLErr VRTPansharpenedDataset::IRasterIO( GDALRWFlag eRWFlag,
 
         //{static int bDone = 0; if (!bDone) printf("(2)\n"); bDone = 1; }
         return poPansharpener->ProcessRegion(
-                    nXOff, nYOff, nXSize, nYSize, pData, eBufType);
+                    psArgs->nXOff, psArgs->nYOff, psArgs->nXSize, psArgs->nYSize, psArgs->pData, psArgs->eBufType);
 
     }
 
 default_path:
     //{static int bDone = 0; if (!bDone) printf("(3)\n"); bDone = 1; }
-    return VRTDataset::IRasterIO(
-            eRWFlag, nXOff, nYOff, nXSize, nYSize,
-            pData, nBufXSize, nBufYSize, eBufType,
-            nBandCount, panBandMap, nPixelSpace, nLineSpace, nBandSpace, psExtraArg);
+    return VRTDataset::ICompactRasterIO(psArgs);
 }
 
 /************************************************************************/
@@ -1230,10 +1212,25 @@ CPLErr VRTPansharpenedRasterBand::IReadBlock( int nBlockXOff, int nBlockYOff,
     int nDataTypeSize = GDALGetDataTypeSize(eDataType) / 8;
     GDALRasterIOExtraArg sExtraArg;
     INIT_RASTERIO_EXTRA_ARG(sExtraArg);
-    if( IRasterIO( GF_Read, nReqXOff, nReqYOff, nReqXSize, nReqYSize,
-                   pImage, nReqXSize, nReqYSize, eDataType,
-                   nDataTypeSize, nDataTypeSize * nReqXSize,
-                   &sExtraArg ) != CE_None )
+
+    GDALRasterIOArgs sArgs;
+    sArgs.eRWFlag = GF_Read;
+    sArgs.nXOff = nReqXOff;
+    sArgs.nYOff = nReqYOff;
+    sArgs.nXSize = nReqXSize;
+    sArgs.nYSize = nReqYSize;
+    sArgs.pData = pImage;
+    sArgs.nBufXSize = nReqXSize;
+    sArgs.nBufYSize = nReqYSize;
+    sArgs.eBufType = eDataType;
+    sArgs.nBandCount = 0;
+    sArgs.panBandMap = NULL;
+    sArgs.nPixelSpace = nDataTypeSize;
+    sArgs.nLineSpace = nDataTypeSize * nReqXSize;
+    sArgs.nBandSpace = 0;
+    sArgs.psExtraArg = &sExtraArg;
+
+    if( ICompactRasterIO( &sArgs ) != CE_None )
     {
         return CE_Failure;
     }
@@ -1290,77 +1287,66 @@ CPLErr VRTPansharpenedRasterBand::IReadBlock( int nBlockXOff, int nBlockYOff,
 }
 
 /************************************************************************/
-/*                              IRasterIO()                             */
+/*                            ICompactRasterIO()                        */
 /************************************************************************/
 
-CPLErr VRTPansharpenedRasterBand::IRasterIO( GDALRWFlag eRWFlag,
-                               int nXOff, int nYOff, int nXSize, int nYSize,
-                               void * pData, int nBufXSize, int nBufYSize,
-                               GDALDataType eBufType,
-                               GSpacing nPixelSpace, GSpacing nLineSpace,
-                               GDALRasterIOExtraArg* psExtraArg)
+CPLErr VRTPansharpenedRasterBand::ICompactRasterIO( const GDALRasterIOArgs* psArgs )
 {
     VRTPansharpenedDataset* poGDS = (VRTPansharpenedDataset *) poDS;
 
-    if( eRWFlag == GF_Write )
+    if( psArgs->eRWFlag == GF_Write )
         return CE_Failure;
 
     /* Try to pass the request to the most appropriate overview dataset */
-    if( nBufXSize < nXSize && nBufYSize < nYSize )
+    if( psArgs->nBufXSize < psArgs->nXSize && psArgs->nBufYSize < psArgs->nYSize )
     {
         int bTried;
-        CPLErr eErr = TryOverviewRasterIO( eRWFlag,
-                                    nXOff, nYOff, nXSize, nYSize,
-                                    pData, nBufXSize, nBufYSize,
-                                    eBufType,
-                                    nPixelSpace, nLineSpace,
-                                    psExtraArg,
-                                    &bTried );
+        CPLErr eErr = TryOverviewRasterIO( psArgs, &bTried );
         if( bTried )
             return eErr;
     }
 
-    int nDataTypeSize = GDALGetDataTypeSize(eBufType) / 8;
-    if( nXSize == nBufXSize &&
-        nYSize == nBufYSize &&
-        nDataTypeSize == nPixelSpace &&
-        nLineSpace == nPixelSpace * nBufXSize )
+    int nDataTypeSize = GDALGetDataTypeSize(psArgs->eBufType) / 8;
+    if( psArgs->nXSize == psArgs->nBufXSize &&
+        psArgs->nYSize == psArgs->nBufYSize &&
+        nDataTypeSize == psArgs->nPixelSpace &&
+        psArgs->nLineSpace == psArgs->nPixelSpace * psArgs->nBufXSize )
     {
         GDALPansharpenOptions* psOptions = poGDS->poPansharpener->GetOptions();
 
         // Have we already done this request for another band ?
         // If so use the cached result
-        size_t nBufferSizePerBand = (size_t)nXSize * nYSize * nDataTypeSize;
-        if( nXOff == poGDS->nLastBandRasterIOXOff &&
-            nYOff >= poGDS->nLastBandRasterIOYOff &&
-            nXSize == poGDS->nLastBandRasterIOXSize &&
-            nYOff + nYSize <= poGDS->nLastBandRasterIOYOff + poGDS->nLastBandRasterIOYSize &&
-            eBufType == poGDS->eLastBandRasterIODataType )
+        size_t nBufferSizePerBand = (size_t)psArgs->nXSize * psArgs->nYSize * nDataTypeSize;
+        if( psArgs->nXOff == poGDS->nLastBandRasterIOXOff &&
+            psArgs->nYOff >= poGDS->nLastBandRasterIOYOff &&
+            psArgs->nXSize == poGDS->nLastBandRasterIOXSize &&
+            psArgs->nYOff + psArgs->nYSize <= poGDS->nLastBandRasterIOYOff + poGDS->nLastBandRasterIOYSize &&
+            psArgs->eBufType == poGDS->eLastBandRasterIODataType )
         {
             //{static int bDone = 0; if (!bDone) printf("(6)\n"); bDone = 1; }
             if( poGDS->pabyLastBufferBandRasterIO == NULL )
                 return CE_Failure;
-            size_t nBufferSizePerBandCached = (size_t)nXSize * poGDS->nLastBandRasterIOYSize * nDataTypeSize;
-            memcpy(pData,
+            size_t nBufferSizePerBandCached = (size_t)psArgs->nXSize * poGDS->nLastBandRasterIOYSize * nDataTypeSize;
+            memcpy(psArgs->pData,
                    poGDS->pabyLastBufferBandRasterIO +
                         nBufferSizePerBandCached * nIndexAsPansharpenedBand +
-                        (nYOff - poGDS->nLastBandRasterIOYOff) * nXSize * nDataTypeSize,
+                        (psArgs->nYOff - poGDS->nLastBandRasterIOYOff) * psArgs->nXSize * nDataTypeSize,
                    nBufferSizePerBand);
             return CE_None;
         }
 
-        int nYSizeToCache = nYSize;
-        if( nYSize == 1 && nXSize == nRasterXSize )
+        int nYSizeToCache = psArgs->nYSize;
+        if( psArgs->nYSize == 1 && psArgs->nXSize == nRasterXSize )
         {
             //{static int bDone = 0; if (!bDone) printf("(7)\n"); bDone = 1; }
             // For efficiency, try to cache at leak 256 K
-            nYSizeToCache = (256 * 1024) / (nXSize * nDataTypeSize);
+            nYSizeToCache = (256 * 1024) / (psArgs->nXSize * nDataTypeSize);
             if( nYSizeToCache == 0 )
                 nYSizeToCache = 1;
-            else if( nYOff + nYSizeToCache > nRasterYSize )
-                nYSizeToCache = nRasterYSize - nYOff;
+            else if( psArgs->nYOff + nYSizeToCache > nRasterYSize )
+                nYSizeToCache = nRasterYSize - psArgs->nYOff;
         }
-        GIntBig nBufferSize = (GIntBig)nXSize * nYSizeToCache * nDataTypeSize * psOptions->nOutPansharpenedBands;
+        GIntBig nBufferSize = (GIntBig)psArgs->nXSize * nYSizeToCache * nDataTypeSize * psOptions->nOutPansharpenedBands;
         if( (GIntBig)(size_t)nBufferSize != nBufferSize )
         {
             CPLError(CE_Failure, CPLE_OutOfMemory,
@@ -1375,21 +1361,21 @@ CPLErr VRTPansharpenedRasterBand::IRasterIO( GDALRWFlag eRWFlag,
                  "Out of memory error while allocating working buffers");
             return CE_Failure;
         }
-        poGDS->nLastBandRasterIOXOff = nXOff;
-        poGDS->nLastBandRasterIOYOff = nYOff;
-        poGDS->nLastBandRasterIOXSize = nXSize;
+        poGDS->nLastBandRasterIOXOff = psArgs->nXOff;
+        poGDS->nLastBandRasterIOYOff = psArgs->nYOff;
+        poGDS->nLastBandRasterIOXSize = psArgs->nXSize;
         poGDS->nLastBandRasterIOYSize = nYSizeToCache;
-        poGDS->eLastBandRasterIODataType = eBufType;
+        poGDS->eLastBandRasterIODataType = psArgs->eBufType;
         poGDS->pabyLastBufferBandRasterIO = pabyTemp;
 
         CPLErr eErr = poGDS->poPansharpener->ProcessRegion(
-                            nXOff, nYOff, nXSize, nYSizeToCache,
-                            poGDS->pabyLastBufferBandRasterIO, eBufType);
+                            psArgs->nXOff, psArgs->nYOff, psArgs->nXSize, nYSizeToCache,
+                            poGDS->pabyLastBufferBandRasterIO, psArgs->eBufType);
         if( eErr == CE_None )
         {
             //{static int bDone = 0; if (!bDone) printf("(8)\n"); bDone = 1; }
-            size_t nBufferSizePerBandCached = (size_t)nXSize * poGDS->nLastBandRasterIOYSize * nDataTypeSize;
-            memcpy(pData,
+            size_t nBufferSizePerBandCached = (size_t)psArgs->nXSize * poGDS->nLastBandRasterIOYSize * nDataTypeSize;
+            memcpy(psArgs->pData,
                    poGDS->pabyLastBufferBandRasterIO +
                         nBufferSizePerBandCached * nIndexAsPansharpenedBand,
                    nBufferSizePerBand);
@@ -1403,10 +1389,7 @@ CPLErr VRTPansharpenedRasterBand::IRasterIO( GDALRWFlag eRWFlag,
     }
 
     //{static int bDone = 0; if (!bDone) printf("(9)\n"); bDone = 1; }
-    CPLErr eErr = VRTRasterBand::IRasterIO(
-            eRWFlag, nXOff, nYOff, nXSize, nYSize,
-            pData, nBufXSize, nBufYSize, eBufType,
-            nPixelSpace, nLineSpace, psExtraArg);
+    CPLErr eErr = VRTRasterBand::ICompactRasterIO(psArgs);
 
     return eErr;
 }

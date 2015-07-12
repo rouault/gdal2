@@ -114,12 +114,7 @@ int VRTFilteredSource::IsTypeSupported( GDALDataType eTestType )
 /************************************************************************/
 
 CPLErr
-VRTFilteredSource::RasterIO( int nXOff, int nYOff, int nXSize, int nYSize, 
-                             void *pData, int nBufXSize, int nBufYSize, 
-                             GDALDataType eBufType, 
-                             GSpacing nPixelSpace,
-                             GSpacing nLineSpace,
-                             GDALRasterIOExtraArg* psExtraArg )
+VRTFilteredSource::RasterIO( const GDALRasterIOArgs* psArgs )
 
 {
 /* -------------------------------------------------------------------- */
@@ -127,11 +122,9 @@ VRTFilteredSource::RasterIO( int nXOff, int nYOff, int nXSize, int nYSize,
 /*      resolution requests. Just collect the data directly without     */
 /*      any operator.                                                   */
 /* -------------------------------------------------------------------- */
-    if( nBufXSize != nXSize || nBufYSize != nYSize )
+    if( psArgs->nBufXSize != psArgs->nXSize || psArgs->nBufYSize != psArgs->nYSize )
     {
-        return VRTComplexSource::RasterIO( nXOff, nYOff, nXSize, nYSize, 
-                                           pData, nBufXSize, nBufYSize, 
-                                           eBufType, nPixelSpace, nLineSpace, psExtraArg );
+        return VRTComplexSource::RasterIO( psArgs );
     }
 
     // The window we will actually request from the source raster band.
@@ -141,15 +134,15 @@ VRTFilteredSource::RasterIO( int nXOff, int nYOff, int nXSize, int nYSize,
     // The window we will actual set _within_ the pData buffer.
     int nOutXOff, nOutYOff, nOutXSize, nOutYSize;
 
-    if( !GetSrcDstWindow( nXOff, nYOff, nXSize, nYSize, nBufXSize, nBufYSize,
+    if( !GetSrcDstWindow( psArgs,
                         &dfReqXOff, &dfReqYOff, &dfReqXSize, &dfReqYSize,
                         &nReqXOff, &nReqYOff, &nReqXSize, &nReqYSize,
                         &nOutXOff, &nOutYOff, &nOutXSize, &nOutYSize ) )
         return CE_None;
 
-    pData = ((GByte *)pData)
-                            + nPixelSpace * nOutXOff
-                            + nLineSpace * nOutYOff;
+    GByte* pData = ((GByte *)psArgs->pData)
+                            + psArgs->nPixelSpace * nOutXOff
+                            + psArgs->nLineSpace * nOutYOff;
 
 /* -------------------------------------------------------------------- */
 /*      Determine the data type we want to request.  We try to match    */
@@ -160,8 +153,8 @@ VRTFilteredSource::RasterIO( int nXOff, int nYOff, int nXSize, int nYSize,
     GDALDataType eOperDataType = GDT_Unknown;
     int i;
     
-    if( IsTypeSupported( eBufType ) )
-        eOperDataType = eBufType;
+    if( IsTypeSupported( psArgs->eBufType ) )
+        eOperDataType = psArgs->eBufType;
 
     if( eOperDataType == GDT_Unknown 
         && IsTypeSupported( poRasterBand->GetRasterDataType() ) )
@@ -171,7 +164,7 @@ VRTFilteredSource::RasterIO( int nXOff, int nYOff, int nXSize, int nYSize,
     {
         for( i = 0; i < nSupportedTypesCount; i++ )
         {
-            if( GDALDataTypeUnion( aeSupportedTypes[i], eBufType ) 
+            if( GDALDataTypeUnion( aeSupportedTypes[i], psArgs->eBufType ) 
                 == aeSupportedTypes[i] )
             {
                 eOperDataType = aeSupportedTypes[i];
@@ -225,8 +218,8 @@ VRTFilteredSource::RasterIO( int nXOff, int nYOff, int nXSize, int nYSize,
 /* -------------------------------------------------------------------- */
     GByte *pabyOutData;
 
-    if( nPixelSpace != nPixelOffset || nLineSpace != nLineOffset
-        || eOperDataType != eBufType )
+    if( psArgs->nPixelSpace != nPixelOffset || psArgs->nLineSpace != nLineOffset
+        || eOperDataType != psArgs->eBufType )
     {
         pabyOutData = (GByte *) 
             VSIMalloc3(nOutXSize, nOutYSize, nPixelOffset );
@@ -291,7 +284,7 @@ VRTFilteredSource::RasterIO( int nXOff, int nYOff, int nXSize, int nYSize,
                                               + nLineOffset * nTopFill
                                               + nPixelOffset * nLeftFill,
                                             nFileXSize, nFileYSize, eOperDataType,
-                                            nPixelOffset, nLineOffset, psExtraArg );
+                                            nPixelOffset, nLineOffset, psArgs->psExtraArg );
 
     if( eErr != CE_None )
     {
@@ -365,8 +358,8 @@ VRTFilteredSource::RasterIO( int nXOff, int nYOff, int nXSize, int nYSize,
         {
             GDALCopyWords( pabyOutData + i * (nPixelOffset * nOutXSize),
                            eOperDataType, nPixelOffset,
-                           ((GByte *) pData) + i * nLineSpace, 
-                           eBufType, nPixelSpace, nOutXSize );
+                           ((GByte *) pData) + i * psArgs->nLineSpace, 
+                           psArgs->eBufType, psArgs->nPixelSpace, nOutXSize );
         }
 
         VSIFree( pabyOutData );

@@ -78,15 +78,7 @@ class CPL_DLL MEMDataset : public GDALDataset
 
     virtual CPLErr        AddBand( GDALDataType eType, 
                                    char **papszOptions=NULL );
-    virtual CPLErr  IRasterIO( GDALRWFlag eRWFlag,
-                               int nXOff, int nYOff, int nXSize, int nYSize,
-                               void * pData, int nBufXSize, int nBufYSize,
-                               GDALDataType eBufType, 
-                               int nBandCount, int *panBandMap,
-                               GSpacing nPixelSpaceBuf,
-                               GSpacing nLineSpaceBuf,
-                               GSpacing nBandSpaceBuf,
-                               GDALRasterIOExtraArg* psExtraArg);
+    virtual CPLErr  ICompactRasterIO( const GDALRasterIOArgs* psArgs );
     
     static GDALDataset *Open( GDALOpenInfo * );
     static GDALDataset *Create( const char * pszFilename,
@@ -131,13 +123,11 @@ class CPL_DLL MEMRasterBand : public GDALPamRasterBand
 
     virtual CPLErr IReadBlock( int, int, void * );
     virtual CPLErr IWriteBlock( int, int, void * );
-    virtual CPLErr IRasterIO( GDALRWFlag eRWFlag,
-                                  int nXOff, int nYOff, int nXSize, int nYSize,
-                                  void * pData, int nBufXSize, int nBufYSize,
-                                  GDALDataType eBufType,
-                                  GSpacing nPixelSpaceBuf,
-                                  GSpacing nLineSpaceBuf,
-                                  GDALRasterIOExtraArg* psExtraArg );
+    virtual CPLErr IRasterIO( GDALRWFlag, int, int, int, int,
+                            void *, int, int, GDALDataType,
+                            GSpacing, GSpacing,
+                            GDALRasterIOExtraArg* psExtraArg );
+    virtual CPLErr ICompactRasterIO( const GDALRasterIOArgs* psArgs );
     virtual double GetNoDataValue( int *pbSuccess = NULL );
     virtual CPLErr SetNoDataValue( double );
     virtual CPLErr DeleteNoDataValue();
