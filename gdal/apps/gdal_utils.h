@@ -2,11 +2,13 @@
  * $Id$
  *
  * Project:  GDAL Utilities
- * Purpose:  Common utility routines
- * Author:   Even Rouault, <even dot rouault at mines dash paris dot org>
+ * Purpose:  GDAL Utilities Public Declarations.
+ * Author:   Faza Mahamood, fazamhd at gmail dot com
  *
- ******************************************************************************
- * Copyright (c) 2011-2012, Even Rouault <even dot rouault at mines-paris dot org>
+ * ****************************************************************************
+ * Copyright (c) 1998, Frank Warmerdam
+ * Copyright (c) 2007-2015, Even Rouault <even.rouault at spatialys.com>
+ * Copyright (c) 2015, Faza Mahamood
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -27,18 +29,32 @@
  * DEALINGS IN THE SOFTWARE.
  ****************************************************************************/
 
-#ifndef _COMMONUTILS_H_
-#define _COMMONUTILS_H_
+#ifndef _GDAL_UTILS_H_INCLUDED
+#define _GDAL_UTILS_H_INCLUDED
+
+/**
+ * \file gdal_utils.h
+ *
+ * Public (C callable) GDAL Utilities entry points.
+ *
+ * @since GDAL 2.1
+ */
 
 #include "cpl_port.h"
 
 CPL_C_START
 
-void CPL_DLL CheckExtensionConsistency(const char* pszDestFilename,
-                               const char* pszDriverName);
+/*! Options for GDALInfo(). Opaque type */
+typedef struct GDALInfoOptions GDALInfoOptions;
 
-void CPL_DLL EarlySetConfigOptions( int argc, char ** argv );
+typedef struct GDALInfoOptionsForBinary GDALInfoOptionsForBinary;
+
+GDALInfoOptions CPL_DLL *GDALInfoOptionsNew(char** papszArgv, GDALInfoOptionsForBinary* psOptionsForBinary);
+
+void CPL_DLL GDALInfoOptionsFree( GDALInfoOptions *psOptions );
+
+char CPL_DLL *GDALInfo( GDALDatasetH hDataset, const GDALInfoOptions *psOptions );
 
 CPL_C_END
 
-#endif
+#endif /* _GDAL_UTILS_H_INCLUDED */

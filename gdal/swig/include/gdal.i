@@ -930,3 +930,28 @@ GDALDriverShadow *IdentifyDriver( const char *utf8_path,
 __version__ = _gdal.VersionInfo("RELEASE_NAME") 
 %}
 #endif
+
+//************************************************************************
+//
+// GDAL Utilities
+//
+//************************************************************************
+
+%{
+#include "gdal_utils.h"   
+%}
+
+struct GDALInfoOptions {
+%extend {
+    GDALInfoOptions(char** options) {
+        return GDALInfoOptionsNew(options, NULL);
+    }
+
+    ~GDALInfoOptions() {
+        GDALInfoOptionsFree( self );
+    }
+}
+};
+
+%rename (InfoInternal) GDALInfo;
+char *GDALInfo( GDALDatasetShadow *hDataset, GDALInfoOptions *infoOptions );

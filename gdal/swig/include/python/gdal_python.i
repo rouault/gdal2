@@ -739,3 +739,79 @@ CPLErr ReadRaster1(  int xoff, int yoff, int xsize, int ysize,
 }
 
 %include "callback.i"
+
+
+%pythoncode %{
+
+def InfoOptions(options = [], format = 'text', deserialize = True,
+         computeMinMax = False, reportHistograms = False, reportProj4 = False,
+         stats = False, approxStats = False, computeChecksum = False,
+         showGCPs = True, showMetadata = True, showRAT = True, showColorTable = True,
+         listMDD = False, showFileList = True, allMetadata = False,
+         extraMDDomains = None):
+    """ Create a InfoOptions() object that can be passed to gdal.Info()
+        options can be be an array of strings, a string or let empty and filled from other keywords."""
+    import copy
+
+    if type(options) == type(''):
+        new_options = ParseCommandLine(options)
+        format = 'text'
+        if '-json' in new_options:
+            format = 'json'
+    else:
+        new_options = copy.copy(options)
+        if format == 'json':
+            new_options += ['-json']
+        if computeMinMax:
+            new_options += ['-mm']
+        if reportHistograms:
+            new_options += ['-hist']
+        if reportProj4:
+            new_options += ['-proj4']
+        if stats:
+            new_options += ['-stats']
+        if approxStats:
+            new_options += ['-approx_stats']
+        if computeChecksum:
+            new_options += ['-checksum']
+        if not showGCPs:
+            new_options += ['-nogcp']
+        if not showMetadata:
+            new_options += ['-nomd']
+        if not showRAT:
+            new_options += ['-norat']
+        if not showColorTable:
+            new_options += ['-noct']
+        if listMDD:
+            new_options += ['-listmdd']
+        if not showFileList:
+            new_options += ['-nofl']
+        if allMetadata:
+            new_options += ['-mdd', 'all']
+        if extraMDDomains is not None:
+            for mdd in extraMDDomains:
+                new_options += ['-mdd', mdd]
+
+    return (GDALInfoOptions(new_options), format, deserialize)
+
+def Info(ds, **kwargs):
+    """ Return information on a dataset.
+        Arguments are :
+          ds --- a Dataset object or a filename
+        Keyword arguments are :
+          options --- return of gdal.InfoOptions(), string or array of strings
+          other keywords arguments of gdal.InfoOptions()
+        If options is provided as a gdal.InfoOptions() object, other keywords are ignored. """
+    if not 'options' in kwargs or type(kwargs['options']) == type([]) or type(kwargs['options']) == type(''):
+        (opts, format, deserialize) = InfoOptions(**kwargs)
+    else:
+        (opts, format, deserialize) = kwargs['options']
+    if type(ds) == type(''):
+        ds = Open(ds)
+    ret = InfoInternal(ds, opts)
+    if format == 'json' and deserialize:
+        import json
+        ret = json.loads(ret)
+    return ret
+
+%}

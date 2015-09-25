@@ -148,6 +148,78 @@ def DontUseExceptions(*args):
 def VSIFReadL(*args):
   """VSIFReadL(int nMembSize, int nMembCount, VSILFILE * fp) -> int"""
   return _gdal.VSIFReadL(*args)
+def InfoOptions(options = [], format = 'text', deserialize = True,
+         computeMinMax = False, reportHistograms = False, reportProj4 = False,
+         stats = False, approxStats = False, computeChecksum = False,
+         showGCPs = True, showMetadata = True, showRAT = True, showColorTable = True,
+         listMDD = False, showFileList = True, allMetadata = False,
+         extraMDDomains = None):
+    """ Create a InfoOptions() object that can be passed to gdal.Info()
+        options can be be an array of strings, a string or let empty and filled from other keywords."""
+    import copy
+
+    if type(options) == type(''):
+        new_options = ParseCommandLine(options)
+        format = 'text'
+        if '-json' in new_options:
+            format = 'json'
+    else:
+        new_options = copy.copy(options)
+        if format == 'json':
+            new_options += ['-json']
+        if computeMinMax:
+            new_options += ['-mm']
+        if reportHistograms:
+            new_options += ['-hist']
+        if reportProj4:
+            new_options += ['-proj4']
+        if stats:
+            new_options += ['-stats']
+        if approxStats:
+            new_options += ['-approx_stats']
+        if computeChecksum:
+            new_options += ['-checksum']
+        if not showGCPs:
+            new_options += ['-nogcp']
+        if not showMetadata:
+            new_options += ['-nomd']
+        if not showRAT:
+            new_options += ['-norat']
+        if not showColorTable:
+            new_options += ['-noct']
+        if listMDD:
+            new_options += ['-listmdd']
+        if not showFileList:
+            new_options += ['-nofl']
+        if allMetadata:
+            new_options += ['-mdd', 'all']
+        if extraMDDomains is not None:
+            for mdd in extraMDDomains:
+                new_options += ['-mdd', mdd]
+
+    return (GDALInfoOptions(new_options), format, deserialize)
+
+def Info(ds, **kwargs):
+    """ Return information on a dataset.
+        Arguments are :
+          ds --- a Dataset object or a filename
+        Keyword arguments are :
+          options --- return of gdal.InfoOptions(), string or array of strings
+          other keywords arguments of gdal.InfoOptions()
+        If options is provided as a gdal.InfoOptions() object, other keywords are ignored. """
+    if not 'options' in kwargs or type(kwargs['options']) == type([]) or type(kwargs['options']) == type(''):
+        (opts, format, deserialize) = InfoOptions(**kwargs)
+    else:
+        (opts, format, deserialize) = kwargs['options']
+    if type(ds) == type(''):
+        ds = Open(ds)
+    ret = InfoInternal(ds, opts)
+    if format == 'json' and deserialize:
+        import json
+        ret = json.loads(ret)
+    return ret
+
+
 
 def Debug(*args):
   """Debug(char const * msg_class, char const * message)"""
@@ -322,6 +394,10 @@ def VSIFTruncateL(*args):
 def VSIFWriteL(*args):
   """VSIFWriteL(int nLen, int size, int memb, VSILFILE * f) -> int"""
   return _gdal.VSIFWriteL(*args)
+
+def ParseCommandLine(*args):
+  """ParseCommandLine(char const * commandLine) -> char **"""
+  return _gdal.ParseCommandLine(*args)
 class MajorObject(_object):
     """Proxy of C++ GDALMajorObjectShadow class"""
     __swig_setmethods__ = {}
@@ -1823,6 +1899,28 @@ def GeneralCmdLineProcessor(*args):
 GeneralCmdLineProcessor = _gdal.GeneralCmdLineProcessor
 __version__ = _gdal.VersionInfo("RELEASE_NAME") 
 
+class GDALInfoOptions(_object):
+    """Proxy of C++ GDALInfoOptions class"""
+    __swig_setmethods__ = {}
+    __setattr__ = lambda self, name, value: _swig_setattr(self, GDALInfoOptions, name, value)
+    __swig_getmethods__ = {}
+    __getattr__ = lambda self, name: _swig_getattr(self, GDALInfoOptions, name)
+    __repr__ = _swig_repr
+    def __init__(self, *args): 
+        """__init__(GDALInfoOptions self, char ** options) -> GDALInfoOptions"""
+        this = _gdal.new_GDALInfoOptions(*args)
+        try: self.this.append(this)
+        except: self.this = this
+    __swig_destroy__ = _gdal.delete_GDALInfoOptions
+    __del__ = lambda self : None;
+GDALInfoOptions_swigregister = _gdal.GDALInfoOptions_swigregister
+GDALInfoOptions_swigregister(GDALInfoOptions)
+
+
+def InfoInternal(*args):
+  """InfoInternal(Dataset hDataset, GDALInfoOptions infoOptions) -> char *"""
+  return _gdal.InfoInternal(*args)
+InfoInternal = _gdal.InfoInternal
 # This file is compatible with both classic and new-style classes.
 
 
