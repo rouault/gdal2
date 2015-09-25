@@ -49,6 +49,17 @@ struct GDALInfoOptionsForBinary
     int nSubdataset;
 };
 
+struct GDALTranslateOptionsForBinary
+{
+    char* pszSource;
+    char* pszDest;
+    int bQuiet;
+    int bCopySubDatasets;
+    char** papszOpenOptions;
+    int bFormatExplicitlySet;
+    char* pszFormat;
+};
+
 CPL_C_END
 
 #endif /* _GDAL_UTILS_PRIV_H_INCLUDED */

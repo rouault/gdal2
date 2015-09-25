@@ -13,7 +13,7 @@ BIN_LIST =	gdalinfo$(EXE) gdalserver$(EXE) gdal_translate$(EXE) \
 		gdalenhance$(EXE) gdaltransform$(EXE) gdaldem$(EXE) \
 		gdallocationinfo$(EXE) gdalsrsinfo$(EXE) 
 
-OBJ = commonutils.o gdalinfo_lib.o
+OBJ = commonutils.o gdalinfo_lib.o gdal_translate_lib.o
 
 ifeq ($(OGR_ENABLED),yes)
 BIN_LIST += 	gdal_contour$(EXE) \
@@ -71,7 +71,7 @@ gdalinfo$(EXE):	gdalinfo_bin.$(OBJ_EXT) $(DEP_LIBS)
 gdalserver$(EXE):	gdalserver.$(OBJ_EXT) $(DEP_LIBS)
 	$(LD) $(LNK_FLAGS) $< $(XTRAOBJ) $(CONFIG_LIBS) -o $@
 
-gdal_translate$(EXE):	gdal_translate.$(OBJ_EXT) $(DEP_LIBS)
+gdal_translate$(EXE):	gdal_translate_bin.$(OBJ_EXT) $(DEP_LIBS)
 	$(LD) $(LNK_FLAGS) $< $(XTRAOBJ) $(CONFIG_LIBS) -o $@
 
 gdaladdo$(EXE):	gdaladdo.$(OBJ_EXT)  $(DEP_LIBS)

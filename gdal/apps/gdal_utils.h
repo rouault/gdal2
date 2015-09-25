@@ -55,6 +55,26 @@ void CPL_DLL GDALInfoOptionsFree( GDALInfoOptions *psOptions );
 
 char CPL_DLL *GDALInfo( GDALDatasetH hDataset, const GDALInfoOptions *psOptions );
 
+
+/*! Options for GDALTranslate(). Opaque type */
+typedef struct GDALTranslateOptions GDALTranslateOptions;
+
+typedef struct GDALTranslateOptionsForBinary GDALTranslateOptionsForBinary;
+
+GDALTranslateOptions CPL_DLL *GDALTranslateOptionsNew(char** papszArgv,
+                                                      GDALTranslateOptionsForBinary* psOptionsForBinary);
+
+void CPL_DLL GDALTranslateOptionsFree( GDALTranslateOptions *psOptions );
+
+void CPL_DLL GDALTranslateOptionsSetProgress( GDALTranslateOptions *psOptions,
+                                              GDALProgressFunc pfnProgress,
+                                              void *pProgressData );
+
+GDALDatasetH CPL_DLL GDALTranslate(const char *pszDestFilename,
+                                   GDALDatasetH hSrcDataset,
+                                   const GDALTranslateOptions *psOptions,
+                                   int *pbUsageError);
+
 CPL_C_END
 
 #endif /* _GDAL_UTILS_H_INCLUDED */

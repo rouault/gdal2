@@ -27,7 +27,7 @@ default:	gdal_translate.exe gdalinfo.exe gdalserver.exe gdaladdo.exe gdalwarp.ex
 all:	default multireadtest.exe \
 			dumpoverviews.exe gdalwarpsimple.exe gdalflattenmask.exe \
 			gdaltorture.exe gdal2ogr.exe test_ogrsf.exe
-OBJ = commonutils.obj gdalinfo_lib.obj
+OBJ = commonutils.obj gdalinfo_lib.obj gdal_translate_lib.obj
 
 appslib: $(OBJ)
 
@@ -41,9 +41,9 @@ gdalserver.exe:	gdalserver.c $(GDALLIB) $(XTRAOBJ)
 		/link $(LINKER_FLAGS)
 	if exist $@.manifest mt -manifest $@.manifest -outputresource:$@;1
 	
-gdal_translate.exe:	gdal_translate.cpp $(GDALLIB) $(XTRAOBJ)
-	$(CC) $(XTRAFLAGS) $(CFLAGS) gdal_translate.cpp $(XTRAOBJ) $(LIBS) \
-		/link $(LINKER_FLAGS)
+gdal_translate.exe:	gdal_translate_bin.cpp $(GDALLIB) $(XTRAOBJ)
+	$(CC) $(XTRAFLAGS) $(CFLAGS) gdal_translate_bin.cpp $(XTRAOBJ) $(LIBS) \
+		/Fe$@ /link $(LINKER_FLAGS)
 	if exist $@.manifest mt -manifest $@.manifest -outputresource:$@;1
 	
 gdaladdo.exe:	gdaladdo.cpp $(GDALLIB) $(XTRAOBJ)
