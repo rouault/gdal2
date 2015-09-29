@@ -1,5 +1,5 @@
 /******************************************************************************
- * $Id$
+ * $Id: pdfreadvectors.cpp 30008 2015-09-01 16:12:30Z rouault $
  *
  * Project:  PDF driver
  * Purpose:  GDALDataset driver for PDF dataset (read vector features)
@@ -32,9 +32,9 @@
 #define SQUARE(x) ((x)*(x))
 #define EPSILON 1e-5
 
-CPL_CVSID("$Id$");
+CPL_CVSID("$Id: pdfreadvectors.cpp 30008 2015-09-01 16:12:30Z rouault $");
 
-#if defined(HAVE_POPPLER) || defined(HAVE_PODOFO)
+#if defined(HAVE_POPPLER) || defined(HAVE_PODOFO) || defined(HAVE_PDFIUM)
 
 /************************************************************************/
 /*                        OpenVectorLayers()                            */
@@ -1676,4 +1676,4 @@ void PDFDataset::ExploreContentsNonStructured(GDALPDFObject* poContents,
     }
 }
 
-#endif /* defined(HAVE_POPPLER) || defined(HAVE_PODOFO) */
+#endif /* defined(HAVE_POPPLER) || defined(HAVE_PODOFO) || defined(HAVE_PDFIUM) */

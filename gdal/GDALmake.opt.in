@@ -35,7 +35,7 @@ INSTALL_DIR	= 	$(GDAL_ROOT)/install-sh -d
 LIBS	=	$(SDE_LIB) @LIBS@ $(KAK_LIBS) $(DWG_LIBS) $(CURL_LIB) \
 		$(MRSID_LIBS) $(MRSID_LIDAR_LIBS) $(ECW_LIBS) $(INGRES_LIB) \
 		$(PCIDSK_LIB) $(RASDAMAN_LIB) $(CHARLS_LIB) $(SOSI_LIB) \
-		$(OPENCL_LIB) $(JVM_LIB) $(LIBICONV) $(FGDB_LIB) $(LIBXML2_LIB)
+		$(OPENCL_LIB) $(JVM_LIB) $(LIBICONV) $(FGDB_LIB) $(LIBXML2_LIB) $(MONGODB_LIB)
 
 SSEFLAGS = @SSEFLAGS@
 HAVE_SSE_AT_COMPILE_TIME = @HAVE_SSE_AT_COMPILE_TIME@
@@ -283,6 +283,13 @@ FGDB_LIB = @FGDB_LIB@
 FGDB_INC = @FGDB_INC@
 
 # 
+# MongoDB
+#
+HAVE_MONGODB = @MONGODB_ENABLED@
+MONGODB_LIB = @MONGODB_LIB@
+MONGODB_INC = @MONGODB_INC@
+
+# 
 # ArcObjects
 #
 HAVE_ARCOBJECTS = @ARCOBJECTS_ENABLED@
@@ -423,6 +430,11 @@ RASDAMAN_INC  =   @RASDAMAN_INC@
 RASDAMAN_LIB  =   @RASDAMAN_LIB@
 
 #
+# PDF stuff
+#
+PDF_PLUGIN = @PDF_PLUGIN@
+
+#
 # Poppler stuff
 #
 
@@ -432,6 +444,7 @@ POPPLER_BASE_STREAM_HAS_TWO_ARGS = @POPPLER_BASE_STREAM_HAS_TWO_ARGS@
 POPPLER_0_20_OR_LATER = @POPPLER_0_20_OR_LATER@
 POPPLER_0_23_OR_LATER = @POPPLER_0_23_OR_LATER@
 POPPLER_INC = @POPPLER_INC@
+POPPLER_PLUGIN_LIB = @POPPLER_PLUGIN_LIB@
 
 #
 # Podofo stuff
@@ -439,6 +452,15 @@ POPPLER_INC = @POPPLER_INC@
 
 HAVE_PODOFO = @HAVE_PODOFO@
 PODOFO_INC = @PODOFO_INC@
+PODOFO_PLUGIN_LIB = @PODOFO_PLUGIN_LIB@
+
+#
+# Pdfium stuff
+#
+
+HAVE_PDFIUM = @HAVE_PDFIUM@
+PDFIUM_INC = @PDFIUM_INC@
+PDFIUM_PLUGIN_LIB = @PDFIUM_PLUGIN_LIB@
 
 #
 # CharLs stuff
@@ -494,12 +516,18 @@ GDAL_FORMATS = 	gxf gtiff hfa aigrid aaigrid ceos ceos2 iso8211 xpm \
 		nitf bmp pcidsk airsar rs2 ilwis rmf leveller sgi srtmhgt \
 		idrisi gsg ingr ers jaxapalsar dimap gff cosar pds adrg \
 		coasp tsx terragen blx msgn til r northwood saga xyz hf2 \
-		kmlsuperoverlay ctg e00grid zmap ngsgeoid iris map\
+		kmlsuperoverlay ctg e00grid zmap ngsgeoid iris map cals\
+		safe\
 		@OPT_GDAL_FORMATS@
 
 
 ifneq ($(LIBZ_SETTING),no)
-GDAL_FORMATS := $(GDAL_FORMATS) rik ozi pdf
+GDAL_FORMATS := $(GDAL_FORMATS) rik ozi
+
+ifneq ($(PDF_PLUGIN),yes)
+GDAL_FORMATS := $(GDAL_FORMATS) pdf
+endif
+
 endif
 
 ifeq ($(OGR_ENABLED),yes)

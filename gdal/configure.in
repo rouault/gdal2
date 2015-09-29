@@ -1596,6 +1596,78 @@ AC_SUBST(SOSI_LIB, $SOSI_LIB)
 AC_SUBST(SOSI_INC, $SOSI_INC)
 
 dnl ---------------------------------------------------------------------------
+dnl MongoCXX driver
+dnl ---------------------------------------------------------------------------
+
+AC_ARG_WITH(mongocxx,[  --with-mongocxx[=ARG]        Include MongoCXX support (ARG=Path, yes or no)],,)
+
+MONGODB_ENABLED=no
+
+if test "$with_mongocxx" = "no" ; then
+
+  echo "MONGODB support disabled."
+
+elif test "$with_mongocxx" = "yes" -o "$with_mongocxx" = "" ; then
+
+    AC_MSG_CHECKING([for MongoCXX])
+
+    rm -f testmongocxx.*
+    rm -f testmongocxx
+    echo "#include <mongo/client/dbclient.h>" > testmongocxx.cpp
+    echo "using namespace mongo;" >> testmongocxx.cpp
+    echo "int main() { client::initialize(client::Options()); return 0; }" >> testmongocxx.cpp
+    if test -z "`${CXX} ${CPPFLAGS} testmongocxx.cpp -lmongoclient -lboost_system -lboost_thread -lboost_regex -o testmongocxx 2>&1`" ; then
+        AC_MSG_RESULT([MongoCXX found])
+        MONGODB_ENABLED="yes"
+        MONGODB_LIB=" -lmongoclient -lboost_system -lboost_thread -lboost_regex"
+    else
+        if test "$with_mongocxx" = "yes"; then
+            AC_MSG_ERROR([MongoCXX not found.])
+        else
+            AC_MSG_RESULT([MongoCXX not found.])
+        fi
+    fi
+    rm -f testmongocxx.*
+    rm -f testmongocxx
+
+else
+
+  AC_ARG_WITH(boost-lib-path,
+          [  --with-boost-lib-path=ARG   Path to boost libraries for mongocxx client],,,)
+
+  AC_MSG_CHECKING([for libmongoclient.so in in $with_mongocxx/lib])
+  MONGODB_ENABLED=yes
+  if test -r $with_mongocxx/lib/libmongoclient.so; then
+    AC_MSG_RESULT([found.])
+    MONGODB_LIB="-L$with_mongocxx/lib -lmongoclient"
+  elif test -r $with_mongocxx/lib/libmongoclient.dylib; then
+    AC_MSG_RESULT([found.])
+    MONGODB_LIB="-L$with_mongocxx/lib -lmongoclient"
+  else
+    AC_MSG_ERROR([not found.])
+  fi
+
+  if test "$with_boost_lib_path" = "" ; then
+    MONGODB_LIB="$MONGODB_LIB -lboost_system -lboost_thread -lboost_regex"
+  else
+    MONGODB_LIB="$MONGODB_LIB -L$with_boost_lib_path -lboost_system -lboost_thread -lboost_regex"
+  fi
+
+  AC_MSG_CHECKING([for mongo/client/dbclient.h in $with_mongocxx/include])
+  if test -r $with_mongocxx/include/mongo/client/dbclient.h ; then  
+    AC_MSG_RESULT([found.])
+    MONGODB_INC="-I$with_mongocxx/include"
+  else
+    AC_MSG_ERROR([not found.])
+  fi
+
+fi
+
+AC_SUBST(MONGODB_ENABLED, $MONGODB_ENABLED)
+AC_SUBST(MONGODB_LIB, $MONGODB_LIB)
+AC_SUBST(MONGODB_INC, $MONGODB_INC)
+
+dnl ---------------------------------------------------------------------------
 dnl Select an HDF4 Library to use, or disable driver.
 dnl
 dnl We assume the user will have libjpeg and libz from other sources when
@@ -2921,7 +2993,7 @@ if test "$CURL_SETTING" = "yes" ; then
   
   CURL_INC=`$LIBCURL_CONFIG --cflags`
   CURL_LIB=`$LIBCURL_CONFIG --libs`
-  OPT_GDAL_FORMATS="wcs wms plmosaic $OPT_GDAL_FORMATS"
+  OPT_GDAL_FORMATS="wcs wms plmosaic wmts $OPT_GDAL_FORMATS"
 
 fi
 
@@ -3553,6 +3625,29 @@ fi
 AC_SUBST(PAM_SETTING, $PAM_SETTING)
 
 dnl ---------------------------------------------------------------------------
+dnl Check if the PDF driver should be built as a plugin
+dnl ---------------------------------------------------------------------------
+
+AC_MSG_CHECKING([whether to build PDF driver as a plugin])
+
+AC_ARG_ENABLE(pdf_plugin,
+              AS_HELP_STRING([--enable-pdf-plugin],
+                             [enable PDF driver as a plugin (included in libgdal by default)]),,)
+
+PDF_PLUGIN=no
+if test "x$enable_pdf_plugin" = "xyes" ; then
+
+  PDF_PLUGIN=yes
+
+  AC_MSG_RESULT([yes])
+else
+  AC_MSG_RESULT([no])
+fi
+
+AC_SUBST(PDF_PLUGIN, $PDF_PLUGIN)
+
+
+dnl ---------------------------------------------------------------------------
 dnl Check if libpoppler is available
 dnl ---------------------------------------------------------------------------
 
@@ -3593,9 +3688,12 @@ if test "$with_poppler" != "no" -a "$with_poppler" != ""; then
     fi
 
     if test "$HAVE_POPPLER" = "yes"; then
-        LIBS="${TEST_POPPLER_LIB} ${LIBS}"
+        if test "$PDF_PLUGIN" = "no"; then
+            LIBS="${TEST_POPPLER_LIB} ${LIBS}"
+        fi
         AC_MSG_RESULT([yes])
         POPPLER_INC=$TEST_POPPLER_INC
+        POPPLER_PLUGIN_LIB="${TEST_POPPLER_LIB}"
 
         # And now try another dirty thing, but this one is
         # optional.
@@ -3676,6 +3774,7 @@ AC_SUBST(POPPLER_BASE_STREAM_HAS_TWO_ARGS, $POPPLER_BASE_STREAM_HAS_TWO_ARGS)
 AC_SUBST(POPPLER_0_20_OR_LATER, $POPPLER_0_20_OR_LATER)
 AC_SUBST(POPPLER_0_23_OR_LATER, $POPPLER_0_23_OR_LATER)
 AC_SUBST(POPPLER_INC, $POPPLER_INC)
+AC_SUBST(POPPLER_PLUGIN_LIB, $POPPLER_PLUGIN_LIB)
 
 dnl ---------------------------------------------------------------------------
 dnl Check if libpodofo is available
@@ -3704,10 +3803,15 @@ if test "$with_podofo" != "no" -a "$with_podofo" != ""; then
         rm -f testpodofo.*
         echo '#include <podofo.h>' > testpodofo.cpp
         echo 'int main(int argc, char** argv) { PoDoFo::PdfError::EnableDebug( 0 ); return 0; } ' >> testpodofo.cpp
-        if test -z "`${CXX} testpodofo.cpp -o testpodofo ${TEST_PODOFO_INC} ${PODOFO_LIB}  2>&1`" ; then
+        ${CXX} testpodofo.cpp -o testpodofo ${TEST_PODOFO_INC} ${PODOFO_LIB} 2>/dev/null
+        RETVAL=$?
+        if test $RETVAL -eq 0; then
             HAVE_PODOFO=yes
-            LIBS="${PODOFO_LIB} ${LIBS}"
+            if test "$PDF_PLUGIN" = "no"; then
+                LIBS="${PODOFO_LIB} ${LIBS}"
+            fi
             PODOFO_INC=$TEST_PODOFO_INC
+            PODOFO_PLUGIN_LIB="${PODOFO_LIB}"
             AC_MSG_RESULT([yes])
         fi
         rm -f testpodofo.*
@@ -3734,10 +3838,15 @@ if test "$with_podofo" != "no" -a "$with_podofo" != ""; then
         rm -f testpodofo.*
         echo '#include <podofo.h>' > testpodofo.cpp
         echo 'int main(int argc, char** argv) { PoDoFo::PdfError::EnableDebug( 0 ); return 0; } ' >> testpodofo.cpp
-        if test -z "`${CXX} testpodofo.cpp -o testpodofo ${TEST_PODOFO_INC} ${TEST_PODOFO_LIB} 2>&1`" ; then
+        ${CXX} testpodofo.cpp -o testpodofo ${TEST_PODOFO_INC} ${TEST_PODOFO_LIB} 2>/dev/null
+        RETVAL=$?
+        if test $RETVAL -eq 0; then
             HAVE_PODOFO=yes
-            LIBS="${PODOFO_LIB} ${LIBS}"
+            if test "$PDF_PLUGIN" = "no"; then
+                LIBS="${PODOFO_LIB} ${LIBS}"
+            fi
             PODOFO_INC=$TEST_PODOFO_INC
+            PODOFO_PLUGIN_LIB="${PODOFO_LIB}"
             AC_MSG_RESULT([yes])
         else
             AC_MSG_RESULT([no])
@@ -3751,6 +3860,117 @@ fi
 
 AC_SUBST(HAVE_PODOFO, $HAVE_PODOFO)
 AC_SUBST(PODOFO_INC, $PODOFO_INC)
+AC_SUBST(PODOFO_PLUGIN_LIB, $PODOFO_PLUGIN_LIB)
+
+dnl ---------------------------------------------------------------------------
+dnl Check if libpdfium is available
+dnl
+dnl Support for open-source PDFium library
+dnl
+dnl Copyright (C) 2015 Klokan Technologies GmbH (http://www.klokantech.com/)
+dnl Author: Martin Mikita <martin.mikita@klokantech.com>, xmikit00 @ FIT VUT Brno
+dnl ---------------------------------------------------------------------------
+
+AC_ARG_WITH(pdfium,[  --with-pdfium[=ARG]    Include pdfium (for PDF) support (ARG=no(default), yes or pdfium install path)],,)
+
+HAVE_PDFIUM=no
+
+AC_MSG_CHECKING([for pdfium])
+
+if test "$with_pdfium" != "no" -a "$with_pdfium" != ""; then
+
+    AC_ARG_WITH(pdfium-lib,
+      [  --with-pdfium-lib=ARG   pdfium Link Flags (ie. -L/xxx -lpdfium ...). Mainly for static libpdfium],,,)
+
+    if test "$with_pdfium" = "yes" ; then
+        TEST_PDFIUM_INC="-I/usr/include -I/usr/include/pdfium"
+        PDFIUM_LIB="-lpdfium"
+        PDFIUM_LIBDIR="/usr"
+    else
+        TEST_PDFIUM_INC="-I$with_pdfium -I$with_pdfium/include -I$with_pdfium/include/pdfium"
+        PDFIUM_LIB="-L$with_pdfium -L$with_pdfium/lib -lpdfium"
+        PDFIUM_LIBDIR="$with_pdfium"
+    fi
+
+    if test ! -z "`uname | grep Darwin`" ; then
+        PDFIUM_LIB="-stdlib=libstdc++ $PDFIUM_LIB"
+    fi
+
+    if test "x$with_pdfium_lib" = "x" ; then
+        rm -f testpdfium.*
+        echo '#include <fpdfview.h>' > testpdfium.cpp
+        echo '#include <core/include/fpdfapi/fpdf_page.h>' >> testpdfium.cpp
+        echo 'int main(int argc, char** argv) { FPDF_InitLibrary(); FPDF_DestroyLibrary(); return 0; } ' >> testpdfium.cpp
+        TEST_CXX_FLAGS="-std=c++0x"
+        if test ! -z "`uname | grep Darwin`" ; then
+          TEST_CXX_FLAGS="$TEST_CXX_FLAGS -stdlib=libstdc++"
+        fi
+        if test -z "`${CXX} $TEST_CXX_FLAGS testpdfium.cpp -o testpdfium ${TEST_PDFIUM_INC} ${PDFIUM_LIB}  2>&1`" ; then
+            HAVE_PDFIUM=yes
+            CXXFLAGS="$TEST_CXX_FLAGS $CXXFLAGS"
+            if test "$PDF_PLUGIN" = "no"; then
+                LIBS="${PDFIUM_LIB} ${LIBS}"
+            fi
+            PDFIUM_PLUGIN_LIB="${PDFIUM_LIB}"
+            PDFIUM_INC=$TEST_PDFIUM_INC
+            AC_MSG_RESULT([yes])
+        fi
+        rm -f testpdfium.*
+        rm -f testpdfium
+    fi
+
+    if test "$HAVE_PDFIUM" = "no"; then
+        if test "x$with_pdfium_lib" != "x" ; then
+            PDFIUM_LIB="$with_pdfium_lib"
+        else
+            # This may be a static libpdfium.a, so add dependant libraries
+            PDFIUM_LIB="-L$PDFIUM_LIBDIR -L$PDFIUM_LIBDIR/lib/pdfium -lpdfium -lfpdfdoc -lfpdfapi -lfpdftext -lformfiller -lpdfwindow"
+            PDFIUM_LIB="$PDFIUM_LIB -lfxedit -lfpdfdoc -lfxcodec -lfx_libopenjpeg -lfx_lcms2 -lfx_libjpeg -lfx_zlib"
+            PDFIUM_LIB="$PDFIUM_LIB -lfdrm -lfxge -lfreetype -lfx_agg -lfxcrt -lbigint"
+            if test ! -z "`uname | grep Darwin`" ; then
+                PDFIUM_LIB="-framework AppKit -framework CoreFoundation $PDFIUM_LIB"
+            fi
+        fi
+
+        AC_ARG_WITH(pdfium-extra-lib-for-test,
+          [  --with-pdfium-extra-lib-for-test=ARG   Additional libraries to pass the detection test, but not used for libgdal linking (ie. -ljpeg ...). Mainly for static libpdfium],,,)
+
+        if test "x$with_pdfium_extra_lib_for_test" = "x" ; then
+            TEST_PDFIUM_LIB="$PDFIUM_LIB"
+        else
+            TEST_PDFIUM_LIB="$PDFIUM_LIB $with_pdfium_extra_lib_for_test"
+        fi
+
+        rm -f testpdfium.*
+        echo '#include <fpdfview.h>' > testpdfium.cpp
+        echo '#include <core/include/fpdfapi/fpdf_page.h>' >> testpdfium.cpp
+        echo 'int main(int argc, char** argv) { FPDF_InitLibrary(); FPDF_DestroyLibrary(); return 0; } ' >> testpdfium.cpp
+        TEST_CXX_FLAGS="-std=c++0x"
+        if test ! -z "`uname | grep Darwin`" ; then
+          TEST_CXX_FLAGS="$TEST_CXX_FLAGS -stdlib=libstdc++"
+        fi
+        if test -z "`${CXX} $TEST_CXX_FLAGS testpdfium.cpp -o testpdfium ${TEST_PDFIUM_INC} ${TEST_PDFIUM_LIB} 2>&1`" ; then
+            HAVE_PDFIUM=yes
+            CXXFLAGS="$TEST_CXX_FLAGS $CXXFLAGS"
+            if test "$PDF_PLUGIN" = "no"; then
+                LIBS="${PDFIUM_LIB} ${LIBS}"
+            fi
+            PDFIUM_PLUGIN_LIB="${PDFIUM_LIB}"
+            PDFIUM_INC=$TEST_PDFIUM_INC
+            AC_MSG_RESULT([yes])
+        else
+            AC_MSG_RESULT([no])
+        fi
+        rm -f testpdfium.*
+        rm -f testpdfium
+    fi
+else
+    AC_MSG_RESULT([disabled])
+fi
+
+AC_SUBST(HAVE_PDFIUM, $HAVE_PDFIUM)
+AC_SUBST(PDFIUM_INC, $PDFIUM_INC)
+AC_SUBST(PDFIUM_PLUGIN_LIB, $PDFIUM_PLUGIN_LIB)
 
 dnl ---------------------------------------------------------------------------
 dnl PROJ.4 related stuff.
@@ -4484,10 +4704,12 @@ LOC_MSG([  INFORMIX DataBlade support:${HAVE_IDB}])
 LOC_MSG([  GEOS support:              ${HAVE_GEOS_RESULT}])
 LOC_MSG([  Poppler support:           ${HAVE_POPPLER}])
 LOC_MSG([  Podofo support:            ${HAVE_PODOFO}])
+LOC_MSG([  PDFium support:            ${HAVE_PDFIUM}])
 LOC_MSG([  OpenCL support:            ${OPENCL_SETTING}])
 LOC_MSG([  Armadillo support:         ${HAVE_ARMADILLO}])
 LOC_MSG([  FreeXL support:            ${HAVE_FREEXL}])
 LOC_MSG([  SOSI support:              ${SOSI_ENABLED}])
+LOC_MSG([  MongoDB support:           ${MONGODB_ENABLED}])
 LOC_MSG()
 if test ! -z "`uname | grep Darwin`" ; then
   LOC_MSG([  Mac OS X Framework :       ${MACOSX_FRAMEWORK}])
@@ -4507,9 +4729,16 @@ LOC_MSG([  enable POSIX iconv support:${am_cv_func_iconv}])
 LOC_MSG([  hide internal symbols:     ${HAVE_HIDE_INTERNAL_SYMBOLS}])
 LOC_MSG()
 
-if test "$HAVE_PODOFO" = "yes" -a "$HAVE_POPPLER" = "yes" ; then
+if test "$HAVE_PODOFO" = "yes" -a "$HAVE_POPPLER" = "yes"  -a "$HAVE_PDFIUM" = "yes"; then
+    AC_MSG_WARN([--with-podofo, --with-poppler and --with-pdfium available. This is unusual setup, but will work. Pdfium will be used by default...])
+elif test "$HAVE_PODOFO" = "yes" -a "$HAVE_POPPLER" = "yes" ; then
     AC_MSG_WARN([--with-podofo and --with-poppler are both available. This is unusual setup, but will work. Poppler will be used by default...])
+elif test "$HAVE_POPPLER" = "yes" -a "$HAVE_PDFIUM" = "yes" ; then
+    AC_MSG_WARN([--with-poppler and --with-pdfium are both available. This is unusual setup, but will work. Pdfium will be used by default...])
+elif test "$HAVE_PODOFO" = "yes" -a "$HAVE_PDFIUM" = "yes" ; then
+    AC_MSG_WARN([--with-podofo and --with-pdfium are both available. This is unusual setup, but will work. Pdfium will be used by default...])
 fi
+
 if test "$HAVE_LIBXML2" = "yes" -a "$FGDB_ENABLED" = "yes"; then
     AC_MSG_WARN([--with-libxml2 and --with-fgdb are both available. There might be some incompatibility between system libxml2 and the embedded copy within libFileGDBAPI])
 fi

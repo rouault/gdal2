@@ -1,5 +1,5 @@
 /******************************************************************************
- * $Id$
+ * $Id: pdfcreatecopy.cpp 30726 2015-09-27 17:25:12Z goatbar $
  *
  * Project:  PDF driver
  * Purpose:  GDALDataset driver for PDF dataset.
@@ -39,14 +39,10 @@
 
 #include "pdfobject.h"
 
-#ifndef M_PI
-#define M_PI       3.14159265358979323846
-#endif
-
 /* Cf PDF reference v1.7, Appendix C, page 993 */
 #define MAXIMUM_SIZE_IN_UNITS   14400
 
-CPL_CVSID("$Id$");
+CPL_CVSID("$Id: pdfcreatecopy.cpp 30726 2015-09-27 17:25:12Z goatbar $");
 
 #define PIXEL_TO_GEO_X(x,y) adfGeoTransform[0] + x * adfGeoTransform[1] + y * adfGeoTransform[2]
 #define PIXEL_TO_GEO_Y(x,y) adfGeoTransform[3] + x * adfGeoTransform[4] + y * adfGeoTransform[5]
@@ -4731,7 +4727,7 @@ GDALDataset *GDALPDFCreateCopy( const char * pszFilename,
     }
     else
     {
-#if defined(HAVE_POPPLER) || defined(HAVE_PODOFO)
+#if defined(HAVE_POPPLER) || defined(HAVE_PODOFO) || defined(HAVE_PDFIUM)
         return GDALPDFOpen(pszFilename, GA_ReadOnly);
 #else
         return new GDALFakePDFDataset();

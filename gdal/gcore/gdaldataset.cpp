@@ -169,6 +169,18 @@ GIntBig GDALGetResponsiblePIDForCurrentThread()
 GDALDataset::GDALDataset()
 
 {
+    Init( CSLTestBoolean( 
+        CPLGetConfigOption( "GDAL_FORCE_CACHING", "NO") ) );
+}
+
+GDALDataset::GDALDataset(int bForceCachedIOIn)
+
+{
+    Init(bForceCachedIOIn);
+}
+
+void GDALDataset::Init(int bForceCachedIOIn)
+{
     poDriver = NULL;
     eAccess = GA_ReadOnly;
     nRasterXSize = 512;
@@ -176,18 +188,16 @@ GDALDataset::GDALDataset()
     nBands = 0;
     papoBands = NULL;
     nRefCount = 1;
+    nOpenFlags = 0;
     bShared = FALSE;
     bIsInternal = TRUE;
     bSuppressOnClose = FALSE;
-    bReserved1 = FALSE;
-    bReserved2 = FALSE;
     papszOpenOptions = NULL;
 
 /* -------------------------------------------------------------------- */
 /*      Set forced caching flag.                                        */
 /* -------------------------------------------------------------------- */
-    bForceCachedIO =  CSLTestBoolean( 
-        CPLGetConfigOption( "GDAL_FORCE_CACHING", "NO") );
+    bForceCachedIO = (GByte)bForceCachedIOIn;
     
     m_poStyleTable = NULL;
     m_hMutex = NULL;
@@ -216,9 +226,7 @@ GDALDataset::GDALDataset()
 GDALDataset::~GDALDataset()
 
 {
-    int         i;
-
-    // we don't want to report destruction of datasets that 
+    // we don't want to report destruction of datasets that
     // were never really open or meant as internal
     if( !bIsInternal && ( nBands != 0 || !EQUAL(GetDescription(),"") ) )
     {
@@ -284,7 +292,7 @@ GDALDataset::~GDALDataset()
 /* -------------------------------------------------------------------- */
 /*      Destroy the raster bands if they exist.                         */
 /* -------------------------------------------------------------------- */
-    for( i = 0; i < nBands && papoBands != NULL; i++ )
+    for( int i = 0; i < nBands && papoBands != NULL; i++ )
     {
         if( papoBands[i] != NULL )
             delete papoBands[i];
@@ -5744,7 +5752,13 @@ int GDALDataset::EnterReadWrite(GDALRWFlag eRWFlag)
 {
     if( eAccess == GA_Update && (eRWFlag == GF_Write || m_hMutex != NULL) )
     {
-        CPLCreateOrAcquireMutex(&m_hMutex, 1000.0);
+        // There should be no race related to creating this mutex since
+        // it should be first created through IWriteBlock() / IRasterIO()
+        // and then GDALRasterBlock might call it from another thread
+        if( m_hMutex == NULL )
+            m_hMutex = CPLCreateMutex();
+        else
+            CPLAcquireMutex(m_hMutex, 1000.0);
         return TRUE;
     }
     return FALSE;
@@ -5755,6 +5769,25 @@ int GDALDataset::EnterReadWrite(GDALRWFlag eRWFlag)
 /************************************************************************/
 
 void GDALDataset::LeaveReadWrite()
+{
+    CPLReleaseMutex(m_hMutex);
+}
+
+
+/************************************************************************/
+/*                           AcquireMutex()                             */
+/************************************************************************/
+
+int GDALDataset::AcquireMutex()
+{
+    return CPLCreateOrAcquireMutex(&m_hMutex, 1000.0);
+}
+
+/************************************************************************/
+/*                          ReleaseMutex()                              */
+/************************************************************************/
+
+void GDALDataset::ReleaseMutex()
 {
     CPLReleaseMutex(m_hMutex);
 }

@@ -280,6 +280,12 @@ void OGRRegisterAllInternal()
 #ifdef CSW_ENABLED
     RegisterOGRCSW();
 #endif
+#ifdef MONGODB_ENABLED
+    RegisterOGRMongoDB();
+#endif
+#ifdef IDF_ENABLED
+    RegisterOGRIDF();
+#endif
 
 /* Put TIGER and AVCBIN at end since they need poOpenInfo->GetSiblingFiles() */
 #ifdef TIGER_ENABLED

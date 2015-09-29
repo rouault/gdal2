@@ -35,7 +35,7 @@
 
 #include "cpl_vsi.h"
 
-CPL_CVSID("$Id$");
+CPL_CVSID("$Id: pdfio.cpp 28956 2015-04-20 16:17:55Z rouault $");
 
 
 #ifdef POPPLER_BASE_STREAM_HAS_TWO_ARGS

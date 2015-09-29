@@ -34,7 +34,7 @@
 
 CPL_CVSID("$Id$");
 
-static int bCacheMaxInitialized = FALSE;
+static bool bCacheMaxInitialized = false;
 static GIntBig nCacheMax = 40 * 1024*1024;
 static volatile GIntBig nCacheUsed = 0;
 
@@ -50,6 +50,7 @@ static CPLMutex *hRBLock = NULL;
 
 static CPLLock* hRBLock = NULL;
 static int bDebugContention = FALSE;
+static bool bSleepsForBockCacheDebug = false;
 static CPLLockType GetLockType()
 {
     static int nLockType = -1;
@@ -129,7 +130,7 @@ void CPL_STDCALL GDALSetCacheMax( int nNewSizeInBytes )
 void CPL_STDCALL GDALSetCacheMax64( GIntBig nNewSizeInBytes )
 
 {
-    bCacheMaxInitialized = TRUE;
+    bCacheMaxInitialized = true;
     nCacheMax = nNewSizeInBytes;
 
 /* -------------------------------------------------------------------- */
@@ -171,13 +172,13 @@ int CPL_STDCALL GDALGetCacheMax()
     GIntBig nRes = GDALGetCacheMax64();
     if (nRes > INT_MAX)
     {
-        static int bHasWarned = FALSE;
+        static bool bHasWarned = false;
         if (!bHasWarned)
         {
             CPLError(CE_Warning, CPLE_AppDefined,
                      "Cache max value doesn't fit on a 32 bit integer. "
                      "Call GDALGetCacheMax64() instead");
-            bHasWarned = TRUE;
+            bHasWarned = true;
         }
         nRes = INT_MAX;
     }
@@ -209,8 +210,10 @@ GIntBig CPL_STDCALL GDALGetCacheMax64()
         {
             INITIALIZE_LOCK;
         }
+        bSleepsForBockCacheDebug = CSLTestBoolean(CPLGetConfigOption("GDAL_DEBUG_BLOCK_CACHE", "NO"));
+
         const char* pszCacheMax = CPLGetConfigOption("GDAL_CACHEMAX",NULL);
-        bCacheMaxInitialized = TRUE;
+        bCacheMaxInitialized = true;
         if( pszCacheMax != NULL )
         {
             GIntBig nNewCacheMax = (GIntBig)CPLScanUIntBig(pszCacheMax, strlen(pszCacheMax));
@@ -246,13 +249,13 @@ int CPL_STDCALL GDALGetCacheUsed()
 {
     if (nCacheUsed > INT_MAX)
     {
-        static int bHasWarned = FALSE;
+        static bool bHasWarned = false;
         if (!bHasWarned)
         {
             CPLError(CE_Warning, CPLE_AppDefined,
                      "Cache used value doesn't fit on a 32 bit integer. "
                      "Call GDALGetCacheUsed64() instead");
-            bHasWarned = TRUE;
+            bHasWarned = true;
         }
         return INT_MAX;
     }
@@ -360,16 +363,27 @@ int GDALRasterBlock::FlushCacheBlock(int bDirtyBlocksOnly)
         INITIALIZE_LOCK;
         poTarget = poOldest;
 
-        while( poTarget != NULL && (poTarget->GetLockCount() > 0 ||
-               (bDirtyBlocksOnly && !poTarget->GetDirty())) )
+        while( poTarget != NULL )
+        {
+            if( !bDirtyBlocksOnly || poTarget->GetDirty() )
+            {
+                if( CPLAtomicCompareAndExchange(&(poTarget->nLockCount), 0, -1) )
+                    break;
+            }
             poTarget = poTarget->poPrevious;
-        
+        }
+
         if( poTarget == NULL )
             return FALSE;
+        if( bSleepsForBockCacheDebug )
+            CPLSleep(CPLAtof(CPLGetConfigOption("GDAL_RB_FLUSHBLOCK_SLEEP_AFTER_DROP_LOCK", "0")));
 
         poTarget->Detach_unlocked();
-        poTarget->GetBand()->UnreferenceBlock(poTarget->GetXOff(),poTarget->GetYOff());
+        poTarget->GetBand()->UnreferenceBlock(poTarget);
     }
+
+    if( bSleepsForBockCacheDebug )
+        CPLSleep(CPLAtof(CPLGetConfigOption("GDAL_RB_FLUSHBLOCK_SLEEP_AFTER_RB_LOCK", "0")));
 
     if( poTarget->GetDirty() )
     {
@@ -380,7 +394,10 @@ int GDALRasterBlock::FlushCacheBlock(int bDirtyBlocksOnly)
             poTarget->GetBand()->SetFlushBlockErr(eErr);
         }
     }
-    delete poTarget;
+
+    VSIFree(poTarget->pData);
+    poTarget->pData = NULL;
+    poTarget->GetBand()->AddBlockToFreeList(poTarget);
 
     return TRUE;
 }
@@ -437,12 +454,69 @@ GDALRasterBlock::GDALRasterBlock( GDALRasterBand *poBandIn,
                                   int nXOffIn, int nYOffIn )
 
 {
-    CPLAssert( NULL != poBandIn );
-
+    CPLAssert( poBandIn != NULL );
     poBand = poBandIn;
-
     poBand->GetBlockSize( &nXSize, &nYSize );
     eType = poBand->GetRasterDataType();
+    pData = NULL;
+    bDirty = FALSE;
+    nLockCount = 0;
+
+    poNext = poPrevious = NULL;
+
+    nXOff = nXOffIn;
+    nYOff = nYOffIn;
+    bMustDetach = TRUE;
+}
+
+/************************************************************************/
+/*                          GDALRasterBlock()                           */
+/************************************************************************/
+
+/**
+ * @brief GDALRasterBlock Constructor (for GDALHashSetBandBlockAccess purpose)
+ *
+ * Normally only called from GDALHashSetBandBlockAccess class. Such a block
+ * is completely non functionnal and only meant as being used to do a look-up
+ * in the hash set of GDALHashSetBandBlockAccess
+ *
+ * @param nXOffIn the horizontal block offset, with zero indicating
+ * the left most block, 1 the next block and so forth. 
+ *
+ * @param nYOffIn the vertical block offset, with zero indicating
+ * the top most block, 1 the next block and so forth.
+ */
+
+GDALRasterBlock::GDALRasterBlock( int nXOffIn, int nYOffIn )
+
+{
+    poBand = NULL;
+    nXSize = nYSize = 0;
+    eType = GDT_Unknown;
+    pData = NULL;
+    bDirty = FALSE;
+    nLockCount = 0;
+
+    poNext = poPrevious = NULL;
+
+    nXOff = nXOffIn;
+    nYOff = nYOffIn;
+    bMustDetach = FALSE;
+}
+
+/************************************************************************/
+/*                                  RecycleFor()                        */
+/************************************************************************/
+
+/**
+ * Recycle an existing block (of the same band)
+ *
+ * Normally called from GDALAbstractBandBlockCache::CreateBlock().
+ */
+
+void GDALRasterBlock::RecycleFor( int nXOffIn, int nYOffIn )
+{
+    CPLAssert(pData == NULL);
     pData = NULL;
     bDirty = FALSE;
     nLockCount = 0;
@@ -474,7 +548,7 @@ GDALRasterBlock::~GDALRasterBlock()
         VSIFree( pData );
     }
 
-    CPLAssert( nLockCount == 0 );
+    CPLAssert( nLockCount <= 0 );
 
 #ifdef ENABLE_DEBUG
     Verify();
@@ -553,9 +627,9 @@ void GDALRasterBlock::Verify()
     {
         CPLAssert( poNewest->poPrevious == NULL );
         CPLAssert( poOldest->poNext == NULL );
-        
+
         GDALRasterBlock* poLast = NULL;
-        for( GDALRasterBlock *poBlock = poNewest; 
+        for( GDALRasterBlock *poBlock = poNewest;
              poBlock != NULL;
              poBlock = poBlock->poNext )
         {
@@ -701,11 +775,11 @@ CPLErr GDALRasterBlock::Internalize()
 /* -------------------------------------------------------------------- */
 /*      Flush old blocks if we are nearing our memory limit.            */
 /* -------------------------------------------------------------------- */
-    int bFirstIter = TRUE;
-    int bLoopAgain;
+    bool bFirstIter = true;
+    bool bLoopAgain = false;
     do
     {
-        bLoopAgain = FALSE;
+        bLoopAgain = false;
         GDALRasterBlock* apoBlocksToFree[64];
         int nBlocksToFree = 0;
         {
@@ -716,15 +790,22 @@ CPLErr GDALRasterBlock::Internalize()
             GDALRasterBlock *poTarget = poOldest;
             while( nCacheUsed > nCurCacheMax )
             {
-                while( poTarget != NULL && poTarget->GetLockCount() > 0 ) 
+                while( poTarget != NULL ) 
+                {
+                    if( CPLAtomicCompareAndExchange(&(poTarget->nLockCount), 0, -1) )
+                        break;
                     poTarget = poTarget->poPrevious;
+                }
 
                 if( poTarget != NULL )
                 {
+                    if( bSleepsForBockCacheDebug )
+                        CPLSleep(CPLAtof(CPLGetConfigOption("GDAL_RB_INTERNALIZE_SLEEP_AFTER_DROP_LOCK", "0")));
+
                     GDALRasterBlock* _poPrevious = poTarget->poPrevious;
 
                     poTarget->Detach_unlocked();
-                    poTarget->GetBand()->UnreferenceBlock(poTarget->GetXOff(),poTarget->GetYOff());
+                    poTarget->GetBand()->UnreferenceBlock(poTarget);
 
                     apoBlocksToFree[nBlocksToFree++] = poTarget;
                     if( poTarget->GetDirty() )
@@ -754,7 +835,7 @@ CPLErr GDALRasterBlock::Internalize()
                 Touch_unlocked();
         }
 
-        bFirstIter = FALSE;
+        bFirstIter = false;
 
         /* Now free blocks we have detached and removed from their band */
         for(int i=0;i<nBlocksToFree;i++)
@@ -777,10 +858,14 @@ CPLErr GDALRasterBlock::Internalize()
                 poBlock->GetBlockSize() >= nSizeInBytes )
             {
                 pNewData = pDataBlock;
-                poBlock->pData = NULL;
             }
-
-            delete poBlock;
+            else
+            {
+                VSIFree(poBlock->pData);
+            }
+            poBlock->pData = NULL;
+ 
+            poBlock->GetBand()->AddBlockToFreeList(poBlock);
         }
     }
     while(bLoopAgain);
@@ -838,40 +923,6 @@ void GDALRasterBlock::MarkClean()
 }
 
 /************************************************************************/
-/*                           SafeLockBlock()                            */
-/************************************************************************/
-
-/**
- * \brief Safely lock block.
- *
- * This method locks a GDALRasterBlock (and touches it) in a thread-safe
- * manner.  The global block cache mutex is held while locking the block,
- * in order to avoid race conditions with other threads that might be
- * trying to expire the block at the same time.  The block pointer may be
- * safely NULL, in which case this method does nothing. 
- *
- * @param ppBlock Pointer to the block pointer to try and lock/touch.
- */
- 
-int GDALRasterBlock::SafeLockBlock( GDALRasterBlock ** ppBlock )
-
-{
-    CPLAssert( NULL != ppBlock );
-
-    TAKE_LOCK;
-
-    if( *ppBlock != NULL )
-    {
-        (*ppBlock)->AddLock();
-        (*ppBlock)->Touch_unlocked();
-        
-        return TRUE;
-    }
-    else
-        return FALSE;
-}
-
-/************************************************************************/
 /*                          DestroyRBMutex()                           */
 /************************************************************************/
 
@@ -881,3 +932,106 @@ void GDALRasterBlock::DestroyRBMutex()
         DESTROY_LOCK;
     hRBLock = NULL;
 }
+
+/************************************************************************/
+/*                              TakeLock()                              */
+/************************************************************************/
+
+/**
+ * Take a lock
+ *
+ * Should only be used by GDALArrayBandBlockCache::TryGetLockedBlockRef()
+ * and GDALHashSetBandBlockCache::TryGetLockedBlockRef()
+ *
+ * @return TRUE if the lock has been successfully acquired. If FALSE, this
+ *         should be reattempted after fetching again from the raster band
+ *         block storage.
+ */
+
+int GDALRasterBlock::TakeLock()
+{
+    int nLockVal = AddLock();
+    CPLAssert(nLockVal >= 0);
+    if( bSleepsForBockCacheDebug )
+        CPLSleep(CPLAtof(CPLGetConfigOption("GDAL_RB_TRYGET_SLEEP_AFTER_TAKE_LOCK", "0")));
+    if( nLockVal == 0 )
+    {
+#ifdef DEBUG
+        CPLDebug("GDAL", "TakeLock(%p): Block(%d,%d,%p) is being evicted while trying to reacquire it",
+                 (void*)CPLGetPID(), nXOff, nYOff, poBand);
+#endif
+        // The block is being evicted by GDALRasterBlock::Internalize()
+        // or FlushCacheBlock(), so wait for this to be done before trying
+        // again
+        DropLock();
+
+        // wait for the block having been unreferenced
+        TAKE_LOCK;
+
+        return FALSE;
+    }
+    Touch();
+    return TRUE;
+}
+
+/************************************************************************/
+/*                      DropLockForRemovalFromStorage()                 */
+/************************************************************************/
+
+/**
+ * Drop a lock before removing the block from the band storage.
+ *
+ * Should only be used by GDALArrayBandBlockCache::FlushBlock()
+ * and GDALHashSetBandBlockCache::FlushBlock()
+ *
+ * @return TRUE if the lock has been successfully droped.
+ */
+
+int GDALRasterBlock::DropLockForRemovalFromStorage()
+{
+    // Detect potential conflict with GDALRasterBlock::Internalize()
+    // or FlushCacheBlock()
+    if( CPLAtomicCompareAndExchange(&nLockCount, 0, -1) )
+        return TRUE;
+#ifdef DEBUG
+    CPLDebug("GDAL", "DropLockForRemovalFromStorage(%p): Block(%d,%d,%p) was "
+                "attempted to be flushed from band but it is flushed by global cache",
+                (void*)CPLGetPID(), nXOff, nYOff, poBand);
+#endif
+
+    // Wait for the block for having been unreferenced
+    TAKE_LOCK;
+
+    return FALSE;
+}
+
+#ifdef notdef
+void GDALRasterBlock::DumpAll()
+{
+    int iBlock = 0;
+    for( GDALRasterBlock *poBlock = poNewest; 
+                            poBlock != NULL;
+                            poBlock = poBlock->poNext )
+    {
+        printf("Block %d\n", iBlock);
+        poBlock->DumpBlock();
+        printf("\n");
+        iBlock ++;
+    }
+}
+
+void GDALRasterBlock::DumpBlock()
+{
+        printf("  Lock count = %d\n", nLockCount);
+        printf("  bDirty = %d\n", bDirty);
+        printf("  nXOff = %d\n", nXOff);
+        printf("  nYOff = %d\n", nYOff);
+        printf("  nXSize = %d\n", nXSize);
+        printf("  nYSize = %d\n", nYSize);
+        printf("  eType = %d\n", eType);
+        printf("  Band %p\n", GetBand());
+        printf("  Band %d\n", GetBand()->GetBand());
+        if( GetBand()->GetDataset() )
+            printf("  Dataset = %s\n", GetBand()->GetDataset()->GetDescription());
+}
+#endif
