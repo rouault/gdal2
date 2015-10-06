@@ -1,5 +1,5 @@
 /******************************************************************************
- * $Id$
+ * $Id: ogr_cartodb.h 30522 2015-09-18 10:15:34Z rouault $
  *
  * Project:  CARTODB Translator
  * Purpose:  Definition of classes for OGR CartoDB driver.
@@ -102,6 +102,12 @@ protected:
     int                         GetFeaturesToFetch() { return atoi(CPLGetConfigOption("CARTODB_PAGE_SIZE", "500")); }
 };
 
+typedef enum
+{
+    INSERT_UNINIT,
+    INSERT_SINGLE_FEATURE,
+    INSERT_MULTIPLE_FEATURE
+} InsertState;
 
 /************************************************************************/
 /*                        OGRCARTODBTableLayer                          */
@@ -117,6 +123,7 @@ class OGRCARTODBTableLayer : public OGRCARTODBLayer
     int                 bLaunderColumnNames;
 
     int                 bInDeferedInsert;
+    InsertState         eDeferedInsertState;
     CPLString           osDeferedInsertSQL;
     GIntBig             nNextFID;
     
@@ -165,9 +172,10 @@ class OGRCARTODBTableLayer : public OGRCARTODBLayer
                                             int bCartoDBify);
     OGRErr              RunDeferedCreationIfNecessary();
     int                 GetDeferedCreation() const { return bDeferedCreation; }
-    void                CancelDeferedCreation() { bDeferedCreation = FALSE; }
+    void                CancelDeferedCreation() { bDeferedCreation = FALSE; bCartoDBify = FALSE; }
 
-    void                FlushDeferedInsert();
+    OGRErr              FlushDeferedInsert(bool bReset = true);
+    void                RunDeferedCartoDBfy();
 };
 
 /************************************************************************/

@@ -1,5 +1,5 @@
 /******************************************************************************
- * $Id$
+ * $Id: ogrcartodbdatasource.cpp 30631 2015-09-22 05:56:37Z goatbar $
  *
  * Project:  CartoDB Translator
  * Purpose:  Implements OGRCARTODBDataSource class
@@ -30,7 +30,7 @@
 #include "ogr_cartodb.h"
 #include "ogr_pgdump.h"
 
-CPL_CVSID("$Id$");
+CPL_CVSID("$Id: ogrcartodbdatasource.cpp 30631 2015-09-22 05:56:37Z goatbar $");
 
 /************************************************************************/
 /*                        OGRCARTODBDataSource()                        */
@@ -68,7 +68,7 @@ OGRCARTODBDataSource::~OGRCARTODBDataSource()
     {
         char** papszOptions = NULL;
         papszOptions = CSLSetNameValue(papszOptions, "CLOSE_PERSISTENT", CPLSPrintf("CARTODB:%p", this));
-        CPLHTTPFetch( GetAPIURL(), papszOptions);
+        CPLHTTPDestroyResult( CPLHTTPFetch( GetAPIURL(), papszOptions) );
         CSLDestroy(papszOptions);
     }
 
@@ -411,10 +411,27 @@ OGRLayer   *OGRCARTODBDataSource::ICreateLayer( const char *pszName,
         CPLFree(pszTmp);
     }
 
+
     OGRCARTODBTableLayer* poLayer = new OGRCARTODBTableLayer(this, osName);
     int bGeomNullable = CSLFetchBoolean(papszOptions, "GEOMETRY_NULLABLE", TRUE);
+    int nSRID = (poSpatialRef && eGType != wkbNone) ? FetchSRSId( poSpatialRef ) : 0;
     int bCartoDBify = CSLFetchBoolean(papszOptions, "CARTODBFY",
-                                      CSLFetchBoolean(papszOptions, "CARTODBIFY", TRUE));
+                                      CSLFetchBoolean(papszOptions, "CARTODBIFY",
+                                      TRUE));
+    if( bCartoDBify )
+    {
+        if( nSRID != 4326 )
+        {
+            if( eGType != wkbNone )
+            {
+                CPLError(CE_Warning, CPLE_AppDefined,
+                        "Cannot register table in dashboard with "
+                        "cdb_cartodbfytable() since its SRS is not EPSG:4326");
+            }
+            bCartoDBify = FALSE;
+        }
+    }
+
     poLayer->SetLaunderFlag( CSLFetchBoolean(papszOptions,"LAUNDER",TRUE) );
     poLayer->SetDeferedCreation(eGType, poSpatialRef, bGeomNullable, bCartoDBify);
     papoLayers = (OGRCARTODBTableLayer**) CPLRealloc(
@@ -539,11 +556,13 @@ json_object* OGRCARTODBDataSource::RunSQL(const char* pszUnescapedSQL)
     }
     if (psResult && psResult->pszErrBuf != NULL) 
     {
-        CPLDebug( "CARTODB", "RunSQL Error Message:%s", psResult->pszErrBuf );
+        CPLError(CE_Failure, CPLE_AppDefined,
+                 "RunSQL Error Message:%s", psResult->pszErrBuf );
     }
     else if (psResult && psResult->nStatus != 0) 
     {
-        CPLDebug( "CARTODB", "RunSQL Error Status:%d", psResult->nStatus );
+        CPLError(CE_Failure, CPLE_AppDefined,
+                 "RunSQL Error Status:%d", psResult->nStatus );
     }
 
     if( psResult->pabyData == NULL )
@@ -654,6 +673,7 @@ OGRLayer * OGRCARTODBDataSource::ExecuteSQLInternal( const char *pszSQLCommand,
         {
             papoLayers[iLayer]->RunDeferedCreationIfNecessary();
             papoLayers[iLayer]->FlushDeferedInsert();
+            papoLayers[iLayer]->RunDeferedCartoDBfy();
         }
     }
 

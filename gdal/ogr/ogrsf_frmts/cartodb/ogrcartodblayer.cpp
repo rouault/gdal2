@@ -1,5 +1,5 @@
 /******************************************************************************
- * $Id$
+ * $Id: ogrcartodblayer.cpp 30283 2015-09-11 15:48:25Z rouault $
  *
  * Project:  CartoDB Translator
  * Purpose:  Implements OGRCARTODBLayer class.
@@ -30,7 +30,7 @@
 #include "ogr_cartodb.h"
 #include "ogr_p.h"
 
-CPL_CVSID("$Id$");
+CPL_CVSID("$Id: ogrcartodblayer.cpp 30283 2015-09-11 15:48:25Z rouault $");
 
 /************************************************************************/
 /*                         OGRCARTODBLayer()                            */
@@ -102,6 +102,7 @@ OGRFeature *OGRCARTODBLayer::BuildFeature(json_object* poRowObj)
     if( poRowObj != NULL &&
         json_object_get_type(poRowObj) == json_type_object )
     {
+        //CPLDebug("CartoDB", "Row: %s", json_object_to_json_string(poRowObj));
         poFeature = new OGRFeature(poFeatureDefn);
 
         if( osFIDColName.size() )

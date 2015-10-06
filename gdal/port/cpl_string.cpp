@@ -2445,42 +2445,42 @@ CPLValueType CPLGetValueType(const char* pszValue)
     /*
     doubles : "+25.e+3", "-25.e-3", "25.e3", "25e3", " 25e3 "
     not doubles: "25e 3", "25e.3", "-2-5e3", "2-5e3", "25.25.3", "-3d"
+                 "XXeYYYYYYYYYYYYYYYYYYY" that evaluates to infinity
     */
 
     const char* pszValueInit = pszValue;
-    int bFoundDot = FALSE;
-    int bFoundExponent = FALSE;
-    int bIsLastCharExponent = FALSE;
-    int bIsReal = FALSE;
+    bool bFoundDot = false;
+    bool bFoundExponent = false;
+    bool bIsLastCharExponent = false;
+    bool bIsReal = false;
     const char* pszAfterExponent = NULL;
-
 
     if (pszValue == NULL)
         return CPL_VALUE_STRING;
 
     /* Skip leading spaces */
     while( isspace( (unsigned char)*pszValue ) )
-        pszValue ++;
+        ++pszValue;
 
     if (*pszValue == '\0')
         return CPL_VALUE_STRING;
 
     /* Skip leading + or - */
     if (*pszValue == '+' || *pszValue == '-')
-        pszValue ++;
+        ++pszValue;
 
-    for(; *pszValue != '\0'; pszValue++ )
+    for(; *pszValue != '\0'; ++pszValue )
     {
         if( isdigit( *pszValue))
         {
-            bIsLastCharExponent = FALSE;
+            bIsLastCharExponent = false;
             /* do nothing */
         }
         else if ( isspace ((unsigned char)*pszValue) )
         {
             const char* pszTmp = pszValue;
             while( isspace( (unsigned char)*pszTmp ) )
-                pszTmp ++;
+                ++pszTmp;
             if (*pszTmp == 0)
                 break;
             else
@@ -2494,16 +2494,16 @@ CPLValueType CPLGetValueType(const char* pszValue)
             }
             else
                 return CPL_VALUE_STRING;
-            bIsLastCharExponent = FALSE;
+            bIsLastCharExponent = false;
         }
         else if ( *pszValue == '.')
         {
-            bIsReal = TRUE;
-            if (!bFoundDot && bIsLastCharExponent == FALSE)
-                bFoundDot = TRUE;
+            bIsReal = true;
+            if (!bFoundDot && !bIsLastCharExponent)
+                bFoundDot = true;
             else
                 return CPL_VALUE_STRING;
-            bIsLastCharExponent = FALSE;
+            bIsLastCharExponent = false;
         }
         else if (*pszValue == 'D' || *pszValue == 'd'
                  || *pszValue == 'E' || *pszValue == 'e' )
@@ -2514,13 +2514,13 @@ CPLValueType CPLGetValueType(const char* pszValue)
 
             bIsReal = TRUE;
             if (!bFoundExponent)
-                bFoundExponent = TRUE;
+                bFoundExponent = true;
             else
                 return CPL_VALUE_STRING;
             pszAfterExponent = pszValue + 1;
-            bIsLastCharExponent = TRUE;
+            bIsLastCharExponent = true;
         }
-        else 
+        else
         {
             return CPL_VALUE_STRING;
         }
