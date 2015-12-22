@@ -2775,6 +2775,7 @@ OGRLayer * OGRPGDataSource::ExecuteSQL( const char *pszSQLCommand,
             
             osCommand.Printf( "CLOSE %s", "executeSQLCursor" );
             hResult = OGRPG_PQexec(hPGConn, osCommand );
+            OGRPGClearResult( hResult );
             
             SoftCommitTransaction();
 
@@ -2787,17 +2788,6 @@ OGRLayer * OGRPGDataSource::ExecuteSQL( const char *pszSQLCommand,
         {
             SoftRollbackTransaction();
         }
-    }
-
-/* -------------------------------------------------------------------- */
-/*      Generate an error report if an error occured.                   */
-/* -------------------------------------------------------------------- */
-    if( !hResult ||
-        (PQresultStatus(hResult) == PGRES_NONFATAL_ERROR
-         || PQresultStatus(hResult) == PGRES_FATAL_ERROR ) )
-    {
-        CPLError( CE_Failure, CPLE_AppDefined,
-                  "%s", PQerrorMessage( hPGConn ) );
     }
 
     OGRPGClearResult( hResult );

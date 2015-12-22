@@ -107,6 +107,9 @@ void LibgeotiffOneTimeInit()
     // If linking with an external libgeotiff we hope this will call the
     // SetCSVFilenameHook() in libgeotiff, not the one in gdal/port!
     SetCSVFilenameHook( GDALDefaultCSVFilename );
+
+    // This isn't thread-safe, so better do it now
+    XTIFFInitialize();
 }
 
 /************************************************************************/
@@ -633,8 +636,12 @@ char *GTIFGetOGISDefn( GTIF *hGTIF, GTIFDefn * psDefn )
     }
     else
     {
-        GDALGTIFKeyGetDOUBLE(hGTIF, GeogAngularUnitSizeGeoKey, &(psDefn->UOMAngleInDegrees), 0, 1 );
-        aUnitGot = TRUE;
+        double dfRadians = 0.0;
+        if( GDALGTIFKeyGetDOUBLE(hGTIF, GeogAngularUnitSizeGeoKey, &dfRadians, 0, 1 ) )
+        {
+            aUnitGot = TRUE;
+            psDefn->UOMAngleInDegrees = dfRadians / CPLAtof(SRS_UA_DEGREE_CONV);
+        }
     }
 
     if( pszDatumName != NULL )
@@ -664,20 +671,12 @@ char *GTIFGetOGISDefn( GTIF *hGTIF, GTIFDefn * psDefn )
         pszGeogName = CPLStrdup( pszDatumName ? pszDatumName : "unknown" );
     }
 
-    if(aUnitGot)
-        oSRS.SetGeogCS( pszGeogName, pszDatumName, 
-                        pszSpheroidName, dfSemiMajor, dfInvFlattening,
-                        pszPMName,
-                        psDefn->PMLongToGreenwich / psDefn->UOMAngleInDegrees,
-                        pszAngularUnits,
-                        psDefn->UOMAngleInDegrees );
-    else
-        oSRS.SetGeogCS( pszGeogName, pszDatumName, 
-                        pszSpheroidName, dfSemiMajor, dfInvFlattening,
-                        pszPMName,
-                        psDefn->PMLongToGreenwich / psDefn->UOMAngleInDegrees,
-                        pszAngularUnits,
-                        psDefn->UOMAngleInDegrees * 0.0174532925199433 );
+    oSRS.SetGeogCS( pszGeogName, pszDatumName, 
+                    pszSpheroidName, dfSemiMajor, dfInvFlattening,
+                    pszPMName,
+                    psDefn->PMLongToGreenwich / psDefn->UOMAngleInDegrees,
+                    pszAngularUnits,
+                    psDefn->UOMAngleInDegrees * CPLAtof(SRS_UA_DEGREE_CONV) );
 
     if( psDefn->GCS != KvUserDefined && psDefn->GCS > 0 )
         oSRS.SetAuthority( "GEOGCS", "EPSG", psDefn->GCS );
@@ -2253,6 +2252,24 @@ int GTIFSetFromOGISDefn( GTIF * psGTIF, const char *pszOGCWKT )
     if(EQUAL(angUnitName, "Degree"))
         GTIFKeySet(psGTIF, GeogAngularUnitsGeoKey, TYPE_SHORT, 1, 
                    Angular_Degree );
+    else if (EQUAL(angUnitName, "arc-second"))
+        GTIFKeySet(psGTIF, GeogAngularUnitsGeoKey, TYPE_SHORT, 1,
+                   Angular_Arc_Second);
+    else if (EQUAL(angUnitName, "arc-minute"))
+        GTIFKeySet(psGTIF, GeogAngularUnitsGeoKey, TYPE_SHORT, 1,
+                   Angular_Arc_Minute);
+    else if (EQUAL(angUnitName, "grad"))
+        GTIFKeySet(psGTIF, GeogAngularUnitsGeoKey, TYPE_SHORT, 1,
+                   Angular_Grad);
+    else if (EQUAL(angUnitName, "gon"))
+        GTIFKeySet(psGTIF, GeogAngularUnitsGeoKey, TYPE_SHORT, 1,
+                   Angular_Gon);
+    else if (EQUAL(angUnitName, "radian"))
+        GTIFKeySet(psGTIF, GeogAngularUnitsGeoKey, TYPE_SHORT, 1,
+                   Angular_Radian);
+    /*else if (EQUAL(angUnitName, "microradian"))
+        GTIFKeySet(psGTIF, GeogAngularUnitsGeoKey, TYPE_SHORT, 1,
+                   9109);*/
     else if(angUnitName)
     {
         GTIFKeySet(psGTIF, GeogCitationGeoKey, TYPE_ASCII, 0, 

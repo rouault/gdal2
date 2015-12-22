@@ -5375,39 +5375,46 @@ def tiff_write_131():
 
 def tiff_write_132():
 
-    ds = gdaltest.tiff_drv.Create('/vsimem/tiff_write_132.tif', 1, 1)
-    ds = None
+    for i in range(2):
 
-    # Open in read-only
-    ds = gdal.Open('/vsimem/tiff_write_132.tif')
-    ds.SetMetadataItem('FOO', 'BAR')
-    ds.GetRasterBand(1).SetMetadataItem('FOO', 'BAR')
-    ds = None
-    
-    # Check that PAM file exists
-    if gdal.VSIStatL('/vsimem/tiff_write_132.tif.aux.xml') is None:
-        gdaltest.post_reason('fail')
-        return 'fail'
+        ds = gdaltest.tiff_drv.Create('/vsimem/tiff_write_132.tif', 1, 1)
+        ds = None
 
-    # Open in read-write
-    ds = gdal.Open('/vsimem/tiff_write_132.tif', gdal.GA_Update)
-    ds.SetMetadataItem('FOO', 'BAZ')
-    ds.GetRasterBand(1).SetMetadataItem('FOO', 'BAZ')
-    ds = None
-    
-    # Check that PAM file no longer exists
-    if gdal.VSIStatL('/vsimem/tiff_write_132.tif.aux.xml') is not None:
-        gdaltest.post_reason('fail')
-        return 'fail'
+        # Open in read-only
+        ds = gdal.Open('/vsimem/tiff_write_132.tif')
+        ds.SetMetadataItem('FOO', 'BAR')
+        ds.GetRasterBand(1).SetMetadataItem('FOO', 'BAR')
+        ds = None
 
-    ds = gdal.Open('/vsimem/tiff_write_132.tif')
-    if ds.GetMetadataItem('FOO') != 'BAZ' or ds.GetRasterBand(1).GetMetadataItem('FOO') != 'BAZ':
-        gdaltest.post_reason('fail')
-        return 'fail'
-    ds = None
+        # Check that PAM file exists
+        if gdal.VSIStatL('/vsimem/tiff_write_132.tif.aux.xml') is None:
+            gdaltest.post_reason('fail')
+            return 'fail'
 
-    gdaltest.tiff_drv.Delete('/vsimem/tiff_write_132.tif')
-    
+        # Open in read-write
+        ds = gdal.Open('/vsimem/tiff_write_132.tif', gdal.GA_Update)
+        if i == 0:
+            ds.SetMetadataItem('FOO', 'BAZ')
+            ds.GetRasterBand(1).SetMetadataItem('FOO', 'BAZ')
+        else:
+            ds.SetMetadata( { 'FOO': 'BAZ' } )
+            ds.GetRasterBand(1).SetMetadata( { 'FOO': 'BAZ' } )
+        ds = None
+
+        # Check that PAM file no longer exists
+        if gdal.VSIStatL('/vsimem/tiff_write_132.tif.aux.xml') is not None:
+            gdaltest.post_reason('fail')
+            print(i)
+            return 'fail'
+
+        ds = gdal.Open('/vsimem/tiff_write_132.tif')
+        if ds.GetMetadataItem('FOO') != 'BAZ' or ds.GetRasterBand(1).GetMetadataItem('FOO') != 'BAZ':
+            gdaltest.post_reason('fail')
+            return 'fail'
+        ds = None
+
+        gdaltest.tiff_drv.Delete('/vsimem/tiff_write_132.tif')
+
     return 'success'
 
 ###############################################################################
@@ -5912,6 +5919,41 @@ def tiff_write_138():
     return 'success'
 
 ###############################################################################
+# Test PixelIsPoint without SRS (#6225)
+
+def tiff_write_142():
+
+    ds = gdaltest.tiff_drv.Create('/vsimem/tiff_write_142.tif', 1, 1)
+    ds.SetMetadataItem( 'AREA_OR_POINT', 'Point' )
+    ds.SetGeoTransform( [10, 1, 0, 100, 0, -1] )
+    ds = None
+
+    src_ds = gdal.Open('/vsimem/tiff_write_142.tif')
+    gdaltest.tiff_drv.CreateCopy('/vsimem/tiff_write_142_2.tif', src_ds)
+    src_ds = None
+
+    ds = gdal.Open('/vsimem/tiff_write_142_2.tif')
+    gt = ds.GetGeoTransform()
+    md = ds.GetMetadataItem( 'AREA_OR_POINT' )
+    ds = None
+
+    gdaltest.tiff_drv.Delete('/vsimem/tiff_write_142.tif')
+    gdaltest.tiff_drv.Delete('/vsimem/tiff_write_142_2.tif')
+
+    gt_expected = (10, 1, 0, 100, 0, -1)
+    if gt != gt_expected:
+        print(gt)
+        gdaltest.post_reason( 'did not get expected geotransform' )
+        return 'fail'
+
+    if md != 'Point':
+        gdaltest.post_reason( 'did not get expected AREA_OR_POINT value' )
+        return 'fail'
+
+    return 'success'
+
+
+###############################################################################
 # Ask to run again tests with GDAL_API_PROXY=YES
 
 def tiff_write_api_proxy():
@@ -6081,6 +6123,7 @@ gdaltest_list = [
     tiff_write_135,
     tiff_write_136,
     tiff_write_138,
+    tiff_write_142,
     #tiff_write_api_proxy,
     tiff_write_cleanup ]
 
