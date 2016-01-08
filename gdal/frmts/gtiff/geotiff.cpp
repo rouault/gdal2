@@ -1061,7 +1061,8 @@ GTiffRasterBand::GTiffRasterBand( GTiffDataset *poDS, int nBand )
             int nBaseSamples;
             nBaseSamples = poDS->nSamplesPerPixel - count;
 
-            if( nBand > nBaseSamples 
+            if( nBand > nBaseSamples
+                && nBand-nBaseSamples-1 < count
                 && (v[nBand-nBaseSamples-1] == EXTRASAMPLE_ASSOCALPHA
                     || v[nBand-nBaseSamples-1] == EXTRASAMPLE_UNASSALPHA) )
                 eBandInterp = GCI_AlphaBand;
@@ -5772,7 +5773,14 @@ CPLErr GTiffDataset::LoadBlockBuf( int nBlockId, int bReadFromDisk )
         }
     }
 
-    nLoadedBlock = nBlockId;
+    if( eErr == CE_None )
+    {
+        nLoadedBlock = nBlockId;
+    }
+    else
+    {
+        nLoadedBlock = -1;
+    }
     bLoadedBlockDirty = FALSE;
 
     return eErr;
@@ -9587,6 +9595,31 @@ CPLErr GTiffDataset::OpenOffset( TIFF *hTIFFIn,
               && nBitsPerSample != 128 )
         bTreatAsOdd = TRUE;
 
+/* -------------------------------------------------------------------- */
+/*      We don't support 'chunks' bigger than 2GB although libtiff v4   */
+/*      can.                                                            */
+/* -------------------------------------------------------------------- */
+#if defined(BIGTIFF_SUPPORT)
+    tmsize_t nChunkSize;
+    if( bTreatAsSplit || bTreatAsSplitBitmap )
+    {
+        nChunkSize = TIFFScanlineSize( hTIFF );
+    }
+    else
+    {
+        if( TIFFIsTiled(hTIFF) )
+            nChunkSize = TIFFTileSize( hTIFF );
+        else
+            nChunkSize = TIFFStripSize( hTIFF );
+    }
+    if( nChunkSize > INT_MAX )
+    {
+        CPLError( CE_Failure, CPLE_NotSupported,
+                  "Scanline/tile/strip size bigger than 2GB." );
+        return CE_Failure;
+    }
+#endif
+
     int bMinIsWhite = nPhotometric == PHOTOMETRIC_MINISWHITE;
 
 /* -------------------------------------------------------------------- */
@@ -10205,6 +10238,7 @@ void GTiffDataset::ScanDirectories()
         /* Embedded mask of the main image */
         else if ((nSubType & FILETYPE_MASK) != 0 &&
                  (nSubType & FILETYPE_REDUCEDIMAGE) == 0 &&
+                 iDirIndex != 1 &&
                  poMaskDS == NULL )
         {
             poMaskDS = new GTiffDataset();
@@ -10241,7 +10275,8 @@ void GTiffDataset::ScanDirectories()
         /* Embedded mask of an overview */
         /* The TIFF6 specification allows the combination of the FILETYPE_xxxx masks */
         else if ((nSubType & FILETYPE_REDUCEDIMAGE) != 0 &&
-                 (nSubType & FILETYPE_MASK) != 0)
+                 (nSubType & FILETYPE_MASK) != 0 &&
+                 iDirIndex != 1)
         {
             GTiffDataset* poDS = new GTiffDataset();
             if( poDS->OpenOffset( hTIFF, ppoActiveDSRef, nThisDir, FALSE, 
