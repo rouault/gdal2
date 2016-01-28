@@ -716,13 +716,10 @@ CPLErr GTiffJPEGOverviewBand::IReadBlock( int nBlockXOff, int nBlockYOff, void *
             /* If the JPEG strip/tile is too big (e.g. a single-strip JPEG-in-TIFF) */
             /* we will use /vsisparse mechanism to make a fake JPEG file */
 
-            /* If the previous file was NOT opened as a /vsisparse/, we have to re-open */
-            if( poGDS->poJPEGDS != NULL &&
-                strncmp(GDALGetDescription(poGDS->poJPEGDS), "/vsisparse/", strlen("/vsisparse/")) != 0  )
-            {
-                GDALClose( (GDALDatasetH) poGDS->poJPEGDS );
-                poGDS->poJPEGDS = NULL;
-            }
+            /* Always re-open */
+            GDALClose( (GDALDatasetH) poGDS->poJPEGDS );
+            poGDS->poJPEGDS = NULL;
+
             osFileToOpen = CPLSPrintf("/vsisparse/%s", poGDS->osTmpFilename.c_str());
 
             VSIFPrintfL(fp, "<VSISparseFile><SubfileRegion><Filename relative='0'>%s</Filename>"
@@ -5176,7 +5173,7 @@ int GTiffDataset::GetJPEGOverviewCount()
         return nJPEGOverviewCount;
 
     nJPEGOverviewCount = 0;
-    if( eAccess != GA_ReadOnly || nCompression != COMPRESSION_JPEG ||
+    if( !bBase || eAccess != GA_ReadOnly || nCompression != COMPRESSION_JPEG ||
         (nRasterXSize < 256 && nRasterYSize < 256) ||
         !CSLTestBoolean(CPLGetConfigOption("GTIFF_IMPLICIT_JPEG_OVR", "YES")) ||
         GDALGetDriverByName("JPEG") == NULL )
