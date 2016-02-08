@@ -141,12 +141,12 @@ script:
   - cd ..
 
 notifications:
-  email:
-    recipients:
-      - gdal-commits@lists.osgeo.org
+#  email:
+#    recipients:
+#      - gdal-commits@lists.osgeo.org
 
-  irc:
-    channels:
-      - "irc.freenode.org#gdal"
-    use_notice: true
+#  irc:
+#    channels:
+#      - "irc.freenode.org#gdal"
+#    use_notice: true
 
