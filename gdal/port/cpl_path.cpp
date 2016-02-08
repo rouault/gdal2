@@ -526,12 +526,19 @@ const char *CPLFormFilename( const char * pszPath,
     else if( pszExtension[0] != '.' && strlen(pszExtension) > 0 )
         pszAddedExtSep = ".";
 
-    if (CPLStrlcpy( pszStaticResult, pszPath, CPL_PATH_BUF_SIZE) >= CPL_PATH_BUF_SIZE ||
-        CPLStrlcat( pszStaticResult, pszAddedPathSep, CPL_PATH_BUF_SIZE) >= CPL_PATH_BUF_SIZE ||
-        CPLStrlcat( pszStaticResult, pszBasename, CPL_PATH_BUF_SIZE) >= CPL_PATH_BUF_SIZE ||
-        CPLStrlcat( pszStaticResult, pszAddedExtSep, CPL_PATH_BUF_SIZE) >= CPL_PATH_BUF_SIZE ||
-        CPLStrlcat( pszStaticResult, pszExtension, CPL_PATH_BUF_SIZE) >= CPL_PATH_BUF_SIZE)
+    if( CPLStrlcpy( pszStaticResult, pszPath, MIN(nLenPath+1, static_cast<size_t>(CPL_PATH_BUF_SIZE)) )
+        >= static_cast<size_t>( CPL_PATH_BUF_SIZE ) ||
+        CPLStrlcat( pszStaticResult, pszAddedPathSep, CPL_PATH_BUF_SIZE)
+        >= static_cast<size_t>( CPL_PATH_BUF_SIZE ) ||
+        CPLStrlcat( pszStaticResult, pszBasename, CPL_PATH_BUF_SIZE)
+        >= static_cast<size_t>( CPL_PATH_BUF_SIZE ) ||
+        CPLStrlcat( pszStaticResult, pszAddedExtSep, CPL_PATH_BUF_SIZE)
+        >= static_cast<size_t>( CPL_PATH_BUF_SIZE ) ||
+        CPLStrlcat( pszStaticResult, pszExtension, CPL_PATH_BUF_SIZE)
+        >= static_cast<size_t>( CPL_PATH_BUF_SIZE ) )
+    {
         return CPLStaticBufferTooSmall(pszStaticResult);
+    }
 
     return pszStaticResult;
 }
