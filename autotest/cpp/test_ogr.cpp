@@ -113,7 +113,7 @@ namespace tut
         reg = OGRSFDriverRegistrar::GetRegistrar();
         ensure(NULL != reg);
 
-        OGRSFDriver* drv = reg->GetDriverByName(drv_shape_.c_str());
+        GDALDriver* drv = reg->GetDriverByName(drv_shape_.c_str());
         ensure("Shapefile driver is not registered", NULL != drv);
     }
 
