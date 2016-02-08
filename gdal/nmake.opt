@@ -637,6 +637,9 @@ OCI_INCLUDE =	-I$(ORACLE_HOME)\oci\include
 # MONGODB_LIBS = c:/users/even/dev/mongo-client-install/lib/libmongoclient.lib $(BOOST_LIB_PATH)\libboost_thread-vc100-mt-1_55.lib  $(BOOST_LIB_PATH)\libboost_thread-vc100-mt-s-1_55.lib $(BOOST_LIB_PATH)\libboost_system-vc100-mt-1_55.lib $(BOOST_LIB_PATH)\libboost_system-vc100-mt-s-1_55.lib $(BOOST_LIB_PATH)\libboost_date_time-vc100-mt-1_55.lib  $(BOOST_LIB_PATH)\libboost_date_time-vc100-mt-s-1_55.lib $(BOOST_LIB_PATH)\libboost_chrono-vc100-mt-1_55.lib $(BOOST_LIB_PATH)\libboost_chrono-vc100-mt-s-1_55.lib $(BOOST_LIB_PATH)\libboost_regex-vc100-mt-s-1_55.lib /nodefaultlib:msvcprt /nodefaultlib:libcmt
 
 
+# Comment out to disable MRF support.
+MRF_SETTING=yes
+
 # Any extra libraries needed on this platform?
 ADD_LIBS	= 
 
