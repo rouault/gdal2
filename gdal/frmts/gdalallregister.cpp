@@ -355,6 +355,12 @@ void CPL_STDCALL GDALAllRegister()
     GDALRegister_MAP();
 #endif
 
+#ifdef FRMT_sentinel2
+    GDALRegister_SENTINEL2();
+#endif
+
+
+
 #ifdef FRMT_mrf
     GDALRegister_mrf();
 #endif
