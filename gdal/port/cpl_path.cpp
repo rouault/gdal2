@@ -47,6 +47,8 @@ CPL_CVSID("$Id$");
 #define SEP_STRING "/"
 #endif
 
+#define STARTS_WITH(a,b)  EQUALN(a,b,strlen(b))
+
 static const char* CPLStaticBufferTooSmall(char *pszStaticResult)
 {
     CPLError(CE_Failure, CPLE_AppDefined, "Destination buffer too small");
@@ -474,9 +476,39 @@ const char *CPLFormFilename( const char * pszPath,
 
     if( pszPath == NULL )
         pszPath = "";
-    else if( strlen(pszPath) > 0
-             && pszPath[strlen(pszPath)-1] != '/'
-             && pszPath[strlen(pszPath)-1] != '\\' )
+    size_t nLenPath = strlen(pszPath);
+    if( !CPLIsFilenameRelative(pszPath) &&
+        strcmp(pszBasename, "..") == 0 )
+    {
+        /* /a/b + .. --> /a */
+        if( pszPath[nLenPath-1] == '\\' || pszPath[nLenPath-1] == '/' )
+            nLenPath --;
+        size_t nLenPathOri = nLenPath;
+        while( nLenPath > 0 && pszPath[nLenPath-1] != '\\' &&
+               pszPath[nLenPath-1] != '/')
+        {
+            nLenPath --;
+        }
+        if( nLenPath == 1 && pszPath[0] == '/' )
+        {
+            pszBasename = "";
+        }
+        else if( (nLenPath > 1 && pszPath[0] == '/') ||
+                 (nLenPath > 2 && pszPath[1] == ':') ||
+                 (nLenPath > 6 && strncmp(pszPath, "\\\\$\\", 4) == 0) )
+        {
+            nLenPath --;
+            pszBasename = "";
+        }
+        else
+        {
+            nLenPath = nLenPathOri;
+            pszAddedPathSep = SEP_STRING;
+        }
+    }
+    else if( nLenPath > 0
+             && pszPath[nLenPath-1] != '/'
+             && pszPath[nLenPath-1] != '\\' )
     {
         /* FIXME? would be better to ask the filesystems what they */
         /* prefer as directory separator */
@@ -687,9 +719,10 @@ error:
 int CPLIsFilenameRelative( const char *pszFilename )
 
 {
-    if( (strlen(pszFilename) > 2
-         && (strncmp(pszFilename+1,":\\",2) == 0
-             || strncmp(pszFilename+1,":/",2) == 0))
+    if( (pszFilename[0] != '\0'
+         && (STARTS_WITH(pszFilename+1, ":\\")
+             || STARTS_WITH(pszFilename+1, ":/")))
+        || STARTS_WITH(pszFilename, "\\\\?\\") /* Windows extended Length Path */
         || pszFilename[0] == '\\'
         || pszFilename[0] == '/' )
         return FALSE;
