@@ -142,23 +142,50 @@ void VRTDataset::FlushCache()
     /* -------------------------------------------------------------------- */
     /*      Convert tree to a single block of XML text.                     */
     /* -------------------------------------------------------------------- */
-    char *pszVRTPath = CPLStrdup(CPLGetPath(GetDescription()));
-    CPLXMLNode *psDSTree = SerializeToXML( pszVRTPath );
-    char *pszXML;
+    char** papszContent = GetMetadata("xml:VRT");
+    bool bOK = true;
+    if( papszContent && papszContent[0] )
+    {
+        /* ------------------------------------------------------------------ */
+        /*      Write to disk.                                                */
+        /* ------------------------------------------------------------------ */
+        bOK &= VSIFWriteL( papszContent[0], 1, strlen(papszContent[0]), fpVRT ) == strlen(papszContent[0]);
+    }
+    if( VSIFCloseL( fpVRT ) != 0 )
+        bOK = false;
+    if( !bOK )
+    {
+        CPLError( CE_Failure, CPLE_AppDefined,
+                  "Failed to write .vrt file in FlushCache()." );
+        return;
+    }
+}
 
-    pszXML = CPLSerializeXMLTree( psDSTree );
+/************************************************************************/
+/*                            GetMetadata()                             */
+/************************************************************************/
 
-    CPLDestroyXMLNode( psDSTree );
+char** VRTDataset::GetMetadata( const char *pszDomain )
+{
+    if( pszDomain != NULL && EQUAL(pszDomain, "xml:VRT") )
+    {
+        /* ------------------------------------------------------------------ */
+        /*      Convert tree to a single block of XML text.                   */
+        /* ------------------------------------------------------------------ */
+        char *l_pszVRTPath = CPLStrdup(CPLGetPath(GetDescription()));
+        CPLXMLNode *psDSTree = SerializeToXML( l_pszVRTPath );
+        char *pszXML = CPLSerializeXMLTree( psDSTree );
 
-    CPLFree( pszVRTPath );
+        CPLDestroyXMLNode( psDSTree );
 
-    /* -------------------------------------------------------------------- */
-    /*      Write to disk.                                                  */
-    /* -------------------------------------------------------------------- */
-    VSIFWriteL( pszXML, 1, strlen(pszXML), fpVRT );
-    VSIFCloseL( fpVRT );
+        CPLFree( l_pszVRTPath );
 
-    CPLFree( pszXML );
+        char* apszContent[2] = { pszXML, NULL };
+        GDALDataset::SetMetadata(apszContent, "xml:VRT");
+        CPLFree(pszXML);
+    }
+
+    return GDALDataset::GetMetadata(pszDomain);
 }
 
 /************************************************************************/
