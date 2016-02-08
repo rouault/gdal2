@@ -2767,16 +2767,23 @@ OGRErr TABFile::SyncToDisk()
     if( m_eAccessMode == TABRead )
         return OGRERR_NONE;
 
+    OGRErr eErr = OGRERR_NONE;
+
+    // This is a hack for Windows and VSIFFlushL() issue. See http://trac.osgeo.org/gdal/ticket/5556
+    CPLSetConfigOption("VSI_FLUSH", "TRUE"); 
+
     if( WriteTABFile() != 0 )
-        return OGRERR_FAILURE;
+        eErr = OGRERR_FAILURE;
 
     if( m_poMAPFile->SyncToDisk() != 0 )
-        return OGRERR_FAILURE;
+        eErr = OGRERR_FAILURE;
 
     if( m_poDATFile->SyncToDisk() != 0 )
-        return OGRERR_FAILURE;
+        eErr = OGRERR_FAILURE;
 
-    return OGRERR_NONE;
+    CPLSetConfigOption("VSI_FLUSH", NULL);
+
+    return eErr;
 }
 
 /************************************************************************/
