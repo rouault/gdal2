@@ -1932,7 +1932,8 @@ char *CPLEscapeString( const char *pszInput, int nLength,
     if( nLength == -1 )
         nLength = strlen(pszInput);
 
-    pszOutput = (char *) CPLMalloc( nLength * 6 + 1 );
+    const size_t nSizeAlloc = nLength * 6 + 1;
+    pszOutput = (char *) CPLMalloc( nSizeAlloc );
     
     if( nScheme == CPLES_BackslashQuotable )
     {
@@ -1969,18 +1970,24 @@ char *CPLEscapeString( const char *pszInput, int nLength,
     {
         int iOut = 0, iIn;
 
-        for( iIn = 0; iIn < nLength; iIn++ )
+        for( iIn = 0; iIn < nLength; ++iIn )
         {
             if( (pszInput[iIn] >= 'a' && pszInput[iIn] <= 'z')
                 || (pszInput[iIn] >= 'A' && pszInput[iIn] <= 'Z')
                 || (pszInput[iIn] >= '0' && pszInput[iIn] <= '9')
-                || pszInput[iIn] == '_' || pszInput[iIn] == '.' )
+                || pszInput[iIn] == '$' || pszInput[iIn] == '-'
+                || pszInput[iIn] == '_' || pszInput[iIn] == '.'
+                || pszInput[iIn] == '+' || pszInput[iIn] == '!'
+                || pszInput[iIn] == '*' || pszInput[iIn] == '\''
+                || pszInput[iIn] == '(' || pszInput[iIn] == ')'
+                || pszInput[iIn] == '"' || pszInput[iIn] == ',' )
             {
                 pszOutput[iOut++] = pszInput[iIn];
             }
             else
             {
-                CPLsprintf( pszOutput+iOut, "%%%02X", ((unsigned char*)pszInput)[iIn] );
+                snprintf( pszOutput+iOut, nSizeAlloc - iOut, "%%%02X",
+                            static_cast<unsigned char>( pszInput[iIn] ) );
                 iOut += 3;
             }
         }
