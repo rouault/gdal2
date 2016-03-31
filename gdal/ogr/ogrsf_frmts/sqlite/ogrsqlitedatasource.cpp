@@ -674,6 +674,18 @@ int OGRSQLiteBaseDataSource::OpenOrCreateDB(int flags, int bRegisterOGR2SQLiteEx
 }
 
 /************************************************************************/
+/*                          GetInternalHandle()                         */
+/************************************************************************/
+
+/* Used by MBTILES driver */
+void *OGRSQLiteBaseDataSource::GetInternalHandle( const char * pszKey )
+{
+    if( pszKey != NULL && EQUAL(pszKey, "SQLITE_HANDLE") )
+        return hDB;
+    return NULL;
+}
+
+/************************************************************************/
 /*                               Create()                               */
 /************************************************************************/
 
