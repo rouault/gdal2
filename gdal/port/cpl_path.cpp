@@ -47,8 +47,6 @@ CPL_CVSID("$Id$");
 #define SEP_STRING "/"
 #endif
 
-#define STARTS_WITH(a,b)  EQUALN(a,b,strlen(b))
-
 static const char* CPLStaticBufferTooSmall(char *pszStaticResult)
 {
     CPLError(CE_Failure, CPLE_AppDefined, "Destination buffer too small");

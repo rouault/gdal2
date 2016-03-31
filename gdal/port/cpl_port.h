@@ -367,6 +367,15 @@ typedef int              GPtrDiff_t;
 #  define EQUAL(a,b)              (STRCASECMP(a,b)==0)
 #endif
 
+/*---------------------------------------------------------------------
+ * Does a string "a" start with string "b".  Search is case-sensitive or,
+ * with CI, it is a case-insensitive comparison.
+ *--------------------------------------------------------------------- */
+#ifndef STARTS_WITH_CI
+#define STARTS_WITH(a,b)               (strncmp(a,b,strlen(b)) == 0)
+#define STARTS_WITH_CI(a,b)            EQUALN(a,b,strlen(b))
+#endif
+
 #ifdef macos_pre10
 int strcasecmp(char * str1, char * str2);
 int strncasecmp(char * str1, char * str2, int len);
