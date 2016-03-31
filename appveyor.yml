@@ -109,6 +109,7 @@ test_script:
   - set SDK_BIN=%CD%\sdk\%SDK%\bin
   - SET PATH=%CD%\gdal;%CD%\gdal\apps;c:\proj\bin;%SDK_BIN%;%PATH%
   - SET GDAL_DATA=%CD%\gdal\data
+  - SET PROJ_LIB=%SDK_BIN%\proj\SHARE
   - cd autotest
   - cd cpp
   - SET DO_NOT_FAIL_ON_RECODE_ERRORS=YES
