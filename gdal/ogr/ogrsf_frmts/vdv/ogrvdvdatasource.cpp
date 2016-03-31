@@ -34,17 +34,6 @@
 
 CPL_CVSID("$Id$");
 
-#ifndef STARTS_WITH_CI
-#define STARTS_WITH(a,b)               (strncmp(a,b,strlen(b)) == 0)
-#define STARTS_WITH_CI(a,b)            EQUALN(a,b,strlen(b))
-#endif
-
-extern "C++" {
-template<class T> static void CPL_IGNORE_RET_VAL(T) {}
-inline static bool CPL_TO_BOOL(int x) { return x != FALSE; }
-} /* extern "C++" */
-
-
 typedef enum
 {
     LAYER_OTHER,
