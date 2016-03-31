@@ -693,9 +693,10 @@ char *VSIStrdup( const char * pszString )
 /*                          VSICheckMul2()                              */
 /************************************************************************/
 
-static size_t VSICheckMul2( size_t mul1, size_t mul2, int *pbOverflowFlag)
+static size_t VSICheckMul2( size_t mul1, size_t mul2, int *pbOverflowFlag,
+                            const char* pszFile, int nLine )
 {
-    size_t res = mul1 * mul2;
+    const size_t res = mul1 * mul2;
     if (mul1 != 0)
     {
         if (res / mul1 == mul2)
@@ -709,8 +710,10 @@ static size_t VSICheckMul2( size_t mul1, size_t mul2, int *pbOverflowFlag)
             if (pbOverflowFlag)
                 *pbOverflowFlag = TRUE;
             CPLError(CE_Failure, CPLE_OutOfMemory,
-                     "Multiplication overflow : %lu * %lu",
-                     (unsigned long)mul1, (unsigned long)mul2);
+                     "%s: %d: Multiplication overflow : " CPL_FRMT_GUIB " * " CPL_FRMT_GUIB,
+                     pszFile ? pszFile : "(unknown file)",
+                     nLine,
+                     (GUIntBig)mul1, (GUIntBig)mul2);
         }
     }
     else
@@ -725,14 +728,15 @@ static size_t VSICheckMul2( size_t mul1, size_t mul2, int *pbOverflowFlag)
 /*                          VSICheckMul3()                              */
 /************************************************************************/
 
-static size_t VSICheckMul3( size_t mul1, size_t mul2, size_t mul3, int *pbOverflowFlag)
+static size_t VSICheckMul3( size_t mul1, size_t mul2, size_t mul3, int *pbOverflowFlag,
+                            const char* pszFile, int nLine )
 {
     if (mul1 != 0)
     {
-        size_t res = mul1 * mul2;
+        const size_t res = mul1 * mul2;
         if (res / mul1 == mul2)
         {
-            size_t res2 = res * mul3;
+            const size_t res2 = res * mul3;
             if (mul3 != 0)
             {
                 if (res2 / mul3 == res)
@@ -746,8 +750,10 @@ static size_t VSICheckMul3( size_t mul1, size_t mul2, size_t mul3, int *pbOverfl
                     if (pbOverflowFlag)
                         *pbOverflowFlag = TRUE;
                     CPLError(CE_Failure, CPLE_OutOfMemory,
-                     "Multiplication overflow : %lu * %lu * %lu",
-                     (unsigned long)mul1, (unsigned long)mul2, (unsigned long)mul3);
+                            "%s: %d: Multiplication overflow : " CPL_FRMT_GUIB " * " CPL_FRMT_GUIB " * " CPL_FRMT_GUIB,
+                            pszFile ? pszFile : "(unknown file)",
+                            nLine,
+                            (GUIntBig)mul1, (GUIntBig)mul2, (GUIntBig)mul3);
                 }
             }
             else
@@ -761,8 +767,10 @@ static size_t VSICheckMul3( size_t mul1, size_t mul2, size_t mul3, int *pbOverfl
             if (pbOverflowFlag)
                 *pbOverflowFlag = TRUE;
             CPLError(CE_Failure, CPLE_OutOfMemory,
-                     "Multiplication overflow : %lu * %lu * %lu",
-                     (unsigned long)mul1, (unsigned long)mul2, (unsigned long)mul3);
+                    "%s: %d: Multiplication overflow : " CPL_FRMT_GUIB " * " CPL_FRMT_GUIB " * " CPL_FRMT_GUIB,
+                    pszFile ? pszFile : "(unknown file)",
+                    nLine,
+                    (GUIntBig)mul1, (GUIntBig)mul2, (GUIntBig)mul3);
         }
     }
     else
@@ -784,27 +792,7 @@ static size_t VSICheckMul3( size_t mul1, size_t mul2, size_t mul3, int *pbOverfl
 */
 void CPL_DLL *VSIMalloc2( size_t nSize1, size_t nSize2 )
 {
-    int bOverflowFlag = FALSE;
-    size_t nSizeToAllocate;
-    void* pReturn;
-
-    nSizeToAllocate = VSICheckMul2( nSize1, nSize2, &bOverflowFlag );
-    if (bOverflowFlag)
-        return NULL;
-
-    if (nSizeToAllocate == 0)
-        return NULL;
-
-    pReturn = VSIMalloc(nSizeToAllocate);
-
-    if( pReturn == NULL )
-    {
-        CPLError( CE_Failure, CPLE_OutOfMemory,
-                  "VSIMalloc2(): Out of memory allocating %lu bytes.\n",
-                  (unsigned long)nSizeToAllocate );
-    }
-
-    return pReturn;
+    return VSIMalloc2Verbose( nSize1, nSize2, NULL, 0);
 }
 
 /**
@@ -816,30 +804,121 @@ void CPL_DLL *VSIMalloc2( size_t nSize1, size_t nSize2 )
 */
 void CPL_DLL *VSIMalloc3( size_t nSize1, size_t nSize2, size_t nSize3 )
 {
-    int bOverflowFlag = FALSE;
-
-    size_t nSizeToAllocate;
-    void* pReturn;
-
-    nSizeToAllocate = VSICheckMul3( nSize1, nSize2, nSize3, &bOverflowFlag );
-    if (bOverflowFlag)
-        return NULL;
-
-    if (nSizeToAllocate == 0)
-        return NULL;
-
-    pReturn = VSIMalloc(nSizeToAllocate);
-
-    if( pReturn == NULL )
-    {
-        CPLError( CE_Failure, CPLE_OutOfMemory,
-                  "VSIMalloc3(): Out of memory allocating %lu bytes.\n",
-                  (unsigned long)nSizeToAllocate );
-    }
-
-    return pReturn;
+    return VSIMalloc3Verbose( nSize1, nSize2, nSize3, NULL, 0);
 }
 
+/************************************************************************/
+/*                          VSIMallocVerbose()                          */
+/************************************************************************/
+
+void *VSIMallocVerbose( size_t nSize, const char* pszFile, int nLine )
+{
+    void* pRet = VSIMalloc(nSize);
+    if( pRet == NULL && nSize != 0 )
+    {
+        CPLError(CE_Failure, CPLE_OutOfMemory,
+                 "%s, %d: cannot allocate " CPL_FRMT_GUIB " bytes",
+                 pszFile ? pszFile : "(unknown file)",
+                 nLine, (GUIntBig)nSize);
+    }
+    return pRet;
+}
+
+/************************************************************************/
+/*                          VSIMalloc2Verbose()                         */
+/************************************************************************/
+
+void *VSIMalloc2Verbose( size_t nSize1, size_t nSize2, const char* pszFile, int nLine )
+{
+    int bOverflowFlag = FALSE;
+    size_t nSizeToAllocate = VSICheckMul2( nSize1, nSize2, &bOverflowFlag, pszFile, nLine );
+    if (bOverflowFlag || nSizeToAllocate == 0)
+        return NULL;
+
+    void* pRet = VSIMalloc(nSizeToAllocate);
+    if( pRet == NULL )
+    {
+        CPLError(CE_Failure, CPLE_OutOfMemory,
+                 "%s, %d: cannot allocate " CPL_FRMT_GUIB " bytes",
+                 pszFile ? pszFile : "(unknown file)",
+                 nLine, (GUIntBig)nSize1 * (GUIntBig)nSize2);
+    }
+    return pRet;
+}
+
+/************************************************************************/
+/*                          VSIMalloc3Verbose()                         */
+/************************************************************************/
+
+void *VSIMalloc3Verbose( size_t nSize1, size_t nSize2, size_t nSize3,
+                         const char* pszFile, int nLine )
+{
+    int bOverflowFlag = FALSE;
+    size_t nSizeToAllocate = VSICheckMul3( nSize1, nSize2, nSize3,
+                                           &bOverflowFlag, pszFile, nLine );
+    if (bOverflowFlag || nSizeToAllocate == 0)
+        return NULL;
+
+    void* pRet = VSIMalloc(nSizeToAllocate);
+    if( pRet == NULL )
+    {
+        CPLError(CE_Failure, CPLE_OutOfMemory,
+                 "%s, %d: cannot allocate " CPL_FRMT_GUIB " bytes",
+                 pszFile ? pszFile : "(unknown file)",
+                 nLine, (GUIntBig)nSize1 * (GUIntBig)nSize2 * (GUIntBig)nSize3);
+    }
+    return pRet;
+}
+/************************************************************************/
+/*                          VSICallocVerbose()                          */
+/************************************************************************/
+
+void *VSICallocVerbose(  size_t nCount, size_t nSize, const char* pszFile, int nLine )
+{
+    void* pRet = VSICalloc(nCount, nSize);
+    if( pRet == NULL && nCount != 0 && nSize != 0 )
+    {
+        CPLError(CE_Failure, CPLE_OutOfMemory,
+                 "%s, %d: cannot allocate " CPL_FRMT_GUIB " bytes",
+                 pszFile ? pszFile : "(unknown file)",
+                 nLine, (GUIntBig)nCount * (GUIntBig)nSize);
+    }
+    return pRet;
+}
+
+/************************************************************************/
+/*                          VSIReallocVerbose()                         */
+/************************************************************************/
+
+void *VSIReallocVerbose( void* pOldPtr, size_t nNewSize, const char* pszFile, int nLine )
+{
+    void* pRet = VSIRealloc(pOldPtr, nNewSize);
+    if( pRet == NULL && nNewSize != 0 )
+    {
+        CPLError(CE_Failure, CPLE_OutOfMemory,
+                 "%s, %d: cannot allocate " CPL_FRMT_GUIB " bytes",
+                 pszFile ? pszFile : "(unknown file)",
+                 nLine, (GUIntBig)(nNewSize));
+    }
+    return pRet;
+}
+
+/************************************************************************/
+/*                          VSIStrdupVerbose()                          */
+/************************************************************************/
+
+char *VSIStrdupVerbose(  const char* pszStr, const char* pszFile, int nLine )
+{
+    char* pRet = VSIStrdup(pszStr);
+    if( pRet == NULL )
+    {
+        CPLError(CE_Failure, CPLE_OutOfMemory,
+                 "%s, %d: cannot allocate " CPL_FRMT_GUIB " bytes",
+                 pszFile ? pszFile : "(unknown file)",
+                 nLine, (GUIntBig)(strlen(pszStr)+1));
+    }
+    return pRet;
+}
 
 /************************************************************************/
 /*                              VSIStat()                               */

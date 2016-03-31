@@ -102,6 +102,28 @@ int CPL_DLL CSLTestBoolean( const char *pszValue );
 int CPL_DLL CSLFetchBoolean( char **papszStrList, const char *pszKey, 
                              int bDefault );
 
+/* TODO: Deprecate CSLTestBoolean.  Remove in GDAL 3.x. */
+int CPL_DLL CSLTestBoolean( const char *pszValue );
+int CPL_DLL CPLTestBoolean( const char *pszValue );
+
+#ifdef __cplusplus
+#ifdef DO_NOT_USE_DEBUG_BOOL
+#define CPLTestBool(x) CPL_TO_BOOL(CPLTestBoolean(x))
+#else
+/* Prefer these for C++ code. */
+#ifdef DEBUG_BOOL
+extern "C++" {
+#endif
+bool CPL_DLL CPLTestBool( const char *pszValue );
+#ifdef DEBUG_BOOL
+}
+#endif
+#endif
+bool CPL_DLL CPLFetchBool( const char **papszStrList, const char *pszKey,
+                           bool bDefault );
+#endif  /* __cplusplus */
+
+
 const char CPL_DLL *
       CPLParseNameValue(const char *pszNameValue, char **ppszKey );
 const char CPL_DLL *

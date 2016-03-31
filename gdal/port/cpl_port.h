@@ -263,6 +263,12 @@ typedef int              GPtrDiff_t;
 #define GUINTBIG_TO_DOUBLE(x) (double)(x)
 #endif
 
+#ifdef COMPAT_WITH_ICC_CONVERSION_CHECK
+#define CPL_INT64_FITS_ON_INT32(x) ((x) >= INT_MIN && (x) <= INT_MAX)
+#else
+#define CPL_INT64_FITS_ON_INT32(x) (((GIntBig)(int)(x)) == (x))
+#endif
+
 /* ==================================================================== */
 /*      Other standard services.                                        */
 /* ==================================================================== */
@@ -625,10 +631,26 @@ static char *cvsid_aw() { return( cvsid_aw() ? ((char *) NULL) : cpl_cvsid ); }
 #endif
 #endif
 
+#define CPL_FINAL
+
 #ifdef WARN_STANDARD_PRINTF
 int vsnprintf(char *str, size_t size, const char* fmt, va_list args) CPL_WARN_DEPRECATED("Use CPLvsnprintf() instead");
 int snprintf(char *str, size_t size, const char* fmt, ...) CPL_PRINT_FUNC_FORMAT(3,4) CPL_WARN_DEPRECATED("Use CPLsnprintf() instead");
 int sprintf(char *str, const char* fmt, ...) CPL_PRINT_FUNC_FORMAT(2, 3) CPL_WARN_DEPRECATED("Use CPLsprintf() instead");
 #endif
+
+#ifdef __cplusplus
+/* The size of C style arrays. */
+#define CPL_ARRAYSIZE(array) \
+  ((sizeof(array) / sizeof(*(array))) / \
+  static_cast<size_t>(!(sizeof(array) % sizeof(*(array)))))
+
+extern "C++" {
+template<class T> static void CPL_IGNORE_RET_VAL(T) {}
+inline static bool CPL_TO_BOOL(int x) { return x != 0; }
+} /* extern "C++" */
+
+#endif  /* __cplusplus */
+
 
 #endif /* ndef CPL_BASE_H_INCLUDED */

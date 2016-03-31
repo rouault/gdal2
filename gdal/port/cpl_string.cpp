@@ -1468,6 +1468,29 @@ int CPL_DLL CPLsscanf(const char* str, const char* fmt, ...)
 }
 
 /************************************************************************/
+/*                         CPLTestBool()                                */
+/************************************************************************/
+
+/**
+ * Test what boolean value contained in the string.
+ *
+ * If pszValue is "NO", "FALSE", "OFF" or "0" will be returned false.
+ * Otherwise, true will be returned.
+ *
+ * @param pszValue the string should be tested.
+ *
+ * @return true or false.
+ */
+
+bool CPLTestBool( const char *pszValue )
+{
+  return !( EQUAL(pszValue,"NO")
+            || EQUAL(pszValue,"FALSE")
+            || EQUAL(pszValue,"OFF")
+            || EQUAL(pszValue,"0") );
+}
+
+/************************************************************************/
 /*                         CSLTestBoolean()                             */
 /************************************************************************/
 
@@ -1484,47 +1507,90 @@ int CPL_DLL CPLsscanf(const char* str, const char* fmt, ...)
 
 int CSLTestBoolean( const char *pszValue )
 {
-    if( EQUAL(pszValue,"NO")
-        || EQUAL(pszValue,"FALSE") 
-        || EQUAL(pszValue,"OFF") 
-        || EQUAL(pszValue,"0") )
-        return FALSE;
-    else
-        return TRUE;
+    return CPLTestBool( pszValue ) ? TRUE : FALSE;
 }
 
+/************************************************************************/
+/*                         CPLTestBoolean()                             */
+/************************************************************************/
+
+/**
+ * Test what boolean value contained in the string.
+ *
+ * If pszValue is "NO", "FALSE", "OFF" or "0" will be returned FALSE.
+ * Otherwise, TRUE will be returned.
+ *
+ * Use this only in C code.  In C++, prefer CPLTestBool().
+ *
+ * @param pszValue the string should be tested.
+ *
+ * @return TRUE or FALSE.
+ */
+
+int CPLTestBoolean( const char *pszValue )
+{
+    return CPLTestBool( pszValue ) ? TRUE : FALSE;
+}
+
+
 /**********************************************************************
- *                       CSLFetchBoolean()
+ *                       CPLFetchBool()
  *
  * Check for boolean key value.
  *
  * In a StringList of "Name=Value" pairs, look to see if there is a key
  * with the given name, and if it can be interpreted as being TRUE.  If
- * the key appears without any "=Value" portion it will be considered true. 
+ * the key appears without any "=Value" portion it will be considered true.
  * If the value is NO, FALSE or 0 it will be considered FALSE otherwise
  * if the key appears in the list it will be considered TRUE.  If the key
- * doesn't appear at all, the indicated default value will be returned. 
- * 
+ * doesn't appear at all, the indicated default value will be returned.
+ *
  * @param papszStrList the string list to search.
  * @param pszKey the key value to look for (case insensitive).
- * @param bDefault the value to return if the key isn't found at all. 
- * 
- * @return TRUE or FALSE 
+ * @param bDefault the value to return if the key isn't found at all.
+ *
+ * @return true or false
+ **********************************************************************/
+
+bool CPLFetchBool( const char **papszStrList, const char *pszKey,
+                   bool bDefault )
+
+{
+    if( CSLFindString( const_cast<char **>(papszStrList), pszKey ) != -1 )
+        return true;
+
+    const char * const pszValue =
+        CSLFetchNameValue( const_cast<char **>(papszStrList), pszKey );
+    if( pszValue == NULL )
+        return bDefault;
+
+    return CPLTestBool( pszValue );
+}
+
+/**********************************************************************
+ *                       CSLFetchBoolean()
+ *
+ * DEPRECATED.  Check for boolean key value.
+ *
+ * In a StringList of "Name=Value" pairs, look to see if there is a key
+ * with the given name, and if it can be interpreted as being TRUE.  If
+ * the key appears without any "=Value" portion it will be considered true.
+ * If the value is NO, FALSE or 0 it will be considered FALSE otherwise
+ * if the key appears in the list it will be considered TRUE.  If the key
+ * doesn't appear at all, the indicated default value will be returned.
+ *
+ * @param papszStrList the string list to search.
+ * @param pszKey the key value to look for (case insensitive).
+ * @param bDefault the value to return if the key isn't found at all.
+ *
+ * @return TRUE or FALSE
  **********************************************************************/
 
 int CSLFetchBoolean( char **papszStrList, const char *pszKey, int bDefault )
 
 {
-    const char *pszValue;
-
-    if( CSLFindString( papszStrList, pszKey ) != -1 )
-        return TRUE;
-
-    pszValue = CSLFetchNameValue(papszStrList, pszKey );
-    if( pszValue == NULL )
-        return bDefault;
-    else 
-        return CSLTestBoolean( pszValue );
+    return CPLFetchBool( const_cast<const char **>(papszStrList),
+                         pszKey, CPL_TO_BOOL(bDefault) );
 }
 
 /************************************************************************/
