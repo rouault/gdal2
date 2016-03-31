@@ -52,8 +52,6 @@ CPL_CVSID("$Id$");
 #  include "cpl_win32ce_api.h"
 #endif
 
-template<class T> static void CPL_IGNORE_RET_VAL(T) {}
-
 /************************************************************************/
 /* ==================================================================== */
 /*                       VSIWin32FilesystemHandler                      */
