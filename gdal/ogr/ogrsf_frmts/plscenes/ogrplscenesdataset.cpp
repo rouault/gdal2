@@ -1,5 +1,5 @@
 /******************************************************************************
- * $Id: ogrplscenesdataset.cpp 33602 2016-02-29 20:20:12Z rouault $
+ * $Id: ogrplscenesdataset.cpp 33883 2016-04-03 17:55:21Z rouault $
  *
  * Project:  PlanetLabs scene driver
  * Purpose:  Implements OGRPLScenesDataset
@@ -29,7 +29,7 @@
 
 #include "ogr_plscenes.h"
 
-CPL_CVSID("$Id: ogrplscenesdataset.cpp 33602 2016-02-29 20:20:12Z rouault $");
+CPL_CVSID("$Id: ogrplscenesdataset.cpp 33883 2016-04-03 17:55:21Z rouault $");
 
 /************************************************************************/
 /*                         OGRPLScenesDataset()                         */
@@ -205,7 +205,7 @@ json_object* OGRPLScenesDataset::RunRequest(const char* pszURL,
         CPLString osURL(pszURL);
         if( osURL[osURL.size()-1 ] == '/' )
             osURL.resize(osURL.size()-1);
-        GByte* pabyBuf = VSIGetMemFileBuffer(osURL, &nDataLengthLarge, FALSE); 
+        GByte* pabyBuf = VSIGetMemFileBuffer(osURL, &nDataLengthLarge, FALSE);
         size_t nDataLength = static_cast<size_t>(nDataLengthLarge);
         if( pabyBuf )
         {
@@ -400,9 +400,6 @@ GDALDataset* OGRPLScenesDataset::OpenRasterScene(GDALOpenInfo* poOpenInfo,
     GDALDataset* poOutDS = (GDALDataset*) GDALOpen(osRasterURL, GA_ReadOnly);
     if( poOutDS )
     {
-        poOutDS->SetDescription(poOpenInfo->pszFilename);
-        CSLDestroy(poOutDS->GetFileList()); /* so as to probe all auxiliary files before reseting the allowed extensions */
-
         if( !EQUAL(pszProductType, "thumb") )
         {
             OGRPLScenesLayer* poLayer = new OGRPLScenesLayer(this, "ortho",
@@ -410,6 +407,10 @@ GDALDataset* OGRPLScenesDataset::OpenRasterScene(GDALOpenInfo* poOpenInfo,
             papoLayers = (OGRPLScenesLayer**) CPLRealloc(papoLayers,
                                         sizeof(OGRPLScenesLayer*) * (nLayers + 1));
             papoLayers[nLayers ++] = poLayer;
+
+            // Set a dummy name so that PAM goes here
+            CPLPushErrorHandler(CPLQuietErrorHandler);
+            poOutDS->SetDescription("/vsimem/tmp/ogrplscenesv0");
 
             /* Attach scene metadata. */
             poLayer->SetAttributeFilter(CPLSPrintf("id = '%s'", osScene.c_str()));
@@ -431,7 +432,16 @@ GDALDataset* OGRPLScenesDataset::OpenRasterScene(GDALOpenInfo* poOpenInfo,
                 }
             }
             delete poFeat;
+
+            poOutDS->FlushCache();
+            VSIUnlink("/vsimem/tmp/ogrplscenesv0");
+            VSIUnlink("/vsimem/tmp/ogrplscenesv0.aux.xml");
+            CPLPopErrorHandler();
         }
+
+        CPLErrorReset();
+        poOutDS->SetDescription(poOpenInfo->pszFilename);
+        CSLDestroy(poOutDS->GetFileList()); /* so as to probe all auxiliary files before reseting the allowed extensions */
     }
 
     if( bUseVSICURL )
