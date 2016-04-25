@@ -668,6 +668,7 @@ HAVE_POPPLER
 PDF_PLUGIN
 PAM_SETTING
 JSON_INCLUDE
+LIBJSON_LINK
 LIBJSONC_SETTING
 FREEXL_INCLUDE
 HAVE_FREEXL
@@ -28543,6 +28544,9 @@ else
   LIBJSONC_SETTING=internal
 fi
 
+  if test "$LIBJSONC_SETTING" = "external" ; then
+    LIBJSON_LINK="-ljson-c"
+  fi
 elif test "$with_libjson_c" = "internal" ; then
   LIBJSONC_SETTING=internal
 elif test "$with_libjson_c" != "no"; then
@@ -28589,6 +28593,9 @@ else
   LIBJSONC_SETTING=internal
 fi
 
+  if test "$LIBJSONC_SETTING" = "external" ; then
+    LIBJSON_LINK="-L$with_libjson_c/lib -ljson-c"
+  fi
 else
   as_fn_error $? "libjson-c (internal or external) is required" "$LINENO" 5
 fi
@@ -28613,6 +28620,8 @@ $as_echo "using internal libjson-c code" >&6; }
 fi
 
 LIBJSONC_SETTING=$LIBJSONC_SETTING
+
+LIBJSON_LINK=$LIBJSON_LINK
 
 JSON_INCLUDE=$JSON_INCLUDE
 

@@ -36,6 +36,7 @@ from osgeo import ogr
 sys.path.append( '../pymod' )
 
 import gdaltest
+import test_cli_utilities
 
 ###############################################################################
 # Get the mbtiles driver
@@ -352,7 +353,7 @@ def mbtiles_7():
         gdaltest.post_reason('fail')
         print(ds.GetRasterBand(1).GetOverviewCount())
         return 'fail'
-    expected_ovr_cs = [ 22294, 25695, 6779, 63629 ]
+    expected_ovr_cs = [ 21179, 22577, 11996 ]
     got_ovr_cs = [ ds.GetRasterBand(i+1).GetOverview(0).Checksum() for i in range(ds.RasterCount) ]
     if expected_ovr_cs != got_ovr_cs:
         gdaltest.post_reason('fail')
@@ -399,7 +400,7 @@ def mbtiles_8():
     out_ds = None
     src_ds = None
 
-    expected_cs = [ 65245, 56985, 54768 ] # , 60492 
+    expected_cs = [ 993, 50461, 64354 ]
     out_ds = gdal.Open('/vsimem/mbtiles_8.mbtiles')
     got_cs = [out_ds.GetRasterBand(i+1).Checksum() for i in range(3)]
     if got_cs != expected_cs:
@@ -413,6 +414,64 @@ def mbtiles_8():
     out_ds = None
 
     gdal.Unlink('/vsimem/mbtiles_8.mbtiles')
+    return 'success'
+
+###############################################################################
+# Test we are robust to invalid bounds
+
+def mbtiles_9():
+
+    if gdaltest.mbtiles_drv is None:
+        return 'skip'
+
+    if gdal.GetDriverByName( 'PNG' ) is None:
+        return 'skip'
+
+    src_ds = gdal.Open('data/byte.tif')
+    gdaltest.mbtiles_drv.CreateCopy('/vsimem/mbtiles_9.mbtiles', src_ds, options = ['RESAMPLING=NEAREST']  )
+    src_ds = None
+    ds = ogr.Open('/vsimem/mbtiles_9.mbtiles', update = 1)
+    ds.ExecuteSQL("UPDATE metadata SET value='invalid' WHERE name='bounds'")
+    ds = None
+
+    with gdaltest.error_handler():
+        ds = gdal.Open('/vsimem/mbtiles_9.mbtiles')
+    if ds.RasterXSize != 256 or ds.RasterYSize != 256:
+        gdaltest.post_reason('fail')
+        return 'fail'
+    if abs(ds.GetGeoTransform()[0] - -13110479.091473430395126) > 1e-6:
+        gdaltest.post_reason('fail')
+        print(ds.GetGeoTransform())
+        return 'fail'
+    ds = None
+
+    gdal.Unlink('/vsimem/mbtiles_9.mbtiles')
+    return 'success'
+
+###############################################################################
+# Test compaction of temporary database
+
+def mbtiles_10():
+
+    if gdaltest.mbtiles_drv is None:
+        return 'skip'
+
+    if gdal.GetDriverByName( 'PNG' ) is None:
+        return 'skip'
+    if test_cli_utilities.get_gdal_translate_path() is None:
+        return 'skip'
+
+    gdaltest.runexternal(test_cli_utilities.get_gdal_translate_path() + ' -of MBTILES ../gcore/data/byte.tif tmp/mbtiles_10.mbtiles --config GDAL_CACHEMAX 0 --config GPKG_FORCE_TEMPDB_COMPACTION YES -outsize 512 512')
+
+    ds = gdal.Open('tmp/mbtiles_10.mbtiles')
+    cs = ds.GetRasterBand(1).Checksum()
+    if cs != 29925:
+        gdaltest.post_reason('fail')
+        print(cs)
+        return 'fail'
+    ds = None
+
+    gdal.Unlink('tmp/mbtiles_10.mbtiles')
     return 'success'
 
 ###############################################################################
@@ -434,9 +493,11 @@ gdaltest_list = [
     mbtiles_6,
     mbtiles_7,
     mbtiles_8,
+    mbtiles_9,
+    mbtiles_10,
     mbtiles_cleanup ]
 
-#gdaltest_list = [ mbtiles_1, mbtiles_7 ]
+#gdaltest_list = [ mbtiles_1, mbtiles_9 ]
 
 if __name__ == '__main__':
 
