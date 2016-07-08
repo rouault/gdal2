@@ -5369,7 +5369,7 @@ CPLVirtualMem * GDALGetVirtualMemAuto( GDALRasterBandH hBand,
  * @param nXOff The pixel offset to the top left corner of the region
  * of the band to be queried. This would be zero to start from the left side.
  *
- * @param nYOff The line checked to the top left corner of the region
+ * @param nYOff The line offset to the top left corner of the region
  * of the band to be queried. This would be zero to start from the top.
  *
  * @param nXSize The width of the region of the band to be queried in pixels.
@@ -5433,7 +5433,7 @@ int GDALGetDataCoverageStatus( GDALRasterBandH hBand,
  * @param nXOff The pixel offset to the top left corner of the region
  * of the band to be queried. This would be zero to start from the left side.
  *
- * @param nYOff The line checked to the top left corner of the region
+ * @param nYOff The line offset to the top left corner of the region
  * of the band to be queried. This would be zero to start from the top.
  *
  * @param nXSize The width of the region of the band to be queried in pixels.
