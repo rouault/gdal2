@@ -6866,6 +6866,39 @@ def tiff_write_154():
 
     return 'success'
 
+###############################################################################
+# Test GetDataCoverageStatus()
+
+def tiff_write_155():
+
+    ds = gdaltest.tiff_drv.Create('/vsimem/tiff_write_155.tif', 64, 64, options = ['SPARSE_OK=YES', 'TILED=YES','BLOCKXSIZE=32', 'BLOCKYSIZE=32'])
+    ds.GetRasterBand(1).WriteRaster(0,0,1,1,'X')
+
+    (flags, pct) = ds.GetRasterBand(1).GetDataCoverageStatus(0,0,32,32)
+    if flags != gdal.GDAL_DATA_COVERAGE_STATUS_DATA or pct != 100.0:
+        gdaltest.post_reason('failure')
+        print(flags)
+        print(pct)
+        return 'fail'
+
+    (flags, pct) = ds.GetRasterBand(1).GetDataCoverageStatus(32,0,32,32)
+    if flags != gdal.GDAL_DATA_COVERAGE_STATUS_EMPTY or pct != 0.0:
+        gdaltest.post_reason('failure')
+        print(flags)
+        print(pct)
+        return 'fail'
+
+    (flags, pct) = ds.GetRasterBand(1).GetDataCoverageStatus(16,16,32,32)
+    if flags != gdal.GDAL_DATA_COVERAGE_STATUS_DATA | gdal.GDAL_DATA_COVERAGE_STATUS_EMPTY or pct != 25.0:
+        gdaltest.post_reason('failure')
+        print(flags)
+        print(pct)
+        return 'fail'
+
+    ds = None
+    gdaltest.tiff_drv.Delete('/vsimem/tiff_write_155.tif')
+
+    return 'success'
 
 ###############################################################################
 # Ask to run again tests with GDAL_API_PROXY=YES
@@ -7051,10 +7084,11 @@ gdaltest_list = [
     tiff_write_152,
     tiff_write_153,
     tiff_write_154,
+    tiff_write_155,
     #tiff_write_api_proxy,
     tiff_write_cleanup ]
 
-# gdaltest_list = [ tiff_write_1, tiff_write_153 ]
+# gdaltest_list = [ tiff_write_1, tiff_write_155 ]
 
 if __name__ == '__main__':
 
