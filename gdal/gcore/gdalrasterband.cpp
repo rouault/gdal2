@@ -5355,6 +5355,9 @@ CPLVirtualMem * GDALGetVirtualMemAuto( GDALRasterBandH hBand,
  * Returns whether a sub-window of the raster contains only data, only empty
  * blocks or a mix of both.
  *
+ * Empty blocks are blocks that contain only pixels whose value is the nodata value when it
+ * is set, or whose value is 0 when the nodata value is not set.
+ *
  * The query is done in an efficient way without reading the actual pixel
  * values. If not possible, GDAL_DATA_COVERAGE_STATUS_UNIMPLEMENTED will be
  * returned.
@@ -5417,6 +5420,9 @@ int GDALGetDataCoverageStatus( GDALRasterBandH hBand,
  *
  * Returns whether a sub-window of the raster contains only data, only empty
  * blocks or a mix of both.
+ *
+ * Empty blocks are blocks that contain only pixels whose value is the nodata value when it
+ * is set, or whose value is 0 when the nodata value is not set.
  *
  * The query is done in an efficient way without reading the actual pixel
  * values. If not possible, GDAL_DATA_COVERAGE_STATUS_UNIMPLEMENTED will be
