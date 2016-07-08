@@ -822,6 +822,16 @@ CPLErr CPL_DLL CPL_STDCALL
 #define GMF_ALPHA         0x04
 #define GMF_NODATA        0x08
 
+#define GDAL_DATA_COVERAGE_STATUS_UNIMPLEMENTED 0x01
+#define GDAL_DATA_COVERAGE_STATUS_DATA          0x02
+#define GDAL_DATA_COVERAGE_STATUS_EMPTY         0x04
+
+int CPL_DLL CPL_STDCALL GDALGetDataCoverageStatus( GDALRasterBandH hBand,
+                                                   int nXOff, int nYOff,
+                                                   int nXSize, int nYSize,
+                                                   int nMaskFlagStop,
+                                                   double* pdfDataPct );
+
 /* ==================================================================== */
 /*     GDALAsyncReader                                                  */
 /* ==================================================================== */

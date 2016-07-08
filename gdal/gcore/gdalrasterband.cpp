@@ -5345,6 +5345,152 @@ CPLVirtualMem * GDALGetVirtualMemAuto( GDALRasterBandH hBand,
                                       pnLineSpace, papszOptions );
 }
 
+/************************************************************************/
+/*                        GDALGetDataCoverageStatus()                   */
+/************************************************************************/
+
+/**
+ * \brief Get the coverage status of a sub-window of the raster.
+ *
+ * Returns whether a sub-window of the raster contains only data, only empty
+ * blocks or a mix of both.
+ *
+ * The query is done in an efficient way without reading the actual pixel
+ * values. If not possible, GDAL_DATA_COVERAGE_STATUS_UNIMPLEMENTED will be
+ * returned.
+ *
+ * @see GDALRasterBand::GetDataCoverageStatus()
+ *
+ * @param hBand raster band
+ *
+ * @param nXOff The pixel offset to the top left corner of the region
+ * of the band to be queried. This would be zero to start from the left side.
+ *
+ * @param nYOff The line checked to the top left corner of the region
+ * of the band to be queried. This would be zero to start from the top.
+ *
+ * @param nXSize The width of the region of the band to be queried in pixels.
+ *
+ * @param nYSize The height of the region of the band to be queried in lines.
+ *
+ * @param nMaskFlagStop 0, or a binary-or'ed mask of possible values
+ * GDAL_DATA_COVERAGE_STATUS_UNIMPLEMENTED,
+ * GDAL_DATA_COVERAGE_STATUS_DATA and GDAL_DATA_COVERAGE_STATUS_EMPTY. As soon as
+ * the computation of the coverage matches the mask, the computation will be
+ * stopped. pdfDataPct will not be valid in that case.
+ *
+ *
+ * @param pdfDataPct Optional output parameter whose pointed value will be set
+ * to the (approximate) percentage in [0,100] of pixels in the queried sub-window that have
+ * valid values. The implementation might not always be able to compute it, in
+ * which case it will be set to a negative value.
+ *
+ * @return a binary-or'ed combination of possible values
+ * GDAL_DATA_COVERAGE_STATUS_UNIMPLEMENTED,
+ * GDAL_DATA_COVERAGE_STATUS_DATA and GDAL_DATA_COVERAGE_STATUS_EMPTY
+ *
+ * @note Added in GDAL 2.2
+ */
+
+int GDALGetDataCoverageStatus( GDALRasterBandH hBand,
+                               int nXOff, int nYOff,
+                               int nXSize,
+                               int nYSize,
+                               int nMaskFlagStop,
+                               double* pdfDataPct)
+{
+    VALIDATE_POINTER1( hBand, "GDALGetDataCoverageStatus",
+                       GDAL_DATA_COVERAGE_STATUS_UNIMPLEMENTED );
+
+    GDALRasterBand *poBand = static_cast<GDALRasterBand*>(hBand);
+
+    return poBand->GetDataCoverageStatus( nXOff, nYOff, nXSize, nYSize,
+                                          nMaskFlagStop, pdfDataPct );
+}
+
+/************************************************************************/
+/*                          GetDataCoverageStatus()                     */
+/************************************************************************/
+
+/**
+ * \brief Get the coverage status of a sub-window of the raster.
+ *
+ * Returns whether a sub-window of the raster contains only data, only empty
+ * blocks or a mix of both.
+ *
+ * The query is done in an efficient way without reading the actual pixel
+ * values. If not possible, GDAL_DATA_COVERAGE_STATUS_UNIMPLEMENTED will be
+ * returned.
+ *
+ * @see GDALGetDataCoverageStatus()
+ *
+ * @param nXOff The pixel offset to the top left corner of the region
+ * of the band to be queried. This would be zero to start from the left side.
+ *
+ * @param nYOff The line checked to the top left corner of the region
+ * of the band to be queried. This would be zero to start from the top.
+ *
+ * @param nXSize The width of the region of the band to be queried in pixels.
+ *
+ * @param nYSize The height of the region of the band to be queried in lines.
+ *
+ * @param nMaskFlagStop 0, or a binary-or'ed mask of possible values
+ * GDAL_DATA_COVERAGE_STATUS_UNIMPLEMENTED,
+ * GDAL_DATA_COVERAGE_STATUS_DATA and GDAL_DATA_COVERAGE_STATUS_EMPTY. As soon as
+ * the computation of the coverage matches the mask, the computation will be
+ * stopped. pdfDataPct will not be valid in that case.
+ *
+ * @param pdfDataPct Optional output parameter whose pointed value will be set
+ * to the (approximate) percentage in [0,100] of pixels in the queried sub-window that have
+ * valid values. The implementation might not always be able to compute it, in
+ * which case it will be set to a negative value.
+ *
+ * @return a binary-or'ed combination of possible values
+ * GDAL_DATA_COVERAGE_STATUS_UNIMPLEMENTED,
+ * GDAL_DATA_COVERAGE_STATUS_DATA and GDAL_DATA_COVERAGE_STATUS_EMPTY
+ *
+ * @note Added in GDAL 2.2
+ */
+
+int  GDALRasterBand::GetDataCoverageStatus( int nXOff,
+                                            int nYOff,
+                                            int nXSize,
+                                            int nYSize,
+                                            int nMaskFlagStop,
+                                            double* pdfDataPct)
+{
+    if( nXOff < 0 || nYOff < 0 ||
+        nXSize > INT_MAX - nXOff ||
+        nYSize > INT_MAX - nYOff ||
+        nXOff + nXSize > nRasterXSize ||
+        nYOff + nYSize > nRasterYSize )
+    {
+        CPLError(CE_Failure, CPLE_AppDefined, "Bad window");
+        if( pdfDataPct )
+            *pdfDataPct = 0.0;
+        return GDAL_DATA_COVERAGE_STATUS_UNIMPLEMENTED |
+               GDAL_DATA_COVERAGE_STATUS_EMPTY;
+    }
+    return IGetDataCoverageStatus(nXOff, nYOff, nXSize, nYSize,
+                                  nMaskFlagStop, pdfDataPct);
+}
+
+/************************************************************************/
+/*                         IGetDataCoverageStatus()                     */
+/************************************************************************/
+
+int  GDALRasterBand::IGetDataCoverageStatus( int /*nXOff*/,
+                                             int /*nYOff*/,
+                                             int /*nXSize/*/,
+                                             int /*nYSize*/,
+                                             int /*nMaskFlagStop*/,
+                                             double* pdfDataPct)
+{
+    if( pdfDataPct != NULL )
+        *pdfDataPct = 100.0;
+    return GDAL_DATA_COVERAGE_STATUS_UNIMPLEMENTED |
+           GDAL_DATA_COVERAGE_STATUS_DATA;
+}
 
 /************************************************************************/
 /*                          EnterReadWrite()                            */
