@@ -5353,14 +5353,48 @@ CPLVirtualMem * GDALGetVirtualMemAuto( GDALRasterBandH hBand,
  * \brief Get the coverage status of a sub-window of the raster.
  *
  * Returns whether a sub-window of the raster contains only data, only empty
- * blocks or a mix of both.
+ * blocks or a mix of both. This function can be used to determine quickly
+ * if it is worth issuing RasterIO / ReadBlock requests in datasets that may
+ * be sparse.
  *
- * Empty blocks are blocks that contain only pixels whose value is the nodata value when it
- * is set, or whose value is 0 when the nodata value is not set.
+ * Empty blocks are blocks that are generally not physically present in the
+ * file, and when read through GDAL, contain only pixels whose value is the
+ * nodata value when it is set, or whose value is 0 when the nodata value is
+ * not set.
  *
  * The query is done in an efficient way without reading the actual pixel
- * values. If not possible, GDAL_DATA_COVERAGE_STATUS_UNIMPLEMENTED will be
- * returned.
+ * values. If not possible, or not implemented at all by the driver,
+ * GDAL_DATA_COVERAGE_STATUS_UNIMPLEMENTED | GDAL_DATA_COVERAGE_STATUS_DATA will
+ * be returned.
+ *
+ * The values that can be returned by the function are the following,
+ * potentially combined with the binary or operator :
+ * <ul>
+ * <li>GDAL_DATA_COVERAGE_STATUS_UNIMPLEMENTED : the driver does not implement
+ * GetDataCoverageStatus(). This flag should be returned together with
+ * GDAL_DATA_COVERAGE_STATUS_DATA.</li>
+ * <li>GDAL_DATA_COVERAGE_STATUS_DATA: There is (potentially) data in the queried
+ * window.</li>
+ * <li>GDAL_DATA_COVERAGE_STATUS_EMPTY: There is nodata in the queried window.
+ * This is typically identified by the concept of missing block in formats that
+ * supports it.
+ * </li>
+ * </ul>
+ *
+ * Note that GDAL_DATA_COVERAGE_STATUS_DATA might have false positives and
+ * should be interpreted more as hint of potential presence of data. For example
+ * if a GeoTIFF file is created with blocks filled with zeroes (or set to the
+ * nodata value), instead of using the missing block mechanism,
+ * GDAL_DATA_COVERAGE_STATUS_DATA will be returned. On the contrary,
+ * GDAL_DATA_COVERAGE_STATUS_EMPTY should have no false positives.
+ *
+ * The nMaskFlagStop should be generally set to 0. It can be set to a
+ * binary-or'ed mask of the above mentioned values to enable a quick exiting of
+ * the function as soon as the computed mask matches the nMaskFlagStop. For
+ * example, you can issue a request on the whole raster with nMaskFlagStop =
+ * GDAL_DATA_COVERAGE_STATUS_EMPTY. As soon as one missing block is encountered,
+ * the function will exit, so that you can potentially refine the requested area
+ * to find which particular region(s) have missing blocks.
  *
  * @see GDALRasterBand::GetDataCoverageStatus()
  *
@@ -5378,15 +5412,14 @@ CPLVirtualMem * GDALGetVirtualMemAuto( GDALRasterBandH hBand,
  *
  * @param nMaskFlagStop 0, or a binary-or'ed mask of possible values
  * GDAL_DATA_COVERAGE_STATUS_UNIMPLEMENTED,
- * GDAL_DATA_COVERAGE_STATUS_DATA and GDAL_DATA_COVERAGE_STATUS_EMPTY. As soon as
- * the computation of the coverage matches the mask, the computation will be
- * stopped. pdfDataPct will not be valid in that case.
- *
+ * GDAL_DATA_COVERAGE_STATUS_DATA and GDAL_DATA_COVERAGE_STATUS_EMPTY. As soon
+ * as the computation of the coverage matches the mask, the computation will be
+ * stopped. *pdfDataPct will not be valid in that case.
  *
  * @param pdfDataPct Optional output parameter whose pointed value will be set
- * to the (approximate) percentage in [0,100] of pixels in the queried sub-window that have
- * valid values. The implementation might not always be able to compute it, in
- * which case it will be set to a negative value.
+ * to the (approximate) percentage in [0,100] of pixels in the queried
+ * sub-window that have valid values. The implementation might not always be
+ * able to compute it, in which case it will be set to a negative value.
  *
  * @return a binary-or'ed combination of possible values
  * GDAL_DATA_COVERAGE_STATUS_UNIMPLEMENTED,
@@ -5419,14 +5452,46 @@ int GDALGetDataCoverageStatus( GDALRasterBandH hBand,
  * \brief Get the coverage status of a sub-window of the raster.
  *
  * Returns whether a sub-window of the raster contains only data, only empty
- * blocks or a mix of both.
+ * blocks or a mix of both. This function can be used to determine quickly
+ * if it is worth issuing RasterIO / ReadBlock requests in datasets that may
+ * be sparse.
  *
- * Empty blocks are blocks that contain only pixels whose value is the nodata value when it
- * is set, or whose value is 0 when the nodata value is not set.
+ * Empty blocks are blocks that contain only pixels whose value is the nodata
+ * value when it is set, or whose value is 0 when the nodata value is not set.
  *
  * The query is done in an efficient way without reading the actual pixel
- * values. If not possible, GDAL_DATA_COVERAGE_STATUS_UNIMPLEMENTED will be
- * returned.
+ * values. If not possible, or not implemented at all by the driver,
+ * GDAL_DATA_COVERAGE_STATUS_UNIMPLEMENTED | GDAL_DATA_COVERAGE_STATUS_DATA will
+ * be returned.
+ *
+ * The values that can be returned by the function are the following,
+ * potentially combined with the binary or operator :
+ * <ul>
+ * <li>GDAL_DATA_COVERAGE_STATUS_UNIMPLEMENTED : the driver does not implement
+ * GetDataCoverageStatus(). This flag should be returned together with
+ * GDAL_DATA_COVERAGE_STATUS_DATA.</li>
+ * <li>GDAL_DATA_COVERAGE_STATUS_DATA: There is (potentially) data in the queried
+ * window.</li>
+ * <li>GDAL_DATA_COVERAGE_STATUS_EMPTY: There is nodata in the queried window.
+ * This is typically identified by the concept of missing block in formats that
+ * supports it.
+ * </li>
+ * </ul>
+ *
+ * Note that GDAL_DATA_COVERAGE_STATUS_DATA might have false positives and
+ * should be interpreted more as hint of potential presence of data. For example
+ * if a GeoTIFF file is created with blocks filled with zeroes (or set to the
+ * nodata value), instead of using the missing block mechanism,
+ * GDAL_DATA_COVERAGE_STATUS_DATA will be returned. On the contrary,
+ * GDAL_DATA_COVERAGE_STATUS_EMPTY should have no false positives.
+ *
+ * The nMaskFlagStop should be generally set to 0. It can be set to a
+ * binary-or'ed mask of the above mentioned values to enable a quick exiting of
+ * the function as soon as the computed mask matches the nMaskFlagStop. For
+ * example, you can issue a request on the whole raster with nMaskFlagStop =
+ * GDAL_DATA_COVERAGE_STATUS_EMPTY. As soon as one missing block is encountered,
+ * the function will exit, so that you can potentially refine the requested area
+ * to find which particular region(s) have missing blocks.
  *
  * @see GDALGetDataCoverageStatus()
  *
@@ -5442,14 +5507,14 @@ int GDALGetDataCoverageStatus( GDALRasterBandH hBand,
  *
  * @param nMaskFlagStop 0, or a binary-or'ed mask of possible values
  * GDAL_DATA_COVERAGE_STATUS_UNIMPLEMENTED,
- * GDAL_DATA_COVERAGE_STATUS_DATA and GDAL_DATA_COVERAGE_STATUS_EMPTY. As soon as
- * the computation of the coverage matches the mask, the computation will be
- * stopped. pdfDataPct will not be valid in that case.
+ * GDAL_DATA_COVERAGE_STATUS_DATA and GDAL_DATA_COVERAGE_STATUS_EMPTY. As soon
+ * as the computation of the coverage matches the mask, the computation will be
+ * stopped. *pdfDataPct will not be valid in that case.
  *
  * @param pdfDataPct Optional output parameter whose pointed value will be set
- * to the (approximate) percentage in [0,100] of pixels in the queried sub-window that have
- * valid values. The implementation might not always be able to compute it, in
- * which case it will be set to a negative value.
+ * to the (approximate) percentage in [0,100] of pixels in the queried
+ * sub-window that have valid values. The implementation might not always be
+ * able to compute it, in which case it will be set to a negative value.
  *
  * @return a binary-or'ed combination of possible values
  * GDAL_DATA_COVERAGE_STATUS_UNIMPLEMENTED,
