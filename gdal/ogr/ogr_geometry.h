@@ -263,6 +263,8 @@ class CPL_DLL OGRGeometry
 
     virtual OGRGeometry *Polygonize() const CPL_WARN_UNUSED_RESULT;
 
+    virtual double Distance3D(const OGRGeometry *poOtherGeom) const;
+
 //! @cond Doxygen_Suppress
     // backward compatibility to non-standard method names.
     OGRBoolean  Intersect( OGRGeometry * ) const CPL_WARN_DEPRECATED("Non standard method. Use Intersects() instead");
@@ -1159,7 +1161,6 @@ class CPL_DLL OGRTriangle : public OGRPolygon
 
     // New methods interfaced through SFCGAL or rewritten from OGRPolygon/OGRCurvePolygon/OGRGeometry
     virtual OGRGeometry *Boundary() const CPL_WARN_UNUSED_RESULT;
-    virtual double Distance3D(const OGRGeometry *poOtherGeom) const;
     virtual OGRBoolean  IsSimple() const;
     virtual OGRErr addRing	(OGRCurve *poNewRing);
     virtual OGRGeometry *SymDifference( const OGRGeometry *poOtherGeom) const CPL_WARN_UNUSED_RESULT;
@@ -1395,7 +1396,6 @@ class CPL_DLL OGRPolyhedralSurface : public OGRSurface
     virtual void set3D( OGRBoolean bIs3D );
     virtual void setMeasured( OGRBoolean bIsMeasured );
     virtual void swapXY();
-    virtual double Distance3D(const OGRGeometry *poOtherGeom) const;
     virtual OGRErr removeGeometry( int iIndex, int bDelete = TRUE );
 };
 

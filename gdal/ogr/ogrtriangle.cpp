@@ -703,63 +703,6 @@ int OGRTriangle::WkbSize() const
 }
 
 /************************************************************************/
-/*                             Distance3D()                             */
-/************************************************************************/
-
-/**
- * \brief Returns the 3D distance between
- *
- * The distance is expressed into the same unit as the coordinates of the geometries.
- *
- * This method is built on the SFCGAL library, check it for the definition
- * of the geometry operation.
- * If OGR is built without the SFCGAL library, this method will always return
- * -1.0
- *
- * @return distance between the two geometries
- */
-
-double OGRTriangle::Distance3D(UNUSED_IF_NO_SFCGAL const OGRGeometry *poOtherGeom) const
-{
-    if (poOtherGeom == NULL)
-    {
-        CPLDebug( "OGR", "OGRTriangle::Distance3D called with NULL geometry pointer" );
-        return -1.0;
-    }
-
-    if (!(poOtherGeom->Is3D() && this->Is3D()))
-    {
-        CPLDebug( "OGR", "OGRGeometry::Distance3D called with two dimensional geometry(geometries)" );
-        return -1.0;
-    }
-
-#ifndef HAVE_SFCGAL
-
-    CPLError( CE_Failure, CPLE_NotSupported, "SFCGAL support not enabled." );
-    return -1.0;
-
-#else
-
-    sfcgal_init();
-    sfcgal_geometry_t *poThis = OGRGeometry::OGRexportToSFCGAL((OGRGeometry *)this);
-    if (poThis == NULL)
-        return -1.0;
-
-    sfcgal_geometry_t *poOther = OGRGeometry::OGRexportToSFCGAL((OGRGeometry *)poOtherGeom);
-    if (poOther == NULL)
-        return -1.0;
-
-    double _distance = sfcgal_geometry_distance_3d(poThis, poOther);
-
-    sfcgal_geometry_delete(poThis);
-    sfcgal_geometry_delete(poOther);
-
-    return (_distance > 0)? _distance: -1.0;
-
-#endif
-}
-
-/************************************************************************/
 /*                               addRing()                              */
 /************************************************************************/
 
