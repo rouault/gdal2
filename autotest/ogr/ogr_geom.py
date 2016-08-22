@@ -219,22 +219,24 @@ def ogr_geom_polyhedral_surface():
         gdaltest.post_reason ("Failure in Wkb methods of PolyhedralSurface")
         return 'fail'
 
-    area = ps.Area()
-    if area != 6.0:
-        gdaltest.post_reason ("Wrong area of PolyhedralSurface")
-        return 'fail'
+    if ogrtest.have_sfcgal():
+        area = ps.Area()
+        if area != 6.0:
+            gdaltest.post_reason ("Wrong area of PolyhedralSurface")
+            return 'fail'
 
     size = ps.WkbSize()
     if size != 807:
         gdaltest.post_reason ("Wrong WkbSize() of PolyhedralSurface")
         return 'fail'
 
-    geom = ps.DelaunayTriangulation(0.0,True)
-    wkt_geom_dt = 'MULTILINESTRING ((0 1 0,1 1 0),(0 0 0,0 1 0),(0 0 0,1 0 0),(1 0 0,1 1 0),(0 1 0,1 0 0))'
-    wkt_geom = geom.ExportToWkt()
-    if wkt_geom != wkt_geom_dt:
-        gdaltest.post_reason ("Failure in DelaunayTriangulation() of PolyhedralSurface")
-        return 'fail'
+    if ogrtest.have_sfcgal():
+        geom = ps.DelaunayTriangulation(0.0,True)
+        wkt_geom_dt = 'MULTILINESTRING ((0 1 0,1 1 0),(0 0 0,0 1 0),(0 0 0,1 0 0),(1 0 0,1 1 0),(0 1 0,1 0 0))'
+        wkt_geom = geom.ExportToWkt()
+        if wkt_geom != wkt_geom_dt:
+            gdaltest.post_reason ("Failure in DelaunayTriangulation() of PolyhedralSurface")
+            return 'fail'
 
     geom = ogr.CreateGeometryFromWkb(wkb_string)
     if ps.Contains(geom) != True:
@@ -280,10 +282,11 @@ def ogr_geom_tin():
         gdaltest.post_reason ("Failure in Wkb methods of TIN")
         return 'fail'
 
-    area = 12.3*tin.Area()
-    if area != 12.3:
-        gdaltest.post_reason ("Wrong area of TIN")
-        return 'fail'
+    if ogrtest.have_sfcgal():
+        area = 12.3*tin.Area()
+        if area != 12.3:
+            gdaltest.post_reason ("Wrong area of TIN")
+            return 'fail'
 
     size = tin.WkbSize()
     if size != 227:
@@ -1264,6 +1267,9 @@ def ogr_geom_getdimension():
 # Test OGRTriangle. Tests if the GEOS/SFCGAL methods are working
 
 def ogr_geom_triangle():
+
+    if not ogrtest.have_sfcgal():
+        return 'skip'
 
     g1 = ogr.CreateGeometryFromWkt( 'TRIANGLE ((0 0,100 0 100,0 100 100,0 0))' )
     g2 = ogr.CreateGeometryFromWkt( 'TRIANGLE ((-1 -1,100 0 100,0 100 100,-1 -1))' )
