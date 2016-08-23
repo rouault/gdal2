@@ -329,6 +329,14 @@ OGRErr OGRPolyhedralSurface::importFromWkb ( unsigned char * pabyData,
         if( eErr != OGRERR_NONE )
             return eErr;
 
+        if( !isCompatibleSubType(eSubGeomType) )
+        {
+            oMP.nGeomCount = iGeom;
+            CPLDebug("OGR", "Cannot add geometry of type (%d) to geometry of type (%d)",
+                     eSubGeomType, getGeometryType());
+            return OGRERR_CORRUPT_DATA;
+        }
+
         OGRGeometry* poSubGeom = NULL;
         eErr = OGRGeometryFactory::createFromWkb( pabySubData, NULL, &poSubGeom, nSize, eWkbVariant );
 
@@ -400,16 +408,10 @@ OGRErr  OGRPolyhedralSurface::exportToWkb ( OGRwkbByteOrder eByteOrder,
 
     if ( eWkbVariant == wkbVariantIso )
         nGType = getIsoGeometryType();
-    else if( eWkbVariant == wkbVariantPostGIS1 )
+    else
     {
-        int bIs3D = wkbHasZ((OGRwkbGeometryType)nGType);
-        nGType = wkbFlatten(nGType);
-        if( nGType == wkbMultiCurve )
-            nGType = POSTGIS15_MULTICURVE;
-        else if( nGType == wkbMultiSurface )
-            nGType = POSTGIS15_MULTISURFACE;
-        if( bIs3D )
-            nGType = (OGRwkbGeometryType)(nGType | wkb25DBitInternalUse); /* yes we explicitly set wkb25DBit */
+        eWkbVariant = wkbVariantIso;
+        nGType = getIsoGeometryType();
     }
 
     if( eByteOrder == wkbNDR )
@@ -811,6 +813,18 @@ OGRSurfaceCasterToCurvePolygon OGRPolyhedralSurface::GetCasterToCurvePolygon() c
 }
 //! @endcond
 
+
+/************************************************************************/
+/*                         isCompatibleSubType()                        */
+/************************************************************************/
+
+//! @cond Doxygen_Suppress
+OGRBoolean OGRPolyhedralSurface::isCompatibleSubType( OGRwkbGeometryType eSubType ) const
+{
+    return wkbFlatten( eSubType ) == wkbPolygon;
+}
+//! @endcond
+
 /************************************************************************/
 /*                               Equals()                               */
 /************************************************************************/
@@ -945,7 +959,7 @@ OGRErr OGRPolyhedralSurface::addGeometry (const OGRGeometry *poNewGeom)
     if (poClone == NULL)
         return OGRERR_FAILURE;
 
-    eErr = oMP.addGeometryDirectly(poClone);
+    eErr = addGeometryDirectly(poClone);
 
     if( eErr != OGRERR_NONE )
         delete poClone;

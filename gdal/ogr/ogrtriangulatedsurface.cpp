@@ -132,31 +132,6 @@ OGRwkbGeometryType OGRTriangulatedSurface::getGeometryType() const
 }
 
 /************************************************************************/
-/*                              WkbSize()                               */
-/************************************************************************/
-
-/**
- * \brief Returns size of related binary representation.
- *
- * This method returns the exact number of bytes required to hold the
- * well known binary representation of this geometry object.
- *
- * This method relates to the SFCOM IWks::WkbSize() method.
- *
- * This method is the same as the C function OGR_G_WkbSize().
- *
- * @return size of binary representation in bytes.
- */
-
-int OGRTriangulatedSurface::WkbSize() const
-{
-    int nSize = 9;
-    for( int i = 0; i < oMP.nGeomCount; i++ )
-        nSize += oMP.papoGeoms[i]->WkbSize();
-    return nSize;
-}
-
-/************************************************************************/
 /*                               clone()                                */
 /************************************************************************/
 
@@ -193,168 +168,15 @@ OGRGeometry* OGRTriangulatedSurface::clone() const
 }
 
 /************************************************************************/
-/*                           importFromWkb()                            */
+/*                         isCompatibleSubType()                        */
 /************************************************************************/
 
-/**
- * \brief Assign geometry from well known binary data.
- *
- * The object must have already been instantiated as the correct derived
- * type of geometry object to match the binaries type.  This method is used
- * by the OGRGeometryFactory class, but not normally called by application
- * code.
- *
- * This method relates to the SFCOM IWks::ImportFromWKB() method.
- *
- * This method is the same as the C function OGR_G_ImportFromWkb().
- *
- * @param pabyData the binary input data.
- * @param nSize the size of pabyData in bytes, or zero if not known.
- * @param eWkbVariant if wkbVariantPostGIS1, special interpretation is done for curve geometries code
- *
- * @return OGRERR_NONE if all goes well, otherwise any of
- * OGRERR_NOT_ENOUGH_DATA, OGRERR_UNSUPPORTED_GEOMETRY_TYPE, or
- * OGRERR_CORRUPT_DATA may be returned.
- */
-
-OGRErr OGRTriangulatedSurface::importFromWkb ( unsigned char * pabyData,
-                                               int nSize,
-                                               OGRwkbVariant eWkbVariant )
+//! @cond Doxygen_Suppress
+OGRBoolean OGRTriangulatedSurface::isCompatibleSubType( OGRwkbGeometryType eSubType ) const
 {
-    oMP.nGeomCount = 0;
-    OGRwkbByteOrder eByteOrder = wkbXDR;
-    int nDataOffset = 0;
-    OGRErr eErr = importPreambuleOfCollectionFromWkb( pabyData,
-                                                      nSize,
-                                                      nDataOffset,
-                                                      eByteOrder,
-                                                      9,
-                                                      oMP.nGeomCount,
-                                                      eWkbVariant );
-
-    if( eErr != OGRERR_NONE )
-        return eErr;
-
-    oMP.papoGeoms = (OGRGeometry **) VSI_CALLOC_VERBOSE(sizeof(void*), oMP.nGeomCount);
-    if (oMP.nGeomCount != 0 && oMP.papoGeoms == NULL)
-    {
-        oMP.nGeomCount = 0;
-        return OGRERR_NOT_ENOUGH_MEMORY;
-    }
-
-    // for each geometry
-    for( int iGeom = 0; iGeom < oMP.nGeomCount; iGeom++ )
-    {
-        // Parse the polygons
-        unsigned char* pabySubData = pabyData + nDataOffset;
-        if( nSize < 9 && nSize != -1 )
-            return OGRERR_NOT_ENOUGH_DATA;
-
-        OGRwkbGeometryType eSubGeomType;
-        eErr = OGRReadWKBGeometryType( pabySubData, eWkbVariant, &eSubGeomType );
-        if( eErr != OGRERR_NONE )
-            return eErr;
-
-        OGRGeometry* poSubGeom = NULL;
-        eErr = OGRGeometryFactory::createFromWkb( pabySubData, NULL, &poSubGeom, nSize, eWkbVariant );
-
-        if( eErr != OGRERR_NONE )
-        {
-            oMP.nGeomCount = iGeom;
-            delete poSubGeom;
-            return eErr;
-        }
-
-        oMP.papoGeoms[iGeom] = poSubGeom;
-
-        if (oMP.papoGeoms[iGeom]->Is3D())
-            flags |= OGR_G_3D;
-        if (oMP.papoGeoms[iGeom]->IsMeasured())
-            flags |= OGR_G_MEASURED;
-
-        int nSubGeomWkbSize = oMP.papoGeoms[iGeom]->WkbSize();
-        if( nSize != -1 )
-            nSize -= nSubGeomWkbSize;
-
-        nDataOffset += nSubGeomWkbSize;
-    }
-
-    return OGRERR_NONE;
+    return wkbFlatten( eSubType ) == wkbTriangle;
 }
-
-/************************************************************************/
-/*                            exportToWkb()                             */
-/*      Build a well known binary representation of this object.        */
-/************************************************************************/
-
-/**
- * \brief Convert a geometry into well known binary format.
- *
- * This method relates to the SFCOM IWks::ExportToWKB() method.
- *
- * This method is the same as the C function OGR_G_ExportToWkb() or OGR_G_ExportToIsoWkb(),
- * depending on the value of eWkbVariant.
- *
- * @param eByteOrder One of wkbXDR or wkbNDR indicating MSB or LSB byte order
- *               respectively.
- * @param pabyData a buffer into which the binary representation is
- *                      written.  This buffer must be at least
- *                      OGRGeometry::WkbSize() byte in size.
- * @param eWkbVariant What standard to use when exporting geometries with
- *                      three dimensions (or more). The default wkbVariantOldOgc is
- *                      the historical OGR variant. wkbVariantIso is the
- *                      variant defined in ISO SQL/MM and adopted by OGC
- *                      for SFSQL 1.2.
- *
- * @return Currently OGRERR_NONE is always returned.
- */
-
-OGRErr  OGRTriangulatedSurface::exportToWkb ( OGRwkbByteOrder eByteOrder,
-                                              unsigned char * pabyData,
-                                              OGRwkbVariant eWkbVariant ) const
-
-{
-    // Set the byte order
-    pabyData[0] = DB2_V72_UNFIX_BYTE_ORDER((unsigned char) eByteOrder);
-
-    GUInt32 nGType = getGeometryType();
-
-    if ( eWkbVariant == wkbVariantIso )
-        nGType = getIsoGeometryType();
-
-    else
-    {
-        eWkbVariant = wkbVariantIso;
-        nGType = getIsoGeometryType();
-    }
-
-    if( eByteOrder == wkbNDR )
-        nGType = CPL_LSBWORD32( nGType );
-    else
-        nGType = CPL_MSBWORD32( nGType );
-
-    memcpy( pabyData + 1, &nGType, 4 );
-
-    // Copy the raw data
-    if( OGR_SWAP( eByteOrder ) )
-    {
-        int nCount = CPL_SWAP32( oMP.nGeomCount );
-        memcpy( pabyData+5, &nCount, 4 );
-    }
-    else
-        memcpy( pabyData+5, &oMP.nGeomCount, 4 );
-
-    int nOffset = 9;
-
-    // serialize each of the geometries
-    for( int iGeom = 0; iGeom < oMP.nGeomCount; iGeom++ )
-    {
-        oMP.papoGeoms[iGeom]->exportToWkb( eByteOrder, pabyData + nOffset, wkbVariantIso );
-        nOffset += oMP.papoGeoms[iGeom]->WkbSize();
-    }
-
-    return OGRERR_NONE;
-}
+//! @endcond
 
 /************************************************************************/
 /*                           importFromWkt()                            */

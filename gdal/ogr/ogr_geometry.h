@@ -1346,6 +1346,7 @@ class CPL_DLL OGRPolyhedralSurface : public OGRSurface
     OGRMultiPolygon oMP;
     virtual OGRSurfaceCasterToPolygon      GetCasterToPolygon() const;
     virtual OGRSurfaceCasterToCurvePolygon GetCasterToCurvePolygon() const;
+    virtual OGRBoolean         isCompatibleSubType( OGRwkbGeometryType ) const;
     OGRErr exportToWktInternal (char ** ppszDstText, OGRwkbVariant eWkbVariant, const char* pszSkipPrefix ) const;
 //! @endcond
 
@@ -1405,6 +1406,11 @@ class CPL_DLL OGRPolyhedralSurface : public OGRSurface
 
 class CPL_DLL OGRTriangulatedSurface : public OGRPolyhedralSurface
 {
+  protected:
+//! @cond Doxygen_Suppress
+    virtual OGRBoolean         isCompatibleSubType( OGRwkbGeometryType ) const;
+//! @endcond
+
   public:
     OGRTriangulatedSurface();
     OGRTriangulatedSurface(const OGRTriangulatedSurface &other);
@@ -1415,9 +1421,6 @@ class CPL_DLL OGRTriangulatedSurface : public OGRPolyhedralSurface
     virtual OGRwkbGeometryType getGeometryType() const;
 
     // IWks Interface
-    virtual int WkbSize() const;
-    virtual OGRErr importFromWkb(unsigned char *, int = -1, OGRwkbVariant=wkbVariantOldOgc);
-    virtual OGRErr exportToWkb(OGRwkbByteOrder, unsigned char *, OGRwkbVariant=wkbVariantOldOgc) const;
     virtual OGRErr importFromWkt(char **);
     virtual OGRErr exportToWkt(char ** ppszDstText, OGRwkbVariant=wkbVariantOldOgc) const;
 
