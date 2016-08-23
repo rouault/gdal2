@@ -552,7 +552,10 @@ OGRErr OGRTriangulatedSurface::addGeometry (const OGRGeometry *poNewGeom)
             return eErr;
         }
         else
+        {
+            delete poTriangle;
             return OGRERR_UNSUPPORTED_GEOMETRY_TYPE;
+        }
     }
 }
 
