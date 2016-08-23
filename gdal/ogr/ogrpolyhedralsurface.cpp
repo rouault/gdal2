@@ -543,7 +543,7 @@ OGRErr OGRPolyhedralSurface::importFromWkt( char ** ppszInput )
         }
 
         if( eErr == OGRERR_NONE )
-            eErr = oMP._addGeometryWithExpectedSubGeometryType( poSurface,
+            eErr = oMP._addGeometryDirectlyWithExpectedSubGeometryType( poSurface,
                                                       getSubGeometryType() );
         if( eErr != OGRERR_NONE )
         {
