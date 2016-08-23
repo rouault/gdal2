@@ -292,3 +292,22 @@ OGRErr OGRTriangle::addRingDirectly( OGRCurve * poNewRing )
         return OGRERR_FAILURE;
 }
 
+/************************************************************************/
+/*                      GetCasterToPolygon()                            */
+/************************************************************************/
+
+OGRSurfaceCasterToPolygon OGRTriangle::GetCasterToPolygon() const {
+    return (OGRSurfaceCasterToPolygon) OGRTriangle::CastToPolygon;
+}
+
+/************************************************************************/
+/*                        CastToPolygon()                               */
+/************************************************************************/
+
+OGRGeometry* OGRTriangle::CastToPolygon(OGRGeometry* poGeom)
+{
+    OGRGeometry* poRet = new OGRPolygon( *(OGRPolygon*)poGeom );
+    delete poGeom;
+    return poRet;
+}
+

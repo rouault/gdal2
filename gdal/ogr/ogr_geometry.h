@@ -1140,9 +1140,11 @@ class CPL_DLL OGRTriangle : public OGRPolygon
   private:
     bool quickValidityCheck() const;
 
+    static OGRGeometry* CastToPolygon(OGRGeometry* poGeom);
+
   protected:
 //! @cond Doxygen_Suppress
-    friend class OGRTriangulatedSurface;
+    virtual OGRSurfaceCasterToPolygon      GetCasterToPolygon() const;
 //! @endcond
 
   public:

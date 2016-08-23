@@ -801,7 +801,7 @@ OGRErr OGRPolyhedralSurface::transform( OGRCoordinateTransformation *poCT )
 //! @cond Doxygen_Suppress
 OGRSurfaceCasterToPolygon OGRPolyhedralSurface::GetCasterToPolygon() const
 {
-    return (OGRSurfaceCasterToPolygon) NULL;
+    return (OGRSurfaceCasterToPolygon) OGRGeometry::CastToError;
 }
 //! @endcond
 
@@ -812,7 +812,7 @@ OGRSurfaceCasterToPolygon OGRPolyhedralSurface::GetCasterToPolygon() const
 //! @cond Doxygen_Suppress
 OGRSurfaceCasterToCurvePolygon OGRPolyhedralSurface::GetCasterToCurvePolygon() const
 {
-    return (OGRSurfaceCasterToCurvePolygon) NULL;
+    return (OGRSurfaceCasterToCurvePolygon) OGRGeometry::CastToError;
 }
 //! @endcond
 

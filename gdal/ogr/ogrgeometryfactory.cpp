@@ -592,6 +592,12 @@ OGRGeometry *OGRGeometryFactory::forceToPolygon( OGRGeometry *poGeom )
         return poPoly;
     }
 
+    // base polygon or triangle
+    if( OGR_GT_IsSubClassOf( eGeomType, wkbPolygon ) )
+    {
+        return OGRSurface::CastToPolygon((OGRSurface*)poGeom);
+    }
+
     if( OGR_GT_IsCurve(eGeomType) &&
         ((OGRCurve*)poGeom)->getNumPoints() >= 3 &&
         ((OGRCurve*)poGeom)->get_IsClosed() )
@@ -765,6 +771,15 @@ OGRGeometry *OGRGeometryFactory::forceToMultiPolygon( OGRGeometry *poGeom )
         poMP->addGeometryDirectly( poPoly );
         delete poGeom;
         return poMP;
+    }
+
+/* -------------------------------------------------------------------- */
+/*      If it is PolyhedralSurface or TIN, then pretend it is a         */
+/*      multipolygon.                                                   */
+/* -------------------------------------------------------------------- */
+    if( OGR_GT_IsSubClassOf(eGeomType, wkbPolyhedralSurface) )
+    {
+        return OGRPolyhedralSurface::CastToMultiPolygon((OGRPolyhedralSurface*)poGeom);
     }
 
 /* -------------------------------------------------------------------- */

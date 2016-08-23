@@ -232,6 +232,18 @@ def ogr_geom_polyhedral_surface():
         gdaltest.post_reason ("Failure in Clone()")
         return 'fail'
 
+    polygon_wkt = ogr.ForceTo(geom.Clone(), ogr.wkbPolygon).ExportToWkt()
+    if polygon_wkt != wkt_original:
+        gdaltest.post_reason ("fail")
+        print(polygon_wkt)
+        return 'fail'
+
+    polygon_wkt = ogr.ForceTo(geom.Clone(), ogr.wkbMultiPolygon).ExportToWkt()
+    if polygon_wkt != 'MULTIPOLYGON (((0 0 0,0 0 1,0 1 1,0 1 0,0 0 0)),((0 0 0,0 1 0,1 1 0,1 0 0,0 0 0)),((0 0 0,1 0 0,1 0 1,0 0 1,0 0 0)),((1 1 0,1 1 1,1 0 1,1 0 0,1 1 0)),((0 1 0,0 1 1,1 1 1,1 1 0,0 1 0)),((0 0 1,1 0 1,1 1 1,0 1 1,0 0 1)))':
+        gdaltest.post_reason ("fail")
+        print(polygon_wkt)
+        return 'fail'
+
     if ogrtest.have_sfcgal():
         area = ps.Area()
         if area != 6.0:
@@ -1305,6 +1317,18 @@ def ogr_geom_triangle():
     wkt_string = geom.Clone().ExportToWkt()
     if wkt_string != wkt_original:
         gdaltest.post_reason ("Failure in Clone()")
+        return 'fail'
+
+    polygon_wkt = ogr.ForceTo(geom.Clone(), ogr.wkbPolygon).ExportToWkt()
+    if polygon_wkt != 'POLYGON ((0 0,0 1,1 1,0 0))':
+        gdaltest.post_reason ("fail")
+        print(polygon_wkt)
+        return 'fail'
+
+    polygon_wkt = ogr.ForceTo(geom.Clone(), ogr.wkbMultiPolygon).ExportToWkt()
+    if polygon_wkt != 'MULTIPOLYGON (((0 0,0 1,1 1,0 0)))':
+        gdaltest.post_reason ("fail")
+        print(polygon_wkt)
         return 'fail'
 
     return 'success'
