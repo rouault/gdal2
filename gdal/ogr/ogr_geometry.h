@@ -541,7 +541,7 @@ class CPL_DLL OGRSimpleCurve: public OGRCurve
                             double *padfMIn = NULL );
     void        setPoints( int, double * padfX, double * padfY,
                            double *padfZIn, double *padfMIn );
-    void        addPoint( OGRPoint * );
+    void        addPoint( const OGRPoint * );
     void        addPoint( double, double );
     void        addPoint( double, double, double );
     void        addPointM( double, double, double );
@@ -1137,6 +1137,9 @@ class CPL_DLL OGRPolygon : public OGRCurvePolygon
 
 class CPL_DLL OGRTriangle : public OGRPolygon
 {
+  private:
+    bool quickValidityCheck() const;
+
   protected:
 //! @cond Doxygen_Suppress
     friend class OGRTriangulatedSurface;
@@ -1153,14 +1156,11 @@ class CPL_DLL OGRTriangle : public OGRPolygon
     virtual OGRwkbGeometryType getGeometryType() const;
 
     // IWks Interface
-    virtual int WkbSize() const;
     virtual OGRErr importFromWkb( unsigned char *, int = -1, OGRwkbVariant=wkbVariantOldOgc );
-    virtual OGRErr exportToWkb( OGRwkbByteOrder, unsigned char *, OGRwkbVariant=wkbVariantOldOgc ) const;
     virtual OGRErr importFromWkt( char ** );
-    virtual OGRErr exportToWkt( char ** ppszDstText, OGRwkbVariant=wkbVariantOldOgc ) const;
 
     // New methods rewritten from OGRPolygon/OGRCurvePolygon/OGRGeometry
-    virtual OGRErr addRing	(OGRCurve *poNewRing);
+    virtual OGRErr addRingDirectly( OGRCurve * poNewRing );
 };
 
 /************************************************************************/
@@ -1306,8 +1306,12 @@ class CPL_DLL OGRMultiPolygon : public OGRMultiSurface
 
   private:
 //! @cond Doxygen_Suppress
-            OGRErr _addGeometry(const OGRGeometry * poNewGeom );
-            OGRErr _addGeometryDirectly( OGRGeometry * poNewGeom );
+            OGRErr _addGeometryWithExpectedSubGeometryType(
+                                const OGRGeometry * poNewGeom,
+                                OGRwkbGeometryType eSubGeometryType );
+            OGRErr _addGeometryDirectlyWithExpectedSubGeometryType(
+                                         OGRGeometry * poNewGeom,
+                                         OGRwkbGeometryType eSubGeometryType );
 //! @endcond
   public:
             OGRMultiPolygon();
@@ -1347,6 +1351,8 @@ class CPL_DLL OGRPolyhedralSurface : public OGRSurface
     virtual OGRSurfaceCasterToPolygon      GetCasterToPolygon() const;
     virtual OGRSurfaceCasterToCurvePolygon GetCasterToCurvePolygon() const;
     virtual OGRBoolean         isCompatibleSubType( OGRwkbGeometryType ) const;
+    virtual const char*        getSubGeometryName() const;
+    virtual OGRwkbGeometryType getSubGeometryType() const;
     OGRErr exportToWktInternal (char ** ppszDstText, OGRwkbVariant eWkbVariant, const char* pszSkipPrefix ) const;
 //! @endcond
 
@@ -1409,6 +1415,8 @@ class CPL_DLL OGRTriangulatedSurface : public OGRPolyhedralSurface
   protected:
 //! @cond Doxygen_Suppress
     virtual OGRBoolean         isCompatibleSubType( OGRwkbGeometryType ) const;
+    virtual const char*        getSubGeometryName() const;
+    virtual OGRwkbGeometryType getSubGeometryType() const;
 //! @endcond
 
   public:
@@ -1421,12 +1429,8 @@ class CPL_DLL OGRTriangulatedSurface : public OGRPolyhedralSurface
     virtual OGRwkbGeometryType getGeometryType() const;
 
     // IWks Interface
-    virtual OGRErr importFromWkt(char **);
-    virtual OGRErr exportToWkt(char ** ppszDstText, OGRwkbVariant=wkbVariantOldOgc) const;
-
-    virtual OGRGeometry *clone() const;
     virtual OGRErr addGeometry( const OGRGeometry * );
-    virtual OGRErr addGeometryDirectly(OGRGeometry *poNewGeom);
+
     static OGRMultiPolygon* CastToMultiPolygon(OGRTriangulatedSurface* poTS);
 };
 

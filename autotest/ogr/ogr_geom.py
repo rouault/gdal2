@@ -227,6 +227,11 @@ def ogr_geom_polyhedral_surface():
         gdaltest.post_reason ("Failure in Wkb methods of PolyhedralSurface")
         return 'fail'
 
+    wkt_string = geom.Clone().ExportToWkt()
+    if wkt_string != wkt_original:
+        gdaltest.post_reason ("Failure in Clone()")
+        return 'fail'
+
     if ogrtest.have_sfcgal():
         area = ps.Area()
         if area != 6.0:
@@ -289,6 +294,11 @@ def ogr_geom_tin():
     wkt_string = geom.ExportToWkt()
     if wkt_string != wkt_original:
         gdaltest.post_reason ("Failure in Wkb methods of TIN")
+        return 'fail'
+
+    wkt_string = geom.Clone().ExportToWkt()
+    if wkt_string != wkt_original:
+        gdaltest.post_reason ("Failure in Clone()")
         return 'fail'
 
     if ogrtest.have_sfcgal():
@@ -1255,7 +1265,9 @@ def ogr_geom_getdimension():
                   ('CURVEPOLYGON EMPTY', 2),
                   ('MULTICURVE EMPTY', 1),
                   ('TRIANGLE EMPTY', 2),
-                  ('MULTISURFACE EMPTY', 2) ]:
+                  ('MULTISURFACE EMPTY', 2),
+                  ('POLYHEDRALSURFACE EMPTY', 2),
+                  ('TIN EMPTY', 2) ]:
         g = ogr.CreateGeometryFromWkt(geom)
         if g.GetDimension() != dim:
             gdaltest.post_reason('fail')
@@ -1271,6 +1283,28 @@ def ogr_geom_getdimension():
     g = ogr.CreateGeometryFromWkt('GEOMETRYCOLLECTION(POINT (0 1), LINESTRING EMPTY, POLYGON EMPTY)')
     if g.GetDimension() != 2:
         gdaltest.post_reason('fail')
+        return 'fail'
+
+    return 'success'
+
+###############################################################################
+# Test triangle
+
+def ogr_geom_triangle():
+
+    wkt_original = 'TRIANGLE ((0 0,0 1,1 1,0 0))'
+    geom = ogr.CreateGeometryFromWkt(wkt_original)
+
+    wkb_string = geom.ExportToWkb(ogr.wkbXDR)
+    geom = ogr.CreateGeometryFromWkb(wkb_string)
+    wkt_string = geom.ExportToWkt()
+    if wkt_string != wkt_original:
+        gdaltest.post_reason ("Failure in Wkb methods of Triangle")
+        return 'fail'
+
+    wkt_string = geom.Clone().ExportToWkt()
+    if wkt_string != wkt_original:
+        gdaltest.post_reason ("Failure in Clone()")
         return 'fail'
 
     return 'success'
@@ -3520,6 +3554,8 @@ def ogr_geom_gt_functions():
                (ogr.wkbMultiLineString, ogr.wkbMultiCurve, 1),
                (ogr.wkbUnknown, ogr.wkbUnknown, 1),
                (ogr.wkbUnknown, ogr.wkbPoint, 0),
+               (ogr.wkbTIN, ogr.wkbPolyhedralSurface,1),
+               (ogr.wkbPolyhedralSurface, ogr.wkbTIN,0),
                ]
     for (gt, gt2, res) in tuples:
         if ogr.GT_IsSubClassOf(gt, gt2) != res:
@@ -3540,7 +3576,10 @@ def ogr_geom_gt_functions():
                (ogr.wkbCompoundCurveZ, 1),
                (ogr.wkbCompoundCurveM, 1),
                (ogr.wkbCompoundCurveZM, 1),
-               (ogr.wkbCurvePolygon, 0) ]
+               (ogr.wkbCurvePolygon, 0),
+               (ogr.wkbTriangle, 0),
+               (ogr.wkbPolyhedralSurface, 0),
+               (ogr.wkbTIN, 0) ]
     for (gt, res) in tuples:
         if ogr.GT_IsCurve(gt) != res:
             gdaltest.post_reason('fail')
@@ -3558,7 +3597,9 @@ def ogr_geom_gt_functions():
                (ogr.wkbCurvePolygonM, 1),
                (ogr.wkbCurvePolygonZM, 1),
                (ogr.wkbPolygon, 1),
-               (ogr.wkbTriangle, 1) ]
+               (ogr.wkbTriangle, 1),
+               (ogr.wkbPolyhedralSurface, 1),
+               (ogr.wkbTIN, 1) ]
     for (gt, res) in tuples:
         if ogr.GT_IsSurface(gt) != res:
             gdaltest.post_reason('fail')
@@ -3929,6 +3970,8 @@ def ogr_geom_import_corrupted_wkb():
                  'MULTISURFACE ZM (((1 2 3 4)))',
                  'GEOMETRYCOLLECTION ZM (POINT ZM (1 2 3 4))',
                  'TRIANGLE ZM ((0 0 3 4,0 1 3 4,1 1 3 4,0 0 3 4))',
+                 'POLYHEDRALSURFACE ZM (((0 0 3 4,0 1 3 4,1 1 3 4,0 0 3 4)),((0 0 3 4,0 1 3 4,1 1 3 4,0 0 3 4)))',
+                 'TIN ZM (((0 0 3 4,0 1 3 4,1 1 3 4,0 0 3 4)),((0 0 3 4,0 1 3 4,1 1 3 4,0 0 3 4)))',
                ]
 
     for wkt in list_wkt:
@@ -4015,6 +4058,7 @@ gdaltest_list = [
     ogr_geom_length_multilinestring,
     ogr_geom_length_geometrycollection,
     ogr_geom_empty_triangle,
+    ogr_geom_triangle,
     ogr_geom_triangle_invalid_wkt,
     ogr_geom_triangle_sfcgal,
     ogr_geom_empty,

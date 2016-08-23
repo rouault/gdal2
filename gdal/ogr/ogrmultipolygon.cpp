@@ -177,13 +177,15 @@ OGRMultiSurface* OGRMultiPolygon::CastToMultiSurface(OGRMultiPolygon* poMP)
 }
 
 /************************************************************************/
-/*                           _addGeometry()                             */
-/*      Only to be used in conjunction with OGRTriangulatedSurface.     */
+/*               _addGeometryWithExpectedSubGeometryType()              */
+/*      Only to be used in conjunction with OGRPolyhedralSurface.       */
 /*                        DO NOT USE IT ELSEWHERE.                      */
 /************************************************************************/
 
 //! @cond Doxygen_Suppress
-OGRErr OGRMultiPolygon::_addGeometry( const OGRGeometry * poNewGeom )
+OGRErr OGRMultiPolygon::_addGeometryWithExpectedSubGeometryType(
+                                      const OGRGeometry * poNewGeom,
+                                      OGRwkbGeometryType eSubGeometryType )
 
 {
     OGRGeometry *poClone = poNewGeom->clone();
@@ -191,7 +193,7 @@ OGRErr OGRMultiPolygon::_addGeometry( const OGRGeometry * poNewGeom )
 
     if( poClone == NULL )
         return OGRERR_FAILURE;
-    eErr = _addGeometryDirectly( poClone );
+    eErr = _addGeometryDirectlyWithExpectedSubGeometryType( poClone, eSubGeometryType );
     if( eErr != OGRERR_NONE )
         delete poClone;
 
@@ -200,15 +202,17 @@ OGRErr OGRMultiPolygon::_addGeometry( const OGRGeometry * poNewGeom )
 //! @endcond
 
 /************************************************************************/
-/*                         _addGeometryDirectly()                       */
-/*      Only to be used in conjunction with OGRTriangulatedSurface.     */
+/*                 _addGeometryDirectlyWithExpectedSubGeometryType()    */
+/*      Only to be used in conjunction with OGRPolyhedralSurface.       */
 /*                        DO NOT USE IT ELSEWHERE.                      */
 /************************************************************************/
 
 //! @cond Doxygen_Suppress
-OGRErr OGRMultiPolygon::_addGeometryDirectly( OGRGeometry * poNewGeom )
+OGRErr OGRMultiPolygon::_addGeometryDirectlyWithExpectedSubGeometryType(
+                                      OGRGeometry * poNewGeom,
+                                      OGRwkbGeometryType eSubGeometryType )
 {
-    if ( wkbFlatten(poNewGeom->getGeometryType()) != wkbTriangle)
+    if ( wkbFlatten(poNewGeom->getGeometryType()) != eSubGeometryType)
         return OGRERR_UNSUPPORTED_GEOMETRY_TYPE;
 
     if( poNewGeom->Is3D() && !Is3D() )

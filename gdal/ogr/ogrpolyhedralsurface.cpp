@@ -30,7 +30,6 @@
 #include "ogr_geometry.h"
 #include "ogr_p.h"
 #include "ogr_sfcgal.h"
-#include "ogr_geos.h"
 #include "ogr_api.h"
 #include "ogr_libs.h"
 
@@ -219,7 +218,8 @@ OGRGeometry* OGRPolyhedralSurface::clone() const
 
     for( int i = 0; i < oMP.nGeomCount; i++ )
     {
-        if( poNewPS->oMP.addGeometry( oMP.papoGeoms[i] ) != OGRERR_NONE )
+        if( poNewPS->oMP._addGeometryWithExpectedSubGeometryType(
+                      oMP.papoGeoms[i], getSubGeometryType()) != OGRERR_NONE )
         {
             delete poNewPS;
             return NULL;
@@ -512,7 +512,8 @@ OGRErr OGRPolyhedralSurface::importFromWkt( char ** ppszInput )
     /* -------------------------------------------------------------------- */
         if (EQUAL(szToken,"("))
         {
-            OGRPolygon      *poPolygon = new OGRPolygon();
+            OGRPolygon *poPolygon = reinterpret_cast<OGRPolygon*>(
+                  OGRGeometryFactory::createGeometry( getSubGeometryType() ));
             poSurface = poPolygon;
             pszInput = pszInputBefore;
             eErr = poPolygon->importFromWKTListOnly( (char**)&pszInput, bHasZ, bHasM,
@@ -520,12 +521,13 @@ OGRErr OGRPolyhedralSurface::importFromWkt( char ** ppszInput )
         }
         else if (EQUAL(szToken, "EMPTY") )
         {
-            poSurface = new OGRPolygon();
+            poSurface = reinterpret_cast<OGRSurface*>(
+                  OGRGeometryFactory::createGeometry( getSubGeometryType() ));
         }
 
         /* We accept POLYGON() but this is an extension to the BNF, also */
         /* accepted by PostGIS */
-        else if (EQUAL(szToken,"POLYGON"))
+        else if (EQUAL(szToken,getSubGeometryName()))
         {
             OGRGeometry* poGeom = NULL;
             pszInput = pszInputBefore;
@@ -541,7 +543,8 @@ OGRErr OGRPolyhedralSurface::importFromWkt( char ** ppszInput )
         }
 
         if( eErr == OGRERR_NONE )
-            eErr = oMP.addGeometryDirectly( poSurface );
+            eErr = oMP._addGeometryWithExpectedSubGeometryType( poSurface,
+                                                      getSubGeometryType() );
         if( eErr != OGRERR_NONE )
         {
             delete poSurface;
@@ -591,7 +594,7 @@ OGRErr OGRPolyhedralSurface::importFromWkt( char ** ppszInput )
 OGRErr OGRPolyhedralSurface::exportToWkt ( char ** ppszDstText,
                                            CPL_UNUSED OGRwkbVariant eWkbVariant ) const
 {
-    return exportToWktInternal(ppszDstText, wkbVariantIso, "POLYGON");
+    return exportToWktInternal(ppszDstText, wkbVariantIso, getSubGeometryName());
 }
 
 //! @cond Doxygen_Suppress
@@ -826,6 +829,28 @@ OGRBoolean OGRPolyhedralSurface::isCompatibleSubType( OGRwkbGeometryType eSubTyp
 //! @endcond
 
 /************************************************************************/
+/*                         getSubGeometryName()                         */
+/************************************************************************/
+
+//! @cond Doxygen_Suppress
+const char* OGRPolyhedralSurface::getSubGeometryName() const
+{
+    return "POLYGON";
+}
+//! @endcond
+
+/************************************************************************/
+/*                         getSubGeometryType()                         */
+/************************************************************************/
+
+//! @cond Doxygen_Suppress
+OGRwkbGeometryType OGRPolyhedralSurface::getSubGeometryType() const
+{
+    return wkbPolygon;
+}
+//! @endcond
+
+/************************************************************************/
 /*                               Equals()                               */
 /************************************************************************/
 
@@ -950,7 +975,7 @@ OGRMultiPolygon* OGRPolyhedralSurface::CastToMultiPolygon(OGRPolyhedralSurface* 
 
 OGRErr OGRPolyhedralSurface::addGeometry (const OGRGeometry *poNewGeom)
 {
-    if (!EQUAL(poNewGeom->getGeometryName(),"POLYGON"))
+    if (!isCompatibleSubType(poNewGeom->getGeometryType()))
         return OGRERR_UNSUPPORTED_GEOMETRY_TYPE;
 
     OGRGeometry *poClone = poNewGeom->clone();
@@ -986,7 +1011,7 @@ OGRErr OGRPolyhedralSurface::addGeometry (const OGRGeometry *poNewGeom)
 
 OGRErr OGRPolyhedralSurface::addGeometryDirectly (OGRGeometry *poNewGeom)
 {
-    if (!EQUAL(poNewGeom->getGeometryName(), "POLYGON"))
+    if (!isCompatibleSubType(poNewGeom->getGeometryType()))
     {
         return OGRERR_UNSUPPORTED_GEOMETRY_TYPE;
     }
@@ -1144,8 +1169,6 @@ void OGRPolyhedralSurface::swapXY()
  * a CIRCULARSTRING.
  *
  * @return TRUE if this geometry is or has curve geometry.
- *
- * @since GDAL 2.0
  */
 
 

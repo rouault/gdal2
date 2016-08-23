@@ -28,11 +28,8 @@
  ****************************************************************************/
 
 #include "ogr_geometry.h"
-#include "ogr_p.h"
-#include "ogr_sfcgal.h"
-#include "ogr_geos.h"
 #include "ogr_api.h"
-#include "ogr_libs.h"
+#include "cpl_error.h"
 
 CPL_CVSID("$Id$");
 
@@ -77,34 +74,15 @@ OGRTriangle::OGRTriangle(const OGRPolygon& other, OGRErr &eErr)
     // In case of Polygon, we have to check that it is a valid triangle -
     // closed and contains one external ring of four points
     // If not, then eErr will contain the error description
-    if (other.getNumInteriorRings() == 0)
+    const OGRCurve *poCurve = other.getExteriorRingCurve();
+    if (other.getNumInteriorRings() == 0 &&
+        poCurve != NULL && poCurve->get_IsClosed() &&
+        poCurve->getNumPoints() == 4)
     {
-        OGRCurve *poCurve = (OGRCurve *)other.getExteriorRingCurve();
-        if (poCurve->get_IsClosed() && poCurve != NULL)
-        {
-            if (poCurve->getNumPoints() == 4)
-            {
-                // everything is fine
-                eErr = this->addRing(poCurve);
-                if (eErr != OGRERR_NONE)
-                    CPLError( CE_Failure, CPLE_NotSupported, "Invalid Polygon");
-            }
-            else
-            {
-                eErr = OGRERR_UNSUPPORTED_GEOMETRY_TYPE;
-                CPLError( CE_Failure, CPLE_NotSupported, "Invalid Polygon");
-            }
-        }
-        else
-        {
-            eErr = OGRERR_UNSUPPORTED_GEOMETRY_TYPE;
-            CPLError( CE_Failure, CPLE_NotSupported, "Invalid Polygon");
-        }
-    }
-    else
-    {
-        eErr = OGRERR_UNSUPPORTED_GEOMETRY_TYPE;
-        CPLError( CE_Failure, CPLE_NotSupported, "Invalid Polygon");
+        // everything is fine
+        eErr = this->addRing( const_cast<OGRCurve*>(poCurve) );
+        if (eErr != OGRERR_NONE)
+            CPLError( CE_Failure, CPLE_NotSupported, "Invalid Triangle");
     }
 }
 
@@ -123,18 +101,12 @@ OGRTriangle::OGRTriangle(const OGRPolygon& other, OGRErr &eErr)
 OGRTriangle::OGRTriangle(const OGRPoint &p, const OGRPoint &q, const OGRPoint &r)
 {
     OGRLinearRing *poCurve = new OGRLinearRing();
-    OGRPoint *poPoint_1 = new OGRPoint(p);
-    OGRPoint *poPoint_2 = new OGRPoint(q);
-    OGRPoint *poPoint_3 = new OGRPoint(r);
-    poCurve->addPoint(poPoint_1);
-    poCurve->addPoint(poPoint_2);
-    poCurve->addPoint(poPoint_3);
-    poCurve->addPoint(poPoint_1);
+    poCurve->addPoint(&p);
+    poCurve->addPoint(&q);
+    poCurve->addPoint(&r);
+    poCurve->addPoint(&p);
 
-    oCC.addCurveDirectly(poCurve, poCurve, TRUE);
-    delete poPoint_1;
-    delete poPoint_2;
-    delete poPoint_3;
+    oCC.addCurveDirectly(this, poCurve, TRUE);
 }
 
 /************************************************************************/
@@ -215,6 +187,18 @@ OGRwkbGeometryType OGRTriangle::getGeometryType() const
 }
 
 /************************************************************************/
+/*                        quickValidityCheck()                          */
+/************************************************************************/
+
+bool OGRTriangle::quickValidityCheck() const
+{
+    return oCC.nCurveCount == 0 ||
+           (oCC.nCurveCount == 1 &&
+            oCC.papoCurves[0]->getNumPoints() == 4 &&
+            oCC.papoCurves[0]->get_IsClosed());
+}
+
+/************************************************************************/
 /*                           importFromWkb()                            */
 /************************************************************************/
 
@@ -243,129 +227,14 @@ OGRErr OGRTriangle::importFromWkb( unsigned char *pabyData,
                                   int nSize,
                                   OGRwkbVariant eWkbVariant )
 {
-    OGRwkbByteOrder eByteOrder;
-    int nDataOffset = 0;
-    OGRErr eErr = oCC.importPreambuleFromWkb(this, pabyData, nSize, nDataOffset, eByteOrder, 4, eWkbVariant);
+    OGRErr eErr = OGRPolygon::importFromWkb( pabyData, nSize, eWkbVariant );
     if( eErr != OGRERR_NONE )
         return eErr;
 
-    // rings must not be greater than 1
-    if (oCC.nCurveCount > 1 )
+    if ( !quickValidityCheck() )
     {
         empty();
         return OGRERR_CORRUPT_DATA;
-    }
-
-    // get the individual LinearRing(s) and construct the triangle
-    // an additional check is to make sure there are 4 points
-
-    for(int iRing = 0; iRing < oCC.nCurveCount; iRing++)
-    {
-        OGRLinearRing* poLR = new OGRLinearRing();
-        oCC.papoCurves[iRing] = poLR;
-        eErr = poLR->_importFromWkb(eByteOrder, flags, pabyData + nDataOffset, nSize);
-        if (eErr != OGRERR_NONE)
-        {
-            delete oCC.papoCurves[iRing];
-            oCC.nCurveCount = iRing;
-            return eErr;
-        }
-
-        if (poLR->getNumPoints() != 4 || !poLR->get_IsClosed())
-        {
-              delete oCC.papoCurves[iRing];
-              oCC.nCurveCount = iRing;
-              return OGRERR_CORRUPT_DATA;
-        }
-
-        if (nSize != -1)
-            nSize -= poLR->_WkbSize( flags );
-
-        nDataOffset += poLR->_WkbSize( flags );
-    }
-
-    return OGRERR_NONE;
-}
-
-/************************************************************************/
-/*                            exportToWkb()                             */
-/************************************************************************/
-
-/**
- * \brief Convert a geometry into well known binary format.
- *
- * This method relates to the SFCOM IWks::ExportToWKB() method.
- *
- * This method is the same as the C function OGR_G_ExportToWkb() or OGR_G_ExportToIsoWkb(),
- * depending on the value of eWkbVariant.
- *
- * @param eByteOrder One of wkbXDR or wkbNDR indicating MSB or LSB byte order
- *               respectively.
- * @param pabyData a buffer into which the binary representation is
- *                      written.  This buffer must be at least
- *                      OGRGeometry::WkbSize() byte in size.
- * @param eWkbVariant What standard to use when exporting geometries with
- *                      three dimensions (or more). The default wkbVariantOldOgc is
- *                      the historical OGR variant. wkbVariantIso is the
- *                      variant defined in ISO SQL/MM and adopted by OGC
- *                      for SFSQL 1.2.
- *
- * @return Currently OGRERR_NONE is always returned.
- */
-
-OGRErr  OGRTriangle::exportToWkb( OGRwkbByteOrder eByteOrder,
-                                 unsigned char * pabyData,
-                                 OGRwkbVariant eWkbVariant ) const
-
-{
-
-    // Set the byte order according to machine (Big/Little Endian)
-    pabyData[0] = DB2_V72_UNFIX_BYTE_ORDER((unsigned char) eByteOrder);
-
-    // set the geometry type
-    // returns wkbTriangle, wkbTriangleZ or wkbTriangleZM; getGeometryType() built within Triangle API
-    GUInt32 nGType = getGeometryType();
-
-    // check the variations of WKB formats
-    if( eWkbVariant == wkbVariantPostGIS1 )
-    {
-        // No need to modify wkbFlatten() as it is optimised for Triangle and other geometries
-        nGType = wkbFlatten(nGType);
-        if(Is3D())
-            nGType = (OGRwkbGeometryType)(nGType | wkb25DBitInternalUse);
-        if(IsMeasured())
-            nGType = (OGRwkbGeometryType)(nGType | 0x40000000);
-    }
-
-    else if ( eWkbVariant == wkbVariantIso )
-        nGType = getIsoGeometryType();
-
-    // set the byte order
-    if( eByteOrder == wkbNDR )
-        nGType = CPL_LSBWORD32(nGType);
-    else
-        nGType = CPL_MSBWORD32(nGType);
-
-    memcpy( pabyData + 1, &nGType, 4 );
-
-    // Copy in the count of the rings after setting the correct byte order
-    if( OGR_SWAP( eByteOrder ) )
-    {
-        int     nCount;
-        nCount = CPL_SWAP32( oCC.nCurveCount );
-        memcpy( pabyData+5, &nCount, 4 );
-    }
-    else
-        memcpy( pabyData+5, &oCC.nCurveCount, 4 );
-
-    // cast every geometry into a LinearRing and attach it to the pabyData
-    int nOffset = 9;
-
-    for( int iRing = 0; iRing < oCC.nCurveCount; iRing++ )
-    {
-        OGRLinearRing* poLR = (OGRLinearRing*) oCC.papoCurves[iRing];
-        poLR->_exportToWkb( eByteOrder, flags, pabyData + nOffset );
-        nOffset += poLR->_WkbSize(flags);
     }
 
     return OGRERR_NONE;
@@ -398,246 +267,28 @@ OGRErr  OGRTriangle::exportToWkb( OGRwkbByteOrder eByteOrder,
 OGRErr OGRTriangle::importFromWkt( char ** ppszInput )
 
 {
-    int bHasZ = FALSE, bHasM = FALSE;
-    bool bIsEmpty = false;
-    OGRErr      eErr = importPreambuleFromWkt(ppszInput, &bHasZ, &bHasM, &bIsEmpty);
-    flags = 0;
+    OGRErr eErr = OGRPolygon::importFromWkt( ppszInput );
     if( eErr != OGRERR_NONE )
         return eErr;
-    if( bHasZ )
-        flags |= OGR_G_3D;
-    if( bHasM )
-        flags |= OGR_G_MEASURED;
-    if( bIsEmpty )
-        return OGRERR_NONE;
 
-    OGRRawPoint *paoPoints = NULL;
-    int          nMaxPoints = 0;
-    double      *padfZ = NULL;
-
-    eErr = importFromWKTListOnly(ppszInput, bHasZ, bHasM, paoPoints, nMaxPoints, padfZ);
-
-    if ( oCC.nCurveCount > 1 || (oCC.nCurveCount == 1 &&
-         (oCC.papoCurves[0]->getNumPoints() != 4 || !oCC.papoCurves[0]->get_IsClosed())) )
+    if ( !quickValidityCheck() )
     {
         empty();
-        eErr = OGRERR_CORRUPT_DATA;
+        return OGRERR_CORRUPT_DATA;
     }
-
-    CPLFree(paoPoints);
-    CPLFree(padfZ);
-
-    return eErr;
-}
-
-/************************************************************************/
-/*                            exportToWkt()                             */
-/************************************************************************/
-
-/**
- * \brief Convert a geometry into well known text format.
- *
- * This method relates to the SFCOM IWks::ExportToWKT() method.
- *
- * This method is the same as the C function OGR_G_ExportToWkt().
- *
- * @param ppszDstText a text buffer is allocated by the program, and assigned
- *                    to the passed pointer. After use, *ppszDstText should be
- *                    freed with OGRFree().
- * @param eWkbVariant the specification that must be conformed too :
- *                    - wbkVariantOgc for old-style 99-402 extended dimension (Z) WKB types
- *                    - wbkVariantIso for SFSQL 1.2 and ISO SQL/MM Part 3
- *
- * @return Currently OGRERR_NONE is always returned.
- */
-
-OGRErr OGRTriangle::exportToWkt( char ** ppszDstText,
-                                OGRwkbVariant eWkbVariant ) const
-
-{
-    OGRErr      eErr;
-    bool        bMustWriteComma = false;
-
-    // If there is no LinearRing, then the Triangle is empty
-    if (getExteriorRing() == NULL || getExteriorRing()->IsEmpty() )
-    {
-        if( eWkbVariant == wkbVariantIso )
-        {
-            if( (flags & OGR_G_3D) && (flags & OGR_G_MEASURED) )
-                *ppszDstText = CPLStrdup("TRIANGLE ZM EMPTY");
-            else if( flags & OGR_G_MEASURED )
-                *ppszDstText = CPLStrdup("TRIANGLE M EMPTY");
-            else if( flags & OGR_G_3D )
-                *ppszDstText = CPLStrdup("TRIANGLE Z EMPTY");
-            else
-                *ppszDstText = CPLStrdup("TRIANGLE EMPTY");
-        }
-        else
-            *ppszDstText = CPLStrdup("TRIANGLE EMPTY");
-        return OGRERR_NONE;
-    }
-
-    // Build a list of strings containing the stuff for the ring.
-    char **papszRings = (char **) CPLCalloc(sizeof(char *),oCC.nCurveCount);
-    size_t nCumulativeLength = 0;
-    size_t nNonEmptyRings = 0;
-    size_t *pnRingBeginning = (size_t *) CPLCalloc(sizeof(size_t),oCC.nCurveCount);
-
-    for( int iRing = 0; iRing < oCC.nCurveCount; iRing++ )
-    {
-        OGRLinearRing* poLR = (OGRLinearRing*) oCC.papoCurves[iRing];
-        //poLR->setFlags( getFlags() );
-        poLR->set3D(Is3D());
-        poLR->setMeasured(IsMeasured());
-        if( poLR->getNumPoints() == 0 )
-        {
-            papszRings[iRing] = NULL;
-            continue;
-        }
-
-        eErr = poLR->exportToWkt( &(papszRings[iRing]), eWkbVariant );
-        if( eErr != OGRERR_NONE )
-            goto error;
-
-        if( STARTS_WITH_CI(papszRings[iRing], "LINEARRING ZM (") )
-            pnRingBeginning[iRing] = 14;
-        else if( STARTS_WITH_CI(papszRings[iRing], "LINEARRING M (") )
-            pnRingBeginning[iRing] = 13;
-        else if( STARTS_WITH_CI(papszRings[iRing], "LINEARRING Z (") )
-            pnRingBeginning[iRing] = 13;
-        else if( STARTS_WITH_CI(papszRings[iRing], "LINEARRING (") )
-            pnRingBeginning[iRing] = 11;
-        else
-        {
-            CPLAssert( 0 );
-        }
-
-        nCumulativeLength += strlen(papszRings[iRing] + pnRingBeginning[iRing]);
-
-        nNonEmptyRings++;
-    }
-
-    // allocate space for the ring
-    *ppszDstText = (char *) VSI_MALLOC_VERBOSE(nCumulativeLength + nNonEmptyRings + 16);
-
-    if( *ppszDstText == NULL )
-    {
-        eErr = OGRERR_NOT_ENOUGH_MEMORY;
-        goto error;
-    }
-
-    // construct the string
-    if( eWkbVariant == wkbVariantIso )
-    {
-        if( (flags & OGR_G_3D) && (flags & OGR_G_MEASURED) )
-            strcpy( *ppszDstText, "TRIANGLE ZM (" );
-        else if( flags & OGR_G_MEASURED )
-            strcpy( *ppszDstText, "TRIANGLE M (" );
-        else if( flags & OGR_G_3D )
-            strcpy( *ppszDstText, "TRIANGLE Z (" );
-        else
-            strcpy( *ppszDstText, "TRIANGLE (" );
-    }
-    else
-        strcpy( *ppszDstText, "TRIANGLE (" );
-    nCumulativeLength = strlen(*ppszDstText);
-
-    for( int iRing = 0; iRing < oCC.nCurveCount; iRing++ )
-    {
-        if( papszRings[iRing] == NULL )
-        {
-            CPLDebug( "OGR", "OGRTriangle::exportToWkt() - skipping empty ring.");
-            continue;
-        }
-
-        if( bMustWriteComma )
-            (*ppszDstText)[nCumulativeLength++] = ',';
-        bMustWriteComma = true;
-
-        size_t nRingLen = strlen(papszRings[iRing] + pnRingBeginning[iRing]);
-        memcpy( *ppszDstText + nCumulativeLength, papszRings[iRing] + pnRingBeginning[iRing], nRingLen );
-        nCumulativeLength += nRingLen;
-        VSIFree( papszRings[iRing] );
-    }
-
-    (*ppszDstText)[nCumulativeLength++] = ')';
-    (*ppszDstText)[nCumulativeLength] = '\0';
-
-    CPLFree( papszRings );
-    CPLFree( pnRingBeginning );
 
     return OGRERR_NONE;
-
-error:
-    for( int iRing = 0; iRing < oCC.nCurveCount; iRing++ )
-        CPLFree(papszRings[iRing]);
-    CPLFree(papszRings);
-    return eErr;
 }
 
 /************************************************************************/
-/*                              WkbSize()                               */
+/*                           addRingDirectly()                          */
 /************************************************************************/
 
-/**
- * \brief Returns size of related binary representation.
- *
- * This method returns the exact number of bytes required to hold the
- * well known binary representation of this geometry object.
- *
- * This method relates to the SFCOM IWks::WkbSize() method.
- *
- * This method is the same as the C function OGR_G_WkbSize().
- *
- * @return size of binary representation in bytes.
- */
-
-int OGRTriangle::WkbSize() const
+OGRErr OGRTriangle::addRingDirectly( OGRCurve * poNewRing )
 {
-    if( oCC.nCurveCount == 0 )
-        return 9;
-    return 9+((OGRLinearRing*)oCC.papoCurves[0])->_WkbSize(flags);
+    if (oCC.nCurveCount == 0)
+        return addRingDirectlyInternal( poNewRing, TRUE );
+    else
+        return OGRERR_FAILURE;
 }
 
-/************************************************************************/
-/*                               addRing()                              */
-/************************************************************************/
-
-/**
- * \brief adds an exterior ring to the Triangle
- *
- * Checks if it is a valid ring (same start and end point; number of points should be four).
- *
- * If there is already a ring, then it doesn't add the new ring. The old ring must be deleted first.
- *
- * @return OGRErr The error code retuned. If the addition is successful, then OGRERR_NONE is returned.
- */
-
-OGRErr OGRTriangle::addRing(OGRCurve *poNewRing)
-{
-    OGRCurve* poNewRingCloned = (OGRCurve* )poNewRing->clone();
-    if( poNewRingCloned == NULL )
-        return OGRERR_FAILURE;
-
-    // check if the number of rings existing is 0
-    if (oCC.nCurveCount > 0)
-    {
-        CPLDebug( "OGR", "OGRTriangle already contains a ring");
-        return OGRERR_FAILURE;
-    }
-
-    // check if the ring to be added is valid
-    if (!poNewRingCloned->get_IsClosed() || poNewRingCloned->getNumPoints() != 4)
-    {
-        // condition fails; cannot add this ring as it is not valid
-        CPLDebug( "OGR", "Not a valid ring to add to a Triangle");
-        return OGRERR_FAILURE;
-    }
-
-    OGRErr eErr = addRingDirectly(poNewRingCloned);
-
-    if( eErr != OGRERR_NONE )
-        delete poNewRingCloned;
-
-    return eErr;
-}
