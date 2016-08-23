@@ -2216,6 +2216,12 @@ OGRwkbGeometryType OGRFromOGCGeomType( const char *pszGeomType )
         eType = wkbMultiCurve;
     else if ( STARTS_WITH_CI(pszGeomType, "MULTISURFACE") )
         eType = wkbMultiSurface;
+    else if ( STARTS_WITH_CI(pszGeomType, "TRIANGLE") )
+        eType = wkbTriangle;
+    else if ( STARTS_WITH_CI(pszGeomType, "POLYHEDRALSURFACE") )
+        eType = wkbPolyhedralSurface;
+    else if ( STARTS_WITH_CI(pszGeomType, "TIN") )
+        eType = wkbTIN;
     else if ( STARTS_WITH_CI(pszGeomType, "CURVE") )
         eType = wkbCurve;
     else if ( STARTS_WITH_CI(pszGeomType, "SURFACE") )
@@ -2269,6 +2275,12 @@ const char * OGRToOGCGeomType( OGRwkbGeometryType eGeomType )
             return "MULTICURVE";
         case wkbMultiSurface:
             return "MULTISURFACE";
+        case wkbTriangle:
+            return "TRIANGLE";
+        case wkbPolyhedralSurface:
+            return "POLYHEDRALSURFACE";
+        case wkbTIN:
+            return "TIN";
         case wkbCurve:
             return "CURVE";
         case wkbSurface:
