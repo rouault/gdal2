@@ -805,21 +805,3 @@ OGRGeometry *OGRTriangle::Boundary() const
 {
     return oCC.papoCurves[0];
 }
-
-/************************************************************************/
-/*                             CastToPolygon()                          */
-/************************************************************************/
-
-/**
- * \brief Casts the OGRTriangle to an OGRPolygon
- *
- * @return OGRPolygon* pointer to the computed OGRPolygon
- */
-
-OGRPolygon* OGRTriangle::CastToPolygon()
-{
-    OGRPolygon *poPolygon = new OGRPolygon();
-    poPolygon->addRing((OGRCurve *)oCC.papoCurves[0]);
-    poPolygon->assignSpatialReference(getSpatialReference());
-    return poPolygon;
-}

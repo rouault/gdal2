@@ -907,12 +907,18 @@ OGRErr OGRPolyhedralSurface::PointOnSurface(OGRPoint *poPoint) const
 /**
  * \brief Casts the OGRPolyhedralSurface to an OGRMultiPolygon
  *
- * @return OGRMultiPolygon* pointer to the computed OGRMultiPolygon
+ * The passed in geometry is consumed and a new one returned (or NULL in case
+ * of failure)
+ *
+ * @param poTS the input geometry - ownership is passed to the method.
+ * @return new geometry.
  */
 
-OGRMultiPolygon* OGRPolyhedralSurface::CastToMultiPolygon()
+
+OGRMultiPolygon* OGRPolyhedralSurface::CastToMultiPolygon(OGRPolyhedralSurface* poPS)
 {
-    OGRMultiPolygon *poMultiPolygon = new OGRMultiPolygon(this->oMP);
+    OGRMultiPolygon *poMultiPolygon = new OGRMultiPolygon(poPS->oMP);
+    delete poPS;
     return poMultiPolygon;
 }
 

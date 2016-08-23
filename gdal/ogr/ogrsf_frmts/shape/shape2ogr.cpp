@@ -863,19 +863,10 @@ OGRErr SHPWriteOGRObject( SHPHandle hSHP, int iShape, OGRGeometry *poGeom,
         OGRLinearRing **papoRings = NULL;
         int nRings = 0;
 
-        if( wkbFlatten(poGeom->getGeometryType()) == wkbPolygon || wkbFlatten(poGeom->getGeometryType()) == wkbTriangle)
+        if( wkbFlatten(poGeom->getGeometryType()) == wkbPolygon ||
+            wkbFlatten(poGeom->getGeometryType()) == wkbTriangle)
         {
-            OGRPolygon *poPoly;
-
-            // in case of Triangle
-            if (wkbFlatten(poGeom->getGeometryType()) == wkbTriangle)
-            {
-                poPoly = ((OGRTriangle *)poGeom)->CastToPolygon();
-            }
-
-            // in case of Polygon
-            else
-                poPoly =  (OGRPolygon *) poGeom;
+            OGRPolygon *poPoly = (OGRPolygon *) poGeom;
 
             if( poPoly->getExteriorRing() == NULL ||
                 poPoly->getExteriorRing()->IsEmpty() )
@@ -916,20 +907,27 @@ OGRErr SHPWriteOGRObject( SHPHandle hSHP, int iShape, OGRGeometry *poGeom,
                  wkbFlatten(poGeom->getGeometryType()) == wkbPolyhedralSurface ||
                  wkbFlatten(poGeom->getGeometryType()) == wkbTIN)
         {
+            OGRGeometry* poGeomToDelete = NULL;
             OGRMultiPolygon *poMultiPolygon = NULL;
             OGRGeometryCollection *poGC;
             // for PolyhedralSurface
             if (wkbFlatten(poGeom->getGeometryType()) == wkbPolyhedralSurface)
             {
-                poMultiPolygon = ((OGRPolyhedralSurface *)poGeom)->CastToMultiPolygon();
-                poGC = (OGRGeometryCollection *)poMultiPolygon;
+                poMultiPolygon = OGRPolyhedralSurface::CastToMultiPolygon(
+                    new OGRPolyhedralSurface(
+                        *reinterpret_cast<OGRPolyhedralSurface*>(poGeom)));
+                poGeomToDelete = poMultiPolygon;
+                poGC = poMultiPolygon;
             }
 
             // for TIN
             else if (wkbFlatten(poGeom->getGeometryType()) == wkbTIN)
             {
-                poMultiPolygon = ((OGRTriangulatedSurface *)poGeom)->CastToMultiPolygon();
-                poGC = (OGRGeometryCollection *)poMultiPolygon;
+                poMultiPolygon = OGRTriangulatedSurface::CastToMultiPolygon(
+                    new OGRTriangulatedSurface(
+                      *reinterpret_cast<OGRTriangulatedSurface*>(poGeom)));
+                poGeomToDelete = poMultiPolygon;
+                poGC = poMultiPolygon;
             }
 
             else
@@ -988,12 +986,7 @@ OGRErr SHPWriteOGRObject( SHPHandle hSHP, int iShape, OGRGeometry *poGeom,
                 }
             }
 
-            // delete poMultiPolygon for TIN and PolyhedralSurface to prevent leakage
-            if (wkbFlatten(poGeom->getGeometryType()) == wkbTIN ||
-                wkbFlatten(poGeom->getGeometryType()) == wkbPolyhedralSurface )
-            {
-                delete poMultiPolygon;
-            }
+            delete poGeomToDelete;
         }
         else
         {

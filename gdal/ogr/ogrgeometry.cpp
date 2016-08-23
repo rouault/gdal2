@@ -2849,7 +2849,9 @@ GEOSGeom OGRGeometry::exportToGEOS(UNUSED_IF_NO_GEOS GEOSContextHandle_t hGEOSCt
     }
     else if (EQUAL(getGeometryName(), "POLYHEDRALSURFACE"))
     {
-        OGRMultiPolygon *poMultiPolygon = ((OGRPolyhedralSurface *)poLinearGeom)->CastToMultiPolygon();
+        OGRPolyhedralSurface* poPS  = new OGRPolyhedralSurface(
+                                  *(OGRPolyhedralSurface*)poLinearGeom);
+        OGRMultiPolygon *poMultiPolygon = OGRPolyhedralSurface::CastToMultiPolygon(poPS);
         OGRErr eErr = poMultiPolygon->exportToWkb( wkbNDR, pabyData );
         if( eErr == OGRERR_NONE )
             hGeom = GEOSGeomFromWKB_buf_r( hGEOSCtxt, pabyData, nDataSize );
@@ -2857,7 +2859,10 @@ GEOSGeom OGRGeometry::exportToGEOS(UNUSED_IF_NO_GEOS GEOSContextHandle_t hGEOSCt
     }
     else if (EQUAL(getGeometryName(), "TIN"))
     {
-        OGRMultiPolygon *poMultiPolygon = ((OGRTriangulatedSurface *)poLinearGeom)->CastToMultiPolygon();
+        OGRTriangulatedSurface* poTS = new OGRTriangulatedSurface(
+                                  *(OGRTriangulatedSurface *)poLinearGeom);
+        OGRMultiPolygon *poMultiPolygon =
+              OGRTriangulatedSurface::CastToMultiPolygon(poTS);
         if( poMultiPolygon->exportToWkb( wkbNDR, pabyData ) == OGRERR_NONE )
             hGeom = GEOSGeomFromWKB_buf_r( hGEOSCtxt, pabyData, nDataSize );
         delete poMultiPolygon;

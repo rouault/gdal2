@@ -609,21 +609,27 @@ OGRErr OGRTriangulatedSurface::addGeometryDirectly (OGRGeometry *poNewGeom)
 /************************************************************************/
 
 /**
- * \brief Casts the OGRPolyhedralSurface to an OGRMultiPolygon
+ * \brief Casts the OGRTriangulatedSurface to an OGRMultiPolygon
  *
- * @return OGRMultiPolygon* pointer to the computed OGRMultiPolygon
+ * The passed in geometry is consumed and a new one returned (or NULL in case
+ * of failure)
+ *
+ * @param poTS the input geometry - ownership is passed to the method.
+ * @return new geometry.
  */
 
-OGRMultiPolygon* OGRTriangulatedSurface::CastToMultiPolygon()
+OGRMultiPolygon* OGRTriangulatedSurface::CastToMultiPolygon(OGRTriangulatedSurface* poTS)
 {
     OGRMultiPolygon *poMultiPolygon = new OGRMultiPolygon();
 
-    for (int i = 0; i < oMP.nGeomCount; i++)
+    for (int i = 0; i < poTS->oMP.nGeomCount; i++)
     {
-        OGRTriangle *geom = (OGRTriangle *)oMP.papoGeoms[i];
-        OGRPolygon *poPolygon = (OGRPolygon *)geom->CastToPolygon();
+        OGRTriangle *geom = reinterpret_cast<OGRTriangle *>(poTS->oMP.papoGeoms[i]);
+        poTS->oMP.papoGeoms[i] = NULL;
+        OGRPolygon *poPolygon = OGRSurface::CastToPolygon(geom);
         poMultiPolygon->addGeometryDirectly(poPolygon);
     }
+    delete poTS;
 
     return poMultiPolygon;
 }
