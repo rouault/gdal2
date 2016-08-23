@@ -174,6 +174,13 @@ def ogr_geom_is_empty_triangle():
         gdaltest.post_reason ("IsEmpty returning false for an empty geometry")
         return 'fail'
 
+    geom = ogr.CreateGeometryFromWkb( geom.ExportToWkb() )
+
+    if (geom.IsEmpty() == False):
+        gdaltest.post_reason ("IsEmpty returning false for an empty geometry")
+        return 'fail'
+
+
     geom_wkt = 'TRIANGLE((0 0,100 0,0 100,0 0))'
 
     geom = ogr.CreateGeometryFromWkt(geom_wkt)
@@ -185,6 +192,7 @@ def ogr_geom_is_empty_triangle():
         gdaltest.post_reason ("IsEmpty returning true for a non-empty geometry")
         return 'fail'
     return 'success'
+
 
 def ogr_geom_pickle():
     geom_wkt = 'MULTIPOLYGON( ((0 0,1 1,1 0,0 0)),((0 0,10 0, 10 10, 0 10),(1 1,1 2,2 2,2 1)) )'
@@ -1268,9 +1276,55 @@ def ogr_geom_getdimension():
     return 'success'
 
 ###############################################################################
+# Test importing invalid triangle WKT
+
+def ogr_geom_triangle_invalid_wkt():
+
+    geom_wkt = 'TRIANGLE (0 0)'
+    with gdaltest.error_handler():
+        geom = ogr.CreateGeometryFromWkt(geom_wkt)
+    if geom is not None:
+        gdaltest.post_reason('fail')
+        return 'fail'
+
+    geom_wkt = 'TRIANGLE ((0 0))'
+    with gdaltest.error_handler():
+        geom = ogr.CreateGeometryFromWkt(geom_wkt)
+    if geom is not None:
+        gdaltest.post_reason('fail')
+        print(geom)
+        return 'fail'
+
+    geom_wkt = 'TRIANGLE ((0 0,0 1,1 1,1 0))'
+    with gdaltest.error_handler():
+        geom = ogr.CreateGeometryFromWkt(geom_wkt)
+    if geom is not None:
+        gdaltest.post_reason('fail')
+        print(geom)
+        return 'fail'
+
+    geom_wkt = 'TRIANGLE ((0 0,0 1,1 1,1 0,0 0))'
+    with gdaltest.error_handler():
+        geom = ogr.CreateGeometryFromWkt(geom_wkt)
+    if geom is not None:
+        gdaltest.post_reason('fail')
+        print(geom)
+        return 'fail'
+
+    geom_wkt = 'TRIANGLE ((0 0,0 1,1 1,0 0),(0 0,0 1,1 1,0 0))'
+    with gdaltest.error_handler():
+        geom = ogr.CreateGeometryFromWkt(geom_wkt)
+    if geom is not None:
+        gdaltest.post_reason('fail')
+        print(geom)
+        return 'fail'
+
+    return 'success'
+
+###############################################################################
 # Test OGRTriangle. Tests if the GEOS/SFCGAL methods are working
 
-def ogr_geom_triangle():
+def ogr_geom_triangle_sfcgal():
 
     if not ogrtest.have_sfcgal():
         return 'skip'
@@ -3873,7 +3927,8 @@ def ogr_geom_import_corrupted_wkb():
                  'MULTICURVE ZM ((1 2 3 4))',
                  'MULTIPOLYGON ZM (((1 2 3 4)))',
                  'MULTISURFACE ZM (((1 2 3 4)))',
-                 'GEOMETRYCOLLECTION ZM (POINT ZM (1 2 3 4))'
+                 'GEOMETRYCOLLECTION ZM (POINT ZM (1 2 3 4))',
+                 'TRIANGLE ZM ((0 0 3 4,0 1 3 4,1 1 3 4,0 0 3 4))',
                ]
 
     for wkt in list_wkt:
@@ -3960,7 +4015,8 @@ gdaltest_list = [
     ogr_geom_length_multilinestring,
     ogr_geom_length_geometrycollection,
     ogr_geom_empty_triangle,
-    ogr_geom_triangle,
+    ogr_geom_triangle_invalid_wkt,
+    ogr_geom_triangle_sfcgal,
     ogr_geom_empty,
     ogr_geom_getpoints,
     ogr_geom_mixed_coordinate_dimension,

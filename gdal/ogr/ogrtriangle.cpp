@@ -249,6 +249,13 @@ OGRErr OGRTriangle::importFromWkb( unsigned char *pabyData,
     if( eErr != OGRERR_NONE )
         return eErr;
 
+    // rings must not be greater than 1
+    if (oCC.nCurveCount > 1 )
+    {
+        empty();
+        return OGRERR_CORRUPT_DATA;
+    }
+
     // get the individual LinearRing(s) and construct the triangle
     // an additional check is to make sure there are 4 points
 
@@ -264,123 +271,11 @@ OGRErr OGRTriangle::importFromWkb( unsigned char *pabyData,
             return eErr;
         }
 
-        OGRPoint start_point;
-        OGRPoint end_point;
-
-        poLR->getPoint(0,&start_point);
-        poLR->getPoint(poLR->getNumPoints()-1,&end_point);
-
-        if (poLR->getNumPoints() == 4)
+        if (poLR->getNumPoints() != 4 || !poLR->get_IsClosed())
         {
-            // if both the start and end points are XYZ or XYZM
-            if (start_point.Is3D() && end_point.Is3D())
-            {
-                if (start_point.getX() == end_point.getX())
-                {
-                    if (start_point.getY() == end_point.getY())
-                    {
-                        if (start_point.getZ() == end_point.getZ()) { }
-                        else
-                        {
-                            delete oCC.papoCurves[iRing];
-                            oCC.nCurveCount = iRing;
-                            return OGRERR_UNSUPPORTED_GEOMETRY_TYPE;
-                        }
-                    }
-                    else
-                    {
-                        delete oCC.papoCurves[iRing];
-                        oCC.nCurveCount = iRing;
-                        return OGRERR_UNSUPPORTED_GEOMETRY_TYPE;
-                    }
-                }
-                else
-                {
-                    delete oCC.papoCurves[iRing];
-                    oCC.nCurveCount = iRing;
-                    return OGRERR_UNSUPPORTED_GEOMETRY_TYPE;
-                }
-            }
-
-            // if both the start and end points are XYM or XYZM
-            else if (start_point.IsMeasured() && end_point.IsMeasured())
-            {
-                if (start_point.getX() == end_point.getX())
-                {
-                    if (start_point.getY() == end_point.getY())
-                    {
-                        if (start_point.getM() == end_point.getM()) { }
-                        else
-                        {
-                            delete oCC.papoCurves[iRing];
-                            oCC.nCurveCount = iRing;
-                            return OGRERR_UNSUPPORTED_GEOMETRY_TYPE;
-                        }
-                    }
-                    else
-                    {
-                        delete oCC.papoCurves[iRing];
-                        oCC.nCurveCount = iRing;
-                        return OGRERR_UNSUPPORTED_GEOMETRY_TYPE;
-                    }
-                }
-                else
-                {
-                    delete oCC.papoCurves[iRing];
-                    oCC.nCurveCount = iRing;
-                    return OGRERR_UNSUPPORTED_GEOMETRY_TYPE;
-                }
-            }
-
-            // one point is XYZ or XYZM, other is XY or XYM
-            // returns an error
-            else if (((start_point.Is3D() & end_point.Is3D()) == 0) &&
-                     ((start_point.Is3D() | end_point.Is3D()) == 1))
-            {
-                delete oCC.papoCurves[iRing];
-                oCC.nCurveCount = iRing;
-                return OGRERR_UNSUPPORTED_GEOMETRY_TYPE;
-            }
-
-            // one point is XYM or XYZM, other is XYZ or XY
-            // returns an error
-            else if (((start_point.IsMeasured() & end_point.IsMeasured()) == 0) &&
-                     ((start_point.IsMeasured() | end_point.IsMeasured()) == 1))
-            {
-                delete oCC.papoCurves[iRing];
-                oCC.nCurveCount = iRing;
-                return OGRERR_UNSUPPORTED_GEOMETRY_TYPE;
-            }
-
-            // both points are XY
-            else
-            {
-                if (start_point.getX() == end_point.getX())
-                {
-                    if (start_point.getY() == end_point.getY()) { }
-                    else
-                    {
-                        delete oCC.papoCurves[iRing];
-                        oCC.nCurveCount = iRing;
-                        return OGRERR_UNSUPPORTED_GEOMETRY_TYPE;
-                    }
-                }
-                else
-                {
-                    delete oCC.papoCurves[iRing];
-                    oCC.nCurveCount = iRing;
-                    return OGRERR_UNSUPPORTED_GEOMETRY_TYPE;
-                }
-            }
-        }
-
-        // there should be exactly four points
-        // if there are not four points, then this falls under OGRPolygon and not OGRTriangle
-        else
-        {
-            delete oCC.papoCurves[iRing];
-            oCC.nCurveCount = iRing;
-            return OGRERR_UNSUPPORTED_GEOMETRY_TYPE;
+              delete oCC.papoCurves[iRing];
+              oCC.nCurveCount = iRing;
+              return OGRERR_CORRUPT_DATA;
         }
 
         if (nSize != -1)
@@ -388,10 +283,6 @@ OGRErr OGRTriangle::importFromWkb( unsigned char *pabyData,
 
         nDataOffset += poLR->_WkbSize( flags );
     }
-
-    // rings must be 1 at all times
-    if (oCC.nCurveCount != 1 )
-        return OGRERR_CORRUPT_DATA;
 
     return OGRERR_NONE;
 }
@@ -526,8 +417,12 @@ OGRErr OGRTriangle::importFromWkt( char ** ppszInput )
 
     eErr = importFromWKTListOnly(ppszInput, bHasZ, bHasM, paoPoints, nMaxPoints, padfZ);
 
-    if (!oCC.papoCurves[0]->get_IsClosed())
-        eErr = OGRERR_UNSUPPORTED_GEOMETRY_TYPE;
+    if ( oCC.nCurveCount > 1 || (oCC.nCurveCount == 1 &&
+         (oCC.papoCurves[0]->getNumPoints() != 4 || !oCC.papoCurves[0]->get_IsClosed())) )
+    {
+        empty();
+        eErr = OGRERR_CORRUPT_DATA;
+    }
 
     CPLFree(paoPoints);
     CPLFree(padfZ);
@@ -699,6 +594,8 @@ error:
 
 int OGRTriangle::WkbSize() const
 {
+    if( oCC.nCurveCount == 0 )
+        return 9;
     return 9+((OGRLinearRing*)oCC.papoCurves[0])->_WkbSize(flags);
 }
 
