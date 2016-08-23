@@ -1159,11 +1159,8 @@ class CPL_DLL OGRTriangle : public OGRPolygon
     virtual OGRErr importFromWkt( char ** );
     virtual OGRErr exportToWkt( char ** ppszDstText, OGRwkbVariant=wkbVariantOldOgc ) const;
 
-    // New methods interfaced through SFCGAL or rewritten from OGRPolygon/OGRCurvePolygon/OGRGeometry
-    virtual OGRGeometry *Boundary() const CPL_WARN_UNUSED_RESULT;
-    virtual OGRBoolean  IsSimple() const;
+    // New methods rewritten from OGRPolygon/OGRCurvePolygon/OGRGeometry
     virtual OGRErr addRing	(OGRCurve *poNewRing);
-    virtual OGRGeometry *SymDifference( const OGRGeometry *poOtherGeom) const CPL_WARN_UNUSED_RESULT;
 };
 
 /************************************************************************/

@@ -891,7 +891,7 @@ double OGRPolyhedralSurface::get_Area() const
 /************************************************************************/
 
 /**
- * \brief Checks if the point is on a surface
+ * \brief Returns a point on the surface
  *
  */
 

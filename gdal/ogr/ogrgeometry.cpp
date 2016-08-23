@@ -4116,6 +4116,30 @@ OGRGeometry *
 OGRGeometry::SymDifference( UNUSED_IF_NO_GEOS const OGRGeometry *poOtherGeom ) const
 
 {
+    if (this->IsSFCGALCompatible() || poOtherGeom->IsSFCGALCompatible())
+    {
+#ifndef HAVE_SFCGAL
+        CPLError( CE_Failure, CPLE_NotSupported, "SFCGAL support not enabled." );
+        return NULL;
+#else
+        OGRGeometry* poFirstDifference = Difference(poOtherGeom);
+        if (poFirstDifference == NULL)
+            return NULL;
+
+        OGRGeometry* poOtherDifference = poOtherGeom->Difference(this);
+        if (poOtherDifference == NULL)
+        {
+            delete poFirstDifference;
+            return NULL;
+        }
+
+        OGRGeometry* poSymDiff = poFirstDifference->Union(poOtherDifference);
+        delete poFirstDifference;
+        delete poOtherDifference;
+        return poSymDiff;
+#endif
+    }
+
 #ifndef HAVE_GEOS
 
     CPLError( CE_Failure, CPLE_NotSupported,
