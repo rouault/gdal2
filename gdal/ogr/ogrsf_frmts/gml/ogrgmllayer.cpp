@@ -795,18 +795,26 @@ OGRErr OGRGMLLayer::ICreateFeature( OGRFeature *poFeature )
             else
                 pszGeometry = poGeom->exportToGML(papszOptions);
             CSLDestroy(papszOptions);
-            if (bWriteSpaceIndentation)
-                VSIFPrintfL(fp, "      ");
-            if( bRemoveAppPrefix )
-                poDS->PrintLine( fp, "<%s>%s</%s>",
-                                 poFieldDefn->GetNameRef(),
-                                 pszGeometry,
-                                 poFieldDefn->GetNameRef() );
+            if( pszGeometry != NULL )
+            {
+                if (bWriteSpaceIndentation)
+                    VSIFPrintfL(fp, "      ");
+                if( bRemoveAppPrefix )
+                    poDS->PrintLine( fp, "<%s>%s</%s>",
+                                     poFieldDefn->GetNameRef(),
+                                     pszGeometry,
+                                     poFieldDefn->GetNameRef() );
+                else
+                    poDS->PrintLine( fp, "<%s:%s>%s</%s:%s>",
+                                     pszPrefix, poFieldDefn->GetNameRef(),
+                                     pszGeometry,
+                                     pszPrefix, poFieldDefn->GetNameRef() );
+            }
             else
-                poDS->PrintLine( fp, "<%s:%s>%s</%s:%s>",
-                                 pszPrefix, poFieldDefn->GetNameRef(),
-                                 pszGeometry,
-                                 pszPrefix, poFieldDefn->GetNameRef() );
+            {
+                 CPLError(CE_Failure, CPLE_AppDefined,
+                     "Export of geometry to GML failed");
+            }
             CPLFree( pszGeometry );
         }
     }
