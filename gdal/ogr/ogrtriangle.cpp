@@ -264,22 +264,22 @@ OGRErr OGRTriangle::importFromWkb( unsigned char *pabyData,
             return eErr;
         }
 
-        OGRPoint *start_point = new OGRPoint();
-        OGRPoint *end_point = new OGRPoint();
+        OGRPoint start_point;
+        OGRPoint end_point;
 
-        poLR->getPoint(0,start_point);
-        poLR->getPoint(poLR->getNumPoints()-1,end_point);
+        poLR->getPoint(0,&start_point);
+        poLR->getPoint(poLR->getNumPoints()-1,&end_point);
 
         if (poLR->getNumPoints() == 4)
         {
             // if both the start and end points are XYZ or XYZM
-            if (start_point->Is3D() && end_point->Is3D())
+            if (start_point.Is3D() && end_point.Is3D())
             {
-                if (start_point->getX() == end_point->getX())
+                if (start_point.getX() == end_point.getX())
                 {
-                    if (start_point->getY() == end_point->getY())
+                    if (start_point.getY() == end_point.getY())
                     {
-                        if (start_point->getZ() == end_point->getZ()) { }
+                        if (start_point.getZ() == end_point.getZ()) { }
                         else
                         {
                             delete oCC.papoCurves[iRing];
@@ -303,13 +303,13 @@ OGRErr OGRTriangle::importFromWkb( unsigned char *pabyData,
             }
 
             // if both the start and end points are XYM or XYZM
-            else if (start_point->IsMeasured() && end_point->IsMeasured())
+            else if (start_point.IsMeasured() && end_point.IsMeasured())
             {
-                if (start_point->getX() == end_point->getX())
+                if (start_point.getX() == end_point.getX())
                 {
-                    if (start_point->getY() == end_point->getY())
+                    if (start_point.getY() == end_point.getY())
                     {
-                        if (start_point->getM() == end_point->getM()) { }
+                        if (start_point.getM() == end_point.getM()) { }
                         else
                         {
                             delete oCC.papoCurves[iRing];
@@ -334,8 +334,8 @@ OGRErr OGRTriangle::importFromWkb( unsigned char *pabyData,
 
             // one point is XYZ or XYZM, other is XY or XYM
             // returns an error
-            else if (((start_point->Is3D() & end_point->Is3D()) == 0) &&
-                     ((start_point->Is3D() | end_point->Is3D()) == 1))
+            else if (((start_point.Is3D() & end_point.Is3D()) == 0) &&
+                     ((start_point.Is3D() | end_point.Is3D()) == 1))
             {
                 delete oCC.papoCurves[iRing];
                 oCC.nCurveCount = iRing;
@@ -344,8 +344,8 @@ OGRErr OGRTriangle::importFromWkb( unsigned char *pabyData,
 
             // one point is XYM or XYZM, other is XYZ or XY
             // returns an error
-            else if (((start_point->IsMeasured() & end_point->IsMeasured()) == 0) &&
-                     ((start_point->IsMeasured() | end_point->IsMeasured()) == 1))
+            else if (((start_point.IsMeasured() & end_point.IsMeasured()) == 0) &&
+                     ((start_point.IsMeasured() | end_point.IsMeasured()) == 1))
             {
                 delete oCC.papoCurves[iRing];
                 oCC.nCurveCount = iRing;
@@ -355,9 +355,9 @@ OGRErr OGRTriangle::importFromWkb( unsigned char *pabyData,
             // both points are XY
             else
             {
-                if (start_point->getX() == end_point->getX())
+                if (start_point.getX() == end_point.getX())
                 {
-                    if (start_point->getY() == end_point->getY()) { }
+                    if (start_point.getY() == end_point.getY()) { }
                     else
                     {
                         delete oCC.papoCurves[iRing];
@@ -527,7 +527,7 @@ OGRErr OGRTriangle::importFromWkt( char ** ppszInput )
     eErr = importFromWKTListOnly(ppszInput, bHasZ, bHasM, paoPoints, nMaxPoints, padfZ);
 
     if (!oCC.papoCurves[0]->get_IsClosed())
-        return OGRERR_UNSUPPORTED_GEOMETRY_TYPE;
+        eErr = OGRERR_UNSUPPORTED_GEOMETRY_TYPE;
 
     CPLFree(paoPoints);
     CPLFree(padfZ);
