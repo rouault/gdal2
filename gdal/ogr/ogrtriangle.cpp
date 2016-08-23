@@ -292,6 +292,7 @@ OGRErr OGRTriangle::addRingDirectly( OGRCurve * poNewRing )
         return OGRERR_FAILURE;
 }
 
+//! @cond Doxygen_Suppress
 /************************************************************************/
 /*                      GetCasterToPolygon()                            */
 /************************************************************************/
@@ -299,6 +300,7 @@ OGRErr OGRTriangle::addRingDirectly( OGRCurve * poNewRing )
 OGRSurfaceCasterToPolygon OGRTriangle::GetCasterToPolygon() const {
     return (OGRSurfaceCasterToPolygon) OGRTriangle::CastToPolygon;
 }
+//! @endcond
 
 /************************************************************************/
 /*                        CastToPolygon()                               */
