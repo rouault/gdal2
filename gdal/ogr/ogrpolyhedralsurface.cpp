@@ -910,7 +910,7 @@ OGRErr OGRPolyhedralSurface::PointOnSurface(OGRPoint *poPoint) const
  * The passed in geometry is consumed and a new one returned (or NULL in case
  * of failure)
  *
- * @param poTS the input geometry - ownership is passed to the method.
+ * @param poPS the input geometry - ownership is passed to the method.
  * @return new geometry.
  */
 
