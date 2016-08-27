@@ -468,6 +468,7 @@ static const char* const apszGMLGeometryElements[] =
     "Tin",
     "TopoCurve",
     "TopoSurface",
+    "Triangle",
     "TriangulatedSurface"
 };
 
