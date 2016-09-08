@@ -37,12 +37,13 @@ import sys
 sys.path.append( '../pymod' )
 
 import gdaltest
+from osgeo import gdal
 from osgeo import ogr
 
 ###############################################################################
-#
+# Basic test
 
-def ogr_gmlas_1():
+def ogr_gmlas_basic():
 
     if ogr.GetDriverByName('GMLAS') is None:
         return 'skip'
@@ -75,6 +76,239 @@ def ogr_gmlas_1():
     return 'success'
 
 ###############################################################################
+# Test virtual file support
+
+def ogr_gmlas_virtual_file():
+
+    if ogr.GetDriverByName('GMLAS') is None:
+        return 'skip'
+
+    gdal.FileFromMemBuffer('/vsimem/ogr_gmlas_8.xml',
+"""<myns:main_elt xmlns:myns="http://myns"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  xsi:schemaLocation="http://myns ogr_gmlas_8.xsd"/>""")
+
+    gdal.FileFromMemBuffer('/vsimem/ogr_gmlas_8.xsd',
+"""<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:myns="http://myns" 
+           targetNamespace="http://myns"
+           elementFormDefault="qualified" attributeFormDefault="unqualified">
+<xs:element name="main_elt" type="xs:string"/>
+</xs:schema>""")
+
+
+    ds = gdal.OpenEx('GMLAS:/vsimem/ogr_gmlas_8.xml')
+    if ds is None:
+        gdaltest.post_reason('fail')
+        return 'fail'
+
+    gdal.Unlink('/vsimem/ogr_gmlas_8.xml')
+    gdal.Unlink('/vsimem/ogr_gmlas_8.xsd')
+
+    return 'success'
+
+###############################################################################
+# Test opening with just XSD option
+
+def ogr_gmlas_no_datafile_with_xsd_option():
+
+    if ogr.GetDriverByName('GMLAS') is None:
+        return 'skip'
+
+    ds = gdal.OpenEx('GMLAS:', open_options = ['XSD=data/gmlas_test1.xsd'])
+    if ds is None:
+        gdaltest.post_reason('fail')
+        return 'fail'
+
+    return 'success'
+
+###############################################################################
+# Test opening with just XSD option but pointing to a non-xsd filename
+
+def ogr_gmlas_no_datafile_xsd_which_is_not_xsd():
+
+    if ogr.GetDriverByName('GMLAS') is None:
+        return 'skip'
+
+    with gdaltest.error_handler():
+        ds = gdal.OpenEx('GMLAS:', open_options = ['XSD=data/gmlas_test1.xml'])
+    if ds is not None:
+        gdaltest.post_reason('fail')
+        return 'fail'
+    if gdal.GetLastErrorMsg().find("invalid content in 'schema' element") < 0:
+        gdaltest.post_reason('fail')
+        print(gdal.GetLastErrorMsg())
+        return 'fail'
+
+    return 'success'
+
+###############################################################################
+# Test opening with nothing
+
+def ogr_gmlas_no_datafile_no_xsd():
+
+    if ogr.GetDriverByName('GMLAS') is None:
+        return 'skip'
+
+    with gdaltest.error_handler():
+        ds = gdal.OpenEx('GMLAS:')
+    if ds is not None:
+        gdaltest.post_reason('fail')
+        return 'fail'
+    if gdal.GetLastErrorMsg().find('XSD open option must be provided when no XML data file is passed') < 0:
+        gdaltest.post_reason('fail')
+        print(gdal.GetLastErrorMsg())
+        return 'fail'
+
+    return 'success'
+
+###############################################################################
+# Test opening an inexisting GML file
+
+def ogr_gmlas_non_existing_gml():
+
+    if ogr.GetDriverByName('GMLAS') is None:
+        return 'skip'
+
+    with gdaltest.error_handler():
+        ds = gdal.OpenEx('GMLAS:/vsimem/i_dont_exist.gml')
+    if ds is not None:
+        gdaltest.post_reason('fail')
+        return 'fail'
+    if gdal.GetLastErrorMsg().find('Cannot open /vsimem/i_dont_exist.gml') < 0:
+        gdaltest.post_reason('fail')
+        print(gdal.GetLastErrorMsg())
+        return 'fail'
+
+    return 'success'
+
+###############################################################################
+# Test opening with just XSD option but pointing to a non existing file
+
+def ogr_gmlas_non_existing_xsd():
+
+    if ogr.GetDriverByName('GMLAS') is None:
+        return 'skip'
+
+    with gdaltest.error_handler():
+        ds = gdal.OpenEx('GMLAS:', open_options = ['XSD=/vsimem/i_dont_exist.xsd'])
+    if ds is not None:
+        gdaltest.post_reason('fail')
+        return 'fail'
+    if gdal.GetLastErrorMsg().find('Cannot resolve /vsimem/i_dont_exist.xsd') < 0:
+        gdaltest.post_reason('fail')
+        print(gdal.GetLastErrorMsg())
+        return 'fail'
+
+    return 'success'
+
+###############################################################################
+# Test opening a GML file without schemaLocation
+
+def ogr_gmlas_gml_without_schema_location():
+
+    if ogr.GetDriverByName('GMLAS') is None:
+        return 'skip'
+
+    gdal.FileFromMemBuffer('/vsimem/ogr_gmlas_gml_without_schema_location.xml',
+"""<MYNS:main_elt xmlns:MYNS="http://myns"/>""")
+
+    with gdaltest.error_handler():
+        ds = gdal.OpenEx('GMLAS:/vsimem/ogr_gmlas_gml_without_schema_location.xml')
+    if ds is not None:
+        gdaltest.post_reason('fail')
+        return 'fail'
+    if gdal.GetLastErrorMsg().find('No schema locations found when analyzing data file: XSD open option must be provided') < 0:
+        gdaltest.post_reason('fail')
+        print(gdal.GetLastErrorMsg())
+        return 'fail'
+
+    gdal.Unlink('/vsimem/ogr_gmlas_gml_without_schema_location.xml')
+
+    return 'success'
+
+###############################################################################
+# Test invalid schema
+
+def ogr_gmlas_invalid_schema():
+
+    if ogr.GetDriverByName('GMLAS') is None:
+        return 'skip'
+
+    gdal.FileFromMemBuffer('/vsimem/ogr_gmlas_invalid_schema.xml',
+"""<myns:main_elt xmlns:myns="http://myns"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  xsi:schemaLocation="http://myns ogr_gmlas_invalid_schema.xsd"/>""")
+
+    gdal.FileFromMemBuffer('/vsimem/ogr_gmlas_invalid_schema.xsd',
+"""<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:myns="http://myns" 
+           targetNamespace="http://myns"
+           elementFormDefault="qualified" attributeFormDefault="unqualified">
+<xs:foo/>
+</xs:schema>""")
+
+    with gdaltest.error_handler():
+        ds = gdal.OpenEx('GMLAS:/vsimem/ogr_gmlas_invalid_schema.xml')
+    if ds is not None:
+        gdaltest.post_reason('fail')
+        return 'fail'
+    if gdal.GetLastErrorMsg().find('invalid content') < 0:
+        gdaltest.post_reason('fail')
+        print(gdal.GetLastErrorMsg())
+        return 'fail'
+
+    gdal.Unlink('/vsimem/ogr_gmlas_invalid_schema.xml')
+    gdal.Unlink('/vsimem/ogr_gmlas_invalid_schema.xsd')
+
+    return 'success'
+
+###############################################################################
+# Test invalid XML
+
+def ogr_gmlas_invalid_xml():
+
+    if ogr.GetDriverByName('GMLAS') is None:
+        return 'skip'
+
+    gdal.FileFromMemBuffer('/vsimem/ogr_gmlas_invalid_xml.xml',
+"""<myns:main_elt xmlns:myns="http://myns"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  xsi:schemaLocation="http://myns ogr_gmlas_invalid_xml.xsd">
+""")
+
+    gdal.FileFromMemBuffer('/vsimem/ogr_gmlas_invalid_xml.xsd',
+"""<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:myns="http://myns" 
+           targetNamespace="http://myns"
+           elementFormDefault="qualified" attributeFormDefault="unqualified">
+<xs:element name="main_elt">
+  <xs:complexType>
+    <xs:sequence>
+        <xs:element name="foo" type="xs:string" minOccurs="0"/>
+    </xs:sequence>
+  </xs:complexType>
+</xs:element>
+</xs:schema>""")
+
+    ds = gdal.OpenEx('GMLAS:/vsimem/ogr_gmlas_invalid_xml.xml')
+    lyr = ds.GetLayer(0)
+    with gdaltest.error_handler():
+        f = lyr.GetNextFeature()
+    if f is not None:
+        gdaltest.post_reason('fail')
+        return 'fail'
+    if gdal.GetLastErrorMsg().find('input ended before all started tags were ended') < 0:
+        gdaltest.post_reason('fail')
+        print(gdal.GetLastErrorMsg())
+        return 'fail'
+
+    gdal.Unlink('/vsimem/ogr_gmlas_invalid_xml.xml')
+    gdal.Unlink('/vsimem/ogr_gmlas_invalid_xml.xsd')
+
+    return 'success'
+
+###############################################################################
 #  Cleanup
 
 def ogr_gmlas_cleanup():
@@ -86,7 +320,16 @@ def ogr_gmlas_cleanup():
 
 
 gdaltest_list = [
-    ogr_gmlas_1,
+    ogr_gmlas_basic,
+    ogr_gmlas_virtual_file,
+    ogr_gmlas_no_datafile_with_xsd_option,
+    ogr_gmlas_no_datafile_xsd_which_is_not_xsd,
+    ogr_gmlas_no_datafile_no_xsd,
+    ogr_gmlas_non_existing_gml,
+    ogr_gmlas_non_existing_xsd,
+    ogr_gmlas_gml_without_schema_location,
+    ogr_gmlas_invalid_schema,
+    ogr_gmlas_invalid_xml,
     ogr_gmlas_cleanup ]
 
 if __name__ == '__main__':
