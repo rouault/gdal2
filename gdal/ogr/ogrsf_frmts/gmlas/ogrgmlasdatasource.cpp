@@ -345,17 +345,30 @@ bool OGRGMLASDataSource::Open(GDALOpenInfo* poOpenInfo)
     GMLASSchemaAnalyzer oAnalyzer;
     oAnalyzer.SetAllowArrays(true);
 
-    const char* pszGMLFilename =
-                        STARTS_WITH_CI(poOpenInfo->pszFilename, "GMLAS:") ?
+    m_osGMLFilename = STARTS_WITH_CI(poOpenInfo->pszFilename, "GMLAS:") ?
         poOpenInfo->pszFilename + strlen("GMLAS:") : poOpenInfo->pszFilename;
-    m_osGMLFilename = pszGMLFilename;
 
     CPLString osXSDFilename = CSLFetchNameValueDef(poOpenInfo->papszOpenOptions,
                                                    "XSD", "");
 
-    VSILFILE* fpGML = VSIFOpenL(pszGMLFilename, "rb");
-    if( fpGML == NULL )
+    VSILFILE* fpGML = NULL;
+    if( !m_osGMLFilename.empty() )
+    {
+        fpGML = VSIFOpenL(m_osGMLFilename, "rb");
+        if( fpGML == NULL )
+        {
+            CPLError(CE_Failure, CPLE_FileIO, "Cannot open %s",
+                     m_osGMLFilename.c_str());
+            return false;
+        }
+    }
+    else if( osXSDFilename.empty() )
+    {
+        CPLError(CE_Failure, CPLE_AppDefined,
+                 "XSD open option must be provided when no XML data file is passed");
         return false;
+    }
+
     std::vector<PairURIFilename> aoXSDs;
     if( osXSDFilename.empty() )
     {
@@ -371,12 +384,22 @@ bool OGRGMLASDataSource::Open(GDALOpenInfo* poOpenInfo)
         }
         CSLDestroy(papszTokens);
     }
-    VSIFCloseL(fpGML);
+    if( fpGML )
+        VSIFCloseL(fpGML);
 
     if( aoXSDs.empty() )
     {
-        CPLError(CE_Failure, CPLE_AppDefined,
-                 "XSD open option is not provided");
+        if( osXSDFilename.empty() )
+        {
+            CPLError(CE_Failure, CPLE_AppDefined,
+                    "No schema locations found when analyzing data file: XSD open "
+                    "option must be provided");
+        }
+        else
+        {
+            CPLError(CE_Failure, CPLE_AppDefined,
+                     "No schema locations found");
+        }
         return false;
     }
     bool bRet = oAnalyzer.Analyze( CPLGetDirname(m_osGMLFilename), aoXSDs );
