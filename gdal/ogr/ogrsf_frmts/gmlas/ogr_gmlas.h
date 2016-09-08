@@ -1,0 +1,626 @@
+/******************************************************************************
+ * Project:  OGR
+ * Purpose:  OGRGMLASDriver implementation
+ * Author:   Even Rouault, <even dot rouault at spatialys dot com>
+ *
+ * Initial developement funded by the European Environment Agency
+ *
+ ******************************************************************************
+ * Copyright (c) 2016, Even Rouault, <even dot rouault at spatialys dot com>
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the "Software"),
+ * to deal in the Software without restriction, including without limitation
+ * the rights to use, copy, modify, merge, publish, distribute, sublicense,
+ * and/or sell copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+ * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+ * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+ * DEALINGS IN THE SOFTWARE.
+ ****************************************************************************/
+
+#ifndef OGR_GMLAS_INCLUDED
+#define OGR_GMLAS_INCLUDED
+
+#include "xercesc_headers.h"
+
+#include "gdal_priv.h"
+#include "ogrsf_frmts.h"
+
+#include <set>
+#include <map>
+#include <vector>
+
+// Pseudo index to indicate that this xpath is a part of a more detailed
+// xpath that is folded into the main type, hence we shouldn't warn about it
+// to be unexpected
+// Would for example be the case of "element_compound_simplifiable" for :
+//             <xs:element name="element_compound_simplifiable">
+//                <xs:complexType><xs:sequence>
+//                        <xs:element name="subelement" type="xs:string"/>
+//                </xs:sequence></xs:complexType>
+//            </xs:element>
+
+static const int IDX_COMPOUND_FOLDED = -2;
+
+static const int MAXOCCURS_UNLIMITED = -2;
+
+static const char* const pszXS_URI = "http://www.w3.org/2001/XMLSchema";
+static const char* const pszXSI_URI =
+                                "http://www.w3.org/2001/XMLSchema-instance";
+static const char* const pszXMLNS_URI =
+                                "http://www.w3.org/2000/xmlns/";
+static const char* const pszXLINK_URI = "http://www.w3.org/1999/xlink";
+
+static const char* const pszGML_URI = "http://www.opengis.net/gml";
+
+static const char* const pszWFS_URI = "http://www.opengis.net/wfs";
+
+typedef std::pair<CPLString, CPLString> PairURIFilename;
+
+// General functions
+
+namespace OGRGMLAS
+{
+    CPLString transcode( const XMLCh *panXMLString, int nLimitingChars = -1 );
+}
+using OGRGMLAS::transcode;
+
+/************************************************************************/
+/*                          IGMLASInputSourceClosing                    */
+/************************************************************************/
+
+class IGMLASInputSourceClosing
+{
+    public:
+        virtual ~IGMLASInputSourceClosing() {}
+
+        virtual void notifyClosing(const CPLString& osFilename) = 0;
+};
+
+/************************************************************************/
+/*                          GMLASInputSource                            */
+/************************************************************************/
+
+class GMLASInputSource : public InputSource
+{
+    VSILFILE *m_fp;
+    bool      m_bOwnFP;
+    int       m_nCounter;
+    int      *m_pnCounter;
+    CPLString m_osFilename;
+    IGMLASInputSourceClosing* m_cbk;
+
+public:
+             GMLASInputSource(const char* pszFilename,
+                              VSILFILE* fp,
+                              bool bOwnFP,
+                              MemoryManager* const manager =
+                                            XMLPlatformUtils::fgMemoryManager);
+    virtual ~GMLASInputSource();
+
+    virtual BinInputStream* makeStream() const;
+
+    void    SetClosingCallback( IGMLASInputSourceClosing* cbk );
+};
+
+
+/************************************************************************/
+/*                            GMLASErrorHandler                         */
+/************************************************************************/
+
+class GMLASErrorHandler: public ErrorHandler
+{
+    public:
+        GMLASErrorHandler () : m_bFailed (false) {}
+
+        bool hasFailed () const { return m_bFailed; }
+
+        virtual void warning (const SAXParseException& e);
+        virtual void error (const SAXParseException& e);
+        virtual void fatalError (const SAXParseException& e);
+
+        virtual void resetErrors () { m_bFailed = false; }
+
+    private:
+        bool m_bFailed;
+
+        void handle (const SAXParseException& e, CPLErr eErr);
+};
+
+/************************************************************************/
+/*                            GMLASFieldType                            */
+/************************************************************************/
+
+/** Enumeration for XML primitive types */
+typedef enum
+{
+    GMLAS_FT_STRING,
+    GMLAS_FT_ID,
+    GMLAS_FT_BOOLEAN,
+    GMLAS_FT_SHORT,
+    GMLAS_FT_INT32,
+    GMLAS_FT_INT64,
+    GMLAS_FT_FLOAT,
+    GMLAS_FT_DOUBLE,
+    GMLAS_FT_DECIMAL,
+    GMLAS_FT_DATE,
+    GMLAS_FT_TIME,
+    GMLAS_FT_DATETIME,
+    GMLAS_FT_ANYURI,
+    GMLAS_FT_ANYTYPE,
+    GMLAS_FT_ANYSIMPLETYPE
+} GMLASFieldType;
+
+/************************************************************************/
+/*                              GMLASField                              */
+/************************************************************************/
+
+class GMLASField
+{
+        CPLString m_osName;
+        GMLASFieldType m_eType;
+        CPLString m_osTypeName;
+        int m_nWidth;
+        bool m_bNotNullable;
+        bool m_bArray;
+        CPLString m_osXPath;
+        std::vector<CPLString> m_aosXPath;
+        CPLString m_osFixedValue;
+        CPLString m_osDefaultValue;
+        bool m_bAbstract;
+        bool m_bIsNestedClass;
+        int  m_nMinOccurs;
+        int  m_nMaxOccurs;
+        bool m_bIncludeThisEltInBlob;
+        CPLString m_osAbstractElementXPath;
+        CPLString m_osNestedClassXPath;
+
+    public:
+        GMLASField();
+
+        void SetName(const CPLString& osName) { m_osName = osName; }
+        void SetType(GMLASFieldType eType, const char* pszTypeName);
+        void SetWidth(int nWidth) { m_nWidth = nWidth; }
+        void SetNotNullable(bool bNotNullable)
+                                    { m_bNotNullable = bNotNullable; }
+        void SetArray(bool bArray) { m_bArray = bArray; }
+        void SetXPath(const CPLString& osXPath) { m_osXPath = osXPath; }
+        void AddAlternateXPath(const CPLString& osXPath)
+                                            { m_aosXPath.push_back(osXPath); }
+        void SetFixedValue(const CPLString& osFixedValue)
+                                    { m_osFixedValue = osFixedValue; }
+        void SetDefaultValue(const CPLString& osDefaultValue)
+                                    { m_osDefaultValue = osDefaultValue; }
+        void SetAbstract(bool bAbstract) { m_bAbstract = bAbstract; }
+        void SetIsNestedClass(bool bIsNestedClass)
+                                    { m_bIsNestedClass = bIsNestedClass; }
+        void SetMinOccurs(int nMinOccurs) { m_nMinOccurs = nMinOccurs; }
+        void SetMaxOccurs(int nMaxOccurs) { m_nMaxOccurs = nMaxOccurs; }
+        void SetIncludeThisEltInBlob(bool b) { m_bIncludeThisEltInBlob = b; }
+        void SetAbstractElementXPath(const CPLString& osName)
+                                            { m_osAbstractElementXPath = osName; }
+
+        void SetNestedClassXPath(const CPLString& osName)
+                                            { m_osNestedClassXPath = osName; }
+
+        const CPLString& GetName() const { return m_osName; }
+        const CPLString& GetXPath() const { return m_osXPath; }
+        const std::vector<CPLString>& GetAlternateXPaths() const
+                                            { return m_aosXPath; }
+        GMLASFieldType GetType() const { return m_eType; }
+        const CPLString& GetTypeName() const { return m_osTypeName; }
+        int GetWidth() const { return m_nWidth; }
+        bool IsNotNullable() const { return m_bNotNullable; }
+        bool IsArray() const { return m_bArray; }
+        const CPLString& GetFixedValue() const { return m_osFixedValue; }
+        const CPLString& GetDefaultValue() const { return m_osDefaultValue; }
+        bool IsAbstract() const { return m_bAbstract; }
+        bool IsNestedClass() const { return m_bIsNestedClass; }
+        int GetMinOccurs() const { return m_nMinOccurs; }
+        int GetMaxOccurs() const { return m_nMaxOccurs; }
+        bool GetIncludeThisEltInBlob() const { return m_bIncludeThisEltInBlob; }
+        const CPLString& GetAbstractElementXPath() const
+                                            { return m_osAbstractElementXPath; }
+        const CPLString& GetNestedClassXPath() const
+                                                { return m_osNestedClassXPath; }
+
+        static GMLASFieldType GetTypeFromString( const CPLString& osType );
+};
+
+/************************************************************************/
+/*                            GMLASFeatureClass                         */
+/************************************************************************/
+
+class GMLASFeatureClass
+{
+        CPLString m_osName;
+        CPLString m_osXPath;
+        std::vector<GMLASField> m_aoFields;
+        std::vector<GMLASFeatureClass> m_aoNestedClasses;
+        bool m_bIsGroup;
+        CPLString m_osParentXPath;
+        CPLString m_osChildXPath;
+        bool m_bIsTopLevel;
+
+    public:
+        GMLASFeatureClass();
+
+        void SetName(const CPLString& osName);
+        void SetXPath(const CPLString& osXPath);
+        void AddField( const GMLASField& oField );
+        void PrependFields( const std::vector<GMLASField>& aoFields );
+        void AppendFields( const std::vector<GMLASField>& aoFields );
+        void AddNestedClass( const GMLASFeatureClass& oNestedClass );
+        void SetIsGroup( bool bIsGroup ) { m_bIsGroup = bIsGroup; }
+        void SetParentXPath(const CPLString& osXPath)
+                                                { m_osParentXPath = osXPath; }
+        void SetChildXPath(const CPLString& osXPath)
+                                                { m_osChildXPath = osXPath; }
+        void SetIsTopLevel(bool bIsTopLevel ) { m_bIsTopLevel = bIsTopLevel; }
+
+        const CPLString& GetName() const { return m_osName; }
+        const CPLString& GetXPath() const { return m_osXPath; }
+        const std::vector<GMLASField>& GetFields() const { return m_aoFields; }
+        std::vector<GMLASField>& GetFields() { return m_aoFields; }
+        const std::vector<GMLASFeatureClass>& GetNestedClasses() const
+                                            { return m_aoNestedClasses; }
+        std::vector<GMLASFeatureClass>& GetNestedClasses()
+                                            { return m_aoNestedClasses; }
+        bool IsGroup() const { return m_bIsGroup; }
+        const CPLString& GetParentXPath() const { return m_osParentXPath; }
+        const CPLString& GetChildXPath() const { return m_osChildXPath; }
+        bool IsTopLevel() const { return m_bIsTopLevel; }
+};
+
+/************************************************************************/
+/*                         GMLASResourceCache                           */
+/************************************************************************/
+
+class GMLASResourceCache
+{
+    public:
+                    GMLASResourceCache() {}
+
+                    VSILFILE* Open( const CPLString& osResource,
+                                    const CPLString& osBasePath,
+                                    CPLString& osOutFilename );
+};
+
+
+/************************************************************************/
+/*                         GMLASSchemaAnalyzer                          */
+/************************************************************************/
+
+class GMLASSchemaAnalyzer
+{
+        bool m_bAllowArrays;
+        std::vector<GMLASFeatureClass> m_aoClasses;
+        std::map<CPLString, CPLString> m_oMapURIToPrefix;
+        typedef std::map<CPLString, std::vector<XSElementDeclaration*> >
+                                                    tMapParentTypeToChildTypes;
+        tMapParentTypeToChildTypes m_oMapParentTypeToChildTypes;
+        std::map< XSModelGroup*, CPLString> m_oMapModelGroupDefinitionToName;
+        std::set< XSElementDeclaration* > m_oSetTypenames;
+        std::set< XSElementDeclaration* > m_oSetNeededTypenames;
+        std::set< XSElementDeclaration* > m_oSetTopLevelElement;
+
+        static bool IsSame( const XSModelGroup* poModelGroup1,
+                                  const XSModelGroup* poModelGroup2 );
+        CPLString GetGroupName( const XSModelGroup* poModelGroup );
+        void SetFieldFromAttribute(GMLASField& oField,
+                                   XSAttributeUse* poAttr,
+                                   const CPLString& osXPathPrefix,
+                                   const CPLString& osNamePrefix = CPLString());
+        void GetConcreteImplementationTypes(
+                                XSElementDeclaration* poParentElt,
+                                std::vector<XSElementDeclaration*>& apoSubEltList);
+        bool FindElementsWithMustBeToLevel(
+                            XSModelGroup* poModelGroup,
+                            int nRecursionCounter,
+                            std::set<XSElementDeclaration*>& oSetVisitedEltDecl,
+                            std::set<XSModelGroup*>& oSetVisitedModelGroups,
+                            XSModel* poModel);
+        bool ExploreModelGroup( XSModelGroup* psMainModelGroup,
+                                XSAttributeUseList* poMainAttrList,
+                                GMLASFeatureClass& oClass,
+                                int nRecursionCounter,
+                                std::set<XSModelGroup*>& oSetVisitedModelGroups );
+        void SetFieldTypeAndWidthFromDefinition( XSSimpleTypeDefinition* poST,
+                                                 GMLASField& oField );
+        CPLString MakeXPath( const CPLString& osNamespace,
+                                          const CPLString& osName );
+        void FixDuplicatedFieldNames( GMLASFeatureClass& oClass );
+
+        XSElementDeclaration* GetTopElementDeclarationFromXPath(
+                                                    const CPLString& osXPath,
+                                                    XSModel* poModel);
+
+        bool InstantiateClassFromEltDeclaration(XSElementDeclaration* poEltDecl,
+                                                XSModel* poModel,
+                                                bool& bError);
+        void CreateNonNestedRelationship(
+                        XSElementDeclaration* poElt,
+                        std::vector<XSElementDeclaration*>& apoSubEltList,
+                        GMLASFeatureClass& oClass,
+                        int nMaxOccurs,
+                        bool bForceJunctionTable);
+
+    public:
+        GMLASSchemaAnalyzer();
+        void SetAllowArrays(bool b) { m_bAllowArrays = b; }
+
+        bool Analyze(const CPLString& osBaseDirname,
+                     const std::vector<PairURIFilename>& aoXSDs);
+        const std::vector<GMLASFeatureClass>& GetClasses() const
+                { return m_aoClasses; }
+
+        const std::map<CPLString, CPLString>& GetMapURIToPrefix() const
+                    { return m_oMapURIToPrefix; }
+};
+
+/************************************************************************/
+/*                           OGRGMLASDataSource                         */
+/************************************************************************/
+
+class OGRGMLASLayer;
+
+class OGRGMLASDataSource: public GDALDataset
+{
+        std::vector<OGRGMLASLayer*>    m_apoLayers;
+        std::map<CPLString, CPLString> m_oMapURIToPrefix;
+        CPLString                      m_osGMLFilename;
+        bool                           m_bExposeMetadataLayers;
+        OGRLayer                      *m_poMetadataLayer;
+        OGRLayer                      *m_poRelationshipsLayer;
+
+        void TranslateClasses( OGRGMLASLayer* poParentLayer,
+                               const GMLASFeatureClass& oFC );
+
+    public:
+        OGRGMLASDataSource();
+        virtual ~OGRGMLASDataSource();
+
+        virtual int         GetLayerCount();
+        virtual OGRLayer    *GetLayer(int);
+        virtual OGRLayer    *GetLayerByName(const char* pszName);
+
+        bool Open(GDALOpenInfo* poOpenInfo);
+
+        std::vector<OGRGMLASLayer*>*          GetLayers()
+                                            { return &m_apoLayers; }
+        const std::map<CPLString, CPLString>& GetMapURIToPrefix() const
+                                            { return m_oMapURIToPrefix; }
+        const CPLString&                      GetGMLFilename() const
+                                            { return m_osGMLFilename; }
+        OGRLayer*                             GetMetadataLayer()
+                                            { return m_poMetadataLayer; }
+        OGRLayer*                             GetRelationshipsLayer()
+                                            { return m_poRelationshipsLayer; }
+        OGRGMLASLayer*          GetLayerByXPath( const CPLString& osXPath );
+
+};
+
+/************************************************************************/
+/*                             OGRGMLASLayer                            */
+/************************************************************************/
+
+class GMLASReader;
+
+class OGRGMLASLayer: public OGRLayer
+{
+        OGRGMLASDataSource            *m_poDS;
+        GMLASFeatureClass              m_oFC;
+        OGRFeatureDefn                *m_poFeatureDefn;
+
+        /** Map from XPath to corresponding field index in m_oFC.GetFields() */
+        std::map<CPLString, int>       m_oMapFieldXPathToFieldIdx;
+
+        /** Map from a OGR field index to the corresponding field index in
+            m_oFC.GetFields() */
+        std::map<int, int>             m_oMapOGRFieldIdxtoFCFieldIdx;
+
+        GMLASReader                   *m_poReader;
+        VSILFILE                      *m_fpGML;
+        /** OGR field index of the ID field */
+        int                            m_nIDFieldIdx;
+        /** Whether the ID field is generated, or comes from the XML content */
+        bool                           m_bIDFieldIsGenerated;
+        /** Pointer to parent layer */
+        OGRGMLASLayer                 *m_poParentLayer;
+        /** OGR field index of the field that points to the parent ID */
+        int                            m_nParentIDFieldIdx;
+
+        OGRFeature*                    GetNextRawFeature();
+
+    public:
+        OGRGMLASLayer(OGRGMLASDataSource* poDS,
+                      const GMLASFeatureClass& oFC,
+                      OGRGMLASLayer* poParentLayer,
+                      bool bHasChildClasses);
+        virtual ~OGRGMLASLayer();
+
+        virtual OGRFeatureDefn* GetLayerDefn() { return m_poFeatureDefn; }
+        virtual void ResetReading();
+        virtual OGRFeature* GetNextFeature();
+        virtual int TestCapability( const char* ) { return FALSE; }
+
+        const GMLASFeatureClass& GetFeatureClass() const { return m_oFC; }
+        int GetFieldIndexFromXPath(const CPLString& osXPath) const;
+        int GetIDFieldIdx() const { return m_nIDFieldIdx; }
+        bool IsGeneratedIDField() const { return m_bIDFieldIsGenerated; }
+        OGRGMLASLayer* GetParent() { return m_poParentLayer; }
+        int GetParentIDFieldIdx() const { return m_nParentIDFieldIdx; }
+        int GetFCFieldIndexFromOGRFieldIdx(int iOGRFieldIdx) const;
+};
+
+/************************************************************************/
+/*                              GMLASReader                             */
+/************************************************************************/
+
+class GMLASReader : public DefaultHandler
+{
+        /** Whether we should stop parsing */
+        bool              m_bParsingError;
+
+        /** Xerces reader object */
+        SAX2XMLReader    *m_poSAXReader;
+
+        /** Token for Xerces */
+        XMLPScanToken     m_oToFill;
+
+        /** Input source */
+        GMLASInputSource *m_GMLInputSource;
+
+        /** Whether we are at the first iteration */
+        bool              m_bFirstIteration;
+
+        /** Whether we have reached end of file (or an error) */
+        bool              m_bEOF;
+
+        /** Error handler (for Xerces reader) */
+        GMLASErrorHandler m_oErrorHandler;
+
+        /** Map URI namespaces to their prefix */
+        std::map<CPLString, CPLString> m_oMapURIToPrefix;
+
+        /** List of OGR layers */
+        std::vector<OGRGMLASLayer*>* m_papoLayers;
+
+        /** Vector of features ready for consumption */
+        std::vector< std::pair<OGRFeature*, OGRGMLASLayer*> > m_aoFeaturesReady;
+
+        /** OGR field index of the current field */
+        int               m_nCurFieldIdx;
+
+        /** XML nested level of current field */
+        int               m_nCurFieldLevel;
+
+        /** Whether we should store all content of the current field as XML */
+        bool              m_bIsXMLBlob;
+        bool              m_bIsXMLBlobIncludeUpper;
+
+        /** Content of the current field */
+        CPLString         m_osTextContent;
+
+        /** For list field types, list of content */
+        CPLStringList     m_osTextContentList;
+        /** Estimated memory footprint of m_osTextContentList */
+        size_t            m_nTextContentListEstimatedSize;
+
+        /** Which layer is of interest for the reader, or NULL for all */
+        OGRGMLASLayer    *m_poLayerOfInterest;
+
+        /** Stack of length of splitted XPath components */
+        std::vector<size_t> m_anStackXPathLength;
+
+        /** Current absolute XPath */
+        CPLString           m_osCurXPath;
+
+        /** Current XPath, relative to top-level feature */
+        CPLString           m_osCurSubXPath;
+
+        /** Current XML nesting level */
+        int                 m_nLevel;
+
+        /** Map layer to global FID */
+        std::map<OGRLayer*, int> m_oMapGlobalCounter;
+
+        /** Parsing context */
+        struct Context
+        {
+            /** XML nesting level */
+            int             m_nLevel;
+
+            /** Current feature */
+            OGRFeature     *m_poFeature;
+
+            /** Layer of m_poFeature */
+            OGRGMLASLayer  *m_poLayer;
+
+            /** Current layer in a repeated group */
+            OGRGMLASLayer  *m_poGroupLayer;
+
+            /** Nesting level of m_poCurGroupLayer */
+            int             m_nGroupLayerLevel;
+
+            /** Index of the last processed OGR field in m_poCurGroupLayer */
+            int             m_nLastFieldIdxGroupLayer;
+
+            /** Map layer to local FID */
+            std::map<OGRLayer*, int> m_oMapCounter;
+
+            /** Current XPath, relative to (current) top-level feature */
+            CPLString       m_osCurSubXPath;
+
+            void Dump();
+        };
+
+        /** Current context */
+        Context              m_oCurCtxt;
+
+        /** Stack of saved contexts */
+        std::vector<Context> m_aoStackContext;
+
+        /** Maximum allowed number of XML nesting level */
+        int                  m_nMaxLevel;
+
+        /** Maximum allowed size of XML content in byte */
+        size_t               m_nMaxContentSize; 
+
+        static void SetField( OGRFeature* poFeature,
+                              int nAttrIdx,
+                              const CPLString& osAttrValue );
+
+        void        CreateNewFeature(const CPLString& osLocalname);
+
+        void        PushFeatureReady( OGRFeature* poFeature,
+                                      OGRGMLASLayer* poLayer );
+
+        void        BuildXMLBlobStartElement(const CPLString& osNSPrefix,
+                                             const CPLString& osLocalname,
+                                             const  Attributes& attrs);
+
+        OGRGMLASLayer* GetLayerByXPath( const CPLString& osXPath );
+
+    public:
+                        GMLASReader();
+                        ~GMLASReader();
+
+        bool Init(const char* pszFilename,
+                  VSILFILE* fp,
+                  const std::map<CPLString, CPLString>& oMapURIToPrefix,
+                  std::vector<OGRGMLASLayer*>* papoLayers);
+
+        void SetLayerOfInterest( OGRGMLASLayer* poLayer );
+
+        OGRFeature* GetNextFeature( OGRLayer** ppoBelongingLayer = NULL );
+
+        virtual void startElement(
+            const   XMLCh* const    uri,
+            const   XMLCh* const    localname,
+            const   XMLCh* const    qname,
+            const   Attributes& attrs
+        );
+        virtual  void endElement(
+            const   XMLCh* const    uri,
+            const   XMLCh* const    localname,
+            const   XMLCh* const    qname
+        );
+
+        virtual  void characters( const XMLCh *const chars,
+                        const XMLSize_t length );
+
+        virtual void startEntity (const XMLCh *const name);
+
+};
+
+#endif // OGR_GMLAS_INCLUDED

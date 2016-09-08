@@ -1,0 +1,558 @@
+INFO: Open of `GMLAS:data/gmlas_test1.xml'
+      using driver `GMLAS' successful.
+
+Layer name: abstract_element_realization1
+Geometry: None
+Feature Count: 2
+Layer SRS WKT:
+(unknown)
+ogr_pkid: String (0.0) NOT NULL
+a_int: Integer (0.0) NOT NULL
+OGRFeature(abstract_element_realization1):1
+  ogr_pkid (String) = _abstract_element_realization1_1
+  a_int (Integer) = 3
+
+OGRFeature(abstract_element_realization1):2
+  ogr_pkid (String) = _abstract_element_realization1_2
+  a_int (Integer) = 5
+
+
+Layer name: abstract_element_realization2
+Geometry: None
+Feature Count: 1
+Layer SRS WKT:
+(unknown)
+ogr_pkid: String (0.0) NOT NULL
+b_int: Integer (0.0) NOT NULL
+OGRFeature(abstract_element_realization2):1
+  ogr_pkid (String) = _abstract_element_realization2_1
+  b_int (Integer) = 4
+
+
+Layer name: main_elt
+Geometry: None
+Feature Count: 1
+Layer SRS WKT:
+(unknown)
+otherns_id: String (0.0) NOT NULL
+optionalStrAttr: String (0.0)
+fixedValUnset: String (0.0) DEFAULT 'fixed_value'
+fixedValSet: String (0.0) DEFAULT 'fixed_value'
+defaultValUnset: String (0.0) DEFAULT 'default_value'
+defaultValSet: String (0.0) DEFAULT 'default_value'
+myAttributeGroupAttr1: String (0.0)
+myAttributeGroupAttr2: Integer (0.0) NOT NULL
+id_attr: String (0.0)
+base_int: Integer (0.0) NOT NULL
+id: String (0.0) NOT NULL
+string: String (0.0) NOT NULL
+string_array: StringList (0.0) NOT NULL
+int: Integer (0.0) NOT NULL
+int_array: IntegerList (0.0) NOT NULL
+long: Integer64 (0.0) NOT NULL
+long_array: Integer64List (0.0) NOT NULL
+float: Real(Float32) (0.0) NOT NULL
+float_array: RealList(Float32) (0.0) NOT NULL
+double: Real (0.0) NOT NULL
+double_array: RealList (0.0) NOT NULL
+decimal: Real (0.0) NOT NULL
+byte: Integer (0.0) NOT NULL
+short: Integer(Int16) (0.0) NOT NULL
+positiveInteger: Integer (0.0) NOT NULL
+dt: DateTime (0.0) NOT NULL
+boolean: Integer(Boolean) (0.0) NOT NULL
+boolean_array: IntegerList(Boolean) (0.0) NOT NULL
+myint_myAttr: String (8.0)
+myint: Integer (0.0)
+int_min_occurs_0: Integer (0.0)
+int_nillable: Integer (0.0)
+int_min_occurs_0_nillable: Integer (0.0)
+int_min_occurs_0_nillable_nil: Integer(Boolean) (0.0)
+int_min_occurs_0_nillable_bis: Integer (0.0)
+int_min_occurs_0_nillable_bis_nil: Integer(Boolean) (0.0)
+anonymous_type: Integer (0.0) NOT NULL
+union: String (0.0) NOT NULL
+compound_simplifiable_subelement: String (0.0)
+compound_simplifiable_subelement2: String (0.0) NOT NULL
+sequence_1_string_unbounded_subelement: StringList (0.0) NOT NULL
+sequence_unbounded_string_1_subelement: StringList (0.0) NOT NULL
+int_complex_simplifiable: IntegerList (0.0)
+an_abstract_element_in_other_ns_pkid: String (0.0)
+any_type_anyAttributes: String (0.0)
+any_type: String (0.0)
+any_attr_anyAttributes: String (0.0)
+any_attr: Integer (0.0)
+any_attr_no_attr_anyAttributes: String (0.0)
+any_attr_no_attr: Integer (0.0)
+group2_elt: String (0.0) NOT NULL
+group4_elt: StringList (0.0) NOT NULL
+rec_A_pkid: String (0.0)
+OGRFeature(main_elt):1
+  otherns_id (String) = otherns_id
+  optionalStrAttr (String) = (null)
+  fixedValUnset (String) = fixed_value
+  fixedValSet (String) = fixed_value
+  defaultValUnset (String) = default_value
+  defaultValSet (String) = mydefaultValSet
+  myAttributeGroupAttr1 (String) = (null)
+  myAttributeGroupAttr2 (Integer) = 3
+  id_attr (String) = attr_id
+  base_int (Integer) = 12
+  id (String) = element_id
+  string (String) = element_string
+  string_array (StringList) = (2:element_string_array,2nd element_string_array)
+  int (Integer) = 3
+  int_array (IntegerList) = (2:3,4)
+  long (Integer64) = 123456789012
+  long_array (Integer64List) = (2:123456789012,123456789013)
+  float (Real(Float32)) = 1.23
+  float_array (RealList(Float32)) = (2:2.34,3.45)
+  double (Real) = 1.23456789012
+  double_array (RealList) = (2:2.3456,3.4578)
+  decimal (Real) = 1.23456789012
+  byte (Integer) = -128
+  short (Integer(Int16)) = -32768
+  positiveInteger (Integer) = 1
+  dt (DateTime) = 2012/01/01 12:34:56+00
+  boolean (Integer(Boolean)) = 0
+  boolean_array (IntegerList(Boolean)) = (2:1,0)
+  myint_myAttr (String) = 12345678
+  myint (Integer) = 10
+  int_min_occurs_0 (Integer) = (null)
+  int_nillable (Integer) = (null)
+  int_min_occurs_0_nillable (Integer) = (null)
+  int_min_occurs_0_nillable_nil (Integer(Boolean)) = (null)
+  int_min_occurs_0_nillable_bis (Integer) = (null)
+  int_min_occurs_0_nillable_bis_nil (Integer(Boolean)) = 1
+  anonymous_type (Integer) = 3
+  union (String) = 42
+  compound_simplifiable_subelement (String) = (null)
+  compound_simplifiable_subelement2 (String) = element_compound_simplifiable_subelement2
+  sequence_1_string_unbounded_subelement (StringList) = (2:sequence_1_string_unbounded_1,sequence_1_string_unbounded_2)
+  sequence_unbounded_string_1_subelement (StringList) = (2:sequence_unbounded_string_1,sequence_unbounded_string_2)
+  int_complex_simplifiable (IntegerList) = (2:10,20)
+  an_abstract_element_in_other_ns_pkid (String) = _an_abstract_element_in_other_ns_realization1_1
+  any_type_anyAttributes (String) = { "foo": "bar" }
+  any_type (String) = A&lt;<foo bar="baz&quot;&gt;">blow</foo><myns:blo></myns:blo>C
+  any_attr_anyAttributes (String) = { "foo": "bar" }
+  any_attr (Integer) = 1
+  any_attr_no_attr_anyAttributes (String) = (null)
+  any_attr_no_attr (Integer) = 2
+  group2_elt (String) = group2_elt_1
+  group4_elt (StringList) = (2:group4_elt_1,group4_elt_2)
+  rec_A_pkid (String) = _rec_A_1
+
+
+Layer name: main_elt_dt_array
+Geometry: None
+Feature Count: 2
+Layer SRS WKT:
+(unknown)
+ogr_pkid: String (0.0) NOT NULL
+parent_otherns_id: String (0.0) NOT NULL
+value: DateTime (0.0)
+OGRFeature(main_elt_dt_array):1
+  ogr_pkid (String) = otherns_id_dt_array_1
+  parent_otherns_id (String) = otherns_id
+  value (DateTime) = 2012/01/01 12:34:56+00
+
+OGRFeature(main_elt_dt_array):2
+  ogr_pkid (String) = otherns_id_dt_array_2
+  parent_otherns_id (String) = otherns_id
+  value (DateTime) = 2012/01/02 12:34:56+00
+
+
+Layer name: main_elt_myint_repeated
+Geometry: None
+Feature Count: 2
+Layer SRS WKT:
+(unknown)
+ogr_pkid: String (0.0) NOT NULL
+parent_otherns_id: String (0.0) NOT NULL
+myAttr: String (8.0)
+value: Integer (0.0) NOT NULL
+OGRFeature(main_elt_myint_repeated):1
+  ogr_pkid (String) = otherns_id_myint_repeated_1
+  parent_otherns_id (String) = otherns_id
+  myAttr (String) = 12345678
+  value (Integer) = 1
+
+OGRFeature(main_elt_myint_repeated):2
+  ogr_pkid (String) = otherns_id_myint_repeated_2
+  parent_otherns_id (String) = otherns_id
+  myAttr (String) = (null)
+  value (Integer) = 2
+
+
+Layer name: main_elt_sequence_1_dt_unbounded_subelement
+Geometry: None
+Feature Count: 2
+Layer SRS WKT:
+(unknown)
+ogr_pkid: String (0.0) NOT NULL
+parent_otherns_id: String (0.0) NOT NULL
+value: DateTime (0.0)
+OGRFeature(main_elt_sequence_1_dt_unbounded_subelement):1
+  ogr_pkid (String) = otherns_id_subelement_1
+  parent_otherns_id (String) = otherns_id
+  value (DateTime) = 2012/01/01 12:34:56+00
+
+OGRFeature(main_elt_sequence_1_dt_unbounded_subelement):2
+  ogr_pkid (String) = otherns_id_subelement_2
+  parent_otherns_id (String) = otherns_id
+  value (DateTime) = 2012/01/02 12:34:56+00
+
+
+Layer name: main_elt_sequence_unbounded_dt_1_subelement
+Geometry: None
+Feature Count: 2
+Layer SRS WKT:
+(unknown)
+ogr_pkid: String (0.0) NOT NULL
+parent_otherns_id: String (0.0) NOT NULL
+value: DateTime (0.0)
+OGRFeature(main_elt_sequence_unbounded_dt_1_subelement):1
+  ogr_pkid (String) = otherns_id_subelement_1
+  parent_otherns_id (String) = otherns_id
+  value (DateTime) = 2012/01/03 12:34:56+00
+
+OGRFeature(main_elt_sequence_unbounded_dt_1_subelement):2
+  ogr_pkid (String) = otherns_id_subelement_2
+  parent_otherns_id (String) = otherns_id
+  value (DateTime) = 2012/01/04 12:34:56+00
+
+
+Layer name: main_elt_sequence_sequence_subsequence
+Geometry: None
+Feature Count: 2
+Layer SRS WKT:
+(unknown)
+ogr_pkid: String (0.0) NOT NULL
+parent_otherns_id: String (0.0) NOT NULL
+OGRFeature(main_elt_sequence_sequence_subsequence):1
+  ogr_pkid (String) = otherns_id_subsequence_1
+  parent_otherns_id (String) = otherns_id
+
+OGRFeature(main_elt_sequence_sequence_subsequence):2
+  ogr_pkid (String) = otherns_id_subsequence_2
+  parent_otherns_id (String) = otherns_id
+
+
+Layer name: main_elt_sequence_sequence_subsequence_subelement
+Geometry: None
+Feature Count: 4
+Layer SRS WKT:
+(unknown)
+ogr_pkid: String (0.0) NOT NULL
+parent_ogr_pkid: String (0.0) NOT NULL
+value: DateTime (0.0)
+OGRFeature(main_elt_sequence_sequence_subsequence_subelement):1
+  ogr_pkid (String) = otherns_id_subsequence_1_subelement_1
+  parent_ogr_pkid (String) = otherns_id_subsequence_1
+  value (DateTime) = 2016/01/01 12:34:56+00
+
+OGRFeature(main_elt_sequence_sequence_subsequence_subelement):2
+  ogr_pkid (String) = otherns_id_subsequence_1_subelement_2
+  parent_ogr_pkid (String) = otherns_id_subsequence_1
+  value (DateTime) = 2016/01/02 12:34:56+00
+
+OGRFeature(main_elt_sequence_sequence_subsequence_subelement):3
+  ogr_pkid (String) = otherns_id_subsequence_2_subelement_3
+  parent_ogr_pkid (String) = otherns_id_subsequence_2
+  value (DateTime) = 2016/01/03 12:34:56+00
+
+OGRFeature(main_elt_sequence_sequence_subsequence_subelement):4
+  ogr_pkid (String) = otherns_id_subsequence_2_subelement_4
+  parent_ogr_pkid (String) = otherns_id_subsequence_2
+  value (DateTime) = 2016/01/04 12:34:56+00
+
+
+Layer name: main_elt_sequence_1_unbounded_with_2_subelts
+Geometry: None
+Feature Count: 2
+Layer SRS WKT:
+(unknown)
+ogr_pkid: String (0.0) NOT NULL
+parent_otherns_id: String (0.0) NOT NULL
+subelement: String (0.0) NOT NULL
+subelement2: String (0.0)
+OGRFeature(main_elt_sequence_1_unbounded_with_2_subelts):1
+  ogr_pkid (String) = otherns_id_sequence_1_unbounded_with_2_subelts_1
+  parent_otherns_id (String) = otherns_id
+  subelement (String) = sequence_1_unbounded_with_2_subelts_1
+  subelement2 (String) = (null)
+
+OGRFeature(main_elt_sequence_1_unbounded_with_2_subelts):2
+  ogr_pkid (String) = otherns_id_subelement_2
+  parent_otherns_id (String) = otherns_id
+  subelement (String) = sequence_1_unbounded_with_2_subelts_2
+  subelement2 (String) = (null)
+
+
+Layer name: main_elt_sequence_1_unbounded_non_simplifiable
+Geometry: None
+Feature Count: 2
+Layer SRS WKT:
+(unknown)
+ogr_pkid: String (0.0) NOT NULL
+parent_otherns_id: String (0.0) NOT NULL
+id: String (0.0)
+OGRFeature(main_elt_sequence_1_unbounded_non_simplifiable):1
+  ogr_pkid (String) = otherns_id_sequence_1_unbounded_non_simplifiable_1
+  parent_otherns_id (String) = otherns_id
+  id (String) = id1
+
+OGRFeature(main_elt_sequence_1_unbounded_non_simplifiable):2
+  ogr_pkid (String) = otherns_id_sequence_1_unbounded_non_simplifiable_2
+  parent_otherns_id (String) = otherns_id
+  id (String) = id2
+
+
+Layer name: main_elt_sequence_1_unbounded_non_simplifiable_sequence
+Geometry: None
+Feature Count: 4
+Layer SRS WKT:
+(unknown)
+ogr_pkid: String (0.0) NOT NULL
+parent_ogr_pkid: String (0.0) NOT NULL
+subelement: String (0.0) NOT NULL
+OGRFeature(main_elt_sequence_1_unbounded_non_simplifiable_sequence):1
+  ogr_pkid (String) = otherns_id_sequence_1_unbounded_non_simplifiable_1_subelement_1
+  parent_ogr_pkid (String) = otherns_id_sequence_1_unbounded_non_simplifiable_1
+  subelement (String) = sequence_1_unbounded_non_simplifiable_1_1
+
+OGRFeature(main_elt_sequence_1_unbounded_non_simplifiable_sequence):2
+  ogr_pkid (String) = otherns_id_sequence_1_unbounded_non_simplifiable_1_subelement_2
+  parent_ogr_pkid (String) = otherns_id_sequence_1_unbounded_non_simplifiable_1
+  subelement (String) = sequence_1_unbounded_non_simplifiable_1_2
+
+OGRFeature(main_elt_sequence_1_unbounded_non_simplifiable_sequence):3
+  ogr_pkid (String) = otherns_id_sequence_1_unbounded_non_simplifiable_2_subelement_3
+  parent_ogr_pkid (String) = otherns_id_sequence_1_unbounded_non_simplifiable_2
+  subelement (String) = sequence_1_unbounded_non_simplifiable_2_1
+
+OGRFeature(main_elt_sequence_1_unbounded_non_simplifiable_sequence):4
+  ogr_pkid (String) = otherns_id_sequence_1_unbounded_non_simplifiable_2_subelement_4
+  parent_ogr_pkid (String) = otherns_id_sequence_1_unbounded_non_simplifiable_2
+  subelement (String) = sequence_1_unbounded_non_simplifiable_2_2
+
+
+Layer name: main_elt_sequence_unbounded_1_with_2_subelts
+Geometry: None
+Feature Count: 2
+Layer SRS WKT:
+(unknown)
+ogr_pkid: String (0.0) NOT NULL
+parent_otherns_id: String (0.0) NOT NULL
+subelement: String (0.0) NOT NULL
+subelement2: String (0.0)
+OGRFeature(main_elt_sequence_unbounded_1_with_2_subelts):1
+  ogr_pkid (String) = otherns_id_sequence_unbounded_1_with_2_subelts_1
+  parent_otherns_id (String) = otherns_id
+  subelement (String) = sequence_unbounded_1_with_2_subelts_1
+  subelement2 (String) = (null)
+
+OGRFeature(main_elt_sequence_unbounded_1_with_2_subelts):2
+  ogr_pkid (String) = otherns_id_sequence_unbounded_1_with_2_subelts_2
+  parent_otherns_id (String) = otherns_id
+  subelement (String) = sequence_unbounded_1_with_2_subelts_2
+  subelement2 (String) = (null)
+
+
+Layer name: main_elt_sequence_with_attr_unbounded
+Geometry: None
+Feature Count: 2
+Layer SRS WKT:
+(unknown)
+ogr_pkid: String (0.0) NOT NULL
+parent_otherns_id: String (0.0) NOT NULL
+id: String (0.0)
+subelement: String (0.0) NOT NULL
+subelement2: String (0.0)
+OGRFeature(main_elt_sequence_with_attr_unbounded):1
+  ogr_pkid (String) = otherns_id_sequence_with_attr_unbounded_1
+  parent_otherns_id (String) = otherns_id
+  id (String) = id1
+  subelement (String) = sequence_with_attr_unbounded_1
+  subelement2 (String) = (null)
+
+OGRFeature(main_elt_sequence_with_attr_unbounded):2
+  ogr_pkid (String) = otherns_id_sequence_with_attr_unbounded_2
+  parent_otherns_id (String) = otherns_id
+  id (String) = id2
+  subelement (String) = sequence_with_attr_unbounded_2
+  subelement2 (String) = (null)
+
+
+Layer name: main_elt_group1
+Geometry: None
+Feature Count: 2
+Layer SRS WKT:
+(unknown)
+ogr_pkid: String (0.0) NOT NULL
+parent_otherns_id: String (0.0) NOT NULL
+group1_elt_1: StringList (0.0)
+group1_elt_2: String (0.0)
+OGRFeature(main_elt_group1):1
+  ogr_pkid (String) = otherns_id_group1_elt_1_1
+  parent_otherns_id (String) = otherns_id
+  group1_elt_1 (StringList) = (2:group1_elt_1_1_1,group1_elt_1_1_2)
+  group1_elt_2 (String) = group1_elt_2_1_1
+
+OGRFeature(main_elt_group1):2
+  ogr_pkid (String) = otherns_id_group1_elt_1_2
+  parent_otherns_id (String) = otherns_id
+  group1_elt_1 (StringList) = (1:group1_elt_1_2_1)
+  group1_elt_2 (String) = group1_elt_2_2_1
+
+
+Layer name: main_elt_group3
+Geometry: None
+Feature Count: 4
+Layer SRS WKT:
+(unknown)
+ogr_pkid: String (0.0) NOT NULL
+parent_otherns_id: String (0.0) NOT NULL
+group3_elt1: String (0.0) NOT NULL
+group3_elt2_b: String (0.0) NOT NULL
+OGRFeature(main_elt_group3):1
+  ogr_pkid (String) = otherns_id_group3_elt1_1
+  parent_otherns_id (String) = otherns_id
+  group3_elt1 (String) = sixthelement
+  group3_elt2_b (String) = sixthelement_a_b
+
+OGRFeature(main_elt_group3):2
+  ogr_pkid (String) = otherns_id_group3_elt1_2
+  parent_otherns_id (String) = otherns_id
+  group3_elt1 (String) = sixthelement2
+  group3_elt2_b (String) = (null)
+
+OGRFeature(main_elt_group3):3
+  ogr_pkid (String) = otherns_id_group3_elt1_3
+  parent_otherns_id (String) = otherns_id
+  group3_elt1 (String) = sixthelement3
+  group3_elt2_b (String) = sixthelement3_a_b
+
+OGRFeature(main_elt_group3):4
+  ogr_pkid (String) = otherns_id_group3_elt1_4
+  parent_otherns_id (String) = otherns_id
+  group3_elt1 (String) = sixthelement4
+  group3_elt2_b (String) = fixed_value
+
+
+Layer name: main_elt_group3_group3_elt3_b2
+Geometry: None
+Feature Count: 4
+Layer SRS WKT:
+(unknown)
+ogr_pkid: String (0.0) NOT NULL
+parent_ogr_pkid: String (0.0) NOT NULL
+value: DateTime (0.0)
+OGRFeature(main_elt_group3_group3_elt3_b2):1
+  ogr_pkid (String) = otherns_id_group3_elt1_1_b2_1
+  parent_ogr_pkid (String) = otherns_id_group3_elt1_1
+  value (DateTime) = 2016/01/01 12:34:56+00
+
+OGRFeature(main_elt_group3_group3_elt3_b2):2
+  ogr_pkid (String) = otherns_id_group3_elt1_1_b2_2
+  parent_ogr_pkid (String) = otherns_id_group3_elt1_1
+  value (DateTime) = 2016/01/02 12:34:56+00
+
+OGRFeature(main_elt_group3_group3_elt3_b2):3
+  ogr_pkid (String) = otherns_id_group3_elt1_4_b2_3
+  parent_ogr_pkid (String) = otherns_id_group3_elt1_4
+  value (DateTime) = 2016/01/03 12:34:56+00
+
+OGRFeature(main_elt_group3_group3_elt3_b2):4
+  ogr_pkid (String) = otherns_id_group3_elt1_4_b2_4
+  parent_ogr_pkid (String) = otherns_id_group3_elt1_4
+  value (DateTime) = 2016/01/04 12:34:56+00
+
+
+Layer name: rec_A
+Geometry: None
+Feature Count: 4
+Layer SRS WKT:
+(unknown)
+ogr_pkid: String (0.0) NOT NULL
+rec_B_rec_A_pkid: String (0.0)
+rec_B_elt_B: String (0.0)
+elt_A: String (0.0)
+OGRFeature(rec_A):4
+  ogr_pkid (String) = _rec_A_4
+  rec_B_rec_A_pkid (String) = (null)
+  rec_B_elt_B (String) = (null)
+  elt_A (String) = elt_A4
+
+OGRFeature(rec_A):3
+  ogr_pkid (String) = _rec_A_3
+  rec_B_rec_A_pkid (String) = _rec_A_4
+  rec_B_elt_B (String) = elt_B3
+  elt_A (String) = elt_A3
+
+OGRFeature(rec_A):2
+  ogr_pkid (String) = _rec_A_2
+  rec_B_rec_A_pkid (String) = _rec_A_3
+  rec_B_elt_B (String) = elt_B2
+  elt_A (String) = elt_A2
+
+OGRFeature(rec_A):1
+  ogr_pkid (String) = _rec_A_1
+  rec_B_rec_A_pkid (String) = _rec_A_2
+  rec_B_elt_B (String) = elt_B
+  elt_A (String) = elt_A
+
+
+Layer name: rec_B
+Geometry: None
+Feature Count: 0
+Layer SRS WKT:
+(unknown)
+ogr_pkid: String (0.0) NOT NULL
+rec_A_pkid: String (0.0)
+elt_B: String (0.0)
+
+Layer name: an_abstract_element_in_other_ns_realization1
+Geometry: None
+Feature Count: 1
+Layer SRS WKT:
+(unknown)
+ogr_pkid: String (0.0) NOT NULL
+a_int: Integer (0.0) NOT NULL
+OGRFeature(an_abstract_element_in_other_ns_realization1):1
+  ogr_pkid (String) = _an_abstract_element_in_other_ns_realization1_1
+  a_int (Integer) = 3
+
+
+Layer name: main_elt_an_abstract_element_abstract_element_realization1
+Geometry: None
+Feature Count: 2
+Layer SRS WKT:
+(unknown)
+occurence: Integer (0.0) NOT NULL
+parent_pkid: String (0.0) NOT NULL
+child_pkid: String (0.0) NOT NULL
+OGRFeature(main_elt_an_abstract_element_abstract_element_realization1):1
+  occurence (Integer) = 1
+  parent_pkid (String) = otherns_id
+  child_pkid (String) = _abstract_element_realization1_1
+
+OGRFeature(main_elt_an_abstract_element_abstract_element_realization1):2
+  occurence (Integer) = 2
+  parent_pkid (String) = otherns_id
+  child_pkid (String) = _abstract_element_realization1_2
+
+
+Layer name: main_elt_an_abstract_element_abstract_element_realization2
+Geometry: None
+Feature Count: 1
+Layer SRS WKT:
+(unknown)
+occurence: Integer (0.0) NOT NULL
+parent_pkid: String (0.0) NOT NULL
+child_pkid: String (0.0) NOT NULL
+OGRFeature(main_elt_an_abstract_element_abstract_element_realization2):1
+  occurence (Integer) = 1
+  parent_pkid (String) = otherns_id
+  child_pkid (String) = _abstract_element_realization2_1
+
