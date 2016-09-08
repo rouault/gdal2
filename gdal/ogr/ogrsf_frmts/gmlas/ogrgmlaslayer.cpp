@@ -135,7 +135,7 @@ OGRGMLASLayer::OGRGMLASLayer( OGRGMLASDataSource* poDS,
 
     // Determine if we have an xs:ID attribute/elt, and if it is compulsory,
     // If so, place it as first field (not strictly required, but more readable)
-    for(size_t i=0; i<oFields.size(); i++ )
+    for(int i=0; i< static_cast<int>(oFields.size()); i++ )
     {
         if( oFields[i].GetType() == GMLAS_FT_ID && oFields[i].IsNotNullable() )
         {
@@ -187,7 +187,7 @@ OGRGMLASLayer::OGRGMLASLayer( OGRGMLASDataSource* poDS,
         delete poRelationshipsFeature;
     }
 
-    for(size_t i=0; i<oFields.size(); i++ )
+    for(int i=0; i< static_cast<int>(oFields.size()); i++ )
     {
         if( !oFields[i].GetNestedClassXPath().empty() )
         {

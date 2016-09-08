@@ -267,7 +267,7 @@ void GMLASSchemaAnalyzer::FixDuplicatedFieldNames( GMLASFeatureClass& oClass )
         // Detect duplicated field names
         std::map<CPLString, std::vector<int> > oSetNames;
         std::vector<GMLASField>& aoFields = oClass.GetFields();
-        for(size_t i=0; i<aoFields.size();i++)
+        for(int i=0; i< static_cast<int>(aoFields.size());i++)
         {
             if( !aoFields[i].IsAbstract() )
             {
@@ -1362,6 +1362,12 @@ bool GMLASSchemaAnalyzer::ExploreModelGroup(
         XSParticle* poParticle = poParticles->elementAt(i);
         const bool bRepeatedParticle = poParticle->getMaxOccursUnbounded() ||
                                        poParticle->getMaxOccurs() > 1;
+        const int nMinOccurs = static_cast<int>(poParticle->getMinOccurs());
+        const int nMaxOccurs =
+                        poParticle->getMaxOccursUnbounded() ?
+                            MAXOCCURS_UNLIMITED :
+                            static_cast<int>(poParticle->getMaxOccurs());
+
         if( poParticle->getTermType() == XSParticle::TERM_ELEMENT )
         {
             XSElementDeclaration* poElt = poParticle->getElementTerm();
@@ -1384,9 +1390,8 @@ bool GMLASSchemaAnalyzer::ExploreModelGroup(
             {
                 GMLASField oField;
                 oField.SetName( transcode(poElt->getName()) );
-                oField.SetMinOccurs( poParticle->getMinOccurs() );
-                oField.SetMaxOccurs( poParticle->getMaxOccursUnbounded() ?
-                    MAXOCCURS_UNLIMITED : poParticle->getMaxOccurs() );
+                oField.SetMinOccurs( nMinOccurs );
+                oField.SetMaxOccurs( nMaxOccurs );
                 oField.SetType( GMLAS_FT_ANYTYPE, "anyType" );
                 oField.SetXPath( osElementXPath );
 
@@ -1399,9 +1404,8 @@ bool GMLASSchemaAnalyzer::ExploreModelGroup(
             {
                 GMLASField oField;
                 oField.SetName( transcode(poElt->getName()) );
-                oField.SetMinOccurs( poParticle->getMinOccurs() );
-                oField.SetMaxOccurs( poParticle->getMaxOccursUnbounded() ?
-                    MAXOCCURS_UNLIMITED : poParticle->getMaxOccurs() );
+                oField.SetMinOccurs( nMinOccurs );
+                oField.SetMaxOccurs( nMaxOccurs );
                 oField.SetType( GMLAS_FT_ANYTYPE, "anyType" );
                 oField.SetIncludeThisEltInBlob( true );
 
@@ -1420,9 +1424,6 @@ bool GMLASSchemaAnalyzer::ExploreModelGroup(
             else if( !apoSubEltList.empty() ||
                         m_oSetTopLevelElement.find(poElt) != m_oSetTopLevelElement.end() )
             {
-                const int nMaxOccurs =
-                        poParticle->getMaxOccursUnbounded() ?
-                            MAXOCCURS_UNLIMITED : poParticle->getMaxOccurs();
                 CreateNonNestedRelationship(poElt,
                                             apoSubEltList,
                                             oClass,
@@ -1445,9 +1446,8 @@ bool GMLASSchemaAnalyzer::ExploreModelGroup(
                             reinterpret_cast<XSSimpleTypeDefinition*>(poTypeDef);
                 GMLASField oField;
                 SetFieldTypeAndWidthFromDefinition(poST, oField);
-                oField.SetMinOccurs( poParticle->getMinOccurs() );
-                oField.SetMaxOccurs( poParticle->getMaxOccursUnbounded() ?
-                    MAXOCCURS_UNLIMITED : poParticle->getMaxOccurs() );
+                oField.SetMinOccurs( nMinOccurs );
+                oField.SetMaxOccurs( nMaxOccurs );
 
                 bool bNeedAuxTable = false;
                 if( m_bAllowArrays && bRepeatedParticle &&
@@ -1484,7 +1484,7 @@ bool GMLASSchemaAnalyzer::ExploreModelGroup(
                 {
                     oField.SetName( transcode(poElt->getName()) );
                     oField.SetXPath( osElementXPath );
-                    if( !bIsChoice && poParticle->getMinOccurs() > 0 &&
+                    if( !bIsChoice && nMinOccurs > 0 &&
                         !poElt->getNillable() )
                     {
                         oField.SetNotNullable( true );
@@ -1495,7 +1495,7 @@ bool GMLASSchemaAnalyzer::ExploreModelGroup(
                     // need an extra field to be able to distinguish between the
                     // case of the missing element or the element with
                     // xsi:nil="true"
-                    if( poParticle->getMinOccurs() == 0 &&
+                    if( nMinOccurs &&
                         poElt->getNillable() )
                     {
                         GMLASField oFieldNil;
@@ -1577,10 +1577,8 @@ bool GMLASSchemaAnalyzer::ExploreModelGroup(
                         /* compatible of arrays, so move it to top level! */
                         oField.SetName( transcode(poElt->getName()) );
                         oField.SetArray( true );
-                        oField.SetMinOccurs( poParticle->getMinOccurs() );
-                        oField.SetMaxOccurs( 
-                            poParticle->getMaxOccursUnbounded() ?
-                            MAXOCCURS_UNLIMITED : poParticle->getMaxOccurs() );
+                        oField.SetMinOccurs( nMinOccurs );
+                        oField.SetMaxOccurs( nMaxOccurs );
                     }
                     else if( bRepeatedParticle )
                     {
@@ -1592,10 +1590,8 @@ bool GMLASSchemaAnalyzer::ExploreModelGroup(
                     else
                     {
                         oField.SetName( transcode(poElt->getName()) );
-                        oField.SetMinOccurs( poParticle->getMinOccurs() );
-                        oField.SetMaxOccurs( 
-                            poParticle->getMaxOccursUnbounded() ?
-                            MAXOCCURS_UNLIMITED : poParticle->getMaxOccurs() );
+                        oField.SetMinOccurs( nMinOccurs );
+                        oField.SetMaxOccurs( nMaxOccurs );
                     }
                     oField.SetXPath( osElementXPath );
                     aoFields.push_back(oField);
@@ -1619,10 +1615,8 @@ bool GMLASSchemaAnalyzer::ExploreModelGroup(
                     else
                     {
                         oField.SetName( transcode(poElt->getName()) );
-                        oField.SetMinOccurs( poParticle->getMinOccurs() );
-                        oField.SetMaxOccurs( 
-                            poParticle->getMaxOccursUnbounded() ?
-                            MAXOCCURS_UNLIMITED : poParticle->getMaxOccurs() );
+                        oField.SetMinOccurs( nMinOccurs );
+                        oField.SetMaxOccurs( nMaxOccurs );
                     }
                     oField.SetXPath( osElementXPath );
                     aoFields.push_back(oField);

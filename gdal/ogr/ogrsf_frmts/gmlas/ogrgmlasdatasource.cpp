@@ -355,7 +355,7 @@ bool OGRGMLASDataSource::Open(GDALOpenInfo* poOpenInfo)
 
     VSILFILE* fpGML = VSIFOpenL(pszGMLFilename, "rb");
     if( fpGML == NULL )
-        return NULL;
+        return false;
     std::vector<PairURIFilename> aoXSDs;
     if( osXSDFilename.empty() )
     {
