@@ -316,7 +316,7 @@ class GMLASFeatureClass
         CPLString m_osChildXPath;
 
         /** Whether this corresponds to a top-level XSD element in the schema */
-        bool m_bIsTopLevel;
+        bool m_bIsTopLevelElt;
 
     public:
         GMLASFeatureClass();
@@ -332,7 +332,8 @@ class GMLASFeatureClass
                                                 { m_osParentXPath = osXPath; }
         void SetChildXPath(const CPLString& osXPath)
                                                 { m_osChildXPath = osXPath; }
-        void SetIsTopLevel(bool bIsTopLevel ) { m_bIsTopLevel = bIsTopLevel; }
+        void SetIsTopLevelElt(bool bIsTopLevelElt )
+                                        { m_bIsTopLevelElt = bIsTopLevelElt; }
 
         const CPLString& GetName() const { return m_osName; }
         const CPLString& GetXPath() const { return m_osXPath; }
@@ -345,7 +346,7 @@ class GMLASFeatureClass
         bool IsGroup() const { return m_bIsGroup; }
         const CPLString& GetParentXPath() const { return m_osParentXPath; }
         const CPLString& GetChildXPath() const { return m_osChildXPath; }
-        bool IsTopLevel() const { return m_bIsTopLevel; }
+        bool IsTopLevelElt() const { return m_bIsTopLevelElt; }
 };
 
 /************************************************************************/
@@ -474,6 +475,7 @@ class OGRGMLASDataSource: public GDALDataset
         CPLString                      m_osGMLFilename;
         bool                           m_bExposeMetadataLayers;
         OGRLayer                      *m_poFieldsMetadataLayer;
+        OGRLayer                      *m_poLayersMetadataLayer;
         OGRLayer                      *m_poRelationshipsLayer;
 
         void TranslateClasses( OGRGMLASLayer* poParentLayer,
@@ -497,6 +499,8 @@ class OGRGMLASDataSource: public GDALDataset
                                             { return m_osGMLFilename; }
         OGRLayer*                             GetFieldsMetadataLayer()
                                             { return m_poFieldsMetadataLayer; }
+        OGRLayer*                             GetLayersMetadataLayer()
+                                            { return m_poLayersMetadataLayer; }
         OGRLayer*                             GetRelationshipsLayer()
                                             { return m_poRelationshipsLayer; }
         OGRGMLASLayer*          GetLayerByXPath( const CPLString& osXPath );

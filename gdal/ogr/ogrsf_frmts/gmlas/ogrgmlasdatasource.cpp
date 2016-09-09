@@ -92,6 +92,21 @@ OGRGMLASDataSource::OGRGMLASDataSource()
         m_poFieldsMetadataLayer->CreateField(&oFieldDefn);
     }
 
+    m_poLayersMetadataLayer = new OGRMemLayer
+                                    ("_ogr_layers_metadata", NULL, wkbNone );
+    {
+        OGRFieldDefn oFieldDefn("layer_name", OFTString);
+        m_poLayersMetadataLayer->CreateField(&oFieldDefn);
+    }
+    {
+        OGRFieldDefn oFieldDefn("layer_xpath", OFTString);
+        m_poLayersMetadataLayer->CreateField(&oFieldDefn);
+    }
+    {
+        OGRFieldDefn oFieldDefn("layer_category", OFTString);
+        m_poLayersMetadataLayer->CreateField(&oFieldDefn);
+    }
+
     m_poRelationshipsLayer = new OGRMemLayer("_ogr_layer_relationships",
                                              NULL, wkbNone );
     {
@@ -125,6 +140,7 @@ OGRGMLASDataSource::~OGRGMLASDataSource()
     for(size_t i=0;i<m_apoLayers.size();i++)
         delete m_apoLayers[i];
     delete m_poFieldsMetadataLayer;
+    delete m_poLayersMetadataLayer;
     delete m_poRelationshipsLayer;
 
     // FIXME
@@ -138,7 +154,7 @@ OGRGMLASDataSource::~OGRGMLASDataSource()
 int         OGRGMLASDataSource::GetLayerCount()
 {
     return static_cast<int>(m_apoLayers.size() +
-                            (m_bExposeMetadataLayers ? 2 : 0));
+                            (m_bExposeMetadataLayers ? 3 : 0));
 }
 
 /************************************************************************/
@@ -150,6 +166,8 @@ OGRLayer    *OGRGMLASDataSource::GetLayer(int i)
     if( m_bExposeMetadataLayers && i == static_cast<int>(m_apoLayers.size()) )
         return m_poFieldsMetadataLayer;
     if( m_bExposeMetadataLayers && i == 1 + static_cast<int>(m_apoLayers.size()) )
+        return m_poLayersMetadataLayer;
+    if( m_bExposeMetadataLayers && i == 2 + static_cast<int>(m_apoLayers.size()) )
         return m_poRelationshipsLayer;
 
     if( i < 0 || i >= static_cast<int>(m_apoLayers.size()) )

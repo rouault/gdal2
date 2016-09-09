@@ -56,6 +56,26 @@ OGRGMLASLayer::OGRGMLASLayer( OGRGMLASDataSource* poDS,
 
     SetDescription( m_poFeatureDefn->GetName() );
 
+    OGRLayer* poLayersMetadataLayer = m_poDS->GetLayersMetadataLayer();
+    OGRFeature* poLayerDescFeature =
+                        new OGRFeature(poLayersMetadataLayer->GetLayerDefn());
+    poLayerDescFeature->SetField( "layer_name", GetName() );
+    if( !m_oFC.GetParentXPath().empty() )
+    {
+        poLayerDescFeature->SetField( "layer_category", "JUNCTION_TABLE" );
+    }
+    else
+    {
+        poLayerDescFeature->SetField( "layer_xpath", m_oFC.GetXPath() );
+
+        poLayerDescFeature->SetField( "layer_category",
+                                m_oFC.IsTopLevelElt() ? "TOP_LEVEL_ELEMENT" :
+                                                        "NESTED_ELEMENT" );
+    }
+    CPL_IGNORE_RET_VAL(
+            poLayersMetadataLayer->CreateFeature(poLayerDescFeature));
+    delete poLayerDescFeature;
+
     // Are we a regular table ?
     if( m_oFC.GetParentXPath().empty() )
     {

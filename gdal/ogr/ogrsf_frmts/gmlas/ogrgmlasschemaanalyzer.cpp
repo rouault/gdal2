@@ -769,7 +769,7 @@ bool GMLASSchemaAnalyzer::InstantiateClassFromEltDeclaration(
             CPLDebug("GMLAS", "Instantiating element %s", osXPath.c_str());
 #endif
             oClass.SetXPath( osXPath );
-            oClass.SetIsTopLevel(
+            oClass.SetIsTopLevelElt(
                 GetTopElementDeclarationFromXPath(osXPath, poModel) != NULL );
 
             m_oSetInstanciatedElements.insert( poEltDecl );
