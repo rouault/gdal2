@@ -358,6 +358,7 @@ static bool ends_with(const CPLString& haystack, const CPLString& needle)
 /************************************************************************/
 
 void GMLASReader::SetField( OGRFeature* poFeature,
+                            OGRGMLASLayer* poLayer,
                             int nAttrIdx,
                             const CPLString& osAttrValue )
 {
@@ -386,6 +387,31 @@ void GMLASReader::SetField( OGRFeature* poFeature,
             poFeature->SetField( nAttrIdx, TRUE );
         else
             poFeature->SetField( nAttrIdx, FALSE );
+    }
+    else if( eType == OFTBinary )
+    {
+        const int nFCFieldIdx =
+            poLayer->GetFCFieldIndexFromOGRFieldIdx(nAttrIdx);
+        if( nFCFieldIdx >= 0 )
+        {
+            const GMLASField& oField(
+                poLayer->GetFeatureClass().GetFields()[nFCFieldIdx]);
+            if( oField.GetType() == GMLAS_FT_BASE64BINARY )
+            {
+                GByte* pabyBuffer = reinterpret_cast<GByte*>(
+                                                    CPLStrdup(osAttrValue));
+                int nBytes = CPLBase64DecodeInPlace(pabyBuffer);
+                poFeature->SetField( nAttrIdx, nBytes, pabyBuffer );
+                CPLFree(pabyBuffer);
+            }
+            else
+            {
+                int nBytes = 0;
+                GByte* pabyBuffer = CPLHexToBinary( osAttrValue, &nBytes );
+                poFeature->SetField( nAttrIdx, nBytes, pabyBuffer );
+                CPLFree(pabyBuffer);
+            }
+        }
     }
     else
     {
@@ -922,12 +948,15 @@ void GMLASReader::startElement(
                     {
                         int nOldCurFieldIdx = m_nCurFieldIdx;
                         OGRFeature* poOldCurFeature = m_oCurCtxt.m_poFeature;
+                        OGRGMLASLayer* poOldLayer = m_oCurCtxt.m_poLayer;
                         m_oCurCtxt.m_poLayer = poSubLayer;
                         CreateNewFeature(osLocalname);
                         CPLString osChildId(
                             m_oCurCtxt.m_poFeature->GetFieldAsString(
                                     m_oCurCtxt.m_poLayer->GetIDFieldIdx()));
-                        SetField( poOldCurFeature, nOldCurFieldIdx,
+                        SetField( poOldCurFeature,
+                                  poOldLayer,
+                                  nOldCurFieldIdx,
                                   osChildId );
 
                         Context oContext;
@@ -1064,7 +1093,9 @@ void GMLASReader::startElement(
             int nAttrIdx = m_oCurCtxt.m_poLayer->GetFieldIndexFromXPath(osAttrXPath);
             if( nAttrIdx >= 0 )
             {
-                SetField( m_oCurCtxt.m_poFeature, nAttrIdx, osAttrValue );
+                SetField( m_oCurCtxt.m_poFeature,
+                          m_oCurCtxt.m_poLayer,
+                          nAttrIdx, osAttrValue );
             }
 
             else if( osAttrNSPrefix != "xmlns" &&
@@ -1098,7 +1129,9 @@ void GMLASReader::startElement(
         // Store wildcard attributes
         if( poWildcard != NULL )
         {
-            SetField( m_oCurCtxt.m_poFeature, nWildcardAttrIdx,
+            SetField( m_oCurCtxt.m_poFeature,
+                      m_oCurCtxt.m_poLayer,
+                      nWildcardAttrIdx,
                       json_object_get_string(poWildcard) );
             json_object_put(poWildcard);
         }
@@ -1124,7 +1157,9 @@ void GMLASReader::startElement(
                 if( !osFixedDefaultValue.empty() &&
                     !m_oCurCtxt.m_poFeature->IsFieldSet(i) )
                 {
-                    SetField( m_oCurCtxt.m_poFeature, i, osFixedDefaultValue);
+                    SetField( m_oCurCtxt.m_poFeature,
+                              m_oCurCtxt.m_poLayer,
+                              i, osFixedDefaultValue);
                 }
             }
         }
@@ -1199,7 +1234,9 @@ void GMLASReader::endElement(
                 m_osTextContent += ">";
             }
 
-            SetField( m_oCurCtxt.m_poFeature, m_nCurFieldIdx, m_osTextContent );
+            SetField( m_oCurCtxt.m_poFeature,
+                      m_oCurCtxt.m_poLayer,
+                      m_nCurFieldIdx, m_osTextContent );
         }
         m_bIsXMLBlob = false;
         m_bIsXMLBlobIncludeUpper = false;

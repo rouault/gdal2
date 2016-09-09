@@ -207,20 +207,45 @@ GMLASSchemaAnalyzer::GMLASSchemaAnalyzer()
 /*                               MakeXPath()                            */
 /************************************************************************/
 
-CPLString GMLASSchemaAnalyzer::MakeXPath( const CPLString& osNamespace,
+CPLString GMLASSchemaAnalyzer::MakeXPath( const CPLString& osNamespaceURI,
                                           const CPLString& osName )
 {
-    if( osNamespace.size() == 0 )
+    if( osNamespaceURI.size() == 0 )
         return osName;
     std::map<CPLString,CPLString>::const_iterator oIter =
-                                        m_oMapURIToPrefix.find(osNamespace);
+                                        m_oMapURIToPrefix.find(osNamespaceURI);
     if( oIter != m_oMapURIToPrefix.end() )
         return oIter->second + ":" + osName;
+    else if( !osNamespaceURI.empty() )
+    {
+        // If the schema doesn't define a xmlns:MYPREFIX=myuri, then forge a
+        // fake prefix for conveniency
+        CPLString osPrefix;
+        if( osNamespaceURI.find("http://www.opengis.net/") == 0 )
+            osPrefix = osNamespaceURI.substr( strlen("http://www.opengis.net/") );
+        else if( osNamespaceURI.find("http://") == 0 )
+            osPrefix = osNamespaceURI.substr( strlen("http://") );
+        else
+            osPrefix = osNamespaceURI;
+        for(size_t i = 0; i < osPrefix.size(); i++ )
+        {
+            if( !isalnum(osPrefix[i]) )
+                osPrefix[i] = '_';
+        }
+        m_oMapURIToPrefix[osNamespaceURI] = osPrefix;
+        CPLDebug("GMLAS",
+                 "Cannot find prefix for ns='%s' (name='%s'). Forging %s",
+                 osNamespaceURI.c_str(),
+                 osName.c_str(),
+                 osPrefix.c_str());
+        return osPrefix + ":" + osName;
+    }
     else
     {
-        CPLError(CE_Warning, CPLE_AppDefined,
-                 "Cannot find prefix for ns='%s' (name='%s')",
-                 osNamespace.c_str(), osName.c_str());
+        CPLDebug("GMLAS",
+                 "Cannot find prefix for ns='%s' (name='%s').",
+                 osNamespaceURI.c_str(),
+                 osName.c_str());
         return osName;
     }
 }
@@ -580,11 +605,11 @@ bool GMLASSchemaAnalyzer::Analyze(const CPLString& osBaseDirname,
                             poEltDecl->getSubstitutionGroupAffiliation();
             if( poSubstGroup )
             {
+                m_oMapParentEltToChildElt[poSubstGroup].push_back(poEltDecl);
+#ifdef DEBUG_VERBOSE
                 CPLString osParentType(
                             transcode(poSubstGroup->getNamespace()) + ":" +
                             transcode(poSubstGroup->getName()));
-                m_oMapParentTypeToChildTypes[osParentType].push_back(poEltDecl);
-#ifdef DEBUG_VERBOSE
                 CPLString osChildType(
                             transcode(poEltDecl->getNamespace()) + ":" +
                             transcode(poEltDecl->getName()));
@@ -678,6 +703,10 @@ bool GMLASSchemaAnalyzer::Analyze(const CPLString& osBaseDirname,
                 continue;
 
             bool bError = false;
+            if(transcode(poEltDecl->getName()) == "group")
+            {
+                printf("foo\n");
+            }
             bool bResolvedType = InstantiateClassFromEltDeclaration(poEltDecl,
                                                                     poModel,
                                                                     bError);
@@ -695,7 +724,10 @@ bool GMLASSchemaAnalyzer::Analyze(const CPLString& osBaseDirname,
                                     transcode(poEltDecl->getNamespace()),
                                     transcode(poEltDecl->getName()) ) );
                 CPLError(CE_Failure, CPLE_AppDefined,
-                         "Couldn't resolve %s", osTypenameXPath.c_str());
+                         "Couldn't resolve %s (%s)",
+                         osTypenameXPath.c_str(),
+                         transcode(poEltDecl->getTypeDefinition()->getName()).c_str()
+                         );
                 return false;
             }
         }
@@ -980,11 +1012,9 @@ void GMLASSchemaAnalyzer::GetConcreteImplementationTypes(
                                 XSElementDeclaration* poParentElt,
                                 std::vector<XSElementDeclaration*>& apoSubEltList)
 {
-    CPLString osParentType(transcode(poParentElt->getNamespace()) + ":" +
-                           transcode(poParentElt->getName()));
-    tMapParentTypeToChildTypes::const_iterator oIter =
-        m_oMapParentTypeToChildTypes.find( osParentType );
-    if( oIter == m_oMapParentTypeToChildTypes.end() )
+    tMapParentEltToChildElt::const_iterator oIter =
+        m_oMapParentEltToChildElt.find( poParentElt );
+    if( oIter == m_oMapParentEltToChildElt.end() )
         return;
 
     for( size_t j = 0; j < oIter->second.size(); j++ )
@@ -1108,8 +1138,10 @@ void GMLASSchemaAnalyzer::CreateNonNestedRelationship(
                         m_oSetTypenames.end() )
             {
 #ifdef DEBUG_VERBOSE
-                CPLDebug("GMLAS", "Adding %s as needed type",
-                         osSubEltXPath.c_str() );
+                CPLDebug("GMLAS", "Adding %s as (%s) needed type",
+                         osSubEltXPath.c_str(),
+                         transcode(poSubElt->getTypeDefinition()->
+                                                        getName()).c_str());
 #endif
                 m_oSetNeededTypenames.insert( poSubElt );
             }
@@ -1153,8 +1185,10 @@ void GMLASSchemaAnalyzer::CreateNonNestedRelationship(
                         m_oSetTypenames.end() )
             {
 #ifdef DEBUG_VERBOSE
-                CPLDebug("GMLAS", "Adding %s as needed type",
-                         osSubEltXPath.c_str() );
+                CPLDebug("GMLAS", "Adding %s as (%s) needed type",
+                         osSubEltXPath.c_str(),
+                         transcode(poSubElt->getTypeDefinition()->
+                                                    getName()).c_str());
 #endif
                 m_oSetNeededTypenames.insert( poSubElt );
             }
@@ -1249,7 +1283,13 @@ bool GMLASSchemaAnalyzer::FindElementsWithMustBeToLevel(
                                 MakeXPath(transcode(poElt->getNamespace()),
                                             transcode(poElt->getName())) );
 
-            if( !poElt->getAbstract() &&
+            // Special case for a GML geometry property
+            if( transcode(poTypeDef->getNamespace()).find(pszGML_URI) == 0 &&
+                IsGMLGeometryProperty(poTypeDef) )
+            {
+                // Do nothing
+            }
+            else if( !poElt->getAbstract() &&
                 poTypeDef->getTypeCategory() == XSTypeDefinition::COMPLEX_TYPE )
             {
                 XSComplexTypeDefinition* poEltCT =
@@ -1264,8 +1304,10 @@ bool GMLASSchemaAnalyzer::FindElementsWithMustBeToLevel(
                                                     m_oSetTopLevelElement.end() )
                         {
 #ifdef DEBUG_VERBOSE
-                            CPLDebug("GMLAS", "%s must be exposed as top-level",
-                                     osXPath.c_str());
+                            CPLDebug("GMLAS", "%s (%s) must be exposed as top-level "
+                                     "(multiple time referenced)",
+                                     osXPath.c_str(),
+                                     transcode(poTypeDef->getNamespace()).c_str());
 #endif
                             m_oSetTopLevelElement.insert(poElt);
                             if( m_oSetTypenames.find( poElt ) == 

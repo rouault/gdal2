@@ -66,6 +66,8 @@
                     <xs:restriction base="xs:boolean"/>
                 </xs:simpleType>
             </xs:element>
+            <xs:element name="base64Binary"  type="xs:base64Binary"/>
+            <xs:element name="hexBinary"  type="xs:hexBinary"/>
 
             <!-- complex type with simple content (attributes) -->
             <xs:element name="myint"  type="myns:myint"/>

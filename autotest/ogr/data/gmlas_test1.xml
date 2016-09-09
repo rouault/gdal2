@@ -40,6 +40,8 @@
     <MYNS:boolean>true</MYNS:boolean>
     <MYNS:boolean_array>true</MYNS:boolean_array>
     <MYNS:boolean_array>false</MYNS:boolean_array>
+    <MYNS:base64Binary>YmFzZTY0QmluYXJ5</MYNS:base64Binary>
+    <MYNS:hexBinary>68657842696E617279</MYNS:hexBinary>
 
     <!-- complex type with simple content (attributes) -->
     <MYNS:myint myAttr="12345678">10</MYNS:myint>

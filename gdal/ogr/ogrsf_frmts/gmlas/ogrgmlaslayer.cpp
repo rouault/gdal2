@@ -319,6 +319,10 @@ OGRGMLASLayer::OGRGMLASLayer( OGRGMLASDataSource* poDS,
             case GMLAS_FT_DATETIME:
                 eType = OFTDateTime;
                 break;
+            case GMLAS_FT_BASE64BINARY:
+            case GMLAS_FT_HEXBINARY:
+                eType = OFTBinary;
+                break;
             case GMLAS_FT_ANYURI:
                 eType = OFTString;
                 break;

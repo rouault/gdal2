@@ -69,10 +69,9 @@ CPLString transcode( const XMLCh *panXMLString, int nLimitingChars )
 /*      recoding API.                                                   */
 /* -------------------------------------------------------------------- */
     wchar_t *pwszSource = (wchar_t *) CPLMalloc(sizeof(wchar_t) * (nChars+1) );
-    int i = 0;
-    for( ; panXMLString[i] != 0; i++ )
+    for( int i = 0 ; i < nChars; i++ )
         pwszSource[i] = panXMLString[i];
-    pwszSource[i] = 0;
+    pwszSource[nChars] = 0;
 
     char *pszResult = CPLRecodeFromWChar( pwszSource,
                                           "WCHAR_T", CPL_ENC_UTF8 );

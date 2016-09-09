@@ -155,9 +155,11 @@ typedef enum
     GMLAS_FT_DATE,
     GMLAS_FT_TIME,
     GMLAS_FT_DATETIME,
+    GMLAS_FT_BASE64BINARY,
+    GMLAS_FT_HEXBINARY,
     GMLAS_FT_ANYURI,
     GMLAS_FT_ANYTYPE,
-    GMLAS_FT_ANYSIMPLETYPE
+    GMLAS_FT_ANYSIMPLETYPE,
 } GMLASFieldType;
 
 /************************************************************************/
@@ -305,9 +307,9 @@ class GMLASSchemaAnalyzer
         bool m_bAllowArrays;
         std::vector<GMLASFeatureClass> m_aoClasses;
         std::map<CPLString, CPLString> m_oMapURIToPrefix;
-        typedef std::map<CPLString, std::vector<XSElementDeclaration*> >
-                                                    tMapParentTypeToChildTypes;
-        tMapParentTypeToChildTypes m_oMapParentTypeToChildTypes;
+        typedef std::map<XSElementDeclaration*, std::vector<XSElementDeclaration*> >
+                                                    tMapParentEltToChildElt;
+        tMapParentEltToChildElt m_oMapParentEltToChildElt;
         std::map< XSModelGroup*, CPLString> m_oMapModelGroupDefinitionToName;
         std::set< XSElementDeclaration* > m_oSetTypenames;
         std::set< XSElementDeclaration* > m_oSetNeededTypenames;
@@ -577,6 +579,7 @@ class GMLASReader : public DefaultHandler
         size_t               m_nMaxContentSize; 
 
         static void SetField( OGRFeature* poFeature,
+                              OGRGMLASLayer* poLayer,
                               int nAttrIdx,
                               const CPLString& osAttrValue );
 

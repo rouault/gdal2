@@ -62,7 +62,7 @@ def ogr_gmlas_basic():
     ret = gdaltest.runexternal(test_cli_utilities.get_ogrinfo_path() + ' -ro -al GMLAS:data/gmlas_test1.xml')
     ret = ret.replace('\r\n', '\n')
     expected = open('data/gmlas_test1.txt', 'rb').read().decode('utf-8')
-    expected = ret.replace('\r\n', '\n')
+    expected = expected.replace('\r\n', '\n')
     if ret != expected:
         gdaltest.post_reason('fail')
         print('Got:')

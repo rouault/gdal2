@@ -57,7 +57,8 @@ GMLASField::GMLASField()
 GMLASFieldType GMLASField::GetTypeFromString( const CPLString& osType )
 {
     if( osType == "string" ||
-        osType == "token" )
+        osType == "token" ||
+        osType == "NMTOKEN" )
     {
         // token has special processing by XML processor: all leading/trailing
         // white space is removed
@@ -104,8 +105,10 @@ GMLASFieldType GMLASField::GetTypeFromString( const CPLString& osType )
         return GMLAS_FT_ANYSIMPLETYPE;
     else if( osType == "duration" )
         return GMLAS_FT_STRING;
-    else if( osType == "NCName" )
-        return GMLAS_FT_STRING;
+    else if( osType == "base64Binary" )
+        return GMLAS_FT_BASE64BINARY;
+    else if( osType == "hexBinary" )
+        return GMLAS_FT_HEXBINARY;
     else
     {
         CPLError(CE_Warning, CPLE_AppDefined,

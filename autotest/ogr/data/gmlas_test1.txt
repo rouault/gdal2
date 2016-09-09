@@ -62,14 +62,15 @@ positiveInteger: Integer (0.0) NOT NULL
 dt: DateTime (0.0) NOT NULL
 boolean: Integer(Boolean) (0.0) NOT NULL
 boolean_array: IntegerList(Boolean) (0.0) NOT NULL
+base64Binary: Binary (0.0) NOT NULL
+hexBinary: Binary (0.0) NOT NULL
 myint_myAttr: String (8.0)
 myint: Integer (0.0)
 int_min_occurs_0: Integer (0.0)
 int_nillable: Integer (0.0)
+int_nillable_nil: Integer(Boolean) (0.0)
 int_min_occurs_0_nillable: Integer (0.0)
-int_min_occurs_0_nillable_nil: Integer(Boolean) (0.0)
 int_min_occurs_0_nillable_bis: Integer (0.0)
-int_min_occurs_0_nillable_bis_nil: Integer(Boolean) (0.0)
 anonymous_type: Integer (0.0) NOT NULL
 union: String (0.0) NOT NULL
 compound_simplifiable_subelement: String (0.0)
@@ -116,14 +117,15 @@ OGRFeature(main_elt):1
   dt (DateTime) = 2012/01/01 12:34:56+00
   boolean (Integer(Boolean)) = 0
   boolean_array (IntegerList(Boolean)) = (2:1,0)
+  base64Binary (Binary) = 62617365363442696E617279
+  hexBinary (Binary) = 68657842696E617279
   myint_myAttr (String) = 12345678
   myint (Integer) = 10
   int_min_occurs_0 (Integer) = (null)
   int_nillable (Integer) = (null)
+  int_nillable_nil (Integer(Boolean)) = 1
   int_min_occurs_0_nillable (Integer) = (null)
-  int_min_occurs_0_nillable_nil (Integer(Boolean)) = (null)
   int_min_occurs_0_nillable_bis (Integer) = (null)
-  int_min_occurs_0_nillable_bis_nil (Integer(Boolean)) = 1
   anonymous_type (Integer) = 3
   union (String) = 42
   compound_simplifiable_subelement (String) = (null)
