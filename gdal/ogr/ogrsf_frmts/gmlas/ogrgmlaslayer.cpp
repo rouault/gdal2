@@ -56,13 +56,55 @@ OGRGMLASLayer::OGRGMLASLayer( OGRGMLASDataSource* poDS,
 
     SetDescription( m_poFeatureDefn->GetName() );
 
-    const std::vector<GMLASField>& oFields = oFC.GetFields();
+    // Are we a regular table ?
+    if( m_oFC.GetParentXPath().empty() )
+    {
+        // Determine if we have an xs:ID attribute/elt, and if it is compulsory,
+        // If so, place it as first field (not strictly required, but more readable)
+        const std::vector<GMLASField>& oFields = m_oFC.GetFields();
+        for(int i=0; i< static_cast<int>(oFields.size()); i++ )
+        {
+            if( oFields[i].GetType() == GMLAS_FT_ID &&
+                oFields[i].IsNotNullable() )
+            {
+                OGRFieldDefn oFieldDefn( oFields[i].GetName(), OFTString );
+                oFieldDefn.SetNullable( false );
+                m_nIDFieldIdx = m_poFeatureDefn->GetFieldCount();
+                m_oMapFieldXPathToFieldIdx[ oFields[i].GetXPath() ] =
+                                            m_nIDFieldIdx;
+                m_oMapOGRFieldIdxtoFCFieldIdx[ m_nIDFieldIdx ] = i;
+                m_poFeatureDefn->AddFieldDefn( &oFieldDefn );
+                break;
+            }
+        }
 
-    OGRLayer* poMetadataLayer = poDS->GetMetadataLayer();
+        // If we don't have an explicit ID, then we need
+        // to generate one, so that potentially related classes can reference it
+        // (We could perhaps try to be clever to determine if we really need it)
+        if( m_nIDFieldIdx < 0 )
+        {
+            OGRFieldDefn oFieldDefn( "ogr_pkid", OFTString );
+            oFieldDefn.SetNullable( false );
+            m_nIDFieldIdx = m_poFeatureDefn->GetFieldCount();
+            m_bIDFieldIsGenerated = true;
+            m_poFeatureDefn->AddFieldDefn( &oFieldDefn );
+        }
+    }
+}
+
+/************************************************************************/
+/*                             PostInit()                               */
+/************************************************************************/
+
+void OGRGMLASLayer::PostInit()
+{
+    const std::vector<GMLASField>& oFields = m_oFC.GetFields();
+
+    OGRLayer* poMetadataLayer = m_poDS->GetMetadataLayer();
     OGRLayer* poRelationshipsLayer = m_poDS->GetRelationshipsLayer();
 
     // Is it a junction table ?
-    if( !oFC.GetParentXPath().empty() )
+    if( !m_oFC.GetParentXPath().empty() )
     {
         {
             OGRFieldDefn oFieldDefn( "occurence", OFTInteger );
@@ -106,15 +148,15 @@ OGRGMLASLayer::OGRGMLASLayer( OGRGMLASDataSource* poDS,
         }
 
         OGRGMLASLayer* poParentLeftLayer =
-                    m_poDS->GetLayerByXPath(oFC.GetParentXPath());
+                    m_poDS->GetLayerByXPath(m_oFC.GetParentXPath());
         OGRGMLASLayer* poChildLayer =
-                    m_poDS->GetLayerByXPath(oFC.GetChildXPath());
+                    m_poDS->GetLayerByXPath(m_oFC.GetChildXPath());
         if( poParentLeftLayer != NULL && poChildLayer != NULL )
         {
             OGRFeature* poRelationshipsFeature =
                             new OGRFeature(poRelationshipsLayer->GetLayerDefn());
             poRelationshipsFeature->SetField( "relation_name",
-                                              oFC.GetName().c_str());
+                                              m_oFC.GetName().c_str());
             poRelationshipsFeature->SetField( "parent_layer",
                                               poParentLeftLayer->GetName() );
             poRelationshipsFeature->SetField( "parent_field",
@@ -133,41 +175,12 @@ OGRGMLASLayer::OGRGMLASLayer( OGRGMLASDataSource* poDS,
         return;
     }
 
-    // Determine if we have an xs:ID attribute/elt, and if it is compulsory,
-    // If so, place it as first field (not strictly required, but more readable)
-    for(int i=0; i< static_cast<int>(oFields.size()); i++ )
-    {
-        if( oFields[i].GetType() == GMLAS_FT_ID && oFields[i].IsNotNullable() )
-        {
-            OGRFieldDefn oFieldDefn( oFields[i].GetName(), OFTString );
-            oFieldDefn.SetNullable( false );
-            m_nIDFieldIdx = m_poFeatureDefn->GetFieldCount();
-            m_oMapFieldXPathToFieldIdx[ oFields[i].GetXPath() ] =
-                                        m_nIDFieldIdx;
-            m_oMapOGRFieldIdxtoFCFieldIdx[ m_nIDFieldIdx ] = i;
-            m_poFeatureDefn->AddFieldDefn( &oFieldDefn );
-            break;
-        }
-    }
-
-    // If we don't have an explicit ID, then we need
-    // to generate one, so that potentially related classes can reference it
-    // (We could perhaps try to be clever to determine if we really need it)
-    if( m_nIDFieldIdx < 0 )
-    {
-        OGRFieldDefn oFieldDefn( "ogr_pkid", OFTString );
-        oFieldDefn.SetNullable( false );
-        m_nIDFieldIdx = m_poFeatureDefn->GetFieldCount();
-        m_bIDFieldIsGenerated = true;
-        m_poFeatureDefn->AddFieldDefn( &oFieldDefn );
-    }
-
     // If we are a child class, then add a field to reference the parent.
-    if( poParentLayer != NULL )
+    if( m_poParentLayer != NULL )
     {
         CPLString osFieldName("parent_");
-        osFieldName += poParentLayer->GetLayerDefn()->GetFieldDefn(
-                                poParentLayer->GetIDFieldIdx())->GetNameRef();
+        osFieldName += m_poParentLayer->GetLayerDefn()->GetFieldDefn(
+                                m_poParentLayer->GetIDFieldIdx())->GetNameRef();
         OGRFieldDefn oFieldDefn( osFieldName, OFTString );
         oFieldDefn.SetNullable( false );
         m_nParentIDFieldIdx = m_poFeatureDefn->GetFieldCount();
@@ -176,10 +189,10 @@ OGRGMLASLayer::OGRGMLASLayer( OGRGMLASDataSource* poDS,
         OGRFeature* poRelationshipsFeature =
                         new OGRFeature(poRelationshipsLayer->GetLayerDefn());
         poRelationshipsFeature->SetField( "parent_layer",
-                                          poParentLayer->GetName() );
+                                          m_poParentLayer->GetName() );
         poRelationshipsFeature->SetField( "parent_field",
-            poParentLayer->GetLayerDefn()->GetFieldDefn(
-                            poParentLayer->GetIDFieldIdx())->GetNameRef() );
+            m_poParentLayer->GetLayerDefn()->GetFieldDefn(
+                            m_poParentLayer->GetIDFieldIdx())->GetNameRef() );
         poRelationshipsFeature->SetField( "child_layer", GetName() );
         poRelationshipsFeature->SetField( "child_field", osFieldName.c_str() );
         CPL_IGNORE_RET_VAL(
@@ -189,11 +202,12 @@ OGRGMLASLayer::OGRGMLASLayer( OGRGMLASDataSource* poDS,
 
     for(int i=0; i< static_cast<int>(oFields.size()); i++ )
     {
-        if( !oFields[i].GetNestedClassXPath().empty() )
+        OGRGMLASLayer* poRelatedLayer = NULL;
+        if( !oFields[i].GetRelatedClassXPath().empty() )
         {
-            OGRGMLASLayer* poChildLayer =
-                    m_poDS->GetLayerByXPath(oFields[i].GetNestedClassXPath());
-            if( poChildLayer != NULL )
+            poRelatedLayer =
+                    m_poDS->GetLayerByXPath(oFields[i].GetRelatedClassXPath());
+            if( poRelatedLayer != NULL )
             {
                 OGRFeature* poRelationshipsFeature =
                         new OGRFeature(poRelationshipsLayer->GetLayerDefn());
@@ -201,13 +215,18 @@ OGRGMLASLayer::OGRGMLASLayer( OGRGMLASDataSource* poDS,
                 poRelationshipsFeature->SetField( "parent_field",
                                                     oFields[i].GetName().c_str() );
                 poRelationshipsFeature->SetField( "child_layer",
-                                                  poChildLayer->GetName() );
+                                                  poRelatedLayer->GetName() );
                 poRelationshipsFeature->SetField( "child_field", 
-                    poChildLayer->GetLayerDefn()->
-                        GetFieldDefn(poChildLayer->GetIDFieldIdx())->GetNameRef() );
+                    poRelatedLayer->GetLayerDefn()->
+                        GetFieldDefn(poRelatedLayer->GetIDFieldIdx())->GetNameRef() );
                 CPL_IGNORE_RET_VAL(
                         poRelationshipsLayer->CreateFeature(poRelationshipsFeature));
                 delete poRelationshipsFeature;
+            }
+            else
+            {
+                CPLDebug("GMLAS", "Cannot find class matching %s",
+                         oFields[i].GetRelatedClassXPath().c_str());
             }
         }
 
@@ -221,7 +240,7 @@ OGRGMLASLayer::OGRGMLASLayer( OGRGMLASDataSource* poDS,
             poMetadataFeature->SetField( "field_xpath",
                                         oFields[i].GetXPath().c_str() );
         }
-        else
+        else if( !oFields[i].GetAlternateXPaths().empty() )
         {
             CPLString osXPath;
             const std::vector<CPLString>& aoXPaths =
@@ -263,6 +282,11 @@ OGRGMLASLayer::OGRGMLASLayer( OGRGMLASDataSource* poDS,
                                      oFields[i].IsAbstract() ? 1 : 0 );
         poMetadataFeature->SetField( "field_is_nested_class",
                                      oFields[i].IsNestedClass() ? 1 : 0 );
+        if( poRelatedLayer != NULL )
+        {
+            poMetadataFeature->SetField( "field_related_layer",
+                                         poRelatedLayer->GetName() );
+        }
         // TODO: set field_documentation
         CPL_IGNORE_RET_VAL(poMetadataLayer->CreateFeature(poMetadataFeature));
         delete poMetadataFeature;
@@ -397,13 +421,13 @@ OGRGMLASLayer::OGRGMLASLayer( OGRGMLASDataSource* poDS,
             aoXPaths.push_back(oFields[i].GetXPath());
         for( size_t j=0; j<aoXPaths.size(); j++ )
         {
-            if( aoXPaths[j].size() > oFC.GetXPath().size() )
+            if( aoXPaths[j].size() > m_oFC.GetXPath().size() )
             {
                 // Split on both '/' and '@'
                 char** papszTokens = CSLTokenizeString2(
-                    aoXPaths[j].c_str() + oFC.GetXPath().size() + 1,
+                    aoXPaths[j].c_str() + m_oFC.GetXPath().size() + 1,
                     "/@", 0 );
-                CPLString osSubXPath = oFC.GetXPath();
+                CPLString osSubXPath = m_oFC.GetXPath();
                 for(int k=0; papszTokens[k] != NULL &&
                             papszTokens[k+1] != NULL; k++)
                 {

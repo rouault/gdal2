@@ -184,7 +184,7 @@ class GMLASField
         int  m_nMaxOccurs;
         bool m_bIncludeThisEltInBlob;
         CPLString m_osAbstractElementXPath;
-        CPLString m_osNestedClassXPath;
+        CPLString m_osRelatedClassXPath;
 
     public:
         GMLASField();
@@ -211,8 +211,13 @@ class GMLASField
         void SetAbstractElementXPath(const CPLString& osName)
                                             { m_osAbstractElementXPath = osName; }
 
-        void SetNestedClassXPath(const CPLString& osName)
-                                            { m_osNestedClassXPath = osName; }
+        void SetRelatedClassXPath(const CPLString& osName)
+                                            { m_osRelatedClassXPath = osName; }
+
+        static CPLString MakePKIDFieldFromXLinkHrefXPath(
+            const CPLString& osBaseXPath)
+                            { return "{" + osBaseXPath + "}_pkid"; }
+
 
         const CPLString& GetName() const { return m_osName; }
         const CPLString& GetXPath() const { return m_osXPath; }
@@ -232,8 +237,8 @@ class GMLASField
         bool GetIncludeThisEltInBlob() const { return m_bIncludeThisEltInBlob; }
         const CPLString& GetAbstractElementXPath() const
                                             { return m_osAbstractElementXPath; }
-        const CPLString& GetNestedClassXPath() const
-                                                { return m_osNestedClassXPath; }
+        const CPLString& GetRelatedClassXPath() const
+                                                { return m_osRelatedClassXPath; }
 
         static GMLASFieldType GetTypeFromString( const CPLString& osType );
 };
@@ -335,7 +340,8 @@ class GMLASSchemaAnalyzer
                                 XSAttributeUseList* poMainAttrList,
                                 GMLASFeatureClass& oClass,
                                 int nRecursionCounter,
-                                std::set<XSModelGroup*>& oSetVisitedModelGroups );
+                                std::set<XSModelGroup*>& oSetVisitedModelGroups,
+                                XSModel* poModel );
         void SetFieldTypeAndWidthFromDefinition( XSSimpleTypeDefinition* poST,
                                                  GMLASField& oField );
         CPLString MakeXPath( const CPLString& osNamespace,
@@ -355,6 +361,8 @@ class GMLASSchemaAnalyzer
                         GMLASFeatureClass& oClass,
                         int nMaxOccurs,
                         bool bForceJunctionTable);
+
+        bool IsGMLNamespace(const CPLString& osURI);
 
     public:
         GMLASSchemaAnalyzer();
@@ -454,6 +462,8 @@ class OGRGMLASLayer: public OGRLayer
         virtual void ResetReading();
         virtual OGRFeature* GetNextFeature();
         virtual int TestCapability( const char* ) { return FALSE; }
+
+        void PostInit();
 
         const GMLASFeatureClass& GetFeatureClass() const { return m_oFC; }
         int GetFieldIndexFromXPath(const CPLString& osXPath) const;

@@ -3,7 +3,8 @@
            targetNamespace="http://other_ns"
            elementFormDefault="qualified"
            attributeFormDefault="unqualified">
-
+ <!-- for fun, but this is insane, we name ourselves xmlns:myns here ! -->
+ 
 <xs:element name="otherns_element" type="xs:string"/>
 
 <xs:simpleType name="myAttrType">

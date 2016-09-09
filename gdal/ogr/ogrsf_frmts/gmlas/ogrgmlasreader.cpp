@@ -940,8 +940,8 @@ void GMLASReader::startElement(
 
                 // Figure out if it is an element that calls from a related
                 // top-level feature (but without junction table)
-                const CPLString& osNestedXPath(oField.GetNestedClassXPath());
-                if( !osNestedXPath.empty() )
+                const CPLString& osNestedXPath(oField.GetRelatedClassXPath());
+                if( !osNestedXPath.empty() && !oField.GetXPath().empty() )
                 {
                     OGRGMLASLayer* poSubLayer = GetLayerByXPath(osNestedXPath);
                     if( poSubLayer )
@@ -1005,7 +1005,7 @@ void GMLASReader::startElement(
                     const CPLString& osAbstractElementXPath(
                                         aoFields[i].GetAbstractElementXPath());
                     const CPLString& osNestedXPath(
-                                        aoFields[i].GetNestedClassXPath());
+                                        aoFields[i].GetRelatedClassXPath());
                     CPLAssert( !osNestedXPath.empty() );
 
                     OGRGMLASLayer* poJunctionLayer = GetLayerByXPath(
@@ -1096,6 +1096,25 @@ void GMLASReader::startElement(
                 SetField( m_oCurCtxt.m_poFeature,
                           m_oCurCtxt.m_poLayer,
                           nAttrIdx, osAttrValue );
+
+                // If we are a xlink:href attribute, and that the link value is
+                // a internal link, then find if we have
+                // a field that does a relation to a targetElement
+                if( osAttrNSPrefix == "xlink" &&
+                    osAttrLocalname == "href" &&
+                    !osAttrValue.empty() && osAttrValue[0] == '#' )
+                {
+                    int nAttrIdx2 =
+                        m_oCurCtxt.m_poLayer->GetFieldIndexFromXPath(
+                            GMLASField::MakePKIDFieldFromXLinkHrefXPath(
+                                                                osAttrXPath));
+                    if( nAttrIdx2 >= 0 )
+                    {
+                        SetField( m_oCurCtxt.m_poFeature,
+                                  m_oCurCtxt.m_poLayer,
+                                  nAttrIdx2, osAttrValue.substr(1) );
+                    }
+                }
             }
 
             else if( osAttrNSPrefix != "xmlns" &&

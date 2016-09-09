@@ -778,7 +778,8 @@ bool GMLASSchemaAnalyzer::InstantiateClassFromEltDeclaration(
                                 poCT->getAttributeUses(),
                                 oClass,
                                 0,
-                                oSetVisitedModelGroups ) )
+                                oSetVisitedModelGroups,
+                                poModel) )
             {
                 bError = true;
                 return false;
@@ -1129,7 +1130,7 @@ void GMLASSchemaAnalyzer::CreateNonNestedRelationship(
                                                 osSubEltXPath);
             oField.SetMinOccurs( 0 );
             oField.SetMaxOccurs( nMaxOccurs );
-            oField.SetNestedClassXPath(osSubEltXPath);
+            oField.SetRelatedClassXPath(osSubEltXPath);
             oField.SetType( GMLAS_FT_STRING, "string" );
             oClass.AddField( oField );
 
@@ -1176,7 +1177,7 @@ void GMLASSchemaAnalyzer::CreateNonNestedRelationship(
             oField.SetMinOccurs( 0 );
             oField.SetMaxOccurs( nMaxOccurs );
             oField.SetAbstractElementXPath(osElementXPath);
-            oField.SetNestedClassXPath(osSubEltXPath);
+            oField.SetRelatedClassXPath(osSubEltXPath);
             oField.SetAbstract( true );
             oClass.AddField( oField );
 
@@ -1356,6 +1357,20 @@ bool GMLASSchemaAnalyzer::FindElementsWithMustBeToLevel(
 }
 
 /************************************************************************/
+/*                           IsGMLNamespace()                           */
+/************************************************************************/
+
+bool GMLASSchemaAnalyzer::IsGMLNamespace(const CPLString& osURI)
+{
+    if( osURI.find(pszGML_URI) == 0 )
+        return true;
+    // Below is mostly for unit tests were we use xmlns:gml="http://fake_gml"
+    std::map<CPLString,CPLString>::const_iterator oIter =
+                                        m_oMapURIToPrefix.find(osURI);
+    return( oIter != m_oMapURIToPrefix.end() && oIter->second == "gml" );
+}
+
+/************************************************************************/
 /*                         ExploreModelGroup()                          */
 /************************************************************************/
 
@@ -1364,7 +1379,8 @@ bool GMLASSchemaAnalyzer::ExploreModelGroup(
                             XSAttributeUseList* poMainAttrList,
                             GMLASFeatureClass& oClass,
                             int nRecursionCounter,
-                            std::set<XSModelGroup*>& oSetVisitedModelGroups )
+                            std::set<XSModelGroup*>& oSetVisitedModelGroups,
+                            XSModel* poModel )
 {
     if( oSetVisitedModelGroups.find(poModelGroup) !=
                                                 oSetVisitedModelGroups.end() )
@@ -1421,6 +1437,28 @@ bool GMLASSchemaAnalyzer::ExploreModelGroup(
 #ifdef DEBUG_VERBOSE
             CPLDebug("GMLAS", "Iterating through %s", osElementXPath.c_str());
 #endif
+
+            CPLString osTargetElement;
+            if( poElt->getAnnotation() != NULL )
+            {
+                CPLString osAnnot(transcode(
+                    poElt->getAnnotation()->getAnnotationString()));
+
+#ifdef DEBUG_SUPER_VERBOSE
+                CPLDebug("GMLAS", "Annot: %s", osAnnot.c_str());
+#endif
+                CPLXMLNode* psRoot = CPLParseXMLString(osAnnot);
+                CPLStripXMLNamespace(psRoot, NULL, TRUE);
+                osTargetElement =
+                    CPLGetXMLValue(psRoot, "=annotation.appinfo.targetElement", "");
+                CPLDestroyXMLNode(psRoot);
+#ifdef DEBUG_VERBOSE
+                if( !osTargetElement.empty() )
+                    CPLDebug("GMLAS", "targetElement: %s",
+                             osTargetElement.c_str());
+#endif
+            }
+
             XSTypeDefinition* poTypeDef = poElt->getTypeDefinition();
 
             std::vector<XSElementDeclaration*> apoSubEltList;
@@ -1703,9 +1741,65 @@ bool GMLASSchemaAnalyzer::ExploreModelGroup(
                                            NULL,
                                            oNestedClass,
                                            nRecursionCounter + 1,
-                                           oSetNewVisitedModelGroups ) )
+                                           oSetNewVisitedModelGroups,
+                                           poModel ) )
                         {
                             return false;
+                        }
+                    }
+
+                    // If we have a element of type gml:ReferenceType that has
+                    // a targetElement in its annotation.appinfo, then create
+                    // a dedicated field to have cross-layer relationships.
+                    if( IsGMLNamespace(transcode(poTypeDef->getNamespace())) &&
+                        transcode(poTypeDef->getName()) == "ReferenceType" &&
+                        !osTargetElement.empty() )
+                    {
+                        XSElementDeclaration* poTargetElt =
+                            GetTopElementDeclarationFromXPath(osTargetElement,
+                                                              poModel);
+                        if( poTargetElt != NULL )
+                        {
+                            GMLASField oField;
+                            // Fake xpath
+                            oField.SetXPath(
+                                GMLASField::MakePKIDFieldFromXLinkHrefXPath(
+                                            osElementXPath + "@xlink:href"));
+                            oField.SetName( transcode(poElt->getName()) +
+                                                                    "_pkid" );
+                            oField.SetMinOccurs(0);
+                            oField.SetMaxOccurs(1);
+                            oField.SetType( GMLAS_FT_STRING, "string" );
+                            oField.SetRelatedClassXPath(osTargetElement);
+                            aoFields.push_back( oField );
+
+                            // Make sure we will instanciate the referenced
+                            //element
+                            if( m_oSetTypenames.find( poTargetElt ) == 
+                                        m_oSetTypenames.end()  &&
+                                m_oSetNeededTypenames.find( poTargetElt ) == 
+                                        m_oSetNeededTypenames.end() )
+                            {
+#ifdef DEBUG_VERBOSE
+                                CPLDebug("GMLAS",
+                                         "Adding %s as (%s) needed type",
+                                        osTargetElement.c_str(),
+                                        transcode(poTargetElt->
+                                                    getTypeDefinition()->
+                                                        getName()).c_str());
+#endif
+                                m_oSetNeededTypenames.insert( poTargetElt );
+                            }
+                        }
+                        else
+                        {
+                            // This shouldn't happen with consistant schemas
+                            // but as targetElement is in <annotation>, no
+                            // general-purpose XSD validator can ensure this
+                            CPLDebug("GMLAS", "%s is a targetElement of %s, "
+                                     "but cannot be found",
+                                     osTargetElement.c_str(),
+                                     osElementXPath.c_str());
                         }
                     }
 
@@ -1876,7 +1970,8 @@ bool GMLASSchemaAnalyzer::ExploreModelGroup(
                                         NULL,
                                         oNestedClass,
                                         nRecursionCounter + 1,
-                                        oSetNewVisitedModelGroups ) )
+                                        oSetNewVisitedModelGroups,
+                                        poModel ) )
                 {
                     return false;
                 }
@@ -1902,7 +1997,8 @@ bool GMLASSchemaAnalyzer::ExploreModelGroup(
                                         NULL,
                                         oClass,
                                         nRecursionCounter + 1,
-                                        oSetNewVisitedModelGroups ) )
+                                        oSetNewVisitedModelGroups,
+                                        poModel ) )
                 {
                     return false;
                 }

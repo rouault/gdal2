@@ -89,6 +89,10 @@ OGRGMLASDataSource::OGRGMLASDataSource()
         m_poMetadataLayer->CreateField(&oFieldDefn);
     }
     {
+        OGRFieldDefn oFieldDefn("field_related_layer", OFTString);
+        m_poMetadataLayer->CreateField(&oFieldDefn);
+    }
+    {
         OGRFieldDefn oFieldDefn("field_documentation", OFTString);
         m_poMetadataLayer->CreateField(&oFieldDefn);
     }
@@ -420,14 +424,20 @@ bool OGRGMLASDataSource::Open(GDALOpenInfo* poOpenInfo)
         if( aoClasses[i].GetParentXPath().empty() )
             TranslateClasses( NULL, aoClasses[i] );
     }
-    // Then junction tables (since they need to have access to the id
-    // fields of their related tables)
+    // Then junction tables
     for( size_t i=0; i<aoClasses.size(); ++i )
     {
         if( !aoClasses[i].GetParentXPath().empty() )
             TranslateClasses( NULL, aoClasses[i] );
     }
-    
+
+    // And now do initialization since we need to have instanciated everything
+    // to be able to do cross-layer links
+    for( size_t i = 0; i < m_apoLayers.size(); i++ )
+    {
+        m_apoLayers[i]->PostInit();
+    }
+
     m_oMapURIToPrefix = oAnalyzer.GetMapURIToPrefix();
 
     return true;

@@ -309,6 +309,30 @@ def ogr_gmlas_invalid_xml():
     return 'success'
 
 ###############################################################################
+# Test links with gml:ReferenceType
+
+def ogr_gmlas_gml_Reference():
+
+    if ogr.GetDriverByName('GMLAS') is None:
+        return 'skip'
+
+    ds = ogr.Open('GMLAS:data/gmlas_test_targetelement.xml')
+    if ds.GetLayerCount() != 2:
+        gdaltest.post_reason('fail')
+        print(ds.GetLayerCount())
+        return 'fail'
+
+    lyr = ds.GetLayerByName('main_elt')
+    f = lyr.GetNextFeature()
+    if f['reference_existing_target_elt_href'] != '#BAZ' or \
+       f['reference_existing_target_elt_pkid'] != 'BAZ':
+           gdaltest.post_reason('fail')
+           f.DumpReadable()
+           return 'fail'
+
+    return 'success'
+
+###############################################################################
 #  Cleanup
 
 def ogr_gmlas_cleanup():
@@ -330,6 +354,7 @@ gdaltest_list = [
     ogr_gmlas_gml_without_schema_location,
     ogr_gmlas_invalid_schema,
     ogr_gmlas_invalid_xml,
+    ogr_gmlas_gml_Reference,
     ogr_gmlas_cleanup ]
 
 if __name__ == '__main__':
