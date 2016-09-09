@@ -45,56 +45,51 @@ OGRGMLASDataSource::OGRGMLASDataSource()
     XMLPlatformUtils::Initialize();
     m_bExposeMetadataLayers = false;
 
-    m_poMetadataLayer = new OGRMemLayer("_ogr_layer_metadata", NULL, wkbNone );
+    m_poFieldsMetadataLayer = new OGRMemLayer
+                                    ("_ogr_fields_metadata", NULL, wkbNone );
     {
         OGRFieldDefn oFieldDefn("layer_name", OFTString);
-        m_poMetadataLayer->CreateField(&oFieldDefn);
+        m_poFieldsMetadataLayer->CreateField(&oFieldDefn);
     }
     {
         OGRFieldDefn oFieldDefn("field_name", OFTString);
-        m_poMetadataLayer->CreateField(&oFieldDefn);
+        m_poFieldsMetadataLayer->CreateField(&oFieldDefn);
     }
     {
         OGRFieldDefn oFieldDefn("field_xpath", OFTString);
-        m_poMetadataLayer->CreateField(&oFieldDefn);
+        m_poFieldsMetadataLayer->CreateField(&oFieldDefn);
     }
     {
         OGRFieldDefn oFieldDefn("field_type", OFTString);
-        m_poMetadataLayer->CreateField(&oFieldDefn);
+        m_poFieldsMetadataLayer->CreateField(&oFieldDefn);
     }
     {
         OGRFieldDefn oFieldDefn("field_min_occurs", OFTInteger);
-        m_poMetadataLayer->CreateField(&oFieldDefn);
+        m_poFieldsMetadataLayer->CreateField(&oFieldDefn);
     }
     {
         OGRFieldDefn oFieldDefn("field_max_occurs", OFTInteger);
-        m_poMetadataLayer->CreateField(&oFieldDefn);
+        m_poFieldsMetadataLayer->CreateField(&oFieldDefn);
     }
     {
         OGRFieldDefn oFieldDefn("field_default_value", OFTString);
-        m_poMetadataLayer->CreateField(&oFieldDefn);
+        m_poFieldsMetadataLayer->CreateField(&oFieldDefn);
     }
     {
         OGRFieldDefn oFieldDefn("field_fixed_value", OFTString);
-        m_poMetadataLayer->CreateField(&oFieldDefn);
+        m_poFieldsMetadataLayer->CreateField(&oFieldDefn);
     }
     {
-        OGRFieldDefn oFieldDefn("field_is_abstract", OFTInteger);
-        oFieldDefn.SetSubType(OFSTBoolean);
-        m_poMetadataLayer->CreateField(&oFieldDefn);
-    }
-    {
-        OGRFieldDefn oFieldDefn("field_is_nested_class", OFTInteger);
-        oFieldDefn.SetSubType(OFSTBoolean);
-        m_poMetadataLayer->CreateField(&oFieldDefn);
+        OGRFieldDefn oFieldDefn("field_category", OFTString);
+        m_poFieldsMetadataLayer->CreateField(&oFieldDefn);
     }
     {
         OGRFieldDefn oFieldDefn("field_related_layer", OFTString);
-        m_poMetadataLayer->CreateField(&oFieldDefn);
+        m_poFieldsMetadataLayer->CreateField(&oFieldDefn);
     }
     {
         OGRFieldDefn oFieldDefn("field_documentation", OFTString);
-        m_poMetadataLayer->CreateField(&oFieldDefn);
+        m_poFieldsMetadataLayer->CreateField(&oFieldDefn);
     }
 
     m_poRelationshipsLayer = new OGRMemLayer("_ogr_layer_relationships",
@@ -129,7 +124,7 @@ OGRGMLASDataSource::~OGRGMLASDataSource()
 {
     for(size_t i=0;i<m_apoLayers.size();i++)
         delete m_apoLayers[i];
-    delete m_poMetadataLayer;
+    delete m_poFieldsMetadataLayer;
     delete m_poRelationshipsLayer;
 
     // FIXME
@@ -153,7 +148,7 @@ int         OGRGMLASDataSource::GetLayerCount()
 OGRLayer    *OGRGMLASDataSource::GetLayer(int i)
 {
     if( m_bExposeMetadataLayers && i == static_cast<int>(m_apoLayers.size()) )
-        return m_poMetadataLayer;
+        return m_poFieldsMetadataLayer;
     if( m_bExposeMetadataLayers && i == 1 + static_cast<int>(m_apoLayers.size()) )
         return m_poRelationshipsLayer;
 
@@ -172,8 +167,8 @@ OGRLayer    *OGRGMLASDataSource::GetLayerByName(const char* pszName)
     if( poLayer )
         return poLayer;
 
-    if( EQUAL(pszName, m_poMetadataLayer->GetName()) )
-        return m_poMetadataLayer;
+    if( EQUAL(pszName, m_poFieldsMetadataLayer->GetName()) )
+        return m_poFieldsMetadataLayer;
 
     if( EQUAL(pszName, m_poRelationshipsLayer->GetName()) )
         return m_poRelationshipsLayer;

@@ -938,11 +938,13 @@ void GMLASReader::startElement(
                     return;
                 }
 
-                // Figure out if it is an element that calls from a related
+                // Figure out if it is an element that calls for a related
                 // top-level feature (but without junction table)
-                const CPLString& osNestedXPath(oField.GetRelatedClassXPath());
-                if( !osNestedXPath.empty() && !oField.GetXPath().empty() )
+                if( oField.GetCategory() ==
+                                GMLASField::PATH_TO_CHILD_ELEMENT_WITH_LINK )
                 {
+                    const CPLString& osNestedXPath(oField.GetRelatedClassXPath());
+                    CPLAssert( !osNestedXPath.empty() );
                     OGRGMLASLayer* poSubLayer = GetLayerByXPath(osNestedXPath);
                     if( poSubLayer )
                     {
@@ -999,7 +1001,8 @@ void GMLASReader::startElement(
                     m_oCurCtxt.m_poLayer->GetFeatureClass().GetFields();
             for( size_t i = 0; i < aoFields.size(); ++i )
             {
-                if( aoFields[i].IsAbstract() &&
+                if( aoFields[i].GetCategory() ==
+                        GMLASField::PATH_TO_CHILD_ELEMENT_WITH_JUNCTION_TABLE &&
                     aoFields[i].GetXPath() == m_osCurSubXPath )
                 {
                     const CPLString& osAbstractElementXPath(

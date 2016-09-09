@@ -168,22 +168,70 @@ typedef enum
 
 class GMLASField
 {
-        CPLString m_osName;
-        GMLASFieldType m_eType;
-        CPLString m_osTypeName;
-        int m_nWidth;
-        bool m_bNotNullable;
-        bool m_bArray;
+    public:
+        typedef enum 
+        {
+            /** Field that is going to be instanciated as a OGR field */
+            REGULAR,
+
+            /** Non-instanciable field. The corresponding element to the XPath
+                is stored in a child layer that will reference back to the
+                main layer. */
+            PATH_TO_CHILD_ELEMENT_NO_LINK,
+
+            /** Field that will store the PKID of a child element */
+            PATH_TO_CHILD_ELEMENT_WITH_LINK,
+
+            /** Non-instanciable field. The corresponding element to the XPath
+                is stored in a child layer. And the link between both will be
+                done through a junction table. */
+            PATH_TO_CHILD_ELEMENT_WITH_JUNCTION_TABLE
+        } Category;
+
+    private:
+        CPLString m_osName;         /*< Field name */
+        GMLASFieldType m_eType;     /*< Field type */
+        CPLString m_osTypeName;     /*< Orignal XSD type */
+        int m_nWidth;               /*< Field width */
+        bool m_bNotNullable;        /*< If the field is not nullable */
+        bool m_bArray;              /*< If the field is an array */
+
+        /** Category of the field. */
+        Category m_eCategory;
+
+        /** XPath of the field. */
         CPLString m_osXPath;
+
+        /** Set of XPath that are linked to this field.
+            This is used for cases where a gml:AbstractGeometry element is
+            referenced. In which case all possible realizations of this
+            element are listed. Will be used with eType == GMLAS_FT_ANYTYPE
+            to store XML blob on parsing. */
         std::vector<CPLString> m_aosXPath;
-        CPLString m_osFixedValue;
-        CPLString m_osDefaultValue;
-        bool m_bAbstract;
-        bool m_bIsNestedClass;
+
+        CPLString m_osFixedValue;       /*< Value of fixed='' attribute */
+        CPLString m_osDefaultValue;     /*< Value of default='' attribute */
+
+        /** Minimum number of occurences. Might be -1 if unset */
         int  m_nMinOccurs;
+
+        /** Maximum number of occurences, or MAXOCCURS_UNLIMITED. Might be
+            -1 if unset. */
         int  m_nMaxOccurs;
+
+        /** In case of m_eType == GMLAS_FT_ANYTYPE whether the current element
+            must be stored in the XML blob (if false, only its children) */
         bool m_bIncludeThisEltInBlob;
+
+        /** Only used for PATH_TO_CHILD_ELEMENT_WITH_JUNCTION_TABLE. The XPath
+            of the abstract element (the concrete XPath is in m_osXPath).
+            e.g myns:mainElt/myns:subEltAbstract whereas the concrete XPath
+            is myns:mainElt/myns:subEltRealization */
         CPLString m_osAbstractElementXPath;
+
+        /** Only used for PATH_TO_CHILD_ELEMENT_WITH_LINK and
+            PATH_TO_CHILD_ELEMENT_WITH_JUNCTION_TABLE. The XPath of the
+            child element. */
         CPLString m_osRelatedClassXPath;
 
     public:
@@ -202,9 +250,7 @@ class GMLASField
                                     { m_osFixedValue = osFixedValue; }
         void SetDefaultValue(const CPLString& osDefaultValue)
                                     { m_osDefaultValue = osDefaultValue; }
-        void SetAbstract(bool bAbstract) { m_bAbstract = bAbstract; }
-        void SetIsNestedClass(bool bIsNestedClass)
-                                    { m_bIsNestedClass = bIsNestedClass; }
+        void SetCategory(Category eCategory) { m_eCategory = eCategory; }
         void SetMinOccurs(int nMinOccurs) { m_nMinOccurs = nMinOccurs; }
         void SetMaxOccurs(int nMaxOccurs) { m_nMaxOccurs = nMaxOccurs; }
         void SetIncludeThisEltInBlob(bool b) { m_bIncludeThisEltInBlob = b; }
@@ -230,8 +276,7 @@ class GMLASField
         bool IsArray() const { return m_bArray; }
         const CPLString& GetFixedValue() const { return m_osFixedValue; }
         const CPLString& GetDefaultValue() const { return m_osDefaultValue; }
-        bool IsAbstract() const { return m_bAbstract; }
-        bool IsNestedClass() const { return m_bIsNestedClass; }
+        Category GetCategory() const { return m_eCategory; }
         int GetMinOccurs() const { return m_nMinOccurs; }
         int GetMaxOccurs() const { return m_nMaxOccurs; }
         bool GetIncludeThisEltInBlob() const { return m_bIncludeThisEltInBlob; }
@@ -249,13 +294,28 @@ class GMLASField
 
 class GMLASFeatureClass
 {
+        /** User facing name */
         CPLString m_osName;
+
+        /** XPath to the main element of the feature class */
         CPLString m_osXPath;
+
+        /** List of fields */
         std::vector<GMLASField> m_aoFields;
+
+        /** Child nested classes */
         std::vector<GMLASFeatureClass> m_aoNestedClasses;
+
+        /** Whether this layer corresponds to a (multiple instanciated) xs:group */
         bool m_bIsGroup;
+
+        /** Only used for junction tables. The XPath to the parent table */
         CPLString m_osParentXPath;
+
+        /** Only used for junction tables. The XPath to the child table */
         CPLString m_osChildXPath;
+
+        /** Whether this corresponds to a top-level XSD element in the schema */
         bool m_bIsTopLevel;
 
     public:
@@ -310,15 +370,39 @@ class GMLASResourceCache
 class GMLASSchemaAnalyzer
 {
         bool m_bAllowArrays;
+
+        /** Vector of feature classes */
         std::vector<GMLASFeatureClass> m_aoClasses;
+
+        /** Map from a namespace URI to the corresponding prefix */
         std::map<CPLString, CPLString> m_oMapURIToPrefix;
-        typedef std::map<XSElementDeclaration*, std::vector<XSElementDeclaration*> >
+
+        typedef std::map<XSElementDeclaration*,
+                                std::vector<XSElementDeclaration*> >
                                                     tMapParentEltToChildElt;
+        /** Map from a base/parent element to a vector of derived/children
+            elements that are substitutionGroup of it. The map only
+            addresses the direct derived types, and not the 2nd level or more
+            derived ones. For that recursion in the map must be used.*/
         tMapParentEltToChildElt m_oMapParentEltToChildElt;
+
+        /** Map from a XSModelGroup* object to the name of its group. */
         std::map< XSModelGroup*, CPLString> m_oMapModelGroupDefinitionToName;
-        std::set< XSElementDeclaration* > m_oSetTypenames;
-        std::set< XSElementDeclaration* > m_oSetNeededTypenames;
-        std::set< XSElementDeclaration* > m_oSetTopLevelElement;
+
+        /** Set of instanciated elements. That is elements for wich a class
+            is added to m_aoClasses */
+        std::set< XSElementDeclaration* > m_oSetInstanciatedElements;
+
+        /** Set of elements that must eventually be instanciated elements. This
+            set is built when instanciating other elements. This is for
+            elements that are in relationships */
+        std::set< XSElementDeclaration* > m_oSetNeededElements;
+
+        /** Set of elements on which exploration must stop, that is elements
+            that must be exposed as top-level classes to avoid too deep
+            flattening of element hierarchy.
+        */
+        std::set< XSElementDeclaration* > m_oSetTopLevelElements;
 
         static bool IsSame( const XSModelGroup* poModelGroup1,
                                   const XSModelGroup* poModelGroup2 );
@@ -329,7 +413,7 @@ class GMLASSchemaAnalyzer
                                    const CPLString& osNamePrefix = CPLString());
         void GetConcreteImplementationTypes(
                                 XSElementDeclaration* poParentElt,
-                                std::vector<XSElementDeclaration*>& apoSubEltList);
+                                std::vector<XSElementDeclaration*>& apoImplEltList);
         bool FindElementsWithMustBeToLevel(
                             XSModelGroup* poModelGroup,
                             int nRecursionCounter,
@@ -389,7 +473,7 @@ class OGRGMLASDataSource: public GDALDataset
         std::map<CPLString, CPLString> m_oMapURIToPrefix;
         CPLString                      m_osGMLFilename;
         bool                           m_bExposeMetadataLayers;
-        OGRLayer                      *m_poMetadataLayer;
+        OGRLayer                      *m_poFieldsMetadataLayer;
         OGRLayer                      *m_poRelationshipsLayer;
 
         void TranslateClasses( OGRGMLASLayer* poParentLayer,
@@ -411,8 +495,8 @@ class OGRGMLASDataSource: public GDALDataset
                                             { return m_oMapURIToPrefix; }
         const CPLString&                      GetGMLFilename() const
                                             { return m_osGMLFilename; }
-        OGRLayer*                             GetMetadataLayer()
-                                            { return m_poMetadataLayer; }
+        OGRLayer*                             GetFieldsMetadataLayer()
+                                            { return m_poFieldsMetadataLayer; }
         OGRLayer*                             GetRelationshipsLayer()
                                             { return m_poRelationshipsLayer; }
         OGRGMLASLayer*          GetLayerByXPath( const CPLString& osXPath );
