@@ -49,7 +49,18 @@ VSILFILE* GMLASResourceCache::Open( const CPLString& osResource,
     }
     else if( CPLIsFilenameRelative( osResource ) && !osResource.empty() )
     {
-        osOutFilename = CPLProjectRelativeFilename(osBasePath, osResource);
+        /* Transform a/b + ../c --> a/c */
+        CPLString osResourceModified(osResource);
+        CPLString osBasePathModified(osBasePath);
+        while( osResourceModified.find("../") == 0 ||
+               osResourceModified.find("..\\") == 0 )
+        {
+            osBasePathModified = CPLGetDirname(osBasePathModified);
+            osResourceModified = osResourceModified.substr(3);
+        }
+
+        osOutFilename = CPLFormFilename(osBasePathModified,
+                                        osResourceModified, NULL);
     }
 
     CPLDebug("GMLAS", "Resolving %s (%s) to %s",
