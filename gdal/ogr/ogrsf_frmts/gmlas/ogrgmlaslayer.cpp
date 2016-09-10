@@ -329,6 +329,7 @@ void OGRGMLASLayer::PostInit()
         CPL_IGNORE_RET_VAL(poFieldsMetadataLayer->CreateFeature(poFieldDescFeature));
         delete poFieldDescFeature;
 
+        // Check whether the field is OGR instanciable
         if( oFields[i].GetCategory() ==
                                 GMLASField::PATH_TO_CHILD_ELEMENT_NO_LINK ||
             oFields[i].GetCategory() ==

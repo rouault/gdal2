@@ -504,7 +504,7 @@ void GMLASReader::BuildXMLBlobStartElement(const CPLString& osNSPrefix,
                                            const  Attributes& attrs)
 {
     m_osTextContent += "<";
-    if( osNSPrefix.size() )
+    if( !osNSPrefix.empty() )
     {
         m_osTextContent += osNSPrefix + ":";
     }
@@ -632,12 +632,12 @@ void GMLASReader::startElement(
     CPLDebug("GMLAS", "startElement(%s / %s)", transcode(qname).c_str(), osXPath.c_str());
 #endif
     m_anStackXPathLength.push_back(osXPath.size());
-    if( m_osCurXPath.size() )
+    if( !m_osCurXPath.empty() )
         m_osCurXPath += "/";
     m_osCurXPath += osXPath;
 
     CPLString osSubXPathBefore(m_osCurSubXPath);
-    if( m_osCurSubXPath.size() )
+    if( !m_osCurSubXPath.empty() )
     {
         m_osCurSubXPath += "/";
         m_osCurSubXPath += osXPath;
@@ -674,11 +674,11 @@ void GMLASReader::startElement(
 
         if( // Case where we haven't yet entered the top-level element, which may
             // be in container elements
-            (m_osCurSubXPath.size() == 0 &&
+            (m_osCurSubXPath.empty() &&
              (*m_papoLayers)[i]->GetFeatureClass().GetXPath() == osXPath) ||
 
             // Case where we are a sub-element of a top-level feature
-            (m_osCurSubXPath.size() != 0 &&
+            (!m_osCurSubXPath.empty() &&
              (*m_papoLayers)[i]->GetFeatureClass().GetXPath() == m_osCurSubXPath) ||
 
             // Case where we are a sub-element of a (repeated) group of a
@@ -1009,6 +1009,7 @@ void GMLASReader::startElement(
                                         aoFields[i].GetAbstractElementXPath());
                     const CPLString& osNestedXPath(
                                         aoFields[i].GetRelatedClassXPath());
+                    CPLAssert( !osAbstractElementXPath.empty() );
                     CPLAssert( !osNestedXPath.empty() );
 
                     OGRGMLASLayer* poJunctionLayer = GetLayerByXPath(
@@ -1235,6 +1236,8 @@ void GMLASReader::endElement(
             else
             {
                 m_osTextContentList.AddString( m_osTextContent );
+                // 16 is an arbitrary number for the cost of a new entry in the
+                // string list
                 m_nTextContentListEstimatedSize += 16 + m_osTextContent.size();
                 m_oCurCtxt.m_poFeature->SetField( m_nCurFieldIdx,
                                         m_osTextContentList.List() );
@@ -1248,7 +1251,7 @@ void GMLASReader::endElement(
                 CPLString osNSPrefix( m_oMapURIToPrefix[ transcode(uri) ] );
 
                 m_osTextContent += "</";
-                if( osNSPrefix.size() )
+                if( !osNSPrefix.empty() )
                 {
                     m_osTextContent += osNSPrefix + ":";
                 }
@@ -1270,7 +1273,7 @@ void GMLASReader::endElement(
         CPLString osNSPrefix( m_oMapURIToPrefix[ transcode(uri) ] );
 
         m_osTextContent += "</";
-        if( osNSPrefix.size() )
+        if( !osNSPrefix.empty() )
         {
             m_osTextContent += osNSPrefix + ":";
         }
