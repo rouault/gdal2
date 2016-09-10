@@ -442,6 +442,30 @@ XSElementDeclaration* GMLASSchemaAnalyzer::GetTopElementDeclarationFromXPath(
 }
 
 /************************************************************************/
+/*                        IsEltCompatibleOfFC()                         */
+/************************************************************************/
+
+static XSComplexTypeDefinition* IsEltCompatibleOfFC(
+                                            XSElementDeclaration* poEltDecl)
+{
+    XSTypeDefinition* poTypeDef = poEltDecl->getTypeDefinition();
+    if( poTypeDef->getTypeCategory() == XSTypeDefinition::COMPLEX_TYPE &&
+        transcode(poEltDecl->getName()) != "FeatureCollection" )
+    {
+        XSComplexTypeDefinition* poCT =
+                    reinterpret_cast<XSComplexTypeDefinition*>(poTypeDef);
+        XSComplexTypeDefinition::CONTENT_TYPE eContentType(
+                                                poCT->getContentType());
+        if( eContentType == XSComplexTypeDefinition::CONTENTTYPE_ELEMENT ||
+            eContentType == XSComplexTypeDefinition::CONTENTTYPE_MIXED )
+        {
+            return poCT;
+        }
+    }
+    return NULL;
+}
+
+/************************************************************************/
 /*                               Analyze()                              */
 /************************************************************************/
 
@@ -639,23 +663,15 @@ bool GMLASSchemaAnalyzer::Analyze(const CPLString& osBaseDirname,
         {
             XSElementDeclaration* poEltDecl =
                 reinterpret_cast<XSElementDeclaration*>(poMapElements->item(i));
-            XSTypeDefinition* poTypeDef = poEltDecl->getTypeDefinition();
-            if( poTypeDef->getTypeCategory() == XSTypeDefinition::COMPLEX_TYPE &&
-                !poEltDecl->getAbstract() &&
-                transcode(poEltDecl->getName()) != "FeatureCollection" )
+            XSComplexTypeDefinition* poCT = IsEltCompatibleOfFC(poEltDecl);
+            if( !poEltDecl->getAbstract() && poCT != NULL  )
             {
-                XSComplexTypeDefinition* poCT =
-                            reinterpret_cast<XSComplexTypeDefinition*>(poTypeDef);
-                if( poCT->getContentType() ==
-                                    XSComplexTypeDefinition::CONTENTTYPE_ELEMENT )
-                {
-                    FindElementsWithMustBeToLevel(
-                            poCT->getParticle()->getModelGroupTerm(),
-                            0,
-                            oSetVisitedEltDecl,
-                            oSetVisitedModelGroups,
-                            poModel);
-                }
+                FindElementsWithMustBeToLevel(
+                        poCT->getParticle()->getModelGroupTerm(),
+                        0,
+                        oSetVisitedEltDecl,
+                        oSetVisitedModelGroups,
+                        poModel);
             }
         }
     }
@@ -749,48 +765,40 @@ bool GMLASSchemaAnalyzer::InstantiateClassFromEltDeclaration(
                                                 bool& bError)
 {
     bError = false;
-    XSTypeDefinition* poTypeDef = poEltDecl->getTypeDefinition();
-    if( poTypeDef->getTypeCategory() == XSTypeDefinition::COMPLEX_TYPE &&
-        !poEltDecl->getAbstract() &&
-        transcode(poEltDecl->getName()) != "FeatureCollection" )
+    XSComplexTypeDefinition* poCT = IsEltCompatibleOfFC(poEltDecl);
+    if( !poEltDecl->getAbstract() && poCT != NULL )
     {
-        XSComplexTypeDefinition* poCT =
-                    reinterpret_cast<XSComplexTypeDefinition*>(poTypeDef);
-        if( poCT->getContentType() ==
-                            XSComplexTypeDefinition::CONTENTTYPE_ELEMENT )
-        {
-            GMLASFeatureClass oClass;
-            oClass.SetName( transcode(poEltDecl->getName()) );
+        GMLASFeatureClass oClass;
+        oClass.SetName( transcode(poEltDecl->getName()) );
 
-            CPLString osXPath( MakeXPath(
-                                    transcode(poEltDecl->getNamespace()),
-                                    transcode(poEltDecl->getName()) ) );
+        CPLString osXPath( MakeXPath(
+                                transcode(poEltDecl->getNamespace()),
+                                transcode(poEltDecl->getName()) ) );
 #ifdef DEBUG_VERBOSE
-            CPLDebug("GMLAS", "Instantiating element %s", osXPath.c_str());
+        CPLDebug("GMLAS", "Instantiating element %s", osXPath.c_str());
 #endif
-            oClass.SetXPath( osXPath );
-            oClass.SetIsTopLevelElt(
-                GetTopElementDeclarationFromXPath(osXPath, poModel) != NULL );
+        oClass.SetXPath( osXPath );
+        oClass.SetIsTopLevelElt(
+            GetTopElementDeclarationFromXPath(osXPath, poModel) != NULL );
 
-            m_oSetInstanciatedElements.insert( poEltDecl );
-            std::set<XSModelGroup*> oSetVisitedModelGroups;
-            if( !ExploreModelGroup(
-                                poCT->getParticle()->getModelGroupTerm(),
-                                poCT->getAttributeUses(),
-                                oClass,
-                                0,
-                                oSetVisitedModelGroups,
-                                poModel) )
-            {
-                bError = true;
-                return false;
-            }
-
-            FixDuplicatedFieldNames( oClass );
-
-            m_aoClasses.push_back(oClass);
-            return true;
+        m_oSetInstanciatedElements.insert( poEltDecl );
+        std::set<XSModelGroup*> oSetVisitedModelGroups;
+        if( !ExploreModelGroup(
+                            poCT->getParticle()->getModelGroupTerm(),
+                            poCT->getAttributeUses(),
+                            oClass,
+                            0,
+                            oSetVisitedModelGroups,
+                            poModel) )
+        {
+            bError = true;
+            return false;
         }
+
+        FixDuplicatedFieldNames( oClass );
+
+        m_aoClasses.push_back(oClass);
+        return true;
     }
     return false;
 }
@@ -1022,15 +1030,7 @@ void GMLASSchemaAnalyzer::GetConcreteImplementationTypes(
     for( size_t j = 0; j < oIter->second.size(); j++ )
     {
         XSElementDeclaration* poSubElt = oIter->second[j];
-        XSTypeDefinition* poSubEltType =
-                                poSubElt->getTypeDefinition();
-        XSComplexTypeDefinition* poCT;
-        if( poSubEltType->getTypeCategory() ==
-                            XSTypeDefinition::COMPLEX_TYPE &&
-            (poCT = reinterpret_cast<XSComplexTypeDefinition*>(
-                                            poSubEltType))
-                    ->getContentType() ==
-                XSComplexTypeDefinition::CONTENTTYPE_ELEMENT )
+        if( IsEltCompatibleOfFC(poSubElt) )
         {
             if( !poSubElt->getAbstract() )
                 apoImplEltList.push_back(poSubElt);
@@ -1298,10 +1298,8 @@ bool GMLASSchemaAnalyzer::FindElementsWithMustBeToLevel(
             else if( !poElt->getAbstract() &&
                 poTypeDef->getTypeCategory() == XSTypeDefinition::COMPLEX_TYPE )
             {
-                XSComplexTypeDefinition* poEltCT =
-                        reinterpret_cast<XSComplexTypeDefinition*>(poTypeDef);
-                if( poEltCT->getContentType() == 
-                            XSComplexTypeDefinition::CONTENTTYPE_ELEMENT )
+                XSComplexTypeDefinition* poEltCT = IsEltCompatibleOfFC(poElt);
+                if( poEltCT )
                 {
                     if( oSetVisitedEltDecl.find(poElt) !=
                                     oSetVisitedEltDecl.end() )
@@ -1327,18 +1325,18 @@ bool GMLASSchemaAnalyzer::FindElementsWithMustBeToLevel(
                     {
                         oSetVisitedEltDecl.insert(poElt);
                     }
-                }
 
-                if( poEltCT->getParticle() != NULL )
-                {
-                    if( !FindElementsWithMustBeToLevel(
-                                    poEltCT->getParticle()->getModelGroupTerm(),
-                                    nRecursionCounter + 1,
-                                    oSetVisitedEltDecl,
-                                    oSetVisitedModelGroups,
-                                    poModel ) )
+                    if( poEltCT->getParticle() != NULL )
                     {
-                        return false;
+                        if( !FindElementsWithMustBeToLevel(
+                                        poEltCT->getParticle()->getModelGroupTerm(),
+                                        nRecursionCounter + 1,
+                                        oSetVisitedEltDecl,
+                                        oSetVisitedModelGroups,
+                                        poModel ) )
+                        {
+                            return false;
+                        }
                     }
                 }
             }
