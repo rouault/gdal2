@@ -235,6 +235,8 @@ void GMLASReader::Context::Dump()
     CPLDebug("GMLAS", "  m_nGroupLayerLevel = %d", m_nGroupLayerLevel);
     CPLDebug("GMLAS", "  m_nLastFieldIdxGroupLayer = %d",
              m_nLastFieldIdxGroupLayer);
+    CPLDebug("GMLAS", "  m_osCurSubXPath = %s",
+             m_osCurSubXPath.c_str());
 }
 
 /************************************************************************/
@@ -966,6 +968,12 @@ void GMLASReader::startElement(
                         oContext.m_nLevel = m_nLevel;
                         oContext.m_osCurSubXPath = m_osCurSubXPath;
                         m_osCurSubXPath = osNestedXPath;
+#ifdef DEBUG_VERBOSE
+                        CPLDebug("GMLAS",
+                                 "Installing new m_osCurSubXPath from %s to %s",
+                                 oContext.m_osCurSubXPath.c_str(),
+                                 m_osCurSubXPath.c_str());
+#endif
                         m_aoStackContext.push_back( oContext );
                         m_oCurCtxt.m_oMapCounter.clear();
                     }
@@ -1338,6 +1346,7 @@ void GMLASReader::endElement(
             if( !m_aoStackContext.empty() )
             {
                 m_oCurCtxt = m_aoStackContext.back();
+                m_oCurCtxt.m_osCurSubXPath.clear();
                 if( m_oCurCtxt.m_nLevel < 0 )
                 {
                     m_aoStackContext.pop_back();
