@@ -1033,7 +1033,9 @@ void GMLASSchemaAnalyzer::GetConcreteImplementationTypes(
         if( IsEltCompatibleOfFC(poSubElt) )
         {
             if( !poSubElt->getAbstract() )
+            {
                 apoImplEltList.push_back(poSubElt);
+            }
             GetConcreteImplementationTypes(poSubElt, apoImplEltList);
         }
     }
@@ -1413,10 +1415,36 @@ bool GMLASSchemaAnalyzer::ExploreModelGroup(
         oClass.AddField(oField);
     }
 
+    XSParticleList* poParticles = poModelGroup->getParticles();
+
+    // Special case for GML 3.1.1 where gml:metaDataProperty should be
+    // a sequence of gml:_Metadata but for some reason they have used
+    // a sequence of any.
+    if( oClass.GetXPath() == "gml:metaDataProperty" &&
+        poModelGroup->getCompositor() == 
+                                XSModelGroup::COMPOSITOR_SEQUENCE &&
+        poParticles->size() == 1 &&
+        poParticles->elementAt(0)->
+                        getTermType() == XSParticle::TERM_WILDCARD )
+    {
+        XSElementDeclaration* poGMLMetadata =
+            GetTopElementDeclarationFromXPath("gml:_MetaData", poModel);
+        if( poGMLMetadata != NULL )
+        {
+            std::vector<XSElementDeclaration*> apoImplEltList;
+            GetConcreteImplementationTypes(poGMLMetadata, apoImplEltList);
+            CreateNonNestedRelationship(poGMLMetadata,
+                                        apoImplEltList,
+                                        oClass,
+                                        1,
+                                        true);
+
+            return true;
+        }
+    }
+
     const bool bIsChoice = (poModelGroup->getCompositor() ==
                                             XSModelGroup::COMPOSITOR_CHOICE);
-
-    XSParticleList* poParticles = poModelGroup->getParticles();
     int nGroup = 0;
     for(size_t i = 0; i < poParticles->size(); ++i )
     {
