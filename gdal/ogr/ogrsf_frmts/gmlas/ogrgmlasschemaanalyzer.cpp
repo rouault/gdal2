@@ -676,6 +676,17 @@ bool GMLASSchemaAnalyzer::Analyze(const CPLString& osBaseDirname,
         }
     }
 
+    // Find ambiguous class names
+    {
+        std::set<XSElementDeclaration*>::const_iterator oIter =
+                                            m_oSetTopLevelElements.begin();
+        for(; oIter != m_oSetTopLevelElements.end(); ++oIter )
+        {
+            CPLString osName(transcode((*oIter)->getName()));
+            m_oMapEltNamesToInstanceCount[osName] ++;
+        }
+    }
+
     // Iterate over top level elements of namespaces of interest to instanciate
     // classes
     for( size_t iNS = 0; iNS < aoNamespaces.size(); iNS++ )
@@ -720,10 +731,6 @@ bool GMLASSchemaAnalyzer::Analyze(const CPLString& osBaseDirname,
                 continue;
 
             bool bError = false;
-            if(transcode(poEltDecl->getName()) == "group")
-            {
-                printf("foo\n");
-            }
             bool bResolvedType = InstantiateClassFromEltDeclaration(poEltDecl,
                                                                     poModel,
                                                                     bError);
@@ -769,11 +776,20 @@ bool GMLASSchemaAnalyzer::InstantiateClassFromEltDeclaration(
     if( !poEltDecl->getAbstract() && poCT != NULL )
     {
         GMLASFeatureClass oClass;
-        oClass.SetName( transcode(poEltDecl->getName()) );
-
-        CPLString osXPath( MakeXPath(
+        const CPLString osEltName( transcode(poEltDecl->getName()) );
+        const CPLString osXPath( MakeXPath(
                                 transcode(poEltDecl->getNamespace()),
-                                transcode(poEltDecl->getName()) ) );
+                                osEltName ) );
+
+        if( m_oMapEltNamesToInstanceCount[osEltName] > 1 )
+        {
+            CPLString osLaunderedXPath(osXPath);
+            osLaunderedXPath.replaceAll(':', '_');
+            oClass.SetName( osLaunderedXPath );
+        }
+        else
+            oClass.SetName( osEltName );
+
 #ifdef DEBUG_VERBOSE
         CPLDebug("GMLAS", "Instantiating element %s", osXPath.c_str());
 #endif
@@ -1115,15 +1131,26 @@ void GMLASSchemaAnalyzer::CreateNonNestedRelationship(
         for( size_t j = 0; j < apoImplEltList.size(); j++ )
         {
             XSElementDeclaration* poSubElt = apoImplEltList[j];
+            const CPLString osSubEltName(transcode(poSubElt->getName()));
             const CPLString osSubEltXPath(
                 MakeXPath(transcode(poSubElt->getNamespace()),
-                            transcode(poSubElt->getName())) );
+                          osSubEltName) );
 
             GMLASField oField;
             if( apoImplEltList.size() > 1 )
             {
-                oField.SetName( transcode(poElt->getName()) + "_" +
-                            transcode(poSubElt->getName()) + "_pkid" );
+                if( m_oMapEltNamesToInstanceCount[osSubEltName] > 1 )
+                {
+                    CPLString osLaunderedXPath(osSubEltXPath);
+                    osLaunderedXPath.replaceAll(':', '_');
+                    oField.SetName( transcode(poElt->getName()) + "_" +
+                                    osLaunderedXPath + "_pkid" );
+                }
+                else
+                {
+                    oField.SetName( transcode(poElt->getName()) + "_" +
+                                    osSubEltName + "_pkid" );
+                }
             }
             else
             {
@@ -1159,15 +1186,27 @@ void GMLASSchemaAnalyzer::CreateNonNestedRelationship(
         for( size_t j = 0; j < apoImplEltList.size(); j++ )
         {
             XSElementDeclaration* poSubElt = apoImplEltList[j];
+            const CPLString osSubEltName( transcode(poSubElt->getName()) );
             const CPLString osSubEltXPath(
-                MakeXPath(transcode(poSubElt->getNamespace()),
-                            transcode(poSubElt->getName())) );
+                MakeXPath(transcode(poSubElt->getNamespace()), osSubEltName) );
 
             // Instantiate a junction table
             GMLASFeatureClass oJunctionTable;
-            oJunctionTable.SetName( oClass.GetName() + "_" +
-                    transcode(poElt->getName()) + "_" +
-                    transcode(poSubElt->getName()) );
+
+            if( m_oMapEltNamesToInstanceCount[osSubEltName] > 1 )
+            {
+                CPLString osLaunderedXPath(osSubEltXPath);
+                osLaunderedXPath.replaceAll(':', '_');
+                oJunctionTable.SetName( oClass.GetName() + "_" +
+                                        transcode(poElt->getName()) + "_" +
+                                        osLaunderedXPath );
+            }
+            else
+            {
+                oJunctionTable.SetName( oClass.GetName() + "_" +
+                                        transcode(poElt->getName()) + "_" +
+                                        osSubEltName );
+            }
             // Create a fake XPath binding the parent xpath (to an abstract
             // element) to the child element
             oJunctionTable.SetXPath( osElementXPath + "|" +
@@ -1291,12 +1330,56 @@ bool GMLASSchemaAnalyzer::FindElementsWithMustBeToLevel(
                                 MakeXPath(transcode(poElt->getNamespace()),
                                             transcode(poElt->getName())) );
 
+            std::vector<XSElementDeclaration*> apoImplEltList;
+            GetConcreteImplementationTypes(poElt, apoImplEltList);
+
             // Special case for a GML geometry property
             if( transcode(poTypeDef->getNamespace()).find(pszGML_URI) == 0 &&
                 IsGMLGeometryProperty(poTypeDef) )
             {
                 // Do nothing
             }
+            // Any GML abstract type
+            else if( poElt->getAbstract() &&
+                transcode(poElt->getNamespace()).find(pszGML_URI) == 0 )
+            {
+                // Do nothing
+            }
+            // Are there substitution groups for this element ?
+            else if( !apoImplEltList.empty() )
+            {
+                if( !poElt->getAbstract() )
+                {
+                    apoImplEltList.insert(apoImplEltList.begin(), poElt);
+                }
+                for( size_t j = 0; j < apoImplEltList.size(); j++ )
+                {
+                    XSElementDeclaration* poSubElt = apoImplEltList[j];
+                    const CPLString osSubEltXPath(
+                        MakeXPath(transcode(poSubElt->getNamespace()),
+                                    transcode(poSubElt->getName())) );
+
+                    // Make sure we will instanciate the referenced element
+                    if( m_oSetTopLevelElements.find( poSubElt ) == 
+                                m_oSetTopLevelElements.end() )
+                    {
+#ifdef DEBUG_VERBOSE
+                        CPLDebug("GMLAS", "%s (%s) must be exposed as "
+                                     "top-level (derived class)",
+                                osSubEltXPath.c_str(),
+                                transcode(poSubElt->getTypeDefinition()->
+                                                                getName()).c_str());
+#endif
+                        m_oSetTopLevelElements.insert(poSubElt);
+                        if( m_oSetInstanciatedElements.find( poSubElt ) == 
+                                        m_oSetInstanciatedElements.end() )
+                        {
+                            m_oSetNeededElements.insert( poSubElt );
+                        }
+                    }
+                }
+            }
+
             else if( !poElt->getAbstract() &&
                 poTypeDef->getTypeCategory() == XSTypeDefinition::COMPLEX_TYPE )
             {
@@ -1532,6 +1615,7 @@ bool GMLASSchemaAnalyzer::ExploreModelGroup(
             }
 
             // Are there substitution groups for this element ?
+            // or is this element already identified as being a top-level one ?
             else if( !apoImplEltList.empty() ||
                      m_oSetTopLevelElements.find(poElt) !=
                                                 m_oSetTopLevelElements.end() )

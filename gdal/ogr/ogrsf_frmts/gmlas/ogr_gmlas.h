@@ -405,6 +405,10 @@ class GMLASSchemaAnalyzer
         */
         std::set< XSElementDeclaration* > m_oSetTopLevelElements;
 
+        /** Map from (non namespace prefixed) element names to the number of
+            elements that share the same namespace (in different namespaces) */
+        std::map<CPLString, int> m_oMapEltNamesToInstanceCount;
+
         static bool IsSame( const XSModelGroup* poModelGroup1,
                                   const XSModelGroup* poModelGroup2 );
         CPLString GetGroupName( const XSModelGroup* poModelGroup );

@@ -57,7 +57,8 @@ GMLASFieldType GMLASField::GetTypeFromString( const CPLString& osType )
 {
     if( osType == "string" ||
         osType == "token" ||
-        osType == "NMTOKEN" )
+        osType == "NMTOKEN" ||
+        osType == "NCName" )
     {
         // token has special processing by XML processor: all leading/trailing
         // white space is removed

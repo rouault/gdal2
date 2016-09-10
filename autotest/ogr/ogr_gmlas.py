@@ -333,6 +333,105 @@ def ogr_gmlas_gml_Reference():
     return 'success'
 
 ###############################################################################
+# Test that we fix ambiguities in class names
+
+def ogr_gmlas_same_element_in_different_ns():
+
+    if ogr.GetDriverByName('GMLAS') is None:
+        return 'skip'
+
+    gdal.FileFromMemBuffer('/vsimem/ogr_gmlas_same_element_in_different_ns.xml',
+"""<myns:elt xmlns:myns="http://myns"
+             xmlns:other_ns="http://other_ns" 
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  xsi:schemaLocation="http://myns ogr_gmlas_same_element_in_different_ns.xsd">
+    <other_ns:realizationOfAbstractElt>
+        <other_ns:foo>bar</other_ns:foo>
+    </other_ns:realizationOfAbstractElt>
+</myns:elt>""")
+
+    gdal.FileFromMemBuffer('/vsimem/ogr_gmlas_same_element_in_different_ns.xsd',
+"""<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:myns="http://myns"
+           xmlns:other_ns="http://other_ns" 
+           targetNamespace="http://myns"
+           elementFormDefault="qualified" attributeFormDefault="unqualified">
+<xs:import namespace="http://other_ns" schemaLocation="ogr_gmlas_same_element_in_different_ns_other_ns.xsd"/>
+<xs:element name="elt">
+  <xs:complexType>
+    <xs:sequence>
+        <xs:element ref="other_ns:abstractElt"/>
+        <xs:element name="elt2">
+            <xs:complexType>
+                <xs:sequence>
+                    <xs:element ref="other_ns:abstractElt" maxOccurs="unbounded"/>
+                </xs:sequence>
+            </xs:complexType>
+        </xs:element>
+    </xs:sequence>
+  </xs:complexType>
+</xs:element>
+<xs:element name="realizationOfAbstractElt" substitutionGroup="other_ns:abstractElt">
+  <xs:complexType>
+    <xs:sequence>
+        <xs:element name="bar" type="xs:string"/>
+    </xs:sequence>
+  </xs:complexType>
+</xs:element>
+</xs:schema>""")
+
+    gdal.FileFromMemBuffer('/vsimem/ogr_gmlas_same_element_in_different_ns_other_ns.xsd',
+"""<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:other_ns="http://other_ns" 
+           targetNamespace="http://other_ns"
+           elementFormDefault="qualified" attributeFormDefault="unqualified">
+<xs:element name="abstractElt" abstract="true"/>
+<xs:element name="realizationOfAbstractElt" substitutionGroup="other_ns:abstractElt">
+  <xs:complexType>
+    <xs:sequence>
+        <xs:element name="foo" type="xs:string"/>
+    </xs:sequence>
+  </xs:complexType>
+</xs:element>
+</xs:schema>""")
+
+    ds = gdal.OpenEx('GMLAS:/vsimem/ogr_gmlas_same_element_in_different_ns.xml')
+    if ds is None:
+        gdaltest.post_reason('fail')
+        return 'fail'
+    #for i in range(ds.GetLayerCount()):
+    #    print(ds.GetLayer(i).GetName())
+
+    if ds.GetLayerCount() != 5:
+        gdaltest.post_reason('fail')
+        print(ds.GetLayerCount())
+        return 'fail'
+    lyr = ds.GetLayerByName('elt')
+    f = lyr.GetNextFeature()
+    if f.IsFieldSet('abstractElt_other_ns_realizationOfAbstractElt_pkid') == 0:
+        gdaltest.post_reason('fail')
+        f.DumpReadable()
+        return 'fail'
+    if ds.GetLayerByName('myns_realizationOfAbstractElt') is None:
+        gdaltest.post_reason('fail')
+        return 'fail'
+    if ds.GetLayerByName('other_ns_realizationOfAbstractElt') is None:
+        gdaltest.post_reason('fail')
+        return 'fail'
+    if ds.GetLayerByName('elt_elt2_abstractElt_myns_realizationOfAbstractElt') is None:
+        gdaltest.post_reason('fail')
+        return 'fail'
+    if ds.GetLayerByName('elt_elt2_abstractElt_other_ns_realizationOfAbstractElt') is None:
+        gdaltest.post_reason('fail')
+        return 'fail'
+
+    gdal.Unlink('/vsimem/ogr_gmlas_same_element_in_different_ns.xml')
+    gdal.Unlink('/vsimem/ogr_gmlas_same_element_in_different_ns.xsd')
+    gdal.Unlink('/vsimem/ogr_gmlas_same_element_in_different_ns_other_ns.xsd')
+
+    return 'success'
+
+###############################################################################
 #  Cleanup
 
 def ogr_gmlas_cleanup():
@@ -355,6 +454,7 @@ gdaltest_list = [
     ogr_gmlas_invalid_schema,
     ogr_gmlas_invalid_xml,
     ogr_gmlas_gml_Reference,
+    ogr_gmlas_same_element_in_different_ns,
     ogr_gmlas_cleanup ]
 
 if __name__ == '__main__':
