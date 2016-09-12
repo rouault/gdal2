@@ -189,12 +189,12 @@ class GMLASField
         } Category;
 
     private:
-        CPLString m_osName;         /*< Field name */
-        GMLASFieldType m_eType;     /*< Field type */
-        CPLString m_osTypeName;     /*< Orignal XSD type */
-        int m_nWidth;               /*< Field width */
-        bool m_bNotNullable;        /*< If the field is not nullable */
-        bool m_bArray;              /*< If the field is an array */
+        CPLString m_osName;         /**< Field name */
+        GMLASFieldType m_eType;     /**< Field type */
+        CPLString m_osTypeName;     /**< Orignal XSD type */
+        int m_nWidth;               /**< Field width */
+        bool m_bNotNullable;        /**< If the field is not nullable */
+        bool m_bArray;              /**< If the field is an array */
 
         /** Category of the field. */
         Category m_eCategory;
@@ -209,8 +209,8 @@ class GMLASField
             to store XML blob on parsing. */
         std::vector<CPLString> m_aosXPath;
 
-        CPLString m_osFixedValue;       /*< Value of fixed='' attribute */
-        CPLString m_osDefaultValue;     /*< Value of default='' attribute */
+        CPLString m_osFixedValue;       /**< Value of fixed='' attribute */
+        CPLString m_osDefaultValue;     /**< Value of default='' attribute */
 
         /** Minimum number of occurences. Might be -1 if unset */
         int  m_nMinOccurs;
