@@ -1939,8 +1939,9 @@ bool GMLASSchemaAnalyzer::ExploreModelGroup(
                             GMLASField oField(osNestedClassFields[j]);
                             oField.SetName( transcode(poElt->getName()) +
                                             "_" + oField.GetName() );
-                            if( poEltCT->getParticle() != NULL &&
-                                poEltCT->getParticle()->getMinOccurs() == 0 )
+                            if( nMinOccurs == 0 ||
+                                (poEltCT->getParticle() != NULL &&
+                                 poEltCT->getParticle()->getMinOccurs() == 0) )
                             {
                                 oField.SetMinOccurs(0);
                                 oField.SetNotNullable(false);

@@ -416,7 +416,7 @@ Layer SRS WKT:
 ogr_pkid: String (0.0) NOT NULL
 parent_otherns_id: String (0.0) NOT NULL
 group3_elt1: String (0.0) NOT NULL
-group3_elt2_b: String (0.0) NOT NULL
+group3_elt2_b: String (0.0)
 OGRFeature(main_elt_group3):1
   ogr_pkid (String) = otherns_id_group3_elt1_1
   parent_otherns_id (String) = otherns_id
