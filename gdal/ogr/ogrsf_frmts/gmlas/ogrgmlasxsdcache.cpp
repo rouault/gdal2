@@ -52,8 +52,9 @@ VSILFILE* GMLASResourceCache::Open( const CPLString& osResource,
         /* Transform a/b + ../c --> a/c */
         CPLString osResourceModified(osResource);
         CPLString osBasePathModified(osBasePath);
-        while( osResourceModified.find("../") == 0 ||
-               osResourceModified.find("..\\") == 0 )
+        while( (osResourceModified.find("../") == 0 ||
+                osResourceModified.find("..\\") == 0) &&
+               !osBasePathModified.empty() )
         {
             osBasePathModified = CPLGetDirname(osBasePathModified);
             osResourceModified = osResourceModified.substr(3);

@@ -432,6 +432,21 @@ def ogr_gmlas_same_element_in_different_ns():
     return 'success'
 
 ###############################################################################
+# Test a corner case of relative path resolution
+
+def ogr_gmlas_corner_case_relative_path():
+
+    if ogr.GetDriverByName('GMLAS') is None:
+        return 'skip'
+
+    ds = ogr.Open('GMLAS:../ogr/data/gmlas_test1.xml')
+    if ds is None:
+        gdaltest.post_reason('fail')
+        return 'fail'
+
+    return 'success'
+
+###############################################################################
 #  Cleanup
 
 def ogr_gmlas_cleanup():
@@ -455,6 +470,7 @@ gdaltest_list = [
     ogr_gmlas_invalid_xml,
     ogr_gmlas_gml_Reference,
     ogr_gmlas_same_element_in_different_ns,
+    ogr_gmlas_corner_case_relative_path,
     ogr_gmlas_cleanup ]
 
 if __name__ == '__main__':

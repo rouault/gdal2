@@ -1341,7 +1341,8 @@ bool GMLASSchemaAnalyzer::FindElementsWithMustBeToLevel(
             }
             // Any GML abstract type
             else if( poElt->getAbstract() &&
-                transcode(poElt->getNamespace()).find(pszGML_URI) == 0 )
+                     transcode(poElt->getNamespace()).find(pszGML_URI) == 0 &&
+                     transcode(poElt->getName()) != "_Feature" )
             {
                 // Do nothing
             }
@@ -1594,7 +1595,8 @@ bool GMLASSchemaAnalyzer::ExploreModelGroup(
 
             // Any GML abstract type
             else if( poElt->getAbstract() &&
-                transcode(poElt->getNamespace()).find(pszGML_URI) == 0 )
+                     transcode(poElt->getNamespace()).find(pszGML_URI) == 0 &&
+                     transcode(poElt->getName()) != "_Feature" )
             {
                 GMLASField oField;
                 oField.SetName( transcode(poElt->getName()) );
