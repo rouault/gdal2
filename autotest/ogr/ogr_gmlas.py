@@ -7,7 +7,8 @@
 # Purpose:  GMLAS driver testing.
 # Author:   Even Rouault, <even dot rouault at spatialys dot com>
 #
-# Initial developement funded by the European Environment Agency
+# Initial development funded by the European Earth observation programme
+# Copernicus
 #
 #******************************************************************************
 # Copyright (c) 2016, Even Rouault, <even dot rouault at spatialys dot com>
