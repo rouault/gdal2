@@ -2010,7 +2010,7 @@ bool GMLASSchemaAnalyzer::ExploreModelGroup(
 
                                 oNestedClass.SetName( oClass.GetName() + "_" +
                                         transcode(poElt->getName()) + "_sequence" );
-                                oNestedClass.SetIsGroup( true );
+                                oNestedClass.SetIsRepeatedSequence( true );
 
                                 GMLASField oField;
                                 oField.SetXPath( oNestedClass.GetXPath() );
@@ -2024,6 +2024,7 @@ bool GMLASSchemaAnalyzer::ExploreModelGroup(
                             }
                             else
                             {
+                                oNestedClass.SetIsRepeatedSequence( bEltRepeatedParticle );
                                 oNestedClass.PrependFields( aoFields );
 
                                 oClass.AddNestedClass( oNestedClass );
@@ -2090,7 +2091,7 @@ bool GMLASSchemaAnalyzer::ExploreModelGroup(
                     oNestedClass.SetName( oClass.GetName() +
                                           CPLSPrintf("_group%d", nGroup) );
                 }
-                oNestedClass.SetIsGroup(true);
+                oNestedClass.SetIsRepeatedSequence(true);
                 oNestedClass.SetXPath( oClass.GetXPath() );
                 std::set<XSModelGroup*>
                     oSetNewVisitedModelGroups(oSetVisitedModelGroups);

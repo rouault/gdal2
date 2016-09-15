@@ -448,6 +448,116 @@ def ogr_gmlas_corner_case_relative_path():
     return 'success'
 
 ###############################################################################
+# Test unexpected repeated element
+
+def ogr_gmlas_unexpected_repeated_element():
+
+    if ogr.GetDriverByName('GMLAS') is None:
+        return 'skip'
+
+    gdal.FileFromMemBuffer('/vsimem/ogr_gmlas_unexpected_repeated_element.xml',
+"""<myns:main_elt xmlns:myns="http://myns"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  xsi:schemaLocation="http://myns ogr_gmlas_unexpected_repeated_element.xsd">
+    <myns:foo>foo_first</myns:foo>
+    <myns:foo>foo_again</myns:foo>
+</myns:main_elt>
+""")
+
+    gdal.FileFromMemBuffer('/vsimem/ogr_gmlas_unexpected_repeated_element.xsd',
+"""<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:myns="http://myns" 
+           targetNamespace="http://myns"
+           elementFormDefault="qualified" attributeFormDefault="unqualified">
+<xs:element name="main_elt">
+  <xs:complexType>
+    <xs:sequence>
+        <xs:element name="foo" type="xs:string" minOccurs="0"/>
+    </xs:sequence>
+  </xs:complexType>
+</xs:element>
+</xs:schema>""")
+
+    ds = gdal.OpenEx('GMLAS:/vsimem/ogr_gmlas_unexpected_repeated_element.xml')
+    lyr = ds.GetLayer(0)
+    with gdaltest.error_handler():
+        f = lyr.GetNextFeature()
+    if f is None or f['foo'] != 'foo_again': # somewhat arbitrary to keep the latest one!
+        gdaltest.post_reason('fail')
+        f.DumpReadable()
+        return 'fail'
+    if gdal.GetLastErrorMsg().find('Unexpected element myns:main_elt/myns:foo') < 0:
+        gdaltest.post_reason('fail')
+        print(gdal.GetLastErrorMsg())
+        return 'fail'
+    f = lyr.GetNextFeature()
+    if f is not None:
+        gdaltest.post_reason('fail')
+        return 'fail'
+    ds = None
+
+    gdal.Unlink('/vsimem/ogr_gmlas_unexpected_repeated_element.xml')
+    gdal.Unlink('/vsimem/ogr_gmlas_unexpected_repeated_element.xsd')
+
+    return 'success'
+
+###############################################################################
+# Test unexpected repeated element
+
+def ogr_gmlas_unexpected_repeated_element_variant():
+
+    if ogr.GetDriverByName('GMLAS') is None:
+        return 'skip'
+
+    gdal.FileFromMemBuffer('/vsimem/ogr_gmlas_unexpected_repeated_element.xml',
+"""<myns:main_elt xmlns:myns="http://myns"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  xsi:schemaLocation="http://myns ogr_gmlas_unexpected_repeated_element.xsd">
+    <myns:foo>foo_first</myns:foo>
+    <myns:bar>bar</myns:bar>
+    <myns:foo>foo_again</myns:foo>
+</myns:main_elt>
+""")
+
+    gdal.FileFromMemBuffer('/vsimem/ogr_gmlas_unexpected_repeated_element.xsd',
+"""<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:myns="http://myns" 
+           targetNamespace="http://myns"
+           elementFormDefault="qualified" attributeFormDefault="unqualified">
+<xs:element name="main_elt">
+  <xs:complexType>
+    <xs:sequence>
+        <xs:element name="foo" type="xs:string" minOccurs="0"/>
+        <xs:element name="bar" type="xs:string" minOccurs="0"/>
+    </xs:sequence>
+  </xs:complexType>
+</xs:element>
+</xs:schema>""")
+
+    ds = gdal.OpenEx('GMLAS:/vsimem/ogr_gmlas_unexpected_repeated_element.xml')
+    lyr = ds.GetLayer(0)
+    with gdaltest.error_handler():
+        f = lyr.GetNextFeature()
+    if f is None or f['foo'] != 'foo_again': # somewhat arbitrary to keep the latest one!
+        gdaltest.post_reason('fail')
+        f.DumpReadable()
+        return 'fail'
+    if gdal.GetLastErrorMsg().find('Unexpected element myns:main_elt/myns:foo') < 0:
+        gdaltest.post_reason('fail')
+        print(gdal.GetLastErrorMsg())
+        return 'fail'
+    f = lyr.GetNextFeature()
+    if f is not None:
+        gdaltest.post_reason('fail')
+        return 'fail'
+    ds = None
+
+    gdal.Unlink('/vsimem/ogr_gmlas_unexpected_repeated_element.xml')
+    gdal.Unlink('/vsimem/ogr_gmlas_unexpected_repeated_element.xsd')
+
+    return 'success'
+
+###############################################################################
 #  Cleanup
 
 def ogr_gmlas_cleanup():
@@ -472,6 +582,8 @@ gdaltest_list = [
     ogr_gmlas_gml_Reference,
     ogr_gmlas_same_element_in_different_ns,
     ogr_gmlas_corner_case_relative_path,
+    ogr_gmlas_unexpected_repeated_element,
+    ogr_gmlas_unexpected_repeated_element_variant,
     ogr_gmlas_cleanup ]
 
 if __name__ == '__main__':

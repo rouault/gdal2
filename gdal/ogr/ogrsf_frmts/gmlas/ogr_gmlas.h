@@ -307,8 +307,9 @@ class GMLASFeatureClass
         /** Child nested classes */
         std::vector<GMLASFeatureClass> m_aoNestedClasses;
 
-        /** Whether this layer corresponds to a (multiple instanciated) xs:group */
-        bool m_bIsGroup;
+        /** Whether this layer corresponds to a (multiple instanciated) xs:group
+            or a repeated sequence */
+        bool m_bIsRepeatedSequence;
 
         /** Only used for junction tables. The XPath to the parent table */
         CPLString m_osParentXPath;
@@ -328,7 +329,8 @@ class GMLASFeatureClass
         void PrependFields( const std::vector<GMLASField>& aoFields );
         void AppendFields( const std::vector<GMLASField>& aoFields );
         void AddNestedClass( const GMLASFeatureClass& oNestedClass );
-        void SetIsGroup( bool bIsGroup ) { m_bIsGroup = bIsGroup; }
+        void SetIsRepeatedSequence( bool bIsRepeatedSequence )
+                            { m_bIsRepeatedSequence = bIsRepeatedSequence; }
         void SetParentXPath(const CPLString& osXPath)
                                                 { m_osParentXPath = osXPath; }
         void SetChildXPath(const CPLString& osXPath)
@@ -344,7 +346,7 @@ class GMLASFeatureClass
                                             { return m_aoNestedClasses; }
         std::vector<GMLASFeatureClass>& GetNestedClasses()
                                             { return m_aoNestedClasses; }
-        bool IsGroup() const { return m_bIsGroup; }
+        bool IsRepeatedSequence() const { return m_bIsRepeatedSequence; }
         const CPLString& GetParentXPath() const { return m_osParentXPath; }
         const CPLString& GetChildXPath() const { return m_osChildXPath; }
         bool IsTopLevelElt() const { return m_bIsTopLevelElt; }

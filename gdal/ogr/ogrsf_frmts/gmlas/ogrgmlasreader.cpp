@@ -667,8 +667,8 @@ void GMLASReader::startElement(
     for(size_t i = 0; i < m_papoLayers->size(); i++ )
     {
         // Are we entering a group ?
-        const bool bIsGroupLayer =
-            ((*m_papoLayers)[i]->GetFeatureClass().IsGroup() &&
+        const bool bIsRepeatedSequenceLayer =
+            ((*m_papoLayers)[i]->GetFeatureClass().IsRepeatedSequence() &&
              m_oCurCtxt.m_poLayer != NULL &&
              m_oCurCtxt.m_poLayer != (*m_papoLayers)[i] &&
              m_oCurCtxt.m_poLayer->GetFeatureClass().GetXPath() ==
@@ -686,7 +686,7 @@ void GMLASReader::startElement(
 
             // Case where we are a sub-element of a (repeated) group of a
             //top-level feature
-            bIsGroupLayer ||
+            bIsRepeatedSequenceLayer ||
 
             // Case where we go back from a sub-element of a (repeated) group
             // of a top-level feature to a regular sub-element of that top-level
@@ -701,7 +701,7 @@ void GMLASReader::startElement(
 #endif
 
             if( (*m_papoLayers)[i]->GetParent() != NULL &&
-                (*m_papoLayers)[i]->GetParent()->GetFeatureClass().IsGroup() &&
+                (*m_papoLayers)[i]->GetParent()->GetFeatureClass().IsRepeatedSequence() &&
                 m_oCurCtxt.m_poGroupLayer != (*m_papoLayers)[i]->GetParent() )
             {
                 // Yuck! Simulate top-level element of a group if we directly jump
@@ -732,7 +732,7 @@ void GMLASReader::startElement(
             }
 
             bool bPushNewState = true;
-            if( bIsGroupLayer )
+            if( bIsRepeatedSequenceLayer )
             {
                 int nFieldIdx =
                     (*m_papoLayers)[i]->GetFieldIndexFromXPath(m_osCurSubXPath);
@@ -872,6 +872,31 @@ void GMLASReader::startElement(
         int idx = m_oCurCtxt.m_poLayer->GetFieldIndexFromXPath(m_osCurSubXPath);
         if( idx >= 0 )
         {
+
+            bool bPushNewFeature = false;
+
+            /* For cases like
+                    <xs:element name="element_compound">
+                        <xs:complexType>
+                            <xs:sequence maxOccurs="unbounded">
+                                <xs:element name="subelement1" type="xs:string"/>
+                                <xs:element name="subelement2" type="xs:string"/>
+                            </xs:sequence>
+                        </xs:complexType>
+                    </xs:element>
+
+                    <element_compound>
+                        <subelement1>a</subelement>
+                        <subelement2>b</subelement>
+                        <subelement1>c</subelement>
+                        <subelement2>d</subelement>
+                    </element_compound>
+            */
+            if( idx < m_nCurFieldIdx )
+            {
+                bPushNewFeature = true;
+            }
+
             /* For cases like
                     <xs:element name="element_compound">
                         <xs:complexType>
@@ -886,17 +911,24 @@ void GMLASReader::startElement(
                         <subelement>2012-01-02T12:34:56Z</subelement>
                     </element_compound>
             */
-            bool bPushNewFeature = false;
-            if( idx < m_nCurFieldIdx )
-            {
-                bPushNewFeature = true;
-            }
             else if (idx == m_nCurFieldIdx &&
                      !IsArrayType(m_oCurCtxt.m_poFeature->
                                 GetFieldDefnRef(m_nCurFieldIdx)->GetType()) )
             {
                 bPushNewFeature = true;
             }
+
+            // Make sure we are in a repeated sequence, otherwise this is
+            // invalid XML
+            if( bPushNewFeature &&
+                !m_oCurCtxt.m_poLayer->GetFeatureClass().IsRepeatedSequence() )
+            {
+                bPushNewFeature = false;
+                CPLError(CE_Warning, CPLE_AppDefined,
+                            "Unexpected element %s",
+                            m_osCurSubXPath.c_str());
+            }
+
             if( bPushNewFeature )
             {
                 //CPLDebug("GMLAS", "Feature ready");
