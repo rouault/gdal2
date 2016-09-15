@@ -675,6 +675,8 @@ bool GMLASSchemaAnalyzer::Analyze(const CPLString& osBaseDirname,
                         poModel);
             }
         }
+
+        XMLString::release(&xmlNamespace);
     }
 
     // Find ambiguous class names
