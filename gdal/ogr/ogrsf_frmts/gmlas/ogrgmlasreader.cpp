@@ -1385,7 +1385,10 @@ void GMLASReader::endElement(
                 m_osTextContent += osLocalname;
                 m_osTextContent += ">";
 
-                m_apsXMLNodeStack.pop_back();
+                if( m_nCurGeomFieldIdx >= 0 )
+                {
+                    m_apsXMLNodeStack.pop_back();
+                }
             }
 
             if( m_nCurFieldIdx >= 0 )
