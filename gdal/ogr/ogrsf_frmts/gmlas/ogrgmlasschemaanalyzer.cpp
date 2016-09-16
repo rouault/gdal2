@@ -1061,36 +1061,47 @@ void GMLASSchemaAnalyzer::GetConcreteImplementationTypes(
 }
 
 /************************************************************************/
-/*                        IsGMLGeometryProperty()                       */
+/*                        GetOGRGeometryType()                          */
 /************************************************************************/
 
-static bool IsGMLGeometryProperty( XSTypeDefinition* poTypeDef )
+static OGRwkbGeometryType GetOGRGeometryType( XSTypeDefinition* poTypeDef )
 {
-    CPLString osName(transcode(poTypeDef->getName()));
-    return osName == "GeometryPropertyType" ||
-           osName == "PointPropertyType" ||
-           osName == "PolygonPropertyType" ||
-           osName == "LineStringPropertyType" ||
-           osName == "MultiPointPropertyType" ||
-           osName == "MultiLineStringPropertyType" ||
-           osName == "MultiPolygonPropertyType" ||
-           osName == "MultiGeometryPropertyType" ||
+    const struct MyStruct
+    {
+        const char* pszName;
+        OGRwkbGeometryType eType;
+    } asArray[] = {
+        { "GeometryPropertyType", wkbUnknown },
+        { "PointPropertyType", wkbPoint },
+        { "PolygonPropertyType", wkbPolygon },
+        { "LineStringPropertyType", wkbLineString },
+        { "MultiPointPropertyType", wkbMultiPoint },
+        { "MultiPolygonPropertyType", wkbMultiPolygon },
+        { "MultiLineStringPropertyType", wkbMultiLineString },
+        { "MultiGeometryPropertyType", wkbGeometryCollection },
+        { "MultiCurvePropertyType", wkbMultiCurve },
+        { "MultiSurfacePropertyType", wkbMultiSurface },
+        { "MultiSolidPropertyType", wkbUnknown },
+        // GeometryArrayPropertyType ?
+        // GeometricPrimitivePropertyType ?
+        { "CurvePropertyType", wkbCurve },
+        { "SurfacePropertyType", wkbSurface },
+        // SurfaceArrayPropertyType ?
+        // AbstractRingPropertyType ?
+        // LinearRingPropertyType ?
+        { "CompositeCurvePropertyType", wkbCurve },
+        { "CompositeSurfacePropertyType", wkbSurface },
+        { "CompositeSolidPropertyType", wkbUnknown },
+        { "GeometricComplexPropertyType", wkbUnknown },
+    };
 
-           osName == "MultiCurvePropertyType" ||
-           osName == "MultiSurfacePropertyType" ||
-           osName == "MultiSolidPropertyType" ||
-           /*osName == "GeometryArrayPropertyType" ||
-           osName == "GeometricPrimitivePropertyType" || */
-           osName == "CurvePropertyType" ||
-           /* osName == "CurveArrayPropertyType" || */
-           osName == "SurfacePropertyType" ||
-           /*osName == "SurfaceArrayPropertyType" || */
-           /*osName == "AbstractRingPropertyType" || */
-           /*osName == "LinearRingPropertyType" || */
-           osName == "CompositeCurvePropertyType" ||
-           osName == "CompositeSurfacePropertyType" ||
-           osName == "CompositeSolidPropertyType" ||
-           osName == "GeometricComplexPropertyType";
+    CPLString osName(transcode(poTypeDef->getName()));
+    for( size_t i = 0; i < CPL_ARRAYSIZE(asArray); ++i )
+    {
+        if( osName == asArray[i].pszName )
+            return asArray[i].eType;
+    }
+    return wkbNone;
 
 #if 0
   <complexType name="CurveSegmentArrayPropertyType">
@@ -1329,23 +1340,23 @@ bool GMLASSchemaAnalyzer::FindElementsWithMustBeToLevel(
         {
             XSElementDeclaration* poElt = poParticle->getElementTerm();
             XSTypeDefinition* poTypeDef = poElt->getTypeDefinition();
-            const CPLString osXPath(
-                                MakeXPath(transcode(poElt->getNamespace()),
-                                            transcode(poElt->getName())) );
+            const CPLString osEltName(transcode(poElt->getName()));
+            const CPLString osEltNS(transcode(poElt->getNamespace()));
+            const CPLString osXPath( MakeXPath(osEltNS, osEltName) );
 
             std::vector<XSElementDeclaration*> apoImplEltList;
             GetConcreteImplementationTypes(poElt, apoImplEltList);
 
             // Special case for a GML geometry property
-            if( transcode(poTypeDef->getNamespace()).find(pszGML_URI) == 0 &&
-                IsGMLGeometryProperty(poTypeDef) )
+            if( IsGMLNamespace(transcode(poTypeDef->getNamespace())) &&
+                GetOGRGeometryType(poTypeDef) != wkbNone )
             {
                 // Do nothing
             }
             // Any GML abstract type
             else if( poElt->getAbstract() &&
-                     transcode(poElt->getNamespace()).find(pszGML_URI) == 0 &&
-                     transcode(poElt->getName()) != "_Feature" )
+                     IsGMLNamespace(osEltNS) &&
+                     osEltName != "_Feature" )
             {
                 // Do nothing
             }
@@ -1547,9 +1558,9 @@ bool GMLASSchemaAnalyzer::ExploreModelGroup(
         if( poParticle->getTermType() == XSParticle::TERM_ELEMENT )
         {
             XSElementDeclaration* poElt = poParticle->getElementTerm();
-            const CPLString osOnlyElementXPath(
-                          MakeXPath(transcode(poElt->getNamespace()),
-                                    transcode(poElt->getName())) );
+            const CPLString osEltName(transcode(poElt->getName()));
+            const CPLString osEltNS(transcode(poElt->getNamespace()));
+            const CPLString osOnlyElementXPath(MakeXPath(osEltNS, osEltName));
             const CPLString osElementXPath( oClass.GetXPath() + "/" +
                                             osOnlyElementXPath );
 #ifdef DEBUG_VERBOSE
@@ -1583,14 +1594,16 @@ bool GMLASSchemaAnalyzer::ExploreModelGroup(
             GetConcreteImplementationTypes(poElt, apoImplEltList);
 
             // Special case for a GML geometry property
-            if( transcode(poTypeDef->getNamespace()).find(pszGML_URI) == 0 &&
-                IsGMLGeometryProperty(poTypeDef) )
+            OGRwkbGeometryType eGeomType = wkbNone;
+            if( IsGMLNamespace(transcode(poTypeDef->getNamespace())) &&
+                (eGeomType = GetOGRGeometryType(poTypeDef)) != wkbNone )
             {
                 GMLASField oField;
-                oField.SetName( transcode(poElt->getName()) );
+                oField.SetName( osEltName );
                 oField.SetMinOccurs( nMinOccurs );
                 oField.SetMaxOccurs( nMaxOccurs );
-                oField.SetType( GMLAS_FT_ANYTYPE, "anyType" );
+                oField.SetType( GMLAS_FT_GEOMETRY, "geometry" );
+                oField.SetGeomType( eGeomType );
                 oField.SetXPath( osElementXPath );
 
                 oClass.AddField( oField );
@@ -1598,14 +1611,22 @@ bool GMLASSchemaAnalyzer::ExploreModelGroup(
 
             // Any GML abstract type
             else if( poElt->getAbstract() &&
-                     transcode(poElt->getNamespace()).find(pszGML_URI) == 0 &&
-                     transcode(poElt->getName()) != "_Feature" )
+                     IsGMLNamespace(osEltNS) &&
+                     osEltName != "_Feature" )
             {
                 GMLASField oField;
-                oField.SetName( transcode(poElt->getName()) );
+                oField.SetName( osEltName );
                 oField.SetMinOccurs( nMinOccurs );
                 oField.SetMaxOccurs( nMaxOccurs );
-                oField.SetType( GMLAS_FT_ANYTYPE, "anyType" );
+                if( osEltName == "AbstractGeometry" )
+                {
+                    oField.SetType( GMLAS_FT_GEOMETRY, "geometry" );
+                    oField.SetGeomType( wkbUnknown );
+                }
+                else
+                {
+                    oField.SetType( GMLAS_FT_ANYTYPE, "anyType" );
+                }
                 oField.SetIncludeThisEltInBlob( true );
 
                 for( size_t j = 0; j < apoImplEltList.size(); j++ )
@@ -1664,7 +1685,7 @@ bool GMLASSchemaAnalyzer::ExploreModelGroup(
                 {
                     GMLASFeatureClass oNestedClass;
                     oNestedClass.SetName( oClass.GetName() + "_" +
-                                          transcode(poElt->getName()) );
+                                          osEltName );
                     oNestedClass.SetXPath( osElementXPath );
                     GMLASField oUniqueField;
                     oUniqueField.SetName("value");
@@ -1676,7 +1697,7 @@ bool GMLASSchemaAnalyzer::ExploreModelGroup(
                     oNestedClass.AddField(oUniqueField);
                     oClass.AddNestedClass( oNestedClass );
 
-                    oField.SetName( transcode(poElt->getName()) );
+                    oField.SetName( osEltName );
                     oField.SetXPath( osElementXPath );
                     oField.SetCategory(
                                     GMLASField::PATH_TO_CHILD_ELEMENT_NO_LINK);
@@ -1684,7 +1705,7 @@ bool GMLASSchemaAnalyzer::ExploreModelGroup(
                 }
                 else
                 {
-                    oField.SetName( transcode(poElt->getName()) );
+                    oField.SetName( osEltName );
                     oField.SetXPath( osElementXPath );
                     if( !bIsChoice && nMinOccurs > 0 &&
                         !poElt->getNillable() )
@@ -1701,7 +1722,7 @@ bool GMLASSchemaAnalyzer::ExploreModelGroup(
                         poElt->getNillable() )
                     {
                         GMLASField oFieldNil;
-                        oFieldNil.SetName( transcode(poElt->getName()) +
+                        oFieldNil.SetName( osEltName +
                                            "_nil" );
                         oFieldNil.SetXPath( osElementXPath + "@xsi:nil" );
                         oFieldNil.SetType( GMLAS_FT_BOOLEAN, "boolean" );
@@ -1738,7 +1759,7 @@ bool GMLASSchemaAnalyzer::ExploreModelGroup(
                     XSAttributeUse* poAttr = poAttrList->elementAt(j);
                     GMLASField oField;
                     CPLString osNamePrefix( bMoveNestedClassToTop ?
-                                transcode(poElt->getName()) : CPLString() );
+                                osEltName : CPLString() );
                     SetFieldFromAttribute(oField, poAttr, osElementXPath,
                                           osNamePrefix);
                     aoFields.push_back(oField);
@@ -1757,7 +1778,7 @@ bool GMLASSchemaAnalyzer::ExploreModelGroup(
                     }
                     else
                     {
-                        oField.SetName( transcode(poElt->getName()) +
+                        oField.SetName( osEltName +
                                                     "_anyAttributes" );
                     }
                     oField.SetXPath(  osElementXPath + "@*" );
@@ -1777,7 +1798,7 @@ bool GMLASSchemaAnalyzer::ExploreModelGroup(
                     {
                         /* We have a complex type, but no attributes, and */
                         /* compatible of arrays, so move it to top level! */
-                        oField.SetName( transcode(poElt->getName()) );
+                        oField.SetName( osEltName );
                         oField.SetArray( true );
                         oField.SetMinOccurs( nMinOccurs );
                         oField.SetMaxOccurs( nMaxOccurs );
@@ -1791,7 +1812,7 @@ bool GMLASSchemaAnalyzer::ExploreModelGroup(
                     }
                     else
                     {
-                        oField.SetName( transcode(poElt->getName()) );
+                        oField.SetName( osEltName );
                         oField.SetMinOccurs( nMinOccurs );
                         oField.SetMaxOccurs( nMaxOccurs );
                     }
@@ -1816,7 +1837,7 @@ bool GMLASSchemaAnalyzer::ExploreModelGroup(
                     }
                     else
                     {
-                        oField.SetName( transcode(poElt->getName()) );
+                        oField.SetName( osEltName );
                         oField.SetMinOccurs( nMinOccurs );
                         oField.SetMaxOccurs( nMaxOccurs );
                     }
@@ -1844,7 +1865,7 @@ bool GMLASSchemaAnalyzer::ExploreModelGroup(
                 {
                     GMLASFeatureClass oNestedClass;
                     oNestedClass.SetName( oClass.GetName() + "_" +
-                                          transcode(poElt->getName()) );
+                                          osEltName );
                     oNestedClass.SetXPath( osElementXPath );
 
                     // NULL can happen, for example for gml:ReferenceType
@@ -1887,7 +1908,7 @@ bool GMLASSchemaAnalyzer::ExploreModelGroup(
                             oField.SetXPath(
                                 GMLASField::MakePKIDFieldFromXLinkHrefXPath(
                                             osElementXPath + "@xlink:href"));
-                            oField.SetName( transcode(poElt->getName()) +
+                            oField.SetName( osEltName +
                                                                     "_pkid" );
                             oField.SetMinOccurs(0);
                             oField.SetMaxOccurs(1);
@@ -1940,7 +1961,7 @@ bool GMLASSchemaAnalyzer::ExploreModelGroup(
                         for(size_t j = 0; j < osNestedClassFields.size(); j++ )
                         {
                             GMLASField oField(osNestedClassFields[j]);
-                            oField.SetName( transcode(poElt->getName()) +
+                            oField.SetName( osEltName +
                                             "_" + oField.GetName() );
                             if( nMinOccurs == 0 ||
                                 (poEltCT->getParticle() != NULL &&
@@ -1979,7 +2000,7 @@ bool GMLASSchemaAnalyzer::ExploreModelGroup(
                             // no nested classes, then add an array attribute
                             // at the top-level
                             GMLASField oField (oNestedClass.GetFields()[0] );
-                            oField.SetName( transcode(poElt->getName()) + "_" +
+                            oField.SetName( osEltName + "_" +
                                             oField.GetName() );
                             oField.SetArray( true );
                             oClass.AddField( oField );
@@ -2003,13 +2024,13 @@ bool GMLASSchemaAnalyzer::ExploreModelGroup(
                                 GMLASFeatureClass oIntermNestedClass;
                                 oIntermNestedClass.SetName(
                                         oClass.GetName() + "_" +
-                                        transcode(poElt->getName()) );
+                                        osEltName );
                                 oIntermNestedClass.SetXPath( osElementXPath );
 
                                 oIntermNestedClass.PrependFields( aoFields );
 
                                 oNestedClass.SetName( oClass.GetName() + "_" +
-                                        transcode(poElt->getName()) + "_sequence" );
+                                        osEltName + "_sequence" );
                                 oNestedClass.SetIsRepeatedSequence( true );
 
                                 GMLASField oField;
@@ -2031,7 +2052,7 @@ bool GMLASSchemaAnalyzer::ExploreModelGroup(
                             }
 
                             GMLASField oField;
-                            oField.SetName( transcode(poElt->getName()) );
+                            oField.SetName( osEltName );
                             oField.SetXPath( osElementXPath );
                             oField.SetCategory(
                                     GMLASField::PATH_TO_CHILD_ELEMENT_NO_LINK);
@@ -2050,13 +2071,13 @@ bool GMLASSchemaAnalyzer::ExploreModelGroup(
                 {
                     GMLASFeatureClass oNestedClass;
                     oNestedClass.SetName( oClass.GetName() + "_" +
-                                        transcode(poElt->getName()) );
+                                        osEltName );
                     oNestedClass.SetXPath( osElementXPath );
                     oNestedClass.AppendFields( aoFields );
                     oClass.AddNestedClass( oNestedClass );
 
                     GMLASField oField;
-                    oField.SetName( transcode(poElt->getName()) );
+                    oField.SetName( osEltName );
                     oField.SetXPath( osElementXPath );
                     oField.SetCategory(
                                     GMLASField::PATH_TO_CHILD_ELEMENT_NO_LINK);

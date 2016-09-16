@@ -91,7 +91,7 @@ OGRGMLASLayer::OGRGMLASLayer( OGRGMLASDataSource* poDS,
                 OGRFieldDefn oFieldDefn( oFields[i].GetName(), OFTString );
                 oFieldDefn.SetNullable( false );
                 m_nIDFieldIdx = m_poFeatureDefn->GetFieldCount();
-                m_oMapFieldXPathToFieldIdx[ oFields[i].GetXPath() ] =
+                m_oMapFieldXPathToOGRFieldIdx[ oFields[i].GetXPath() ] =
                                             m_nIDFieldIdx;
                 m_oMapOGRFieldIdxtoFCFieldIdx[ m_nIDFieldIdx ] = i;
                 m_poFeatureDefn->AddFieldDefn( &oFieldDefn );
@@ -339,6 +339,7 @@ void OGRGMLASLayer::PostInit()
 
         OGRFieldType eType = OFTString;
         OGRFieldSubType eSubType = OFSTNone;
+        CPLString osOGRFieldName( oFields[i].GetName() );
         switch( oFields[i].GetType() )
         {
             case GMLAS_FT_STRING:
@@ -399,12 +400,53 @@ void OGRGMLASLayer::PostInit()
             case GMLAS_FT_ANYSIMPLETYPE:
                 eType = OFTString;
                 break;
+            case GMLAS_FT_GEOMETRY:
+            {
+                // Create a geometry field
+                OGRGeomFieldDefn oGeomFieldDefn( osOGRFieldName, 
+                                                 oFields[i].GetGeomType() );
+                m_poFeatureDefn->AddGeomFieldDefn( &oGeomFieldDefn );
+
+                const int iOGRGeomIdx =
+                                m_poFeatureDefn->GetGeomFieldCount() - 1;
+                if( !oFields[i].GetXPath().empty() )
+                {
+                    m_oMapFieldXPathToOGRGeomFieldIdx[ oFields[i].GetXPath() ]
+                            = iOGRGeomIdx ;
+                }
+                else
+                {
+                    const std::vector<CPLString>& aoXPaths =
+                                        oFields[i].GetAlternateXPaths();
+                    for( size_t j=0; j<aoXPaths.size(); j++ )
+                    {
+                        m_oMapFieldXPathToOGRGeomFieldIdx[ aoXPaths[j] ]
+                                = iOGRGeomIdx ;
+                    }
+                }
+
+                m_oMapOGRGeomFieldIdxtoFCFieldIdx[ iOGRGeomIdx ] = i;
+
+                // Suffix the regular non-geometry field
+                osOGRFieldName += "_xml";
+                eType = OFTString;
+                break;
+            }
             default:
                 CPLError(CE_Warning, CPLE_AppDefined,
                          "Unhandled type in enum: %d",
                          oFields[i].GetType() );
                 break;
         }
+
+/*
+        if( oFields[i].GetType() == GMLAS_FT_GEOMETRY &&
+            !poDS->GetCreateGeometryXMLField() )
+        {
+            continue;
+        }
+*/
+
         if( oFields[i].IsArray() )
         {
             switch( eType )
@@ -419,7 +461,7 @@ void OGRGMLASLayer::PostInit()
                     break;
             }
         }
-        OGRFieldDefn oFieldDefn( oFields[i].GetName(), eType );
+        OGRFieldDefn oFieldDefn( osOGRFieldName, eType );
         oFieldDefn.SetSubType(eSubType);
         if( oFields[i].IsNotNullable() )
             oFieldDefn.SetNullable( false );
@@ -440,14 +482,14 @@ void OGRGMLASLayer::PostInit()
         const int iOGRIdx = m_poFeatureDefn->GetFieldCount() - 1;
         if( !oFields[i].GetXPath().empty() )
         {
-            m_oMapFieldXPathToFieldIdx[ oFields[i].GetXPath() ] = iOGRIdx ;
+            m_oMapFieldXPathToOGRFieldIdx[ oFields[i].GetXPath() ] = iOGRIdx ;
         }
         else
         {
             const std::vector<CPLString>& aoXPaths = oFields[i].GetAlternateXPaths();
             for( size_t j=0; j<aoXPaths.size(); j++ )
             {
-                m_oMapFieldXPathToFieldIdx[ aoXPaths[j] ] = iOGRIdx ;
+                m_oMapFieldXPathToOGRFieldIdx[ aoXPaths[j] ] = iOGRIdx ;
             }
         }
 
@@ -476,10 +518,10 @@ void OGRGMLASLayer::PostInit()
                 {
                     osSubXPath += "/";
                     osSubXPath += papszTokens[k];
-                    if( m_oMapFieldXPathToFieldIdx.find( osSubXPath ) ==
-                                                m_oMapFieldXPathToFieldIdx.end() )
+                    if( m_oMapFieldXPathToOGRFieldIdx.find( osSubXPath ) ==
+                                                m_oMapFieldXPathToOGRFieldIdx.end() )
                     {
-                        m_oMapFieldXPathToFieldIdx[ osSubXPath ] =
+                        m_oMapFieldXPathToOGRFieldIdx[ osSubXPath ] =
                                                             IDX_COMPOUND_FOLDED;
                     }
                 }
@@ -502,14 +544,27 @@ OGRGMLASLayer::~OGRGMLASLayer()
 }
 
 /************************************************************************/
-/*                         GetFieldIndexFromXPath()                     */
+/*                       GetOGRFieldIndexFromXPath()                    */
 /************************************************************************/
 
-int OGRGMLASLayer::GetFieldIndexFromXPath(const CPLString& osXPath) const
+int OGRGMLASLayer::GetOGRFieldIndexFromXPath(const CPLString& osXPath) const
 {
     std::map<CPLString, int>::const_iterator oIter =
-        m_oMapFieldXPathToFieldIdx.find(osXPath);
-    if( oIter == m_oMapFieldXPathToFieldIdx.end() )
+        m_oMapFieldXPathToOGRFieldIdx.find(osXPath);
+    if( oIter == m_oMapFieldXPathToOGRFieldIdx.end() )
+        return -1;
+    return oIter->second;
+}
+
+/************************************************************************/
+/*                      GetOGRGeomFieldIndexFromXPath()                 */
+/************************************************************************/
+
+int OGRGMLASLayer::GetOGRGeomFieldIndexFromXPath(const CPLString& osXPath) const
+{
+    std::map<CPLString, int>::const_iterator oIter =
+        m_oMapFieldXPathToOGRGeomFieldIdx.find(osXPath);
+    if( oIter == m_oMapFieldXPathToOGRGeomFieldIdx.end() )
         return -1;
     return oIter->second;
 }
@@ -523,6 +578,19 @@ int OGRGMLASLayer::GetFCFieldIndexFromOGRFieldIdx(int iOGRFieldIdx) const
     std::map<int, int>::const_iterator oIter =
         m_oMapOGRFieldIdxtoFCFieldIdx.find(iOGRFieldIdx);
     if( oIter == m_oMapOGRFieldIdxtoFCFieldIdx.end() )
+        return -1;
+    return oIter->second;
+}
+
+/************************************************************************/
+/*                  GetFCFieldIndexFromOGRGeomFieldIdx()                */
+/************************************************************************/
+
+int OGRGMLASLayer::GetFCFieldIndexFromOGRGeomFieldIdx(int iOGRGeomFieldIdx) const
+{
+    std::map<int, int>::const_iterator oIter =
+        m_oMapOGRGeomFieldIdxtoFCFieldIdx.find(iOGRGeomFieldIdx);
+    if( oIter == m_oMapOGRGeomFieldIdxtoFCFieldIdx.end() )
         return -1;
     return oIter->second;
 }

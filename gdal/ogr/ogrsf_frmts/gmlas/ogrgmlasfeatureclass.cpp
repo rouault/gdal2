@@ -40,6 +40,7 @@ CPL_CVSID("$Id$");
 
 GMLASField::GMLASField()
     : m_eType(GMLAS_FT_STRING)
+    , m_eGeomType(wkbNone)
     , m_nWidth(0)
     , m_bNotNullable(false)
     , m_bArray(false)

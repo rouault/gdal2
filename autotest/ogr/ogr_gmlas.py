@@ -558,6 +558,63 @@ def ogr_gmlas_unexpected_repeated_element_variant():
     return 'success'
 
 ###############################################################################
+# Test reading geometries embedded in a geometry property element
+
+def ogr_gmlas_geometryproperty():
+
+    ds = gdal.OpenEx('GMLAS:data/gmlas_geometryproperty_gml32.gml')
+    lyr = ds.GetLayer(0)
+    if lyr.GetLayerDefn().GetGeomFieldCount() != 12:
+        gdaltest.post_reason('fail')
+        print(lyr.GetLayerDefn().GetGeomFieldCount())
+        return 'fail'
+    f = lyr.GetNextFeature()
+    if f['geometryProperty_xml'] != ' <gml:Point gml:id="poly.geom.Geometry"> <gml:pos>1.0 1.0</gml:pos> </gml:Point> ':
+        gdaltest.post_reason('fail')
+        f.DumpReadable()
+        return 'fail'
+    if f['pointProperty_xml'] != '<gml:Point gml:id="poly.geom.Point"><gml:pos>1.0 1.0</gml:pos></gml:Point>':
+        gdaltest.post_reason('fail')
+        f.DumpReadable()
+        return 'fail'
+    wkt = f.GetGeomFieldRef(0).ExportToWkt()
+    if wkt != 'POINT (1 1)':
+        gdaltest.post_reason('fail')
+        f.DumpReadable()
+        return 'fail'
+    wkt = f.GetGeomFieldRef(2).ExportToWkt()
+    if wkt != 'LINESTRING (1 1)':
+        gdaltest.post_reason('fail')
+        f.DumpReadable()
+        return 'fail'
+
+    return 'success'
+
+###############################################################################
+# Test reading geometries referenced by a AbstractGeometry element
+
+def ogr_gmlas_abstractgeometry():
+
+    ds = gdal.OpenEx('GMLAS:data/gmlas_abstractgeometry_gml32.gml')
+    lyr = ds.GetLayer(0)
+    if lyr.GetLayerDefn().GetGeomFieldCount() != 1:
+        gdaltest.post_reason('fail')
+        print(lyr.GetLayerDefn().GetGeomFieldCount())
+        return 'fail'
+    f = lyr.GetNextFeature()
+    if f['AbstractGeometry_xml'] != '<gml:Point gml:id="test.geom.0"><gml:pos>0 1</gml:pos></gml:Point>':
+        gdaltest.post_reason('fail')
+        f.DumpReadable()
+        return 'fail'
+    wkt = f.GetGeomFieldRef(0).ExportToWkt()
+    if wkt != 'POINT (0 1)':
+        gdaltest.post_reason('fail')
+        f.DumpReadable()
+        return 'fail'
+
+    return 'success'
+
+###############################################################################
 #  Cleanup
 
 def ogr_gmlas_cleanup():
@@ -584,6 +641,8 @@ gdaltest_list = [
     ogr_gmlas_corner_case_relative_path,
     ogr_gmlas_unexpected_repeated_element,
     ogr_gmlas_unexpected_repeated_element_variant,
+    ogr_gmlas_geometryproperty,
+    ogr_gmlas_abstractgeometry,
     ogr_gmlas_cleanup ]
 
 if __name__ == '__main__':

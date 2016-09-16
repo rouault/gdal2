@@ -161,6 +161,7 @@ typedef enum
     GMLAS_FT_ANYURI,
     GMLAS_FT_ANYTYPE,
     GMLAS_FT_ANYSIMPLETYPE,
+    GMLAS_FT_GEOMETRY, // this one isn't a XML primitive type.
 } GMLASFieldType;
 
 /************************************************************************/
@@ -192,6 +193,7 @@ class GMLASField
     private:
         CPLString m_osName;         /**< Field name */
         GMLASFieldType m_eType;     /**< Field type */
+        OGRwkbGeometryType m_eGeomType; /**< Field geometry type */
         CPLString m_osTypeName;     /**< Orignal XSD type */
         int m_nWidth;               /**< Field width */
         bool m_bNotNullable;        /**< If the field is not nullable */
@@ -240,6 +242,8 @@ class GMLASField
 
         void SetName(const CPLString& osName) { m_osName = osName; }
         void SetType(GMLASFieldType eType, const char* pszTypeName);
+        void SetGeomType(OGRwkbGeometryType eGeomType)
+                                   { m_eGeomType = eGeomType; }
         void SetWidth(int nWidth) { m_nWidth = nWidth; }
         void SetNotNullable(bool bNotNullable)
                                     { m_bNotNullable = bNotNullable; }
@@ -271,6 +275,7 @@ class GMLASField
         const std::vector<CPLString>& GetAlternateXPaths() const
                                             { return m_aosXPath; }
         GMLASFieldType GetType() const { return m_eType; }
+        OGRwkbGeometryType GetGeomType() const { return m_eGeomType; }
         const CPLString& GetTypeName() const { return m_osTypeName; }
         int GetWidth() const { return m_nWidth; }
         bool IsNotNullable() const { return m_bNotNullable; }
@@ -526,12 +531,18 @@ class OGRGMLASLayer: public OGRLayer
         GMLASFeatureClass              m_oFC;
         OGRFeatureDefn                *m_poFeatureDefn;
 
-        /** Map from XPath to corresponding field index in m_oFC.GetFields() */
-        std::map<CPLString, int>       m_oMapFieldXPathToFieldIdx;
+        /** Map from XPath to corresponding field index in OGR layer
+            definition */
+        std::map<CPLString, int>       m_oMapFieldXPathToOGRFieldIdx;
+
+        /** Map from XPath to corresponding geometry field index in OGR layer
+            definition */
+        std::map<CPLString, int>       m_oMapFieldXPathToOGRGeomFieldIdx;
 
         /** Map from a OGR field index to the corresponding field index in
             m_oFC.GetFields() */
         std::map<int, int>             m_oMapOGRFieldIdxtoFCFieldIdx;
+        std::map<int, int>             m_oMapOGRGeomFieldIdxtoFCFieldIdx;
 
         GMLASReader                   *m_poReader;
         VSILFILE                      *m_fpGML;
@@ -561,12 +572,14 @@ class OGRGMLASLayer: public OGRLayer
         void PostInit();
 
         const GMLASFeatureClass& GetFeatureClass() const { return m_oFC; }
-        int GetFieldIndexFromXPath(const CPLString& osXPath) const;
+        int GetOGRFieldIndexFromXPath(const CPLString& osXPath) const;
+        int GetOGRGeomFieldIndexFromXPath(const CPLString& osXPath) const;
         int GetIDFieldIdx() const { return m_nIDFieldIdx; }
         bool IsGeneratedIDField() const { return m_bIDFieldIsGenerated; }
         OGRGMLASLayer* GetParent() { return m_poParentLayer; }
         int GetParentIDFieldIdx() const { return m_nParentIDFieldIdx; }
         int GetFCFieldIndexFromOGRFieldIdx(int iOGRFieldIdx) const;
+        int GetFCFieldIndexFromOGRGeomFieldIdx(int iOGRGeomFieldIdx) const;
 };
 
 /************************************************************************/
@@ -607,6 +620,9 @@ class GMLASReader : public DefaultHandler
 
         /** OGR field index of the current field */
         int               m_nCurFieldIdx;
+
+        /** OGR geometry field index of the current field */
+        int               m_nCurGeomFieldIdx;
 
         /** XML nested level of current field */
         int               m_nCurFieldLevel;
@@ -677,6 +693,19 @@ class GMLASReader : public DefaultHandler
         /** Stack of saved contexts */
         std::vector<Context> m_aoStackContext;
 
+        /** Context used in m_apsXMLNodeStack */
+        typedef struct
+        {
+            /** Current node */
+            CPLXMLNode* psNode;
+
+            /** Last child of psNode (for fast append operations) */
+            CPLXMLNode* psLastChild;
+        } NodeLastChild;
+
+        /** Stack of contexts to build XML tree of GML Geometry */
+        std::vector<NodeLastChild> m_apsXMLNodeStack;
+
         /** Maximum allowed number of XML nesting level */
         int                  m_nMaxLevel;
 
@@ -698,6 +727,8 @@ class GMLASReader : public DefaultHandler
                                              const  Attributes& attrs);
 
         OGRGMLASLayer* GetLayerByXPath( const CPLString& osXPath );
+
+        void        AttachAsLastChild(CPLXMLNode* psNode);
 
     public:
                         GMLASReader();
