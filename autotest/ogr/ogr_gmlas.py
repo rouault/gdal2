@@ -564,12 +564,16 @@ def ogr_gmlas_geometryproperty():
 
     ds = gdal.OpenEx('GMLAS:data/gmlas_geometryproperty_gml32.gml')
     lyr = ds.GetLayer(0)
-    if lyr.GetLayerDefn().GetGeomFieldCount() != 12:
+    if lyr.GetLayerDefn().GetGeomFieldCount() != 13:
         gdaltest.post_reason('fail')
         print(lyr.GetLayerDefn().GetGeomFieldCount())
         return 'fail'
     f = lyr.GetNextFeature()
     if f['geometryProperty_xml'] != ' <gml:Point gml:id="poly.geom.Geometry"> <gml:pos>1.0 1.0</gml:pos> </gml:Point> ':
+        gdaltest.post_reason('fail')
+        f.DumpReadable()
+        return 'fail'
+    if f.IsFieldSet('geometryPropertyEmpty_xml'):
         gdaltest.post_reason('fail')
         f.DumpReadable()
         return 'fail'
@@ -582,7 +586,11 @@ def ogr_gmlas_geometryproperty():
         gdaltest.post_reason('fail')
         f.DumpReadable()
         return 'fail'
-    wkt = f.GetGeomFieldRef(2).ExportToWkt()
+    if f.GetGeomFieldRef(1) is not None:
+        gdaltest.post_reason('fail')
+        f.DumpReadable()
+        return 'fail'
+    wkt = f.GetGeomFieldRef(3).ExportToWkt()
     if wkt != 'LINESTRING (1 1)':
         gdaltest.post_reason('fail')
         f.DumpReadable()

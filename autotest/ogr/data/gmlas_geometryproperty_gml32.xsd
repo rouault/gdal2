@@ -37,6 +37,7 @@
     <xs:extension base="gml:AbstractFeatureType">
       <xs:sequence>
         <xs:element name="geometryProperty" type="gml:GeometryPropertyType" nillable="true" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="geometryPropertyEmpty" type="gml:GeometryPropertyType" nillable="true" minOccurs="0" maxOccurs="1"/>
         <xs:element name="pointProperty" type="gml:PointPropertyType" nillable="true" minOccurs="0" maxOccurs="1"/>
         <xs:element name="lineStringProperty" type="gml:LineStringPropertyType" nillable="true" minOccurs="0" maxOccurs="1"/>
         <xs:element name="polygonProperty" type="gml:PolygonPropertyType" nillable="true" minOccurs="0" maxOccurs="1"/>

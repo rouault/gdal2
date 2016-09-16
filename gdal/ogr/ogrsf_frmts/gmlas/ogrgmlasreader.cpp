@@ -1397,22 +1397,26 @@ void GMLASReader::endElement(
 
             if( m_nCurGeomFieldIdx >= 0 )
             {
-                CPLAssert( m_apsXMLNodeStack.size() == 1 );
+                if( !m_apsXMLNodeStack.empty() )
+                {
+                    CPLAssert( m_apsXMLNodeStack.size() == 1 );
 
-                CPLXMLNode* psInterestNode = m_apsXMLNodeStack.back().psNode;
-                m_apsXMLNodeStack.pop_back();
+                    CPLXMLNode* psInterestNode = m_apsXMLNodeStack.back().psNode;
+                    m_apsXMLNodeStack.pop_back();
 
 #ifdef DEBUG_VERBOSE
-                char* pszXML = CPLSerializeXMLTree(psInterestNode);
-                CPLDebug("GML", "geometry = %s", pszXML);
-                CPLFree(pszXML);
+                    char* pszXML = CPLSerializeXMLTree(psInterestNode);
+                    CPLDebug("GML", "geometry = %s", pszXML);
+                    CPLFree(pszXML);
 #endif
 
-                m_oCurCtxt.m_poFeature->SetGeomFieldDirectly(
-                    m_nCurGeomFieldIdx,
-                    reinterpret_cast<OGRGeometry*>
-                        (OGR_G_CreateFromGMLTree( psInterestNode )) );
-                CPLDestroyXMLNode( psInterestNode );
+                    OGRGeometry* poGeom = reinterpret_cast<OGRGeometry*>
+                                    (OGR_G_CreateFromGMLTree( psInterestNode ));
+
+                    m_oCurCtxt.m_poFeature->SetGeomFieldDirectly(
+                        m_nCurGeomFieldIdx, poGeom );
+                    CPLDestroyXMLNode( psInterestNode );
+                }
                 m_nCurGeomFieldIdx = -1;
             }
         }
@@ -1420,14 +1424,14 @@ void GMLASReader::endElement(
         m_bIsXMLBlobIncludeUpper = false;
     }
 
-    if( m_nCurGeomFieldIdx >= 0 )
-    {
-        if( m_nLevel >= m_nCurFieldLevel + 1 )
-            m_apsXMLNodeStack.pop_back();
-    }
-
     if( m_bIsXMLBlob )
     {
+        if( m_nCurGeomFieldIdx >= 0 )
+        {
+            if( m_nLevel >= m_nCurFieldLevel + 1 )
+                m_apsXMLNodeStack.pop_back();
+        }
+
         CPLString osLocalname( transcode(localname) );
         CPLString osNSPrefix( m_oMapURIToPrefix[ transcode(uri) ] );
 
