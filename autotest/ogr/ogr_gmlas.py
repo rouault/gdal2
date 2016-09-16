@@ -326,7 +326,8 @@ def ogr_gmlas_gml_Reference():
     lyr = ds.GetLayerByName('main_elt')
     f = lyr.GetNextFeature()
     if f['reference_existing_target_elt_href'] != '#BAZ' or \
-       f['reference_existing_target_elt_pkid'] != 'BAZ':
+       f['reference_existing_target_elt_pkid'] != 'BAZ' or \
+       f['reference_existing_abstract_target_elt_href'] != '#BAW':
            gdaltest.post_reason('fail')
            f.DumpReadable()
            return 'fail'

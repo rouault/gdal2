@@ -1901,7 +1901,9 @@ bool GMLASSchemaAnalyzer::ExploreModelGroup(
                         XSElementDeclaration* poTargetElt =
                             GetTopElementDeclarationFromXPath(osTargetElement,
                                                               poModel);
-                        if( poTargetElt != NULL )
+                        // TODO: even for non abstract we should probably
+                        // handle substitutions
+                        if( poTargetElt != NULL && !poTargetElt->getAbstract() )
                         {
                             GMLASField oField;
                             // Fake xpath
@@ -1934,6 +1936,25 @@ bool GMLASSchemaAnalyzer::ExploreModelGroup(
                                                         getName()).c_str());
 #endif
                                 m_oSetNeededElements.insert( poTargetElt );
+                            }
+                        }
+                        else if( poTargetElt != NULL && poTargetElt->getAbstract() )
+                        {
+                            // e.g importing http://inspire.ec.europa.eu/schemas/ad/4.0
+                            // references bu-base:AbstractConstruction, but sometimes
+                            // there are no realization available for it, so no
+                            // need to be verbose about that.
+                            std::vector<XSElementDeclaration*>
+                                                        apoImplTargetEltList;
+                            GetConcreteImplementationTypes(poTargetElt,
+                                                        apoImplTargetEltList);
+                            if( !apoImplTargetEltList.empty() )
+                            {
+                                CPLDebug("GMLAS",
+                                         "Not handled: targetElement %s of %s "
+                                         "is abstract but has substitutions",
+                                         osTargetElement.c_str(),
+                                         osElementXPath.c_str());
                             }
                         }
                         else
