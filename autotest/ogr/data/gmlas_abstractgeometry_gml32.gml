@@ -8,6 +8,10 @@
   <ogr:featureMember>
     <ogr:test gml:id="test.0">
       <gml:Point gml:id="test.geom.0"><gml:pos>0 1</gml:pos></gml:Point>
+      <ogr:repeated>
+        <gml:Point gml:id="test.geom.repeated.1"><gml:pos>0 1</gml:pos></gml:Point>
+        <gml:Point gml:id="test.geom.repeated.2"><gml:pos>1 2</gml:pos></gml:Point>
+      </ogr:repeated>
     </ogr:test>
   </ogr:featureMember>
 </ogr:FeatureCollection>

@@ -565,7 +565,7 @@ def ogr_gmlas_geometryproperty():
 
     ds = gdal.OpenEx('GMLAS:data/gmlas_geometryproperty_gml32.gml')
     lyr = ds.GetLayer(0)
-    if lyr.GetLayerDefn().GetGeomFieldCount() != 13:
+    if lyr.GetLayerDefn().GetGeomFieldCount() != 14:
         gdaltest.post_reason('fail')
         print(lyr.GetLayerDefn().GetGeomFieldCount())
         return 'fail'
@@ -582,17 +582,42 @@ def ogr_gmlas_geometryproperty():
         gdaltest.post_reason('fail')
         f.DumpReadable()
         return 'fail'
-    wkt = f.GetGeomFieldRef(0).ExportToWkt()
+    if f['pointPropertyRepeated_xml'] != [
+            '<gml:Point gml:id="poly.geom.pointPropertyRepeated.1"><gml:pos>0 1</gml:pos></gml:Point>',
+            '<gml:Point gml:id="poly.geom.pointPropertyRepeated.2"><gml:pos>1 2</gml:pos></gml:Point>',
+            '<gml:Point gml:id="poly.geom.pointPropertyRepeated.3"><gml:pos>3 4</gml:pos></gml:Point>']:
+        gdaltest.post_reason('fail')
+        print(f['pointPropertyRepeated_xml'])
+        f.DumpReadable()
+        return 'fail'
+    geom_idx = lyr.GetLayerDefn().GetGeomFieldIndex('geometryProperty')
+    wkt = f.GetGeomFieldRef(geom_idx).ExportToWkt()
     if wkt != 'POINT (1 1)':
         gdaltest.post_reason('fail')
         f.DumpReadable()
         return 'fail'
-    if f.GetGeomFieldRef(1) is not None:
+    geom_idx = lyr.GetLayerDefn().GetGeomFieldIndex('geometryPropertyEmpty')
+    if f.GetGeomFieldRef(geom_idx) is not None:
         gdaltest.post_reason('fail')
         f.DumpReadable()
         return 'fail'
-    wkt = f.GetGeomFieldRef(3).ExportToWkt()
+    geom_idx = lyr.GetLayerDefn().GetGeomFieldIndex('lineStringProperty')
+    if lyr.GetLayerDefn().GetGeomFieldDefn(geom_idx).GetType() != ogr.wkbLineString:
+        gdaltest.post_reason('fail')
+        print(lyr.GetLayerDefn().GetGeomFieldDefn(geom_idx).GetType())
+        return 'fail'
+    wkt = f.GetGeomFieldRef(geom_idx).ExportToWkt()
     if wkt != 'LINESTRING (1 1)':
+        gdaltest.post_reason('fail')
+        f.DumpReadable()
+        return 'fail'
+    geom_idx = lyr.GetLayerDefn().GetGeomFieldIndex('pointPropertyRepeated')
+    if lyr.GetLayerDefn().GetGeomFieldDefn(geom_idx).GetType() != ogr.wkbUnknown:
+        gdaltest.post_reason('fail')
+        print(lyr.GetLayerDefn().GetGeomFieldDefn(geom_idx).GetType())
+        return 'fail'
+    wkt = f.GetGeomFieldRef(geom_idx).ExportToWkt()
+    if wkt != 'GEOMETRYCOLLECTION (POINT (0 1),POINT (1 2),POINT (3 4))':
         gdaltest.post_reason('fail')
         f.DumpReadable()
         return 'fail'
@@ -606,7 +631,7 @@ def ogr_gmlas_abstractgeometry():
 
     ds = gdal.OpenEx('GMLAS:data/gmlas_abstractgeometry_gml32.gml')
     lyr = ds.GetLayer(0)
-    if lyr.GetLayerDefn().GetGeomFieldCount() != 1:
+    if lyr.GetLayerDefn().GetGeomFieldCount() != 2:
         gdaltest.post_reason('fail')
         print(lyr.GetLayerDefn().GetGeomFieldCount())
         return 'fail'
@@ -615,8 +640,20 @@ def ogr_gmlas_abstractgeometry():
         gdaltest.post_reason('fail')
         f.DumpReadable()
         return 'fail'
+    if f['repeated_AbstractGeometry_xml'] != [
+            '<gml:Point gml:id="test.geom.repeated.1"><gml:pos>0 1</gml:pos>',
+            '<gml:Point gml:id="test.geom.repeated.2"><gml:pos>1 2</gml:pos>']:
+        gdaltest.post_reason('fail')
+        print(f['repeated_AbstractGeometry_xml'])
+        f.DumpReadable()
+        return 'fail'
     wkt = f.GetGeomFieldRef(0).ExportToWkt()
     if wkt != 'POINT (0 1)':
+        gdaltest.post_reason('fail')
+        f.DumpReadable()
+        return 'fail'
+    wkt = f.GetGeomFieldRef(1).ExportToWkt()
+    if wkt != 'GEOMETRYCOLLECTION (POINT (0 1),POINT (1 2))':
         gdaltest.post_reason('fail')
         f.DumpReadable()
         return 'fail'

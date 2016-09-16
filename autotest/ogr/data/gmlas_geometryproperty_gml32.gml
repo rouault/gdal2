@@ -20,6 +20,9 @@
       <ogr:multiSurfaceProperty><gml:MultiSurface gml:id="poly.geom.MultiSurface"><gml:surfaceMember><gml:Polygon gml:id="poly.geom.MultiSurface.Polygon"><gml:exterior><gml:LinearRing><gml:posList>0 0 0 1 1 1 1 0 0 0</gml:posList></gml:LinearRing></gml:exterior></gml:Polygon></gml:surfaceMember></gml:MultiSurface></ogr:multiSurfaceProperty>
       <ogr:curveProperty><gml:LineString gml:id="poly.geom.Curve"><gml:pos>1.0 1.0</gml:pos></gml:LineString></ogr:curveProperty>
       <ogr:surfaceProperty><gml:Polygon gml:id="poly.geom.Surface"><gml:exterior><gml:LinearRing><gml:posList>0 0 0 1 1 1 1 0 0 0</gml:posList></gml:LinearRing></gml:exterior></gml:Polygon></ogr:surfaceProperty>
+      <ogr:pointPropertyRepeated><gml:Point gml:id="poly.geom.pointPropertyRepeated.1"><gml:pos>0 1</gml:pos></gml:Point></ogr:pointPropertyRepeated>
+      <ogr:pointPropertyRepeated><gml:Point gml:id="poly.geom.pointPropertyRepeated.2"><gml:pos>1 2</gml:pos></gml:Point></ogr:pointPropertyRepeated>
+      <ogr:pointPropertyRepeated><gml:Point gml:id="poly.geom.pointPropertyRepeated.3"><gml:pos>3 4</gml:pos></gml:Point></ogr:pointPropertyRepeated>
     </ogr:test>
   </ogr:featureMember>
 

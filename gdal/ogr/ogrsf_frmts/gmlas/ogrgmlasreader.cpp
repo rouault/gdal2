@@ -947,6 +947,9 @@ void GMLASReader::startElement(
         {
 
             bool bPushNewFeature = false;
+            const int nFCFieldIdx = (idx >= 0) ?
+                m_oCurCtxt.m_poLayer->GetFCFieldIndexFromOGRFieldIdx(idx) :
+                m_oCurCtxt.m_poLayer->GetFCFieldIndexFromOGRGeomFieldIdx(geom_idx);
 
             /* For cases like
                     <xs:element name="element_compound">
@@ -986,7 +989,11 @@ void GMLASReader::startElement(
             */
             else if( idx >= 0 && idx == m_nCurFieldIdx &&
                      !IsArrayType(m_oCurCtxt.m_poFeature->
-                                GetFieldDefnRef(m_nCurFieldIdx)->GetType()) )
+                                GetFieldDefnRef(m_nCurFieldIdx)->GetType()) &&
+                     // Make sure this isn't a repeated geometry as well
+                     !( geom_idx >= 0 && nFCFieldIdx >= 0 &&
+                        m_oCurCtxt.m_poLayer->GetFeatureClass().GetFields()[
+                                        nFCFieldIdx].GetMaxOccurs() > 1 ) )
             {
                 bPushNewFeature = true;
             }
@@ -1030,9 +1037,6 @@ void GMLASReader::startElement(
             CPLDebug("GMLAS", "Matches field %s", m_oCurCtxt.m_poLayer->
                             GetLayerDefn()->GetFieldDefn(idx)->GetNameRef() );
 #endif
-            const int nFCFieldIdx = (idx >= 0) ?
-                m_oCurCtxt.m_poLayer->GetFCFieldIndexFromOGRFieldIdx(idx) :
-                m_oCurCtxt.m_poLayer->GetFCFieldIndexFromOGRGeomFieldIdx(geom_idx);
             if( nFCFieldIdx >= 0 )
             {
                 const GMLASField& oField(
@@ -1089,11 +1093,6 @@ void GMLASReader::startElement(
                 }
 
             }
-            else
-            {
-                
-            }
-
         }
 
 #if 0
@@ -1372,7 +1371,7 @@ void GMLASReader::endElement(
         }
         else 
         {
-            if( m_bIsXMLBlob && m_bIsXMLBlobIncludeUpper )
+            if( m_bIsXMLBlobIncludeUpper )
             {
                 CPLString osLocalname( transcode(localname) );
                 CPLString osNSPrefix( m_oMapURIToPrefix[ transcode(uri) ] );
@@ -1384,11 +1383,6 @@ void GMLASReader::endElement(
                 }
                 m_osTextContent += osLocalname;
                 m_osTextContent += ">";
-
-                if( m_nCurGeomFieldIdx >= 0 )
-                {
-                    m_apsXMLNodeStack.pop_back();
-                }
             }
 
             if( m_nCurFieldIdx >= 0 )
@@ -1397,31 +1391,71 @@ void GMLASReader::endElement(
                           m_oCurCtxt.m_poLayer,
                           m_nCurFieldIdx, m_osTextContent );
             }
+        }
 
-            if( m_nCurGeomFieldIdx >= 0 )
+        if( m_nCurGeomFieldIdx >= 0 )
+        {
+            if( m_bIsXMLBlobIncludeUpper )
             {
-                if( !m_apsXMLNodeStack.empty() )
-                {
-                    CPLAssert( m_apsXMLNodeStack.size() == 1 );
+                m_apsXMLNodeStack.pop_back();
+            }
 
-                    CPLXMLNode* psInterestNode = m_apsXMLNodeStack.back().psNode;
-                    m_apsXMLNodeStack.pop_back();
+            if( !m_apsXMLNodeStack.empty() )
+            {
+                CPLAssert( m_apsXMLNodeStack.size() == 1 );
+
+                CPLXMLNode* psInterestNode = m_apsXMLNodeStack.back().psNode;
+                m_apsXMLNodeStack.pop_back();
 
 #ifdef DEBUG_VERBOSE
+                {
                     char* pszXML = CPLSerializeXMLTree(psInterestNode);
                     CPLDebug("GML", "geometry = %s", pszXML);
                     CPLFree(pszXML);
+                }
 #endif
 
-                    OGRGeometry* poGeom = reinterpret_cast<OGRGeometry*>
-                                    (OGR_G_CreateFromGMLTree( psInterestNode ));
-
+                OGRGeometry* poGeom = reinterpret_cast<OGRGeometry*>
+                                (OGR_G_CreateFromGMLTree( psInterestNode ));
+                if( poGeom != NULL )
+                {
+                    // Deal with possibly repeated geometries by building
+                    // a geometry collection. We could also create a
+                    // nested table, but that would probably be less
+                    // convenient to use.
+                    OGRGeometry* poPrevGeom = m_oCurCtxt.m_poFeature->
+                                            StealGeometry(m_nCurGeomFieldIdx);
+                    if( poPrevGeom != NULL )
+                    {
+                        if( poPrevGeom->getGeometryType() ==
+                                                wkbGeometryCollection )
+                        {
+                            reinterpret_cast<OGRGeometryCollection*>(
+                                poPrevGeom)->addGeometryDirectly(poGeom);
+                            poGeom = poPrevGeom;
+                        }
+                        else
+                        {
+                            OGRGeometryCollection* poGC =
+                                            new OGRGeometryCollection();
+                            poGC->addGeometryDirectly(poPrevGeom);
+                            poGC->addGeometryDirectly(poGeom);
+                            poGeom = poGC;
+                        }
+                    }
                     m_oCurCtxt.m_poFeature->SetGeomFieldDirectly(
                         m_nCurGeomFieldIdx, poGeom );
-                    CPLDestroyXMLNode( psInterestNode );
                 }
-                m_nCurGeomFieldIdx = -1;
+                else
+                {
+                    char* pszXML = CPLSerializeXMLTree(psInterestNode);
+                    CPLDebug("GMLAS", "Non-recognized geometry: %s",
+                                pszXML);
+                    CPLFree(pszXML);
+                }
+                CPLDestroyXMLNode( psInterestNode );
             }
+            m_nCurGeomFieldIdx = -1;
         }
         m_bIsXMLBlob = false;
         m_bIsXMLBlobIncludeUpper = false;

@@ -189,6 +189,9 @@ OGRLayer    *OGRGMLASDataSource::GetLayerByName(const char* pszName)
     if( EQUAL(pszName, m_poFieldsMetadataLayer->GetName()) )
         return m_poFieldsMetadataLayer;
 
+    if( EQUAL(pszName, m_poLayersMetadataLayer->GetName()) )
+        return m_poLayersMetadataLayer;
+
     if( EQUAL(pszName, m_poRelationshipsLayer->GetName()) )
         return m_poRelationshipsLayer;
 

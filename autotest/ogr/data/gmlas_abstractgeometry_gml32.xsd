@@ -38,6 +38,13 @@
     <xs:extension base="gml:AbstractFeatureType">
       <xs:sequence>
         <xs:element ref="gml:AbstractGeometry" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="repeated">
+            <xs:complexType>
+                <xs:sequence>
+                    <xs:element ref="gml:AbstractGeometry" minOccurs="0" maxOccurs="2"/>
+                </xs:sequence>
+            </xs:complexType>
+        </xs:element>
       </xs:sequence>
     </xs:extension>
   </xs:complexContent>

@@ -1603,7 +1603,16 @@ bool GMLASSchemaAnalyzer::ExploreModelGroup(
                 oField.SetMinOccurs( nMinOccurs );
                 oField.SetMaxOccurs( nMaxOccurs );
                 oField.SetType( GMLAS_FT_GEOMETRY, "geometry" );
-                oField.SetGeomType( eGeomType );
+                if( nMaxOccurs > 1 || nMaxOccurs == MAXOCCURS_UNLIMITED )
+                {
+                    // Repeated geometry property can happen in some schemas
+                    // like inspire.ec.europa.eu/schemas/ge_gp/4.0/GeophysicsCore.xsd
+                    // or http://ngwd-bdnes.cits.nrcan.gc.ca/service/gwml/schemas/2.1/gwml2-flow.xsd
+                    oField.SetGeomType( wkbUnknown );
+                    oField.SetArray( true );
+                }
+                else
+                    oField.SetGeomType( eGeomType );
                 oField.SetXPath( osElementXPath );
 
                 oClass.AddField( oField );
@@ -1622,6 +1631,8 @@ bool GMLASSchemaAnalyzer::ExploreModelGroup(
                 {
                     oField.SetType( GMLAS_FT_GEOMETRY, "geometry" );
                     oField.SetGeomType( wkbUnknown );
+                    oField.SetArray( nMaxOccurs > 1 ||
+                                     nMaxOccurs == MAXOCCURS_UNLIMITED );
                 }
                 else
                 {
