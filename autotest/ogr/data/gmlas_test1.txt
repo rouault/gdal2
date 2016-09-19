@@ -75,6 +75,8 @@ anonymous_type: Integer (0.0) NOT NULL
 union: String (0.0) NOT NULL
 compound_simplifiable_subelement: String (0.0)
 compound_simplifiable_subelement2: String (0.0) NOT NULL
+compound_simplifiable_optional_attr: String (0.0)
+compound_simplifiable_optional: String (0.0)
 sequence_1_string_unbounded_subelement: StringList (0.0) NOT NULL
 sequence_unbounded_string_1_subelement: StringList (0.0) NOT NULL
 int_complex_simplifiable: IntegerList (0.0)
@@ -130,6 +132,8 @@ OGRFeature(main_elt):1
   union (String) = 42
   compound_simplifiable_subelement (String) = (null)
   compound_simplifiable_subelement2 (String) = element_compound_simplifiable_subelement2
+  compound_simplifiable_optional_attr (String) = (null)
+  compound_simplifiable_optional (String) = (null)
   sequence_1_string_unbounded_subelement (StringList) = (2:sequence_1_string_unbounded_1,sequence_1_string_unbounded_2)
   sequence_unbounded_string_1_subelement (StringList) = (2:sequence_unbounded_string_1,sequence_unbounded_string_2)
   int_complex_simplifiable (IntegerList) = (2:10,20)

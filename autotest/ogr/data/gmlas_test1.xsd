@@ -101,6 +101,17 @@
                 </xs:complexType>
             </xs:element>
 
+            <!-- optional element but with a required attribute -->
+            <xs:element name="compound_simplifiable_optional" minOccurs="0">
+                <xs:complexType>
+                    <xs:simpleContent>
+                        <xs:extension base="xs:string">
+                            <xs:attribute name="attr" type="xs:string" use="required"/>
+                        </xs:extension>
+                    </xs:simpleContent>
+                </xs:complexType>
+            </xs:element>
+
             <!-- can be simplified as a string list -->
             <xs:element name="sequence_1_string_unbounded">
                 <xs:complexType>

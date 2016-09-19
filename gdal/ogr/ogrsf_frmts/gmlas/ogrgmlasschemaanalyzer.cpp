@@ -1017,7 +1017,7 @@ void GMLASSchemaAnalyzer::SetFieldFromAttribute(
     {
         oField.SetNotNullable( true );
     }
-    oField.SetMinOccurs( poAttr->getRequired() ? 1 : 0 );
+    oField.SetMinOccurs( oField.IsNotNullable() ? 1 : 0 );
     oField.SetMaxOccurs( 1 );
     if( poAttr->getConstraintType() ==
                             XSConstants::VALUE_CONSTRAINT_FIXED )
@@ -1771,7 +1771,8 @@ bool GMLASSchemaAnalyzer::ExploreModelGroup(
                     GMLASField oField;
                     CPLString osNamePrefix( bMoveNestedClassToTop ?
                                 osEltName : CPLString() );
-                    SetFieldFromAttribute(oField, poAttr, osElementXPath,
+                    SetFieldFromAttribute(oField, poAttr,
+                                          osElementXPath,
                                           osNamePrefix);
                     aoFields.push_back(oField);
                 }
@@ -1823,6 +1824,15 @@ bool GMLASSchemaAnalyzer::ExploreModelGroup(
                     }
                     else
                     {
+                        if( nMinOccurs == 0 )
+                        {
+                            for(size_t j=0; j<aoFields.size();j++)
+                            {
+                                aoFields[j].SetMinOccurs( 0 );
+                                aoFields[j].SetNotNullable( false );
+                            }
+                        }
+
                         oField.SetName( osEltName );
                         oField.SetMinOccurs( nMinOccurs );
                         oField.SetMaxOccurs( nMaxOccurs );
@@ -1848,6 +1858,15 @@ bool GMLASSchemaAnalyzer::ExploreModelGroup(
                     }
                     else
                     {
+                        if( nMinOccurs == 0 )
+                        {
+                            for(size_t j=0; j<aoFields.size();j++)
+                            {
+                                aoFields[j].SetMinOccurs( 0 );
+                                aoFields[j].SetNotNullable( false );
+                            }
+                        }
+
                         oField.SetName( osEltName );
                         oField.SetMinOccurs( nMinOccurs );
                         oField.SetMaxOccurs( nMaxOccurs );
