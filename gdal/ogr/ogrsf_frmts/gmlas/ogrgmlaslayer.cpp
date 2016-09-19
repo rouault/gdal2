@@ -53,6 +53,7 @@ OGRGMLASLayer::OGRGMLASLayer( OGRGMLASDataSource* poDS,
     m_poParentLayer = poParentLayer;
     m_nParentIDFieldIdx = -1;
     m_poReader = NULL;
+    m_bEOF = false;
     m_fpGML = NULL;
 
     SetDescription( m_poFeatureDefn->GetName() );
@@ -603,6 +604,7 @@ void OGRGMLASLayer::ResetReading()
 {
     delete m_poReader;
     m_poReader = NULL;
+    m_bEOF = false;
 }
 
 /************************************************************************/
@@ -615,7 +617,10 @@ OGRFeature* OGRGMLASLayer::GetNextRawFeature()
     {
         if( m_fpGML == NULL )
         {
-            m_fpGML = VSIFOpenL(m_poDS->GetGMLFilename(), "rb");
+            // Try recycling an already opened and unused file pointer
+            m_fpGML = m_poDS->PopUnusedGMLFilePointer();
+            if( m_fpGML == NULL )
+                m_fpGML = VSIFOpenL(m_poDS->GetGMLFilename(), "rb");
             if( m_fpGML == NULL )
                 return NULL;
         }
@@ -636,11 +641,23 @@ OGRFeature* OGRGMLASLayer::GetNextRawFeature()
 
 OGRFeature* OGRGMLASLayer::GetNextFeature()
 {
+    if( m_bEOF )
+        return NULL;
+
     while( true )
     {
         OGRFeature *poFeature = GetNextRawFeature();
         if( poFeature == NULL )
+        {
+            // Avoid keeping too many file descriptor opened
+            if( m_fpGML != NULL )
+                m_poDS->PushUnusedGMLFilePointer(m_fpGML);
+            m_fpGML = NULL;
+            delete m_poReader;
+            m_poReader = NULL;
+            m_bEOF = true;
             return NULL;
+        }
 
         if( (m_poFilterGeom == NULL
              || FilterGeometry( poFeature->GetGeometryRef() ) )

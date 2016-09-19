@@ -489,6 +489,7 @@ class OGRGMLASDataSource: public GDALDataset
         OGRLayer                      *m_poFieldsMetadataLayer;
         OGRLayer                      *m_poLayersMetadataLayer;
         OGRLayer                      *m_poRelationshipsLayer;
+        VSILFILE                      *m_fpGML;
 
         void TranslateClasses( OGRGMLASLayer* poParentLayer,
                                const GMLASFeatureClass& oFC );
@@ -517,6 +518,9 @@ class OGRGMLASDataSource: public GDALDataset
                                             { return m_poRelationshipsLayer; }
         OGRGMLASLayer*          GetLayerByXPath( const CPLString& osXPath );
 
+        void        PushUnusedGMLFilePointer( VSILFILE* fpGML );
+        VSILFILE   *PopUnusedGMLFilePointer();
+
 };
 
 /************************************************************************/
@@ -544,6 +548,7 @@ class OGRGMLASLayer: public OGRLayer
         std::map<int, int>             m_oMapOGRFieldIdxtoFCFieldIdx;
         std::map<int, int>             m_oMapOGRGeomFieldIdxtoFCFieldIdx;
 
+        bool                           m_bEOF;
         GMLASReader                   *m_poReader;
         VSILFILE                      *m_fpGML;
         /** OGR field index of the ID field */
@@ -711,6 +716,10 @@ class GMLASReader : public DefaultHandler
 
         /** Maximum allowed size of XML content in byte */
         size_t               m_nMaxContentSize; 
+
+        /** Map from a SRS name to a boolean indicating if its coordinate
+            order is inverted. */
+        std::map<CPLString, bool>      m_oMapSRSNameToInvertedAxis;
 
         static void SetField( OGRFeature* poFeature,
                               OGRGMLASLayer* poLayer,

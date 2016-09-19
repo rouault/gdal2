@@ -45,6 +45,7 @@ OGRGMLASDataSource::OGRGMLASDataSource()
     // FIXME
     XMLPlatformUtils::Initialize();
     m_bExposeMetadataLayers = false;
+    m_fpGML = NULL;
 
     m_poFieldsMetadataLayer = new OGRMemLayer
                                     ("_ogr_fields_metadata", NULL, wkbNone );
@@ -143,6 +144,8 @@ OGRGMLASDataSource::~OGRGMLASDataSource()
     delete m_poFieldsMetadataLayer;
     delete m_poLayersMetadataLayer;
     delete m_poRelationshipsLayer;
+    if( m_fpGML != NULL )
+        VSIFCloseL(m_fpGML);
 
     // FIXME
     XMLPlatformUtils::Terminate();
@@ -474,4 +477,29 @@ OGRGMLASLayer* OGRGMLASDataSource::GetLayerByXPath( const CPLString& osXPath )
         }
     }
     return NULL;
+}
+
+/************************************************************************/
+/*                       PushUnusedGMLFilePointer()                     */
+/************************************************************************/
+
+void OGRGMLASDataSource::PushUnusedGMLFilePointer( VSILFILE* fpGML )
+{
+    if( m_fpGML == NULL )
+        m_fpGML = fpGML;
+    else
+    {
+        VSIFCloseL(fpGML);
+    }
+}
+
+/************************************************************************/
+/*                        PopUnusedGMLFilePointer()                     */
+/************************************************************************/
+
+VSILFILE* OGRGMLASDataSource::PopUnusedGMLFilePointer()
+{
+    VSILFILE* fpGML = m_fpGML;
+    m_fpGML = NULL;
+    return fpGML;
 }
