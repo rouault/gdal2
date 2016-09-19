@@ -660,7 +660,7 @@ OGRFeature* OGRGMLASLayer::GetNextFeature()
         }
 
         if( (m_poFilterGeom == NULL
-             || FilterGeometry( poFeature->GetGeometryRef() ) )
+             || FilterGeometry( poFeature->GetGeomFieldRef(m_iGeomFieldFilter) ) )
             && (m_poAttrQuery == NULL
                 || m_poAttrQuery->Evaluate( poFeature )) )
         {
