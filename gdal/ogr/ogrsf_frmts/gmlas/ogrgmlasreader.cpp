@@ -1249,7 +1249,11 @@ void GMLASReader::startElement(
                      !(osAttrNSPrefix == "xsi" &&
                             osAttrLocalname == "schemaLocation") &&
                      !(osAttrNSPrefix == "xsi" &&
-                            osAttrLocalname == "nil") )
+                            osAttrLocalname == "nil") &&
+                     // Do not warn about fixed attributes on geometry properties
+                     !(m_nCurGeomFieldIdx >= 0 && (
+                        (osAttrNSPrefix == "xlink" && osAttrLocalname == "type") ||
+                        (osAttrNSPrefix == "" && osAttrLocalname == "owns"))) )
             {
                 if( nWildcardAttrIdx >= 0 )
                 {
