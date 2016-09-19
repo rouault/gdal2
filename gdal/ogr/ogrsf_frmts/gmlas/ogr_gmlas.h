@@ -479,6 +479,7 @@ class GMLASSchemaAnalyzer
 /************************************************************************/
 
 class OGRGMLASLayer;
+class GMLASReader;
 
 class OGRGMLASDataSource: public GDALDataset
 {
@@ -490,6 +491,14 @@ class OGRGMLASDataSource: public GDALDataset
         OGRLayer                      *m_poLayersMetadataLayer;
         OGRLayer                      *m_poRelationshipsLayer;
         VSILFILE                      *m_fpGML;
+        bool                           m_bLayerInitFinished;
+        bool                           m_bFirstPassDone;
+        /** Map from a SRS name to a boolean indicating if its coordinate
+            order is inverted. */
+        std::map<CPLString, bool>      m_oMapSRSNameToInvertedAxis;
+
+        /** Map from geometry field definition to its expected SRSName */
+        std::map<OGRGeomFieldDefn*, CPLString> m_oMapGeomFieldDefnToSRSName;
 
         void TranslateClasses( OGRGMLASLayer* poParentLayer,
                                const GMLASFeatureClass& oFC );
@@ -518,8 +527,11 @@ class OGRGMLASDataSource: public GDALDataset
                                             { return m_poRelationshipsLayer; }
         OGRGMLASLayer*          GetLayerByXPath( const CPLString& osXPath );
 
+        void        RunFirstPassIfNeeded( GMLASReader* poReader );
+
         void        PushUnusedGMLFilePointer( VSILFILE* fpGML );
         VSILFILE   *PopUnusedGMLFilePointer();
+        bool        IsLayerInitFinished() const { return m_bLayerInitFinished; }
 
 };
 
@@ -527,12 +539,13 @@ class OGRGMLASDataSource: public GDALDataset
 /*                             OGRGMLASLayer                            */
 /************************************************************************/
 
-class GMLASReader;
-
 class OGRGMLASLayer: public OGRLayer
 {
+        friend class OGRGMLASDataSource;
+
         OGRGMLASDataSource            *m_poDS;
         GMLASFeatureClass              m_oFC;
+        bool                           m_bLayerDefnFinalized;
         OGRFeatureDefn                *m_poFeatureDefn;
 
         /** Map from XPath to corresponding field index in OGR layer
@@ -562,6 +575,11 @@ class OGRGMLASLayer: public OGRLayer
 
         OGRFeature*                    GetNextRawFeature();
 
+        bool                           InitReader();
+
+        void                           SetLayerDefnFinalized(bool bVal)
+                                            { m_bLayerDefnFinalized = bVal; }
+
     public:
         OGRGMLASLayer(OGRGMLASDataSource* poDS,
                       const GMLASFeatureClass& oFC,
@@ -569,7 +587,8 @@ class OGRGMLASLayer: public OGRLayer
                       bool bHasChildClasses);
         virtual ~OGRGMLASLayer();
 
-        virtual OGRFeatureDefn* GetLayerDefn() { return m_poFeatureDefn; }
+        virtual const char* GetName() { return GetDescription(); }
+        virtual OGRFeatureDefn* GetLayerDefn();
         virtual void ResetReading();
         virtual OGRFeature* GetNextFeature();
         virtual int TestCapability( const char* ) { return FALSE; }
@@ -601,6 +620,9 @@ class GMLASReader : public DefaultHandler
 
         /** Token for Xerces */
         XMLPScanToken     m_oToFill;
+
+        /** File descriptor (not owned by this object) */
+        VSILFILE         *m_fp;
 
         /** Input source */
         GMLASInputSource *m_GMLInputSource;
@@ -721,6 +743,13 @@ class GMLASReader : public DefaultHandler
             order is inverted. */
         std::map<CPLString, bool>      m_oMapSRSNameToInvertedAxis;
 
+        /** Set of geometry fields with unknown SRS */
+        std::set<OGRGeomFieldDefn*>    m_oSetGeomFieldsWithUnknownSRS;
+
+        /** Map from geometry field definition to its expected SRSName.
+            This is used to know if reprojection must be done */
+        std::map<OGRGeomFieldDefn*, CPLString> m_oMapGeomFieldDefnToSRSName;
+
         static void SetField( OGRFeature* poFeature,
                               OGRGMLASLayer* poLayer,
                               int nAttrIdx,
@@ -739,6 +768,8 @@ class GMLASReader : public DefaultHandler
 
         void        AttachAsLastChild(CPLXMLNode* psNode);
 
+        void        ProcessGeometry();
+
     public:
                         GMLASReader();
                         ~GMLASReader();
@@ -749,6 +780,18 @@ class GMLASReader : public DefaultHandler
                   std::vector<OGRGMLASLayer*>* papoLayers);
 
         void SetLayerOfInterest( OGRGMLASLayer* poLayer );
+
+        VSILFILE* GetFP() const { return m_fp; }
+
+        const std::map<CPLString, bool>& GetMapSRSNameToInvertedAxis() const
+                                    { return m_oMapSRSNameToInvertedAxis; }
+        void SetMapSRSNameToInvertedAxis( const std::map<CPLString, bool>& oMap )
+                                    { m_oMapSRSNameToInvertedAxis = oMap; }
+
+        const std::map<OGRGeomFieldDefn*, CPLString>& GetMapGeomFieldDefnToSRSName() const
+                                    { return m_oMapGeomFieldDefnToSRSName; }
+        void SetMapGeomFieldDefnToSRSName(const std::map<OGRGeomFieldDefn*, CPLString>& oMap )
+                                    { m_oMapGeomFieldDefnToSRSName = oMap; }
 
         OGRFeature* GetNextFeature( OGRLayer** ppoBelongingLayer = NULL );
 
@@ -769,6 +812,7 @@ class GMLASReader : public DefaultHandler
 
         virtual void startEntity (const XMLCh *const name);
 
+        void RunFirstPass();
 };
 
 #endif // OGR_GMLAS_INCLUDED

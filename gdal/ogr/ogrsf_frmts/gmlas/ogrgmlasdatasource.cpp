@@ -46,6 +46,8 @@ OGRGMLASDataSource::OGRGMLASDataSource()
     XMLPlatformUtils::Initialize();
     m_bExposeMetadataLayers = false;
     m_fpGML = NULL;
+    m_bLayerInitFinished = false;
+    m_bFirstPassDone = false;
 
     m_poFieldsMetadataLayer = new OGRMemLayer
                                     ("_ogr_fields_metadata", NULL, wkbNone );
@@ -457,6 +459,7 @@ bool OGRGMLASDataSource::Open(GDALOpenInfo* poOpenInfo)
     {
         m_apoLayers[i]->PostInit();
     }
+    m_bLayerInitFinished = true;
 
     m_oMapURIToPrefix = oAnalyzer.GetMapURIToPrefix();
 
@@ -502,4 +505,62 @@ VSILFILE* OGRGMLASDataSource::PopUnusedGMLFilePointer()
     VSILFILE* fpGML = m_fpGML;
     m_fpGML = NULL;
     return fpGML;
+}
+
+/************************************************************************/
+/*                           DoFirstPassIfNeeded()                      */
+/************************************************************************/
+
+void OGRGMLASDataSource::RunFirstPassIfNeeded( GMLASReader* poReader )
+{
+    if( m_bFirstPassDone )
+    {
+        poReader->SetMapSRSNameToInvertedAxis(m_oMapSRSNameToInvertedAxis);
+        poReader->SetMapGeomFieldDefnToSRSName(m_oMapGeomFieldDefnToSRSName);
+        return;
+    }
+
+    m_bFirstPassDone = true;
+
+    // Determine if we have geometry fields in any layer
+    bool bHasGeomFields = false;
+    for(size_t i=0;i<m_apoLayers.size();i++)
+    {
+        if( m_apoLayers[i]->GetLayerDefn()->GetGeomFieldCount() > 0 )
+        {
+            bHasGeomFields = true;
+            break;
+        }
+    }
+
+    // If so, do an initial pass to determine the SRS of those geometry fields.
+    if( bHasGeomFields )
+    {
+        VSILFILE* fp = poReader->GetFP();
+
+        GMLASReader* poReaderFirstPass = new GMLASReader();
+        poReaderFirstPass->Init( GetGMLFilename(),
+                        fp,
+                        GetMapURIToPrefix(),
+                        GetLayers() );
+        poReaderFirstPass->RunFirstPass();
+
+        // Store 2 maps to reinject them in real readers
+        m_oMapSRSNameToInvertedAxis =
+                        poReaderFirstPass->GetMapSRSNameToInvertedAxis();
+        m_oMapGeomFieldDefnToSRSName =
+                        poReaderFirstPass->GetMapGeomFieldDefnToSRSName();
+
+        delete poReaderFirstPass;
+
+        VSIFSeekL(fp, 0, SEEK_SET);
+
+        poReader->SetMapSRSNameToInvertedAxis(m_oMapSRSNameToInvertedAxis);
+        poReader->SetMapGeomFieldDefnToSRSName(m_oMapGeomFieldDefnToSRSName);
+
+        for(size_t i=0;i<m_apoLayers.size();i++)
+        {
+            m_apoLayers[i]->SetLayerDefnFinalized(true);
+        }
+    }
 }

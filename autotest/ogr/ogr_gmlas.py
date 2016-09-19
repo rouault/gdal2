@@ -38,6 +38,7 @@ import sys
 sys.path.append( '../pymod' )
 
 import gdaltest
+import ogrtest
 from osgeo import gdal
 from osgeo import ogr
 
@@ -565,12 +566,14 @@ def ogr_gmlas_geometryproperty():
 
     ds = gdal.OpenEx('GMLAS:data/gmlas_geometryproperty_gml32.gml')
     lyr = ds.GetLayer(0)
-    if lyr.GetLayerDefn().GetGeomFieldCount() != 14:
+    with gdaltest.error_handler():
+        geom_field_count = lyr.GetLayerDefn().GetGeomFieldCount()
+    if geom_field_count != 14:
         gdaltest.post_reason('fail')
-        print(lyr.GetLayerDefn().GetGeomFieldCount())
+        print(geom_field_count)
         return 'fail'
     f = lyr.GetNextFeature()
-    if f['geometryProperty_xml'] != ' <gml:Point gml:id="poly.geom.Geometry"> <gml:pos>1.0 1.0</gml:pos> </gml:Point> ':
+    if f['geometryProperty_xml'] != ' <gml:Point gml:id="poly.geom.Geometry" srsName="urn:ogc:def:crs:EPSG::4326"> <gml:pos>49 2</gml:pos> </gml:Point> ':
         gdaltest.post_reason('fail')
         f.DumpReadable()
         return 'fail'
@@ -578,7 +581,7 @@ def ogr_gmlas_geometryproperty():
         gdaltest.post_reason('fail')
         f.DumpReadable()
         return 'fail'
-    if f['pointProperty_xml'] != '<gml:Point gml:id="poly.geom.Point"><gml:pos>1.0 1.0</gml:pos></gml:Point>':
+    if f['pointProperty_xml'] != '<gml:Point gml:id="poly.geom.Point" srsName="urn:ogc:def:crs:EPSG::4326"><gml:pos>50 3</gml:pos></gml:Point>':
         gdaltest.post_reason('fail')
         f.DumpReadable()
         return 'fail'
@@ -591,8 +594,14 @@ def ogr_gmlas_geometryproperty():
         f.DumpReadable()
         return 'fail'
     geom_idx = lyr.GetLayerDefn().GetGeomFieldIndex('geometryProperty')
+    sr = lyr.GetLayerDefn().GetGeomFieldDefn(geom_idx).GetSpatialRef()
+    if sr is None or sr.ExportToWkt().find('4326') < 0 or sr.ExportToWkt().find('AXIS') >= 0:
+        gdaltest.post_reason('fail')
+        print(sr)
+        return 'fail'
     wkt = f.GetGeomFieldRef(geom_idx).ExportToWkt()
-    if wkt != 'POINT (1 1)':
+    # Axis swapping
+    if wkt != 'POINT (2 49)':
         gdaltest.post_reason('fail')
         f.DumpReadable()
         return 'fail'
@@ -601,13 +610,29 @@ def ogr_gmlas_geometryproperty():
         gdaltest.post_reason('fail')
         f.DumpReadable()
         return 'fail'
+    geom_idx = lyr.GetLayerDefn().GetGeomFieldIndex('pointProperty')
+    sr = lyr.GetLayerDefn().GetGeomFieldDefn(geom_idx).GetSpatialRef()
+    if sr is None or sr.ExportToWkt().find('4326') < 0 or sr.ExportToWkt().find('AXIS') >= 0:
+        gdaltest.post_reason('fail')
+        print(sr)
+        return 'fail'
+    wkt = f.GetGeomFieldRef(geom_idx).ExportToWkt()
+    if wkt != 'POINT (3 50)':
+        gdaltest.post_reason('fail')
+        f.DumpReadable()
+        return 'fail'
     geom_idx = lyr.GetLayerDefn().GetGeomFieldIndex('lineStringProperty')
+    sr = lyr.GetLayerDefn().GetGeomFieldDefn(geom_idx).GetSpatialRef()
+    if sr is None or sr.ExportToWkt().find('4326') < 0 or sr.ExportToWkt().find('AXIS') >= 0:
+        gdaltest.post_reason('fail')
+        print(sr)
+        return 'fail'
     if lyr.GetLayerDefn().GetGeomFieldDefn(geom_idx).GetType() != ogr.wkbLineString:
         gdaltest.post_reason('fail')
         print(lyr.GetLayerDefn().GetGeomFieldDefn(geom_idx).GetType())
         return 'fail'
     wkt = f.GetGeomFieldRef(geom_idx).ExportToWkt()
-    if wkt != 'LINESTRING (1 1)':
+    if wkt != 'LINESTRING (2 49)':
         gdaltest.post_reason('fail')
         f.DumpReadable()
         return 'fail'
@@ -618,6 +643,24 @@ def ogr_gmlas_geometryproperty():
         return 'fail'
     wkt = f.GetGeomFieldRef(geom_idx).ExportToWkt()
     if wkt != 'GEOMETRYCOLLECTION (POINT (0 1),POINT (1 2),POINT (3 4))':
+        gdaltest.post_reason('fail')
+        f.DumpReadable()
+        return 'fail'
+
+    # Test that on-the-fly reprojection works
+    f = lyr.GetNextFeature()
+    geom_idx = lyr.GetLayerDefn().GetGeomFieldIndex('geometryProperty')
+    geom = f.GetGeomFieldRef(geom_idx)
+    if ogrtest.check_feature_geometry(geom, 'POINT (3.0 0.0)') != 0:
+        gdaltest.post_reason('fail')
+        f.DumpReadable()
+        return 'fail'
+
+    # Failed reprojection
+    with gdaltest.error_handler():
+        f = lyr.GetNextFeature()
+    geom_idx = lyr.GetLayerDefn().GetGeomFieldIndex('geometryProperty')
+    if f.GetGeomFieldRef(geom_idx) is not None:
         gdaltest.post_reason('fail')
         f.DumpReadable()
         return 'fail'

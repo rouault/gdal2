@@ -45,6 +45,7 @@ OGRGMLASLayer::OGRGMLASLayer( OGRGMLASDataSource* poDS,
 {
     m_poDS = poDS;
     m_oFC = oFC;
+    m_bLayerDefnFinalized = false;
     m_poFeatureDefn = new OGRFeatureDefn( oFC.GetName() );
     m_poFeatureDefn->SetGeomType(wkbNone);
     m_poFeatureDefn->Reference();
@@ -597,6 +598,25 @@ int OGRGMLASLayer::GetFCFieldIndexFromOGRGeomFieldIdx(int iOGRGeomFieldIdx) cons
 }
 
 /************************************************************************/
+/*                              GetLayerDefn()                          */
+/************************************************************************/
+
+OGRFeatureDefn* OGRGMLASLayer::GetLayerDefn()
+{
+    if( !m_bLayerDefnFinalized && m_poDS->IsLayerInitFinished() )
+    {
+        // If we haven't yet determined the SRS of geometry columns, do it now
+        m_bLayerDefnFinalized = true;
+        if( m_poFeatureDefn->GetGeomFieldCount() > 0 )
+        {
+            if( m_poReader == NULL )
+                InitReader();
+        }
+    }
+    return m_poFeatureDefn;
+}
+
+/************************************************************************/
 /*                              ResetReading()                          */
 /************************************************************************/
 
@@ -608,30 +628,44 @@ void OGRGMLASLayer::ResetReading()
 }
 
 /************************************************************************/
+/*                              InitReader()                            */
+/************************************************************************/
+
+bool OGRGMLASLayer::InitReader()
+{
+    CPLAssert( m_poReader == NULL );
+
+    if( m_fpGML == NULL )
+    {
+        // Try recycling an already opened and unused file pointer
+        m_fpGML = m_poDS->PopUnusedGMLFilePointer();
+        if( m_fpGML == NULL )
+            m_fpGML = VSIFOpenL(m_poDS->GetGMLFilename(), "rb");
+        if( m_fpGML == NULL )
+            return false;
+    }
+
+    m_poReader = new GMLASReader();
+    m_poReader->Init( m_poDS->GetGMLFilename(),
+                        m_fpGML,
+                        m_poDS->GetMapURIToPrefix(),
+                        m_poDS->GetLayers() );
+    m_poDS->RunFirstPassIfNeeded( m_poReader );
+    m_poReader->SetLayerOfInterest( this );
+
+    m_bLayerDefnFinalized = true;
+    return true;
+}
+
+/************************************************************************/
 /*                          GetNextRawFeature()                         */
 /************************************************************************/
 
 OGRFeature* OGRGMLASLayer::GetNextRawFeature()
 {
-    if( m_poReader == NULL )
-    {
-        if( m_fpGML == NULL )
-        {
-            // Try recycling an already opened and unused file pointer
-            m_fpGML = m_poDS->PopUnusedGMLFilePointer();
-            if( m_fpGML == NULL )
-                m_fpGML = VSIFOpenL(m_poDS->GetGMLFilename(), "rb");
-            if( m_fpGML == NULL )
-                return NULL;
-        }
+    if( m_poReader == NULL && !InitReader() )
+        return NULL;
 
-        m_poReader = new GMLASReader();
-        m_poReader->Init( m_poDS->GetGMLFilename(),
-                          m_fpGML,
-                          m_poDS->GetMapURIToPrefix(),
-                          m_poDS->GetLayers() );
-        m_poReader->SetLayerOfInterest( this );
-    }
     return m_poReader->GetNextFeature();
 }
 

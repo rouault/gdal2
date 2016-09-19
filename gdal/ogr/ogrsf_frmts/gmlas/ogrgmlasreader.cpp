@@ -248,6 +248,7 @@ GMLASReader::GMLASReader()
 {
     m_bParsingError = false;
     m_poSAXReader = NULL;
+    m_fp = NULL;
     m_GMLInputSource = NULL;
     m_bFirstIteration = true;
     m_bEOF = false;
@@ -344,6 +345,7 @@ bool GMLASReader::Init(const char* pszFilename,
 
     m_poSAXReader->setErrorHandler(&m_oErrorHandler);
 
+    m_fp = fp;
     m_GMLInputSource = new GMLASInputSource(pszFilename, fp, false);
 
     return true;
@@ -1404,56 +1406,7 @@ void GMLASReader::endElement(
             {
                 CPLAssert( m_apsXMLNodeStack.size() == 1 );
 
-                CPLXMLNode* psInterestNode = m_apsXMLNodeStack.back().psNode;
-                m_apsXMLNodeStack.pop_back();
-
-#ifdef DEBUG_VERBOSE
-                {
-                    char* pszXML = CPLSerializeXMLTree(psInterestNode);
-                    CPLDebug("GML", "geometry = %s", pszXML);
-                    CPLFree(pszXML);
-                }
-#endif
-
-                OGRGeometry* poGeom = reinterpret_cast<OGRGeometry*>
-                                (OGR_G_CreateFromGMLTree( psInterestNode ));
-                if( poGeom != NULL )
-                {
-                    // Deal with possibly repeated geometries by building
-                    // a geometry collection. We could also create a
-                    // nested table, but that would probably be less
-                    // convenient to use.
-                    OGRGeometry* poPrevGeom = m_oCurCtxt.m_poFeature->
-                                            StealGeometry(m_nCurGeomFieldIdx);
-                    if( poPrevGeom != NULL )
-                    {
-                        if( poPrevGeom->getGeometryType() ==
-                                                wkbGeometryCollection )
-                        {
-                            reinterpret_cast<OGRGeometryCollection*>(
-                                poPrevGeom)->addGeometryDirectly(poGeom);
-                            poGeom = poPrevGeom;
-                        }
-                        else
-                        {
-                            OGRGeometryCollection* poGC =
-                                            new OGRGeometryCollection();
-                            poGC->addGeometryDirectly(poPrevGeom);
-                            poGC->addGeometryDirectly(poGeom);
-                            poGeom = poGC;
-                        }
-                    }
-                    m_oCurCtxt.m_poFeature->SetGeomFieldDirectly(
-                        m_nCurGeomFieldIdx, poGeom );
-                }
-                else
-                {
-                    char* pszXML = CPLSerializeXMLTree(psInterestNode);
-                    CPLDebug("GMLAS", "Non-recognized geometry: %s",
-                                pszXML);
-                    CPLFree(pszXML);
-                }
-                CPLDestroyXMLNode( psInterestNode );
+                ProcessGeometry();
             }
             m_nCurGeomFieldIdx = -1;
         }
@@ -1570,6 +1523,168 @@ void GMLASReader::endElement(
         m_osCurSubXPath.resize( m_osCurSubXPath.size() - 1 - nLastXPathLength);
     else if( m_osCurSubXPath.size() == nLastXPathLength )
          m_osCurSubXPath.clear();
+}
+
+/************************************************************************/
+/*                            ProcessGeometry()                         */
+/************************************************************************/
+
+void GMLASReader::ProcessGeometry()
+{
+    CPLXMLNode* psInterestNode = m_apsXMLNodeStack.back().psNode;
+    m_apsXMLNodeStack.pop_back();
+
+#ifdef DEBUG_VERBOSE
+    {
+        char* pszXML = CPLSerializeXMLTree(psInterestNode);
+        CPLDebug("GML", "geometry = %s", pszXML);
+        CPLFree(pszXML);
+    }
+#endif
+
+    OGRGeometry* poGeom = reinterpret_cast<OGRGeometry*>
+                    (OGR_G_CreateFromGMLTree( psInterestNode ));
+    if( poGeom != NULL )
+    {
+        OGRGeomFieldDefn* poGeomFieldDefn =
+            m_oCurCtxt.m_poFeature->GetGeomFieldDefnRef(
+                                        m_nCurGeomFieldIdx);
+
+
+        const char* pszSRSName = CPLGetXMLValue(psInterestNode,
+                                                "srsName", NULL);
+        bool bSwapXY = false;
+        if( pszSRSName != NULL )
+        {
+            // If we are doing a first pass, store the SRS of the geometry
+            // column
+            if( !m_oSetGeomFieldsWithUnknownSRS.empty() &&
+                 m_oSetGeomFieldsWithUnknownSRS.find(poGeomFieldDefn) !=
+                        m_oSetGeomFieldsWithUnknownSRS.end() )
+            {
+                OGRSpatialReference* poSRS = 
+                                new OGRSpatialReference();
+                if( poSRS->SetFromUserInput( pszSRSName ) == OGRERR_NONE )
+                {
+                    OGR_SRSNode *poGEOGCS = poSRS->GetAttrNode( "GEOGCS" );
+                    if( poGEOGCS != NULL )
+                        poGEOGCS->StripNodes( "AXIS" );
+
+                    OGR_SRSNode *poPROJCS = poSRS->GetAttrNode( "PROJCS" );
+                    if (poPROJCS != NULL &&
+                        poSRS->EPSGTreatsAsNorthingEasting())
+                    {
+                        poPROJCS->StripNodes( "AXIS" );
+                    }
+
+                    m_oMapGeomFieldDefnToSRSName[poGeomFieldDefn] = pszSRSName;
+                    poGeomFieldDefn->SetSpatialRef(poSRS);
+                }
+                poSRS->Release();
+                m_oSetGeomFieldsWithUnknownSRS.erase(poGeomFieldDefn);
+            }
+
+            // Check if the srsName indicates unusual axis order,
+            // and if so swap x and y coordinates.
+            std::map<CPLString, bool>::iterator oIter =
+                m_oMapSRSNameToInvertedAxis.find(pszSRSName);
+            if( oIter == m_oMapSRSNameToInvertedAxis.end() )
+            {
+                OGRSpatialReference oSRS;
+                oSRS.SetFromUserInput( pszSRSName );
+                bSwapXY = CPL_TO_BOOL(oSRS.EPSGTreatsAsLatLong()) ||
+                            CPL_TO_BOOL(oSRS.EPSGTreatsAsNorthingEasting());
+                m_oMapSRSNameToInvertedAxis[ pszSRSName ] = bSwapXY;
+            }
+            else
+            {
+                bSwapXY = oIter->second;
+            }
+        }
+        if( bSwapXY )
+            poGeom->swapXY();
+
+        if( !m_oSetGeomFieldsWithUnknownSRS.empty() )
+        {
+            delete poGeom;
+            poGeom = NULL;
+        }
+        // Do we need to do reprojection ?
+        else if( pszSRSName != NULL && poGeomFieldDefn->GetSpatialRef() != NULL &&
+            m_oMapGeomFieldDefnToSRSName[poGeomFieldDefn] != pszSRSName )
+        {
+            bool bReprojectionOK = false;
+            OGRSpatialReference oSRS;
+            if( oSRS.SetFromUserInput( pszSRSName ) == OGRERR_NONE )
+            {
+                OGRCoordinateTransformation* poCT =
+                    OGRCreateCoordinateTransformation( &oSRS,
+                                            poGeomFieldDefn->GetSpatialRef() );
+                if( poCT != NULL )
+                {
+                    bReprojectionOK = (poGeom->transform( poCT ) == OGRERR_NONE);
+                    delete poCT;
+                }
+            }
+            if( !bReprojectionOK )
+            {
+                CPLError(CE_Warning, CPLE_AppDefined,
+                         "Reprojection fom %s to %s failed",
+                         pszSRSName,
+                         m_oMapGeomFieldDefnToSRSName[poGeomFieldDefn].c_str());
+                delete poGeom;
+                poGeom = NULL;
+            }
+#ifdef DEBUG_VERBOSE
+            else
+            {
+                CPLDebug("GMLAS", "Reprojected geometry from %s to %s",
+                         pszSRSName,
+                         m_oMapGeomFieldDefnToSRSName[poGeomFieldDefn].c_str());
+            }
+#endif
+        }
+
+        if( poGeom != NULL )
+        {
+            // Deal with possibly repeated geometries by building
+            // a geometry collection. We could also create a
+            // nested table, but that would probably be less
+            // convenient to use.
+            OGRGeometry* poPrevGeom = m_oCurCtxt.m_poFeature->
+                                    StealGeometry(m_nCurGeomFieldIdx);
+            if( poPrevGeom != NULL )
+            {
+                if( poPrevGeom->getGeometryType() ==
+                                        wkbGeometryCollection )
+                {
+                    reinterpret_cast<OGRGeometryCollection*>(
+                        poPrevGeom)->addGeometryDirectly(poGeom);
+                    poGeom = poPrevGeom;
+                }
+                else
+                {
+                    OGRGeometryCollection* poGC =
+                                    new OGRGeometryCollection();
+                    poGC->addGeometryDirectly(poPrevGeom);
+                    poGC->addGeometryDirectly(poGeom);
+                    poGeom = poGC;
+                }
+            }
+            poGeom->assignSpatialReference(
+                                poGeomFieldDefn->GetSpatialRef());
+            m_oCurCtxt.m_poFeature->SetGeomFieldDirectly(
+                m_nCurGeomFieldIdx, poGeom );
+        }
+    }
+    else
+    {
+        char* pszXML = CPLSerializeXMLTree(psInterestNode);
+        CPLDebug("GMLAS", "Non-recognized geometry: %s",
+                    pszXML);
+        CPLFree(pszXML);
+    }
+    CPLDestroyXMLNode( psInterestNode );
 }
 
 /************************************************************************/
@@ -1745,3 +1860,32 @@ OGRFeature* GMLASReader::GetNextFeature( OGRLayer** ppoBelongingLayer )
     return NULL;
 }
 
+/************************************************************************/
+/*                              RunFirstPass()                          */
+/************************************************************************/
+
+void GMLASReader::RunFirstPass()
+{
+    // Store in m_oSetGeomFieldsWithUnknownSRS the geometry fields
+    for(size_t i=0; i < m_papoLayers->size(); i++ )
+    {
+        OGRFeatureDefn* poFDefn = (*m_papoLayers)[i]->GetLayerDefn();
+        for(int j=0; j< poFDefn->GetGeomFieldCount(); j++ )
+        {
+            m_oSetGeomFieldsWithUnknownSRS.insert(
+                                            poFDefn->GetGeomFieldDefn(j));
+        }
+    }
+
+    // Loop on features until we have determined the SRS of all geometry
+    // columns.
+    OGRFeature* poFeature;
+    while( !m_oSetGeomFieldsWithUnknownSRS.empty() &&
+           (poFeature = GetNextFeature(NULL)) != NULL )
+    {
+        delete poFeature;
+    }
+
+    // Clear the set even if we didn't manage to determine all the SRS
+    m_oSetGeomFieldsWithUnknownSRS.clear();
+}
