@@ -31,6 +31,7 @@
  ****************************************************************************/
 
 #include "ogr_gmlas.h"
+#include "cpl_sha256.h"
 
 CPL_CVSID("$Id$");
 
@@ -84,6 +85,19 @@ VSILFILE* GMLASResourceCache::Open( const CPLString& osResource,
         {
             if( !isalnum(osLaunderedName[i]) && osLaunderedName[i] != '.' )
                 osLaunderedName[i] = '_';
+        }
+
+        // If filename is too long, then truncate it and put a hash at the end
+        if( osLaunderedName.size() >= 255 - strlen(".tmp") )
+        {
+            GByte abyHash[CPL_SHA256_HASH_SIZE];
+            CPL_SHA256(osOutFilename, osOutFilename.size(), abyHash);
+            char* pszHash = CPLBinaryToHex(CPL_SHA256_HASH_SIZE, abyHash);
+            osLaunderedName.resize(255 - strlen(".tmp") -  2 * CPL_SHA256_HASH_SIZE);
+            osLaunderedName += pszHash;
+            CPLFree(pszHash);
+            CPLDebug("GMLAS", "Cached filename truncated to %s",
+                     osLaunderedName.c_str());
         }
 
         CPLString osCachedFileName("cache_xsd/" + osLaunderedName);
