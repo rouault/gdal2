@@ -1612,17 +1612,8 @@ void GMLASReader::characters( const XMLCh *const chars,
             // Otherwise create a new text node
             else
             {
-                char* pszValue = VSIStrdup(osText);
-                if( pszValue )
-                {
-                    AttachAsLastChild(
-                            CPLCreateXMLNode(NULL, CXT_Text, pszValue) );
-                }
-                else
-                {
-                    CPLError(CE_Failure, CPLE_OutOfMemory, "Out of memory");
-                    m_bParsingError = true;
-                }
+                AttachAsLastChild(
+                        CPLCreateXMLNode(NULL, CXT_Text, osText) );
             }
         }
 
