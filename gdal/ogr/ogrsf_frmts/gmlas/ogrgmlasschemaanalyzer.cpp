@@ -445,22 +445,7 @@ bool GMLASSchemaAnalyzer::Analyze(const CPLString& osBaseDirname,
     for( size_t i = 0; i < aoXSDs.size(); i++ )
     {
         const CPLString osURI(aoXSDs[i].first);
-        const CPLString osOriFilename(aoXSDs[i].second);
-        const CPLString osXSDFilename( 
-            (osOriFilename.find("http://") != 0 &&
-             osOriFilename.find("https://") != 0 &&
-             CPLIsFilenameRelative(osOriFilename)) ?
-                CPLString(CPLFormFilename(osBaseDirname, osOriFilename, NULL)) :
-                osOriFilename );
-        CPLString osResolvedFilename;
-        VSILFILE* fpXSD = oCache.Open( osXSDFilename, CPLString(),
-                                       osResolvedFilename );
-        if( fpXSD == NULL )
-        {
-            return FALSE;
-        }
-
-        CollectNamespacePrefixes(osResolvedFilename, fpXSD, m_oMapURIToPrefix);
+        const CPLString osXSDFilename(aoXSDs[i].second);
 
         GMLASUniquePtr<SAX2XMLReader> poParser(
                     XMLReaderFactory::createXMLReader(
@@ -477,7 +462,7 @@ bool GMLASSchemaAnalyzer::Analyze(const CPLString& osBaseDirname,
         //
         poParser->setFeature (XMLUni::fgXercesSchema, true);
         poParser->setFeature (XMLUni::fgXercesSchemaFullChecking, true);
-        poParser->setFeature (XMLUni::fgXercesValidationErrorAsFatal, true);
+        poParser->setFeature (XMLUni::fgXercesValidationErrorAsFatal, false);
 
         // Use the loaded grammar during parsing.
         //
@@ -488,36 +473,25 @@ bool GMLASSchemaAnalyzer::Analyze(const CPLString& osBaseDirname,
         //
         poParser->setFeature (XMLUni::fgXercesLoadSchema, false);
 
-        GMLASErrorHandler oErrorHandler;
-        poParser->setErrorHandler(&oErrorHandler);
 
-        CPLString osXSDDirname( CPLGetDirname(osXSDFilename) );
-        if( osOriFilename.find("http://") == 0 || 
-            osOriFilename.find("https://") == 0 )
+        VSILFILE* fpXSD = NULL;
+        Grammar* poGrammar = NULL;
+        CPLString osResolvedFilename;
+        if( !GMLASReader::LoadXSDInParser( poParser.get(),
+                                           oCache,
+                                           osBaseDirname,
+                                           osXSDFilename,
+                                           &poGrammar,
+                                           &fpXSD,
+                                           &osResolvedFilename ) )
         {
-            osXSDDirname = CPLGetDirname(("/vsicurl_streaming/" + osXSDFilename).c_str());
+            return false;
         }
-        GMLASAnalyzerEntityResolver oEntityResolver( osXSDDirname,
-                                             m_oMapURIToPrefix,
-                                             oCache );
-        poParser->setEntityResolver(&oEntityResolver);
 
-        GMLASInputSource oSource(osResolvedFilename, fpXSD, false);
-        const bool bCacheGrammar = true;
-        Grammar* poGrammar = poParser->loadGrammar(oSource,
-                                                   Grammar::SchemaGrammarType,
-                                                   bCacheGrammar);
+        CollectNamespacePrefixes(osResolvedFilename, fpXSD, m_oMapURIToPrefix);
+
         VSIFCloseL(fpXSD);
 
-        if( poGrammar == NULL )
-        {
-            CPLError(CE_Failure, CPLE_AppDefined, "loadGrammar failed");
-            return false;
-        }
-        if( oErrorHandler.hasFailed() )
-        {
-            return false;
-        }
 
         // Some .xsd like
         // http://www.opengis.net/gwml-main/2.1 -> https://wfspoc.brgm-rec.fr/constellation/WS/wfs/BRGM:GWML2?request=DescribeFeatureType&version=2.0.0&service=WFS&namespace=xmlns(ns1=http://www.opengis.net/gwml-main/2.1)&typenames=ns1:GW_Aquifer

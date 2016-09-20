@@ -410,6 +410,7 @@ bool OGRGMLASDataSource::Open(GDALOpenInfo* poOpenInfo)
             aoXSDs.push_back(PairURIFilename("",papszTokens[i]));
         }
         CSLDestroy(papszTokens);
+        m_aoXSDs = aoXSDs;
     }
     if( fpGML )
         VSIFCloseL(fpGML);
@@ -434,6 +435,7 @@ bool OGRGMLASDataSource::Open(GDALOpenInfo* poOpenInfo)
     {
         return false;
     }
+
     m_oMapURIToPrefix = oAnalyzer.GetMapURIToPrefix();
 
     m_bExposeMetadataLayers = CPLTestBool(
@@ -578,7 +580,8 @@ void OGRGMLASDataSource::RunFirstPassIfNeeded( GMLASReader* poReader )
                                  fp,
                                  GetMapURIToPrefix(),
                                  GetLayers(),
-                                 m_bValidate );
+                                 m_bValidate,
+                                 m_aoXSDs );
         poReaderFirstPass->RunFirstPass();
 
         // Store 2 maps to reinject them in real readers

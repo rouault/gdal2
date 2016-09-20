@@ -525,6 +525,8 @@ class OGRGMLASDataSource: public GDALDataset
         /** Map from geometry field definition to its expected SRSName */
         std::map<OGRGeomFieldDefn*, CPLString> m_oMapGeomFieldDefnToSRSName;
 
+        std::vector<PairURIFilename>   m_aoXSDs;
+
         void TranslateClasses( OGRGMLASLayer* poParentLayer,
                                const GMLASFeatureClass& oFC );
 
@@ -812,7 +814,8 @@ class GMLASReader : public DefaultHandler
                   VSILFILE* fp,
                   const std::map<CPLString, CPLString>& oMapURIToPrefix,
                   std::vector<OGRGMLASLayer*>* papoLayers,
-                  bool bValidate);
+                  bool bValidate,
+                  const std::vector<PairURIFilename>& aoXSDs = std::vector<PairURIFilename>() );
 
         void SetLayerOfInterest( OGRGMLASLayer* poLayer );
 
@@ -846,6 +849,14 @@ class GMLASReader : public DefaultHandler
                         const XMLSize_t length );
 
         void RunFirstPass();
+
+        static bool LoadXSDInParser( SAX2XMLReader* poParser,
+                                     GMLASResourceCache& oCache,
+                                     const CPLString& osBaseDirname,
+                                     const CPLString& osXSDFilename,
+                                     Grammar** ppoGrammar = NULL,
+                                     VSILFILE** pfp = NULL,
+                                     CPLString* posResolvedFilename = NULL );
 };
 
 #endif // OGR_GMLAS_INCLUDED

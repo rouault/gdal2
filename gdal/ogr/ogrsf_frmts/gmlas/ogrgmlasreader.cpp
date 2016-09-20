@@ -384,6 +384,90 @@ void GMLASReader::SetLayerOfInterest( OGRGMLASLayer* poLayer )
 }
 
 /************************************************************************/
+/*                          LoadXSDInParser()                           */
+/************************************************************************/
+
+bool GMLASReader::LoadXSDInParser( SAX2XMLReader* poParser,
+                                   GMLASResourceCache& oCache,
+                                   const CPLString& osBaseDirname,
+                                   const CPLString& osXSDFilename,
+                                   Grammar** ppoGrammar,
+                                   VSILFILE** pfp,
+                                   CPLString* posResolvedFilename )
+{
+    if( ppoGrammar != NULL )
+        *ppoGrammar = NULL;
+    if( pfp != NULL )
+        *pfp = NULL;
+    if( posResolvedFilename != NULL )
+        posResolvedFilename->clear();
+
+    const CPLString osModifXSDFilename( 
+        (osXSDFilename.find("http://") != 0 &&
+        osXSDFilename.find("https://") != 0 &&
+        CPLIsFilenameRelative(osXSDFilename)) ?
+            CPLString(CPLFormFilename(osBaseDirname, osXSDFilename, NULL)) :
+            osXSDFilename );
+    CPLString osResolvedFilename;
+    VSILFILE* fpXSD = oCache.Open( osModifXSDFilename, CPLString(),
+                                   osResolvedFilename );
+    if( fpXSD == NULL )
+    {
+        return false;
+    }
+    if( posResolvedFilename != NULL )
+        *posResolvedFilename = osResolvedFilename;
+
+    // Install a temporary entity resolved based on the current XSD
+    CPLString osXSDDirname( CPLGetDirname(osModifXSDFilename) );
+    if( osXSDFilename.find("http://") == 0 || 
+        osXSDFilename.find("https://") == 0 )
+    {
+        osXSDDirname = CPLGetDirname(("/vsicurl_streaming/" +
+                                     osModifXSDFilename).c_str());
+    }
+    GMLASBaseEntityResolver oXSDEntityResolver(
+                                        osXSDDirname,
+                                        oCache );
+    EntityResolver* poOldEntityResolver = poParser->getEntityResolver();
+    poParser->setEntityResolver( &oXSDEntityResolver );
+
+    // Install a temporary error handler
+    GMLASErrorHandler oErrorHandler;
+    ErrorHandler* poOldErrorHandler = poParser->getErrorHandler();
+    poParser->setErrorHandler( &oErrorHandler);
+
+    GMLASInputSource oSource(osResolvedFilename, fpXSD, false);
+    const bool bCacheGrammar = true;
+    Grammar* poGrammar = poParser->loadGrammar(oSource,
+                                            Grammar::SchemaGrammarType,
+                                            bCacheGrammar);
+
+    // Restore previous handlers
+    poParser->setEntityResolver( poOldEntityResolver );
+    poParser->setErrorHandler( poOldErrorHandler );
+
+    if( poGrammar == NULL )
+    {
+        CPLError(CE_Failure, CPLE_AppDefined, "loadGrammar failed");
+        VSIFCloseL(fpXSD);
+        return false;
+    }
+    if( oErrorHandler.hasFailed() )
+    {
+        VSIFCloseL(fpXSD);
+        return false;
+    }
+
+    if( pfp != NULL )
+        *pfp = fpXSD;
+    if( ppoGrammar != NULL )
+        *ppoGrammar = poGrammar;
+
+    return true;
+}
+
+/************************************************************************/
 /*                                  Init()                              */
 /************************************************************************/
 
@@ -391,7 +475,8 @@ bool GMLASReader::Init(const char* pszFilename,
                        VSILFILE* fp,
                        const std::map<CPLString, CPLString>& oMapURIToPrefix,
                        std::vector<OGRGMLASLayer*>* papoLayers,
-                       bool bValidate)
+                       bool bValidate,
+                       const std::vector<PairURIFilename>& aoXSDs)
 {
     m_oMapURIToPrefix = oMapURIToPrefix;
     m_papoLayers = papoLayers;
@@ -408,6 +493,8 @@ bool GMLASReader::Init(const char* pszFilename,
     m_poSAXReader->setLexicalHandler( this );
     m_poSAXReader->setDTDHandler( this );
 
+    m_poSAXReader->setErrorHandler(&m_oErrorHandler);
+
     if( bValidate )
     {
         // Enable validation.
@@ -418,10 +505,38 @@ bool GMLASReader::Init(const char* pszFilename,
         // We want all errors to be reported
         m_poSAXReader->setFeature (XMLUni::fgXercesValidationErrorAsFatal, false);
 
+        CPLString osBaseDirname( CPLGetDirname(pszFilename) );
+
+        // In the case the schemas are explicitly passed, we must do special
+        // processing
+        if( !aoXSDs.empty() )
+        {
+            for( size_t i = 0; i < aoXSDs.size(); i++ )
+            {
+                const CPLString osXSDFilename(aoXSDs[i].second);
+                if( !LoadXSDInParser( m_poSAXReader, m_oCache,
+                                    osBaseDirname, osXSDFilename ) )
+                {
+                    return false;
+                }
+            }
+
+            // Make sure our previously loaded schemas are used
+            m_poSAXReader->setFeature (XMLUni::fgXercesUseCachedGrammarInParse,
+                                       true);
+
+            // Don't load schemas from any other source (e.g., from XML document's
+            // xsi:schemaLocation attributes).
+            //
+            m_poSAXReader->setFeature (XMLUni::fgXercesLoadSchema, false);
+        }
+
+        // Install entity resolver based on XML file
         m_poEntityResolver = new GMLASBaseEntityResolver(
-                                                CPLGetDirname(pszFilename),
+                                                osBaseDirname,
                                                 m_oCache );
         m_poSAXReader->setEntityResolver( m_poEntityResolver );
+
     }
     else
     {
@@ -431,8 +546,6 @@ bool GMLASReader::Init(const char* pszFilename,
         m_poSAXReader->setFeature (XMLUni::fgXercesLoadSchema, false);
         m_poSAXReader->setEntityResolver( this );
     }
-
-    m_poSAXReader->setErrorHandler(&m_oErrorHandler);
 
     m_fp = fp;
     m_GMLInputSource = new GMLASInputSource(pszFilename, fp, false);

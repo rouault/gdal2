@@ -755,6 +755,25 @@ def ogr_gmlas_validate():
     gdal.PopErrorHandler()
     if ds is None:
         gdaltest.post_reason('fail')
+        print(myhandler.error_list)
+        return 'fail'
+    if len(myhandler.error_list) != 0:
+        gdaltest.post_reason('fail')
+        print(myhandler.error_list)
+        return 'fail'
+
+    # Enable validation on a doc without validation error, and with explicit XSD
+    gdal.FileFromMemBuffer('/vsimem/gmlas_test1.xml',
+                           open('data/gmlas_test1.xml').read() )
+    myhandler = MyHandler()
+    gdal.PushErrorHandler(myhandler.error_handler)
+    ds = gdal.OpenEx('GMLAS:/vsimem/gmlas_test1.xml', open_options = [
+                'XSD=' + os.getcwd() + '/data/gmlas_test1.xsd', 'VALIDATE=YES'])
+    gdal.PopErrorHandler()
+    gdal.Unlink('/vsimem/gmlas_test1.xml')
+    if ds is None:
+        gdaltest.post_reason('fail')
+        print(myhandler.error_list)
         return 'fail'
     if len(myhandler.error_list) != 0:
         gdaltest.post_reason('fail')
