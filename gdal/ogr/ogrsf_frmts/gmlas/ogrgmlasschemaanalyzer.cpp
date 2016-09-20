@@ -130,9 +130,6 @@ class GMLASAnalyzerEntityResolver: public GMLASBaseEntityResolver
 {
         std::map<CPLString, CPLString>& m_oMapURIToPrefix;
 
-  protected:
-        virtual void DoExtraSchemaProcessing(const CPLString& osFilename,
-                                             VSILFILE* fp);
   public:
         GMLASAnalyzerEntityResolver(const CPLString& osBasePath,
                             std::map<CPLString, CPLString>& oMapURIToPrefix,
@@ -141,6 +138,9 @@ class GMLASAnalyzerEntityResolver: public GMLASBaseEntityResolver
             , m_oMapURIToPrefix(oMapURIToPrefix)
         {
         }
+
+        virtual void DoExtraSchemaProcessing(const CPLString& osFilename,
+                                             VSILFILE* fp);
 };
 
 /************************************************************************/
@@ -442,6 +442,10 @@ bool GMLASSchemaAnalyzer::Analyze(const CPLString& osBaseDirname,
          (new XMLGrammarPoolImpl(XMLPlatformUtils::fgMemoryManager)));
 
     std::vector<CPLString> aoNamespaces;
+    GMLASAnalyzerEntityResolver oXSDEntityResolver( CPLString(),
+                                                    m_oMapURIToPrefix,
+                                                    oCache );
+
     for( size_t i = 0; i < aoXSDs.size(); i++ )
     {
         const CPLString osURI(aoXSDs[i].first);
@@ -473,24 +477,16 @@ bool GMLASSchemaAnalyzer::Analyze(const CPLString& osBaseDirname,
         //
         poParser->setFeature (XMLUni::fgXercesLoadSchema, false);
 
-
-        VSILFILE* fpXSD = NULL;
         Grammar* poGrammar = NULL;
-        CPLString osResolvedFilename;
         if( !GMLASReader::LoadXSDInParser( poParser.get(),
                                            oCache,
+                                           oXSDEntityResolver,
                                            osBaseDirname,
                                            osXSDFilename,
-                                           &poGrammar,
-                                           &fpXSD,
-                                           &osResolvedFilename ) )
+                                           &poGrammar ) )
         {
             return false;
         }
-
-        CollectNamespacePrefixes(osResolvedFilename, fpXSD, m_oMapURIToPrefix);
-
-        VSIFCloseL(fpXSD);
 
 
         // Some .xsd like

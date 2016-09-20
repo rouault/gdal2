@@ -251,6 +251,16 @@ void GMLASBaseEntityResolver::notifyClosing(const CPLString& osFilename )
 }
 
 /************************************************************************/
+/*                            SetBasePath()                             */
+/************************************************************************/
+
+void GMLASBaseEntityResolver::SetBasePath(const CPLString& osBasePath)
+{
+    CPLAssert( m_aosPathStack.size() == 1 );
+    m_aosPathStack[0] = osBasePath;
+}
+
+/************************************************************************/
 /*                         DoExtraSchemaProcessing()                    */
 /************************************************************************/
 
@@ -389,18 +399,13 @@ void GMLASReader::SetLayerOfInterest( OGRGMLASLayer* poLayer )
 
 bool GMLASReader::LoadXSDInParser( SAX2XMLReader* poParser,
                                    GMLASResourceCache& oCache,
+                                   GMLASBaseEntityResolver& oXSDEntityResolver,
                                    const CPLString& osBaseDirname,
                                    const CPLString& osXSDFilename,
-                                   Grammar** ppoGrammar,
-                                   VSILFILE** pfp,
-                                   CPLString* posResolvedFilename )
+                                   Grammar** ppoGrammar )
 {
     if( ppoGrammar != NULL )
         *ppoGrammar = NULL;
-    if( pfp != NULL )
-        *pfp = NULL;
-    if( posResolvedFilename != NULL )
-        posResolvedFilename->clear();
 
     const CPLString osModifXSDFilename( 
         (osXSDFilename.find("http://") != 0 &&
@@ -415,8 +420,6 @@ bool GMLASReader::LoadXSDInParser( SAX2XMLReader* poParser,
     {
         return false;
     }
-    if( posResolvedFilename != NULL )
-        *posResolvedFilename = osResolvedFilename;
 
     // Install a temporary entity resolved based on the current XSD
     CPLString osXSDDirname( CPLGetDirname(osModifXSDFilename) );
@@ -426,9 +429,9 @@ bool GMLASReader::LoadXSDInParser( SAX2XMLReader* poParser,
         osXSDDirname = CPLGetDirname(("/vsicurl_streaming/" +
                                      osModifXSDFilename).c_str());
     }
-    GMLASBaseEntityResolver oXSDEntityResolver(
-                                        osXSDDirname,
-                                        oCache );
+    oXSDEntityResolver.SetBasePath(osXSDDirname);
+    oXSDEntityResolver.DoExtraSchemaProcessing( osResolvedFilename, fpXSD );
+
     EntityResolver* poOldEntityResolver = poParser->getEntityResolver();
     poParser->setEntityResolver( &oXSDEntityResolver );
 
@@ -446,21 +449,18 @@ bool GMLASReader::LoadXSDInParser( SAX2XMLReader* poParser,
     // Restore previous handlers
     poParser->setEntityResolver( poOldEntityResolver );
     poParser->setErrorHandler( poOldErrorHandler );
+    VSIFCloseL(fpXSD);
 
     if( poGrammar == NULL )
     {
         CPLError(CE_Failure, CPLE_AppDefined, "loadGrammar failed");
-        VSIFCloseL(fpXSD);
         return false;
     }
     if( oErrorHandler.hasFailed() )
     {
-        VSIFCloseL(fpXSD);
         return false;
     }
 
-    if( pfp != NULL )
-        *pfp = fpXSD;
     if( ppoGrammar != NULL )
         *ppoGrammar = poGrammar;
 
@@ -511,11 +511,13 @@ bool GMLASReader::Init(const char* pszFilename,
         // processing
         if( !aoXSDs.empty() )
         {
+            GMLASBaseEntityResolver oXSDEntityResolver( CPLString(), m_oCache );
             for( size_t i = 0; i < aoXSDs.size(); i++ )
             {
                 const CPLString osXSDFilename(aoXSDs[i].second);
                 if( !LoadXSDInParser( m_poSAXReader, m_oCache,
-                                    osBaseDirname, osXSDFilename ) )
+                                      oXSDEntityResolver,
+                                      osBaseDirname, osXSDFilename ) )
                 {
                     return false;
                 }

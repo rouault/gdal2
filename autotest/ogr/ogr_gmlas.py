@@ -812,6 +812,27 @@ def ogr_gmlas_validate():
     return 'success'
 
 ###############################################################################
+# Test correct namespace prefix handling
+
+def ogr_gmlas_test_ns_prefix():
+
+    if ogr.GetDriverByName('GMLAS') is None:
+        return 'skip'
+
+    # The schema doesn't directly import xlink, but indirectly references it
+    ds = gdal.OpenEx('GMLAS:', open_options = ['XSD=data/gmlas_test_targetelement.xsd'])
+
+    lyr = ds.GetLayerByName('_ogr_fields_metadata')
+    f = lyr.GetNextFeature()
+    if f['field_xpath'] != 'myns:main_elt/myns:reference_missing_target_elt@xlink:href':
+        gdaltest.post_reason('fail')
+        f.DumpReadable()
+        return 'fail'
+
+    return 'success'
+
+
+###############################################################################
 #  Cleanup
 
 def ogr_gmlas_cleanup():
@@ -841,6 +862,7 @@ gdaltest_list = [
     ogr_gmlas_geometryproperty,
     ogr_gmlas_abstractgeometry,
     ogr_gmlas_validate,
+    ogr_gmlas_test_ns_prefix,
     ogr_gmlas_cleanup ]
 
 if __name__ == '__main__':

@@ -112,18 +112,19 @@ class GMLASBaseEntityResolver: public EntityResolver,
         std::vector<CPLString> m_aosPathStack;
         GMLASResourceCache& m_oCache;
 
-  protected:
-        virtual void DoExtraSchemaProcessing(const CPLString& osFilename,
-                                             VSILFILE* fp);
-
   public:
         GMLASBaseEntityResolver(const CPLString& osBasePath,
                                 GMLASResourceCache& oCache);
         virtual ~GMLASBaseEntityResolver();
 
+        void SetBasePath(const CPLString& osBasePath);
+
         virtual void notifyClosing(const CPLString& osFilename );
         virtual InputSource* resolveEntity( const XMLCh* const publicId,
                                             const XMLCh* const systemId);
+
+        virtual void DoExtraSchemaProcessing(const CPLString& osFilename,
+                                             VSILFILE* fp);
 };
 
 /************************************************************************/
@@ -852,11 +853,10 @@ class GMLASReader : public DefaultHandler
 
         static bool LoadXSDInParser( SAX2XMLReader* poParser,
                                      GMLASResourceCache& oCache,
+                                     GMLASBaseEntityResolver& oXSDEntityResolver,
                                      const CPLString& osBaseDirname,
                                      const CPLString& osXSDFilename,
-                                     Grammar** ppoGrammar = NULL,
-                                     VSILFILE** pfp = NULL,
-                                     CPLString* posResolvedFilename = NULL );
+                                     Grammar** ppoGrammar = NULL );
 };
 
 #endif // OGR_GMLAS_INCLUDED
