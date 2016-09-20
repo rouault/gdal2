@@ -357,6 +357,12 @@ void GMLASGuessXSDFilename::startElement(
             }
             CSLDestroy(papszTokens);
         }
+        else if( osAttrURIPrefix == pszXSI_URI &&
+                 osAttrLocalname == "noNamespaceSchemaLocation" )
+        {
+            CPLDebug("GMLAS", "noNamespaceSchemaLocation=%s", osAttrValue.c_str());
+            m_aoFilenames.push_back( PairURIFilename( "", osAttrValue ) );
+        }
     }
 
     if( m_nStartElementCounter == 1 )
