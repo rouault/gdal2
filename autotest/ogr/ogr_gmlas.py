@@ -806,6 +806,20 @@ def ogr_gmlas_validate():
         print(myhandler.error_list)
         return 'fail'
 
+    # Test that validation without doc doesn't crash
+    myhandler = MyHandler()
+    gdal.PushErrorHandler(myhandler.error_handler)
+    ds = gdal.OpenEx('GMLAS:', open_options = ['XSD=data/gmlas_test1.xsd', 'VALIDATE=YES'])
+    gdal.PopErrorHandler()
+    if ds is None:
+        gdaltest.post_reason('fail')
+        print(myhandler.error_list)
+        return 'fail'
+    if len(myhandler.error_list) != 0:
+        gdaltest.post_reason('fail')
+        print(myhandler.error_list)
+        return 'fail'
+
     gdal.Unlink('/vsimem/ogr_gmlas_validate.xml')
     gdal.Unlink('/vsimem/ogr_gmlas_validate.xsd')
 
