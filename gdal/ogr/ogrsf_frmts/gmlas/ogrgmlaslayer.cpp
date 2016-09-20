@@ -647,9 +647,10 @@ bool OGRGMLASLayer::InitReader()
 
     m_poReader = new GMLASReader();
     m_poReader->Init( m_poDS->GetGMLFilename(),
-                        m_fpGML,
-                        m_poDS->GetMapURIToPrefix(),
-                        m_poDS->GetLayers() );
+                      m_fpGML,
+                      m_poDS->GetMapURIToPrefix(),
+                      m_poDS->GetLayers(),
+                      false );
     m_poDS->RunFirstPassIfNeeded( m_poReader );
     m_poReader->SetLayerOfInterest( this );
 

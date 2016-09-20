@@ -123,73 +123,36 @@ void CollectNamespacePrefixes(const char* pszXSDFilename,
 }
 
 /************************************************************************/
-/*                         GMLASEntityResolver                          */
+/*                       GMLASAnalyzerEntityResolver                    */
 /************************************************************************/
 
-class GMLASEntityResolver: public EntityResolver,
-                           public IGMLASInputSourceClosing
+class GMLASAnalyzerEntityResolver: public GMLASBaseEntityResolver
 {
-        std::vector<CPLString> m_aosPathStack;
         std::map<CPLString, CPLString>& m_oMapURIToPrefix;
-        GMLASResourceCache& m_oCache;
 
+  protected:
+        virtual void DoExtraSchemaProcessing(const CPLString& osFilename,
+                                             VSILFILE* fp);
   public:
-        GMLASEntityResolver(const CPLString& osBasePath,
+        GMLASAnalyzerEntityResolver(const CPLString& osBasePath,
                             std::map<CPLString, CPLString>& oMapURIToPrefix,
                             GMLASResourceCache& oCache)
-            : m_oMapURIToPrefix(oMapURIToPrefix)
-            , m_oCache(oCache)
+            : GMLASBaseEntityResolver(osBasePath, oCache)
+            , m_oMapURIToPrefix(oMapURIToPrefix)
         {
-            m_aosPathStack.push_back(osBasePath);
         }
-
-        virtual ~GMLASEntityResolver()
-        {
-            CPLAssert( m_aosPathStack.size() == 1 );
-        }
-
-        /* Called by GMLASInputSource destructor. This is useful for use to */
-        /* know where a .xsd has been finished from processing. Note that we */
-        /* strongly depend on Xerces behaviour here... */
-        virtual void notifyClosing(const CPLString& osFilename )
-        {
-            CPLDebug("GMLAS", "Closing %s", osFilename.c_str());
-
-            CPLAssert( m_aosPathStack.back() ==
-                                        CPLString(CPLGetDirname(osFilename)) );
-            m_aosPathStack.pop_back();
-        }
-
-        virtual InputSource* resolveEntity( const XMLCh* const publicId,
-                                            const XMLCh* const systemId);
 };
 
 /************************************************************************/
-/*                         resolveEntity()                              */
+/*                         DoExtraSchemaProcessing()                    */
 /************************************************************************/
 
-InputSource* GMLASEntityResolver::resolveEntity( const XMLCh* const /*publicId*/,
-                                                 const XMLCh* const systemId)
+void GMLASAnalyzerEntityResolver::DoExtraSchemaProcessing(
+                                             const CPLString& osFilename,
+                                             VSILFILE* fp)
 {
-    CPLString osSystemId(transcode(systemId));
-
-    CPLString osNewPath;
-    VSILFILE* fp = m_oCache.Open(osSystemId,
-                                 m_aosPathStack.back(),
-                                 osNewPath);
-    if( fp == NULL )
-    {
-        return NULL;
-    }
-    CPLDebug("GMLAS", "Opening %s", osNewPath.c_str());
-
-    CollectNamespacePrefixes(osNewPath, fp, m_oMapURIToPrefix);
+    CollectNamespacePrefixes(osFilename, fp, m_oMapURIToPrefix);
     VSIFSeekL(fp, 0, SEEK_SET);
-
-    m_aosPathStack.push_back( CPLGetDirname(osNewPath) );
-    GMLASInputSource* poIS = new GMLASInputSource(osNewPath, fp, true);
-    poIS->SetClosingCallback(this);
-    return poIS;
 }
 
 /************************************************************************/
@@ -534,7 +497,7 @@ bool GMLASSchemaAnalyzer::Analyze(const CPLString& osBaseDirname,
         {
             osXSDDirname = CPLGetDirname(("/vsicurl_streaming/" + osXSDFilename).c_str());
         }
-        GMLASEntityResolver oEntityResolver( osXSDDirname,
+        GMLASAnalyzerEntityResolver oEntityResolver( osXSDDirname,
                                              m_oMapURIToPrefix,
                                              oCache );
         poParser->setEntityResolver(&oEntityResolver);

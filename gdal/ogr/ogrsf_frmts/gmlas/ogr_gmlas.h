@@ -88,6 +88,45 @@ class IGMLASInputSourceClosing
 };
 
 /************************************************************************/
+/*                         GMLASResourceCache                           */
+/************************************************************************/
+
+class GMLASResourceCache
+{
+    public:
+                    GMLASResourceCache() {}
+
+                    VSILFILE* Open( const CPLString& osResource,
+                                    const CPLString& osBasePath,
+                                    CPLString& osOutFilename );
+};
+
+
+/************************************************************************/
+/*                     GMLASBaseEntityResolver                          */
+/************************************************************************/
+
+class GMLASBaseEntityResolver: public EntityResolver,
+                           public IGMLASInputSourceClosing
+{
+        std::vector<CPLString> m_aosPathStack;
+        GMLASResourceCache& m_oCache;
+
+  protected:
+        virtual void DoExtraSchemaProcessing(const CPLString& osFilename,
+                                             VSILFILE* fp);
+
+  public:
+        GMLASBaseEntityResolver(const CPLString& osBasePath,
+                                GMLASResourceCache& oCache);
+        virtual ~GMLASBaseEntityResolver();
+
+        virtual void notifyClosing(const CPLString& osFilename );
+        virtual InputSource* resolveEntity( const XMLCh* const publicId,
+                                            const XMLCh* const systemId);
+};
+
+/************************************************************************/
 /*                          GMLASInputSource                            */
 /************************************************************************/
 
@@ -358,21 +397,6 @@ class GMLASFeatureClass
 };
 
 /************************************************************************/
-/*                         GMLASResourceCache                           */
-/************************************************************************/
-
-class GMLASResourceCache
-{
-    public:
-                    GMLASResourceCache() {}
-
-                    VSILFILE* Open( const CPLString& osResource,
-                                    const CPLString& osBasePath,
-                                    CPLString& osOutFilename );
-};
-
-
-/************************************************************************/
 /*                         GMLASSchemaAnalyzer                          */
 /************************************************************************/
 
@@ -492,6 +516,7 @@ class OGRGMLASDataSource: public GDALDataset
         OGRLayer                      *m_poRelationshipsLayer;
         VSILFILE                      *m_fpGML;
         bool                           m_bLayerInitFinished;
+        bool                           m_bValidate;
         bool                           m_bFirstPassDone;
         /** Map from a SRS name to a boolean indicating if its coordinate
             order is inverted. */
@@ -750,6 +775,15 @@ class GMLASReader : public DefaultHandler
             This is used to know if reprojection must be done */
         std::map<OGRGeomFieldDefn*, CPLString> m_oMapGeomFieldDefnToSRSName;
 
+        /** Whether this parsing involves schema validation */
+        bool                       m_bValidate;
+
+        /** Schema cache */
+        GMLASResourceCache         m_oCache;
+
+        /** Entity resolver used during schema validation */
+        GMLASBaseEntityResolver* m_poEntityResolver;
+
         static void SetField( OGRFeature* poFeature,
                               OGRGMLASLayer* poLayer,
                               int nAttrIdx,
@@ -777,7 +811,8 @@ class GMLASReader : public DefaultHandler
         bool Init(const char* pszFilename,
                   VSILFILE* fp,
                   const std::map<CPLString, CPLString>& oMapURIToPrefix,
-                  std::vector<OGRGMLASLayer*>* papoLayers);
+                  std::vector<OGRGMLASLayer*>* papoLayers,
+                  bool bValidate);
 
         void SetLayerOfInterest( OGRGMLASLayer* poLayer );
 
@@ -809,8 +844,6 @@ class GMLASReader : public DefaultHandler
 
         virtual  void characters( const XMLCh *const chars,
                         const XMLSize_t length );
-
-        virtual void startEntity (const XMLCh *const name);
 
         void RunFirstPass();
 };

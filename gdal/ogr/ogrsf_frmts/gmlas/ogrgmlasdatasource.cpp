@@ -47,6 +47,7 @@ OGRGMLASDataSource::OGRGMLASDataSource()
     m_bExposeMetadataLayers = false;
     m_fpGML = NULL;
     m_bLayerInitFinished = false;
+    m_bValidate = false;
     m_bFirstPassDone = false;
 
     m_poFieldsMetadataLayer = new OGRMemLayer
@@ -433,6 +434,7 @@ bool OGRGMLASDataSource::Open(GDALOpenInfo* poOpenInfo)
     {
         return false;
     }
+    m_oMapURIToPrefix = oAnalyzer.GetMapURIToPrefix();
 
     m_bExposeMetadataLayers = CPLTestBool(
         CSLFetchNameValueDef(poOpenInfo->papszOpenOptions,
@@ -461,7 +463,25 @@ bool OGRGMLASDataSource::Open(GDALOpenInfo* poOpenInfo)
     }
     m_bLayerInitFinished = true;
 
-    m_oMapURIToPrefix = oAnalyzer.GetMapURIToPrefix();
+
+    // Do optional validation
+    m_bValidate = CPLTestBool(
+        CSLFetchNameValueDef(poOpenInfo->papszOpenOptions,
+                             "VALIDATE", "NO") );
+    if( m_bValidate )
+    {
+        CPLErrorReset();
+        RunFirstPassIfNeeded( NULL );
+        if( CPLTestBool( CSLFetchNameValueDef(poOpenInfo->papszOpenOptions,
+                             "FAIL_IF_VALIDATION_ERROR", "NO") ) &&
+            CPLGetLastErrorType() != CE_None )
+        {
+            CPLError(CE_Failure, CPLE_AppDefined,
+                     "Validation errors encountered");
+            return false;
+        }
+    }
+    CPLErrorReset();
 
     return true;
 }
@@ -515,8 +535,11 @@ void OGRGMLASDataSource::RunFirstPassIfNeeded( GMLASReader* poReader )
 {
     if( m_bFirstPassDone )
     {
-        poReader->SetMapSRSNameToInvertedAxis(m_oMapSRSNameToInvertedAxis);
-        poReader->SetMapGeomFieldDefnToSRSName(m_oMapGeomFieldDefnToSRSName);
+        if( poReader != NULL )
+        {
+            poReader->SetMapSRSNameToInvertedAxis(m_oMapSRSNameToInvertedAxis);
+            poReader->SetMapGeomFieldDefnToSRSName(m_oMapGeomFieldDefnToSRSName);
+        }
         return;
     }
 
@@ -534,15 +557,28 @@ void OGRGMLASDataSource::RunFirstPassIfNeeded( GMLASReader* poReader )
     }
 
     // If so, do an initial pass to determine the SRS of those geometry fields.
-    if( bHasGeomFields )
+    if( bHasGeomFields || m_bValidate )
     {
-        VSILFILE* fp = poReader->GetFP();
+        bool bJustOpenedFiled =false;
+        VSILFILE* fp = NULL;
+        if( poReader )
+            fp = poReader->GetFP();
+        else
+        {
+            fp = VSIFOpenL(GetGMLFilename(), "rb");
+            if( fp == NULL )
+            {
+                return;
+            }
+            bJustOpenedFiled = true;
+        }
 
         GMLASReader* poReaderFirstPass = new GMLASReader();
         poReaderFirstPass->Init( GetGMLFilename(),
-                        fp,
-                        GetMapURIToPrefix(),
-                        GetLayers() );
+                                 fp,
+                                 GetMapURIToPrefix(),
+                                 GetLayers(),
+                                 m_bValidate );
         poReaderFirstPass->RunFirstPass();
 
         // Store 2 maps to reinject them in real readers
@@ -554,9 +590,14 @@ void OGRGMLASDataSource::RunFirstPassIfNeeded( GMLASReader* poReader )
         delete poReaderFirstPass;
 
         VSIFSeekL(fp, 0, SEEK_SET);
+        if( bJustOpenedFiled )
+            PushUnusedGMLFilePointer(fp);
 
-        poReader->SetMapSRSNameToInvertedAxis(m_oMapSRSNameToInvertedAxis);
-        poReader->SetMapGeomFieldDefnToSRSName(m_oMapGeomFieldDefnToSRSName);
+        if( poReader != NULL )
+        {
+            poReader->SetMapSRSNameToInvertedAxis(m_oMapSRSNameToInvertedAxis);
+            poReader->SetMapGeomFieldDefnToSRSName(m_oMapGeomFieldDefnToSRSName);
+        }
 
         for(size_t i=0;i<m_apoLayers.size();i++)
         {

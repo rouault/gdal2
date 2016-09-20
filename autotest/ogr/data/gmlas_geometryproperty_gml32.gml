@@ -8,7 +8,7 @@
   <ogr:featureMember>
     <ogr:test gml:id="poly.0">
       <ogr:geometryProperty> <gml:Point gml:id="poly.geom.Geometry" srsName="urn:ogc:def:crs:EPSG::4326"> <gml:pos>49 2</gml:pos> </gml:Point> </ogr:geometryProperty>
-      <ogr:geometryPropertyEmpty/>
+      <ogr:geometryPropertyEmpty xsi:nil="true"/>
       <ogr:pointProperty><gml:Point gml:id="poly.geom.Point" srsName="urn:ogc:def:crs:EPSG::4326"><gml:pos>50 3</gml:pos></gml:Point></ogr:pointProperty>
       <ogr:lineStringProperty><gml:LineString gml:id="poly.geom.LineString" srsName="EPSG:4326"><gml:pos>2 49</gml:pos></gml:LineString></ogr:lineStringProperty>
       <ogr:polygonProperty><gml:Polygon gml:id="poly.geom.Polygon"><gml:exterior><gml:LinearRing><gml:posList>0 0 0 1 1 1 1 0 0 0</gml:posList></gml:LinearRing></gml:exterior></gml:Polygon></ogr:polygonProperty>

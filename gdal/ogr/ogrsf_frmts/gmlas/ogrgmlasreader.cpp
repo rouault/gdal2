@@ -215,6 +215,79 @@ void GMLASErrorHandler::handle (const SAXParseException& e, CPLErr eErr)
 }
 
 /************************************************************************/
+/*                     GMLASBaseEntityResolver()                        */
+/************************************************************************/
+
+GMLASBaseEntityResolver::GMLASBaseEntityResolver(const CPLString& osBasePath,
+                                                 GMLASResourceCache& oCache) 
+    : m_oCache(oCache)
+{
+    m_aosPathStack.push_back(osBasePath);
+}
+
+/************************************************************************/
+/*                    ~GMLASBaseEntityResolver()                        */
+/************************************************************************/
+
+GMLASBaseEntityResolver::~GMLASBaseEntityResolver()
+{
+    CPLAssert( m_aosPathStack.size() == 1 );
+}
+
+/************************************************************************/
+/*                            notifyClosing()                           */
+/************************************************************************/
+
+/* Called by GMLASInputSource destructor. This is useful for use to */
+/* know where a .xsd has been finished from processing. Note that we */
+/* strongly depend on Xerces behaviour here... */
+void GMLASBaseEntityResolver::notifyClosing(const CPLString& osFilename )
+{
+    CPLDebug("GMLAS", "Closing %s", osFilename.c_str());
+
+    CPLAssert( m_aosPathStack.back() ==
+                                CPLString(CPLGetDirname(osFilename)) );
+    m_aosPathStack.pop_back();
+}
+
+/************************************************************************/
+/*                         DoExtraSchemaProcessing()                    */
+/************************************************************************/
+
+void GMLASBaseEntityResolver::DoExtraSchemaProcessing(
+                                             const CPLString& /*osFilename*/,
+                                             VSILFILE* /*fp*/)
+{
+}
+
+/************************************************************************/
+/*                         resolveEntity()                              */
+/************************************************************************/
+
+InputSource* GMLASBaseEntityResolver::resolveEntity(
+                                                const XMLCh* const /*publicId*/,
+                                                const XMLCh* const systemId)
+{
+    CPLString osSystemId(transcode(systemId));
+
+    CPLString osNewPath;
+    VSILFILE* fp = m_oCache.Open(osSystemId,
+                                 m_aosPathStack.back(),
+                                 osNewPath);
+    if( fp == NULL )
+    {
+        return NULL;
+    }
+    CPLDebug("GMLAS", "Opening %s", osNewPath.c_str());
+    DoExtraSchemaProcessing( osNewPath, fp );
+
+    m_aosPathStack.push_back( CPLGetDirname(osNewPath) );
+    GMLASInputSource* poIS = new GMLASInputSource(osNewPath, fp, true);
+    poIS->SetClosingCallback(this);
+    return poIS;
+}
+
+/************************************************************************/
 /*                             Dump()                                   */
 /************************************************************************/
 
@@ -269,6 +342,8 @@ GMLASReader::GMLASReader()
     m_nMaxLevel = atoi(CPLGetConfigOption("GMLAS_XML_MAX_LEVEL", "100"));
     m_nMaxContentSize = static_cast<size_t>(
           atoi(CPLGetConfigOption("GMLAS_XML_MAX_CONTENT_SIZE", "512000000")));
+    m_bValidate = false;
+    m_poEntityResolver = NULL;
 }
 
 /************************************************************************/
@@ -296,6 +371,7 @@ GMLASReader::~GMLASReader()
     {
         CPLDestroyXMLNode(m_apsXMLNodeStack[0].psNode);
     }
+    delete m_poEntityResolver;
 }
 
 /************************************************************************/
@@ -314,10 +390,12 @@ void GMLASReader::SetLayerOfInterest( OGRGMLASLayer* poLayer )
 bool GMLASReader::Init(const char* pszFilename,
                        VSILFILE* fp,
                        const std::map<CPLString, CPLString>& oMapURIToPrefix,
-                       std::vector<OGRGMLASLayer*>* papoLayers)
+                       std::vector<OGRGMLASLayer*>* papoLayers,
+                       bool bValidate)
 {
     m_oMapURIToPrefix = oMapURIToPrefix;
     m_papoLayers = papoLayers;
+    m_bValidate = bValidate;
 
     m_poSAXReader = XMLReaderFactory::createXMLReader();
 
@@ -325,23 +403,34 @@ bool GMLASReader::Init(const char* pszFilename,
     //
     m_poSAXReader->setFeature (XMLUni::fgSAX2CoreNameSpaces, true);
     m_poSAXReader->setFeature (XMLUni::fgSAX2CoreNameSpacePrefixes, true);
-    //m_poSAXReader->setFeature (XMLUni::fgSAX2CoreValidation, true);
 
     m_poSAXReader->setContentHandler( this );
     m_poSAXReader->setLexicalHandler( this );
-    m_poSAXReader->setEntityResolver( this );
     m_poSAXReader->setDTDHandler( this );
 
-    // Enable validation.
-    //
-    /*m_poSAXReader->setFeature (XMLUni::fgXercesSchema, true);
-    m_poSAXReader->setFeature (XMLUni::fgXercesSchemaFullChecking, true);
-    m_poSAXReader->setFeature (XMLUni::fgXercesValidationErrorAsFatal, true);*/
+    if( bValidate )
+    {
+        // Enable validation.
+        m_poSAXReader->setFeature (XMLUni::fgSAX2CoreValidation, true);
+        m_poSAXReader->setFeature (XMLUni::fgXercesSchema, true);
+        m_poSAXReader->setFeature (XMLUni::fgXercesSchemaFullChecking, true);
 
-    // Don't load schemas from any other source (e.g., from XML document's
-    // xsi:schemaLocation attributes).
-    //
-    m_poSAXReader->setFeature (XMLUni::fgXercesLoadSchema, false);
+        // We want all errors to be reported
+        m_poSAXReader->setFeature (XMLUni::fgXercesValidationErrorAsFatal, false);
+
+        m_poEntityResolver = new GMLASBaseEntityResolver(
+                                                CPLGetDirname(pszFilename),
+                                                m_oCache );
+        m_poSAXReader->setEntityResolver( m_poEntityResolver );
+    }
+    else
+    {
+        // Don't load schemas from any other source (e.g., from XML document's
+        // xsi:schemaLocation attributes).
+        //
+        m_poSAXReader->setFeature (XMLUni::fgXercesLoadSchema, false);
+        m_poSAXReader->setEntityResolver( this );
+    }
 
     m_poSAXReader->setErrorHandler(&m_oErrorHandler);
 
@@ -350,18 +439,6 @@ bool GMLASReader::Init(const char* pszFilename,
 
     return true;
 }
-
-#ifdef notdef
-/************************************************************************/
-/*                               ends_with()                            */
-/************************************************************************/
-
-static bool ends_with(const CPLString& haystack, const CPLString& needle)
-{
-    return haystack.size() >= needle.size() &&
-           haystack.substr(haystack.size() - needle.size()).compare(needle) == 0;
-}
-#endif
 
 /************************************************************************/
 /*                                SetField()                            */
@@ -1774,14 +1851,6 @@ void GMLASReader::characters( const XMLCh *const chars,
 }
 
 /************************************************************************/
-/*                             startEntity()                            */
-/************************************************************************/
-
-void GMLASReader::startEntity (const XMLCh *const /*name*/)
-{
-}
-
-/************************************************************************/
 /*                            GetNextFeature()                          */
 /************************************************************************/
 
@@ -1881,14 +1950,18 @@ void GMLASReader::RunFirstPass()
         }
     }
 
+    CPLDebug("GMLAS", "Start of first pass");
+
     // Loop on features until we have determined the SRS of all geometry
-    // columns.
+    // columns. If we do validation, parse the whole file
     OGRFeature* poFeature;
-    while( !m_oSetGeomFieldsWithUnknownSRS.empty() &&
+    while( (m_bValidate || !m_oSetGeomFieldsWithUnknownSRS.empty()) &&
            (poFeature = GetNextFeature(NULL)) != NULL )
     {
         delete poFeature;
     }
+
+    CPLDebug("GMLAS", "End of first pass");
 
     // Clear the set even if we didn't manage to determine all the SRS
     m_oSetGeomFieldsWithUnknownSRS.clear();

@@ -704,6 +704,95 @@ def ogr_gmlas_abstractgeometry():
     return 'success'
 
 ###############################################################################
+# Test validation against schema
+
+class MyHandler:
+    def __init__(self):
+        self.error_list = []
+
+    def error_handler(self, err_type, err_no, err_msg):
+        self.error_list.append((err_type, err_no, err_msg))
+
+def ogr_gmlas_validate():
+
+    gdal.FileFromMemBuffer('/vsimem/ogr_gmlas_validate.xml',
+"""<myns:main_elt xmlns:myns="http://myns"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  xsi:schemaLocation="http://myns ogr_gmlas_validate.xsd">
+    <myns:bar>bar</myns:bar>
+</myns:main_elt>
+""")
+
+    gdal.FileFromMemBuffer('/vsimem/ogr_gmlas_validate.xsd',
+"""<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:myns="http://myns" 
+           targetNamespace="http://myns"
+           elementFormDefault="qualified" attributeFormDefault="unqualified">
+<xs:element name="main_elt">
+  <xs:complexType>
+    <xs:sequence>
+        <xs:element name="foo" type="xs:string"/>
+    </xs:sequence>
+  </xs:complexType>
+</xs:element>
+</xs:schema>""")
+
+    # By default check we are silent about validation error
+    ds = gdal.OpenEx('GMLAS:/vsimem/ogr_gmlas_validate.xml')
+    if ds is None:
+        gdaltest.post_reason('fail')
+        return 'fail'
+    lyr = ds.GetLayer(0)
+    lyr.GetFeatureCount()
+    if gdal.GetLastErrorMsg() != '':
+        gdaltest.post_reason('fail')
+        return 'fail'
+
+    # Enable validation on a doc without validation errors
+    myhandler = MyHandler()
+    gdal.PushErrorHandler(myhandler.error_handler)
+    ds = gdal.OpenEx('GMLAS:data/gmlas_test1.xml', open_options = ['VALIDATE=YES'])
+    gdal.PopErrorHandler()
+    if ds is None:
+        gdaltest.post_reason('fail')
+        return 'fail'
+    if len(myhandler.error_list) != 0:
+        gdaltest.post_reason('fail')
+        print(myhandler.error_list)
+        return 'fail'
+
+    # Validation errors, but do not prevent dataset opening
+    myhandler = MyHandler()
+    gdal.PushErrorHandler(myhandler.error_handler)
+    ds = gdal.OpenEx('GMLAS:/vsimem/ogr_gmlas_validate.xml', open_options = ['VALIDATE=YES'])
+    gdal.PopErrorHandler()
+    if ds is None:
+        gdaltest.post_reason('fail')
+        return 'fail'
+    if len(myhandler.error_list) != 2:
+        gdaltest.post_reason('fail')
+        print(myhandler.error_list)
+        return 'fail'
+
+    # Validation errors and do prevent dataset opening
+    myhandler = MyHandler()
+    gdal.PushErrorHandler(myhandler.error_handler)
+    ds = gdal.OpenEx('GMLAS:/vsimem/ogr_gmlas_validate.xml', open_options = ['VALIDATE=YES', 'FAIL_IF_VALIDATION_ERROR=YES'])
+    gdal.PopErrorHandler()
+    if ds is not None:
+        gdaltest.post_reason('fail')
+        return 'fail'
+    if len(myhandler.error_list) != 3:
+        gdaltest.post_reason('fail')
+        print(myhandler.error_list)
+        return 'fail'
+
+    gdal.Unlink('/vsimem/ogr_gmlas_validate.xml')
+    gdal.Unlink('/vsimem/ogr_gmlas_validate.xsd')
+
+    return 'success'
+
+###############################################################################
 #  Cleanup
 
 def ogr_gmlas_cleanup():
@@ -732,6 +821,7 @@ gdaltest_list = [
     ogr_gmlas_unexpected_repeated_element_variant,
     ogr_gmlas_geometryproperty,
     ogr_gmlas_abstractgeometry,
+    ogr_gmlas_validate,
     ogr_gmlas_cleanup ]
 
 if __name__ == '__main__':

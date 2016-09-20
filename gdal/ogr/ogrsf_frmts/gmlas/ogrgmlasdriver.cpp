@@ -105,6 +105,11 @@ void RegisterOGRGMLAS()
 "  <Option name='EXPOSE_METADATA_LAYERS' type='boolean' "
         "description='Whether metadata layers should be reported by default.' "
         "default='NO'/>"
+"  <Option name='VALIDATE' type='boolean' description='Whether validation "
+        "against the schema should be done' default='NO'/>"
+"  <Option name='FAIL_IF_VALIDATION_ERROR' type='boolean' "
+    "description='Whether a validation error should cause dataset opening to fail' "
+    "default='NO'/>"
 "</OpenOptionList>" );
 
     poDriver->SetMetadataItem( GDAL_DCAP_VIRTUALIO, "YES" );
