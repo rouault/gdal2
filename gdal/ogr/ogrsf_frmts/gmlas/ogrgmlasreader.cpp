@@ -894,7 +894,7 @@ void GMLASReader::startElement(
 {
     CPLString osLocalname( transcode(localname) );
     CPLString osNSPrefix( m_oMapURIToPrefix[ transcode(uri) ] );
-    CPLString osXPath = osNSPrefix + ":" + osLocalname;
+    CPLString osXPath = (osNSPrefix.empty()) ? osLocalname : osNSPrefix + ":" + osLocalname;
 #ifdef DEBUG_VERBOSE
     CPLDebug("GMLAS", "startElement(%s / %s)", transcode(qname).c_str(), osXPath.c_str());
 #endif
