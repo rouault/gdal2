@@ -945,6 +945,8 @@ class GMLASReader : public DefaultHandler
 
         void        ProcessGeometry();
 
+        void        ProcessAttributes(const Attributes& attrs);
+
     public:
                         GMLASReader(GMLASResourceCache& oCache,
                                     const GMLASXPathMatcher& oIgnoredXPathMatcher);

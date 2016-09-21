@@ -1287,6 +1287,55 @@ def ogr_gmlas_cache():
 
     return 'success'
 
+
+###############################################################################
+# Test good working of linking to a child through its id attribute
+
+def ogr_gmlas_link_nested_independant_child():
+
+    if ogr.GetDriverByName('GMLAS') is None:
+        return 'skip'
+
+    gdal.FileFromMemBuffer('/vsimem/ogr_gmlas_link_nested_independant_child.xml',
+"""<first xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  xsi:noNamespaceSchemaLocation="ogr_gmlas_link_nested_independant_child.xsd">
+    <second my_id="second_id"/>
+</first>
+""")
+
+    gdal.FileFromMemBuffer('/vsimem/ogr_gmlas_link_nested_independant_child.xsd',
+"""<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           elementFormDefault="qualified" attributeFormDefault="unqualified">
+<xs:element name="first">
+  <xs:complexType>
+    <xs:sequence>
+        <xs:element ref="second"/>
+    </xs:sequence>
+  </xs:complexType>
+</xs:element>
+
+<xs:element name="second">
+  <xs:complexType>
+    <xs:sequence/>
+    <xs:attribute name="my_id" type="xs:ID" use="required"/>
+  </xs:complexType>
+</xs:element>
+
+</xs:schema>""")
+
+    ds = ogr.Open('GMLAS:/vsimem/ogr_gmlas_link_nested_independant_child.xml')
+    lyr = ds.GetLayer(0)
+    f = lyr.GetNextFeature()
+    if f['second_my_id'] != 'second_id':
+        gdaltest.post_reason('fail')
+        f.DumpReadable()
+        return 'fail'
+
+    gdal.Unlink('/vsimem/ogr_gmlas_link_nested_independant_child.xml')
+    gdal.Unlink('/vsimem/ogr_gmlas_link_nested_independant_child.xsd')
+
+    return 'success'
+
 ###############################################################################
 #  Cleanup
 
@@ -1327,6 +1376,7 @@ gdaltest_list = [
     ogr_gmlas_conf,
     ogr_gmlas_conf_ignored_xpath,
     ogr_gmlas_cache,
+    ogr_gmlas_link_nested_independant_child,
     ogr_gmlas_cleanup ]
 
 if __name__ == '__main__':

@@ -1133,6 +1133,8 @@ void GMLASReader::startElement(
         CPLDebug("GMLAS", "Current layer: %s", m_oCurCtxt.m_poLayer->GetName() );
 #endif
 
+        bool bHasProcessedAttributes = false;
+
         // Find if we can match this element with one of our fields
         int idx = m_oCurCtxt.m_poLayer->
                             GetOGRFieldIndexFromXPath(m_osCurSubXPath);
@@ -1271,14 +1273,8 @@ void GMLASReader::startElement(
                         OGRGMLASLayer* poOldLayer = m_oCurCtxt.m_poLayer;
                         m_oCurCtxt.m_poLayer = poSubLayer;
                         CreateNewFeature(osLocalname);
-                        CPLString osChildId(
-                            m_oCurCtxt.m_poFeature->GetFieldAsString(
-                                    m_oCurCtxt.m_poLayer->GetIDFieldIdx()));
-                        SetField( poOldCurFeature,
-                                  poOldLayer,
-                                  nOldCurFieldIdx,
-                                  osChildId );
 
+                        // Install new context
                         Context oContext;
                         oContext = m_oCurCtxt;
                         oContext.m_nLevel = m_nLevel;
@@ -1292,6 +1288,20 @@ void GMLASReader::startElement(
 #endif
                         m_aoStackContext.push_back( oContext );
                         m_oCurCtxt.m_oMapCounter.clear();
+
+                        // Process attributes now because we might need to
+                        // fetch the child id from them
+                        ProcessAttributes(attrs);
+                        bHasProcessedAttributes = true;
+
+                        CPLString osChildId(
+                            m_oCurCtxt.m_poFeature->GetFieldAsString(
+                                    m_oCurCtxt.m_poLayer->GetIDFieldIdx()));
+                        SetField( poOldCurFeature,
+                                  poOldLayer,
+                                  nOldCurFieldIdx,
+                                  osChildId );
+
                     }
                 }
 
@@ -1348,13 +1358,6 @@ void GMLASReader::startElement(
                         // Create child feature
                         m_oCurCtxt.m_poLayer = poSubLayer;
                         CreateNewFeature(osLocalname);
-                        CPLString osChildId(
-                            m_oCurCtxt.m_poFeature->GetFieldAsString(
-                                    m_oCurCtxt.m_poLayer->GetIDFieldIdx()));
-
-                        // Create junction feature
-                        OGRFeature* poJunctionFeature =
-                                new OGRFeature(poJunctionLayer->GetLayerDefn());
 
                         ++m_oMapGlobalCounter[poJunctionLayer];
                         const int nGlobalCounter =
@@ -1364,12 +1367,7 @@ void GMLASReader::startElement(
                         const int nCounter =
                             m_oCurCtxt.m_oMapCounter[poJunctionLayer];
 
-                        poJunctionFeature->SetFID(nGlobalCounter);
-                        poJunctionFeature->SetField("occurence", nCounter);
-                        poJunctionFeature->SetField("parent_pkid", osParentId);
-                        poJunctionFeature->SetField("child_pkid", osChildId);
-                        PushFeatureReady(poJunctionFeature, poJunctionLayer);
-
+                        // Install new context
                         Context oContext;
                         oContext = m_oCurCtxt;
                         oContext.m_nLevel = m_nLevel;
@@ -1383,6 +1381,25 @@ void GMLASReader::startElement(
 #endif
                         m_aoStackContext.push_back( oContext );
                         m_oCurCtxt.m_oMapCounter.clear();
+
+                        // Process attributes now because we might need to
+                        // fetch the child id from them
+                        ProcessAttributes(attrs);
+                        bHasProcessedAttributes = true;
+
+                        CPLString osChildId(
+                            m_oCurCtxt.m_poFeature->GetFieldAsString(
+                                    m_oCurCtxt.m_poLayer->GetIDFieldIdx()));
+
+                        // Create junction feature
+                        OGRFeature* poJunctionFeature =
+                                new OGRFeature(poJunctionLayer->GetLayerDefn());
+                        poJunctionFeature->SetFID(nGlobalCounter);
+                        poJunctionFeature->SetField("occurence", nCounter);
+                        poJunctionFeature->SetField("parent_pkid", osParentId);
+                        poJunctionFeature->SetField("child_pkid", osChildId);
+                        PushFeatureReady(poJunctionFeature, poJunctionLayer);
+
                     }
                     idx = IDX_COMPOUND_FOLDED;
 
@@ -1429,140 +1446,8 @@ void GMLASReader::startElement(
             m_nCurGeomFieldIdx = -1;
         }
 
-        // Browse through attributes and match them with one of our fields
-        const int nWildcardAttrIdx =
-            m_oCurCtxt.m_poLayer->GetOGRFieldIndexFromXPath(m_osCurSubXPath + "/@*");
-        json_object* poWildcard = NULL;
-
-        for(unsigned int i=0; i < attrs.getLength(); i++)
-        {
-            CPLString osAttrNSPrefix( m_oMapURIToPrefix[
-                                            transcode( attrs.getURI(i) ) ] );
-            CPLString osAttrLocalname( transcode(attrs.getLocalName(i)) );
-            CPLString osAttrValue( transcode(attrs.getValue(i)) );
-            CPLString osAttrXPath = m_osCurSubXPath + "/@";
-            if( !osAttrNSPrefix.empty() )
-                osAttrXPath += osAttrNSPrefix + ":";
-            osAttrXPath += osAttrLocalname;
-            int nAttrIdx = m_oCurCtxt.m_poLayer->GetOGRFieldIndexFromXPath(osAttrXPath);
-            if( nAttrIdx >= 0 )
-            {
-                SetField( m_oCurCtxt.m_poFeature,
-                          m_oCurCtxt.m_poLayer,
-                          nAttrIdx, osAttrValue );
-
-                // If we are a xlink:href attribute, and that the link value is
-                // a internal link, then find if we have
-                // a field that does a relation to a targetElement
-                if( osAttrNSPrefix == "xlink" &&
-                    osAttrLocalname == "href" &&
-                    !osAttrValue.empty() && osAttrValue[0] == '#' )
-                {
-                    int nAttrIdx2 =
-                        m_oCurCtxt.m_poLayer->GetOGRFieldIndexFromXPath(
-                            GMLASField::MakePKIDFieldFromXLinkHrefXPath(
-                                                                osAttrXPath));
-                    if( nAttrIdx2 >= 0 )
-                    {
-                        SetField( m_oCurCtxt.m_poFeature,
-                                  m_oCurCtxt.m_poLayer,
-                                  nAttrIdx2, osAttrValue.substr(1) );
-                    }
-                }
-            }
-
-            else if( osAttrNSPrefix != "xmlns" &&
-                     !(osAttrNSPrefix == "xsi" &&
-                            osAttrLocalname == "schemaLocation") &&
-                     !(osAttrNSPrefix == "xsi" &&
-                            osAttrLocalname == "noNamespaceSchemaLocation") &&
-                     !(osAttrNSPrefix == "xsi" &&
-                            osAttrLocalname == "nil") &&
-                     // Do not warn about fixed attributes on geometry properties
-                     !(m_nCurGeomFieldIdx >= 0 && (
-                        (osAttrNSPrefix == "xlink" && osAttrLocalname == "type") ||
-                        (osAttrNSPrefix == "" && osAttrLocalname == "owns"))) )
-            {
-                CPLString osMatchedXPath;
-                if( nWildcardAttrIdx >= 0 )
-                {
-                    if( poWildcard == NULL )
-                        poWildcard = json_object_new_object();
-                    CPLString osKey;
-                    if( !osAttrNSPrefix.empty() )
-                        osKey = osAttrNSPrefix + ":" + osAttrLocalname;
-                    else
-                        osKey = osAttrLocalname;
-                    json_object_object_add(poWildcard,
-                        osKey,
-                        json_object_new_string(osAttrValue));
-                }
-                else if( m_oIgnoredXPathMatcher.MatchesRefXPath(
-                                            osAttrXPath, m_oMapURIToPrefix,
-                                            osMatchedXPath) )
-                {
-                    if( m_oMapIgnoredXPathToWarn[osMatchedXPath] )
-                    {
-                        CPLError(CE_Warning, CPLE_AppDefined,
-                                "Attribute with xpath=%s found in document but "
-                                "ignored according to configuration",
-                                osAttrXPath.c_str());
-                    }
-                    else
-                    {
-                        CPLDebug("GMLAS",
-                                "Attribute with xpath=%s found in document but "
-                                "ignored according to configuration",
-                                osAttrXPath.c_str());
-                    }
-                }
-                else
-                {
-                    // Emit debug message if unexpected attribute
-                    CPLDebug("GMLAS",
-                                "Unexpected attribute with xpath=%s found",
-                            osAttrXPath.c_str());
-                }
-            }
-        }
-
-        // Store wildcard attributes
-        if( poWildcard != NULL )
-        {
-            SetField( m_oCurCtxt.m_poFeature,
-                      m_oCurCtxt.m_poLayer,
-                      nWildcardAttrIdx,
-                      json_object_get_string(poWildcard) );
-            json_object_put(poWildcard);
-        }
-
-        // Process fixed and default values
-        const int nFieldCount = m_oCurCtxt.m_poFeature->GetFieldCount();
-        const std::vector<GMLASField>& aoFields =
-                        m_oCurCtxt.m_poLayer->GetFeatureClass().GetFields();
-        for( int i=0; i < nFieldCount; i++ )
-        {
-            const int nFCIdx =
-                    m_oCurCtxt.m_poLayer->GetFCFieldIndexFromOGRFieldIdx(i);
-            if( nFCIdx >= 0 &&
-                aoFields[nFCIdx].GetXPath().find('@') != std::string::npos )
-            {
-                // We process fixed as default. In theory, to be XSD compliant,
-                // the user shouldn't have put a different value than the fixed
-                // one, but just in case he did, then honour it instead of
-                // overwriting it.
-                CPLString osFixedDefaultValue = aoFields[nFCIdx].GetFixedValue();
-                if( osFixedDefaultValue.empty() )
-                    osFixedDefaultValue = aoFields[nFCIdx].GetDefaultValue();
-                if( !osFixedDefaultValue.empty() &&
-                    !m_oCurCtxt.m_poFeature->IsFieldSet(i) )
-                {
-                    SetField( m_oCurCtxt.m_poFeature,
-                              m_oCurCtxt.m_poLayer,
-                              i, osFixedDefaultValue);
-                }
-            }
-        }
+        if( !bHasProcessedAttributes )
+            ProcessAttributes(attrs);
     }
     else
     {
@@ -1571,6 +1456,148 @@ void GMLASReader::startElement(
     }
 
     m_nLevel ++;
+}
+
+/************************************************************************/
+/*                          ProcessAttributes()                         */
+/************************************************************************/
+
+void GMLASReader::ProcessAttributes(const Attributes& attrs)
+{
+    // Browse through attributes and match them with one of our fields
+    const int nWildcardAttrIdx =
+        m_oCurCtxt.m_poLayer->GetOGRFieldIndexFromXPath(m_osCurSubXPath + "/@*");
+    json_object* poWildcard = NULL;
+
+    for(unsigned int i=0; i < attrs.getLength(); i++)
+    {
+        CPLString osAttrNSPrefix( m_oMapURIToPrefix[
+                                        transcode( attrs.getURI(i) ) ] );
+        CPLString osAttrLocalname( transcode(attrs.getLocalName(i)) );
+        CPLString osAttrValue( transcode(attrs.getValue(i)) );
+        CPLString osAttrXPath = m_osCurSubXPath + "/@";
+        if( !osAttrNSPrefix.empty() )
+            osAttrXPath += osAttrNSPrefix + ":";
+        osAttrXPath += osAttrLocalname;
+        int nAttrIdx = m_oCurCtxt.m_poLayer->GetOGRFieldIndexFromXPath(osAttrXPath);
+        if( nAttrIdx >= 0 )
+        {
+            SetField( m_oCurCtxt.m_poFeature,
+                        m_oCurCtxt.m_poLayer,
+                        nAttrIdx, osAttrValue );
+
+            // If we are a xlink:href attribute, and that the link value is
+            // a internal link, then find if we have
+            // a field that does a relation to a targetElement
+            if( osAttrNSPrefix == "xlink" &&
+                osAttrLocalname == "href" &&
+                !osAttrValue.empty() && osAttrValue[0] == '#' )
+            {
+                int nAttrIdx2 =
+                    m_oCurCtxt.m_poLayer->GetOGRFieldIndexFromXPath(
+                        GMLASField::MakePKIDFieldFromXLinkHrefXPath(
+                                                            osAttrXPath));
+                if( nAttrIdx2 >= 0 )
+                {
+                    SetField( m_oCurCtxt.m_poFeature,
+                                m_oCurCtxt.m_poLayer,
+                                nAttrIdx2, osAttrValue.substr(1) );
+                }
+            }
+        }
+
+        else if( osAttrNSPrefix != "xmlns" &&
+                    !(osAttrNSPrefix == "xsi" &&
+                        osAttrLocalname == "schemaLocation") &&
+                    !(osAttrNSPrefix == "xsi" &&
+                        osAttrLocalname == "noNamespaceSchemaLocation") &&
+                    !(osAttrNSPrefix == "xsi" &&
+                        osAttrLocalname == "nil") &&
+                    // Do not warn about fixed attributes on geometry properties
+                    !(m_nCurGeomFieldIdx >= 0 && (
+                    (osAttrNSPrefix == "xlink" && osAttrLocalname == "type") ||
+                    (osAttrNSPrefix == "" && osAttrLocalname == "owns"))) )
+        {
+            CPLString osMatchedXPath;
+            if( nWildcardAttrIdx >= 0 )
+            {
+                if( poWildcard == NULL )
+                    poWildcard = json_object_new_object();
+                CPLString osKey;
+                if( !osAttrNSPrefix.empty() )
+                    osKey = osAttrNSPrefix + ":" + osAttrLocalname;
+                else
+                    osKey = osAttrLocalname;
+                json_object_object_add(poWildcard,
+                    osKey,
+                    json_object_new_string(osAttrValue));
+            }
+            else if( m_oIgnoredXPathMatcher.MatchesRefXPath(
+                                        osAttrXPath, m_oMapURIToPrefix,
+                                        osMatchedXPath) )
+            {
+                if( m_oMapIgnoredXPathToWarn[osMatchedXPath] )
+                {
+                    CPLError(CE_Warning, CPLE_AppDefined,
+                            "Attribute with xpath=%s found in document but "
+                            "ignored according to configuration",
+                            osAttrXPath.c_str());
+                }
+                else
+                {
+                    CPLDebug("GMLAS",
+                            "Attribute with xpath=%s found in document but "
+                            "ignored according to configuration",
+                            osAttrXPath.c_str());
+                }
+            }
+            else
+            {
+                // Emit debug message if unexpected attribute
+                CPLDebug("GMLAS",
+                            "Unexpected attribute with xpath=%s found",
+                        osAttrXPath.c_str());
+            }
+        }
+    }
+
+    // Store wildcard attributes
+    if( poWildcard != NULL )
+    {
+        SetField( m_oCurCtxt.m_poFeature,
+                    m_oCurCtxt.m_poLayer,
+                    nWildcardAttrIdx,
+                    json_object_get_string(poWildcard) );
+        json_object_put(poWildcard);
+    }
+
+    // Process fixed and default values
+    const int nFieldCount = m_oCurCtxt.m_poFeature->GetFieldCount();
+    const std::vector<GMLASField>& aoFields =
+                    m_oCurCtxt.m_poLayer->GetFeatureClass().GetFields();
+    for( int i=0; i < nFieldCount; i++ )
+    {
+        const int nFCIdx =
+                m_oCurCtxt.m_poLayer->GetFCFieldIndexFromOGRFieldIdx(i);
+        if( nFCIdx >= 0 &&
+            aoFields[nFCIdx].GetXPath().find('@') != std::string::npos )
+        {
+            // We process fixed as default. In theory, to be XSD compliant,
+            // the user shouldn't have put a different value than the fixed
+            // one, but just in case he did, then honour it instead of
+            // overwriting it.
+            CPLString osFixedDefaultValue = aoFields[nFCIdx].GetFixedValue();
+            if( osFixedDefaultValue.empty() )
+                osFixedDefaultValue = aoFields[nFCIdx].GetDefaultValue();
+            if( !osFixedDefaultValue.empty() &&
+                !m_oCurCtxt.m_poFeature->IsFieldSet(i) )
+            {
+                SetField( m_oCurCtxt.m_poFeature,
+                            m_oCurCtxt.m_poLayer,
+                            i, osFixedDefaultValue);
+            }
+        }
+    }
 }
 
 /************************************************************************/

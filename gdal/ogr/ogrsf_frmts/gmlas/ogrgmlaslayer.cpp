@@ -82,11 +82,14 @@ OGRGMLASLayer::OGRGMLASLayer( OGRGMLASDataSource* poDS,
     {
         // Determine if we have an xs:ID attribute/elt, and if it is compulsory,
         // If so, place it as first field (not strictly required, but more readable)
+        // Furthermore restrict that to attributes, because otherwise it is
+        // impractical in the reader when joining related features.
         const std::vector<GMLASField>& oFields = m_oFC.GetFields();
         for(int i=0; i< static_cast<int>(oFields.size()); i++ )
         {
             if( oFields[i].GetType() == GMLAS_FT_ID &&
-                oFields[i].IsNotNullable() )
+                oFields[i].IsNotNullable() &&
+                oFields[i].GetXPath().find('@') != std::string::npos)
             {
                 OGRFieldDefn oFieldDefn( oFields[i].GetName(), OFTString );
                 oFieldDefn.SetNullable( false );
