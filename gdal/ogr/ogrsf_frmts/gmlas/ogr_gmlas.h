@@ -93,8 +93,25 @@ class IGMLASInputSourceClosing
 
 class GMLASResourceCache
 {
+                bool            m_bHasCheckedCacheDirectory;
+                CPLString       m_osCacheDirectory;
+                bool            m_bRefresh;
+                bool            m_bAllowRemoteSchemaDownload;
+                std::set<CPLString> m_aoSetRefreshedFiles;
+
+                static bool RecursivelyCreateDirectoryIfNeeded(
+                                                const CPLString& osDirname);
+                bool RecursivelyCreateDirectoryIfNeeded();
+
     public:
-                    GMLASResourceCache() {}
+                             GMLASResourceCache();
+                    virtual ~GMLASResourceCache();
+
+                    void    SetCacheDirectory(const CPLString& osCacheDirectory);
+                    void    SetRefreshMode(bool bRefresh)
+                                            { m_bRefresh = bRefresh; }
+                    void    SetAllowRemoteSchemaDownload(bool bVal)
+                                    { m_bAllowRemoteSchemaDownload = bVal; }
 
                     VSILFILE* Open( const CPLString& osResource,
                                     const CPLString& osBasePath,
@@ -175,6 +192,97 @@ class GMLASErrorHandler: public ErrorHandler
         bool m_bFailed;
 
         void handle (const SAXParseException& e, CPLErr eErr);
+};
+
+/************************************************************************/
+/*                          GMLASConfiguration                          */
+/************************************************************************/
+
+class GMLASConfiguration
+{
+    public:
+        static const bool ALLOW_REMOTE_SCHEMA_DOWNLOAD_DEFAULT = true;
+        static const bool USE_ARRAYS_DEFAULT = true;
+        static const bool INCLUDE_GEOMETRY_XML_DEFAULT = true;
+        static const bool ALLOW_XSD_CACHE_DEFAULT = true;
+        static const bool VALIDATE_DEFAULT = false;
+        static const bool FAIL_IF_VALIDATION_ERROR_DEFAULT = false;
+        static const bool WARN_IF_EXCLUDED_XPATH_FOUND_DEFAULT = true;
+
+        /** Whether remote schemas are allowed to be download. */
+        bool            m_bAllowRemoteSchemaDownload;
+
+        /** Whether repeated strings, integers, reals should be in corresponding
+            OGR array types. */
+        bool            m_bUseArrays;
+
+        /** Whether geometries should be stored as XML in a OGR string field. */
+        bool            m_bIncludeGeometryXML;
+
+        /** Whether remote XSD schemas should be locally cached. */
+        bool            m_bAllowXSDCache;
+
+        /** Cache directory for cached XSD schemas. */
+        CPLString       m_osCacheDirectory;
+
+        /** Whether validation of document against schema should be done.  */
+        bool            m_bValidate;
+
+        /** Whether a validation error should prevent dataset opening.  */
+        bool            m_bFailIfValidationError;
+
+        /** For ignored xpaths, map prefix namespace to its URI */
+        std::map<CPLString, CPLString> m_oMapPrefixToURIIgnoredXPaths;
+
+        /** Ignored xpaths */
+        std::vector<CPLString> m_aosIgnoredXPaths;
+
+        /** Whether a warning should be emitted when an element or attribute is
+            found in the document parsed, but ignored because of the ignored
+            XPath defined.  */
+        std::map<CPLString, bool> m_oMapIgnoredXPathToWarn;
+
+                                    GMLASConfiguration();
+                    virtual        ~GMLASConfiguration();
+
+                            bool    Load(const char* pszFilename);
+                            void    Finalize();
+};
+
+/************************************************************************/
+/*                           GMLASXPathMatcher                          */
+/************************************************************************/
+
+/** Object to compares a user provided XPath against a set of test XPaths */
+class GMLASXPathMatcher
+{
+        /** For reference xpaths, map prefix namespace to its URI */
+        std::map<CPLString, CPLString> m_oMapPrefixToURIReferenceXPaths;
+
+        /** Reference xpaths */
+        std::vector<CPLString> m_aosReferenceXPaths;
+
+        bool MatchesRefXPath(
+            const CPLString& osXPath,
+            const CPLString& osRefXPath,
+            const std::map<CPLString,CPLString>& oMapURIToPrefix) const;
+
+    public:
+                                GMLASXPathMatcher();
+                    virtual    ~GMLASXPathMatcher();
+
+        void    SetRefXPaths(const std::map<CPLString, CPLString>&
+                                    oMapPrefixToURIReferenceXPaths,
+                                const std::vector<CPLString>& 
+                                    aosReferenceXPaths);
+
+        /** Return true if osXPath (with its associate namespace mappings
+            defined by oMapURIToPrefix) matches one of the XPath of
+            m_aosReferenceXPaths */
+        bool MatchesRefXPath(
+            const CPLString& osXPath,
+            const std::map<CPLString,CPLString>& oMapURIToPrefix,
+            CPLString& osOutMatchedXPath ) const;
 };
 
 /************************************************************************/
@@ -403,7 +511,11 @@ class GMLASFeatureClass
 
 class GMLASSchemaAnalyzer
 {
-        bool m_bAllowArrays;
+        const GMLASXPathMatcher& m_oIgnoredXPathMatcher;
+
+        /** Whether repeated strings, integers, reals should be in corresponding
+            OGR array types. */
+        bool m_bUseArrays;
 
         /** Vector of feature classes */
         std::vector<GMLASFeatureClass> m_aoClasses;
@@ -453,6 +565,7 @@ class GMLASSchemaAnalyzer
                                 XSElementDeclaration* poParentElt,
                                 std::vector<XSElementDeclaration*>& apoImplEltList);
         bool FindElementsWithMustBeToLevel(
+                            const CPLString& osParentXPath,
                             XSModelGroup* poModelGroup,
                             int nRecursionCounter,
                             std::set<XSElementDeclaration*>& oSetVisitedEltDecl,
@@ -486,11 +599,14 @@ class GMLASSchemaAnalyzer
 
         bool IsGMLNamespace(const CPLString& osURI);
 
-    public:
-        GMLASSchemaAnalyzer();
-        void SetAllowArrays(bool b) { m_bAllowArrays = b; }
+        bool IsIgnoredXPath(const CPLString& osXPath);
 
-        bool Analyze(const CPLString& osBaseDirname,
+    public:
+        GMLASSchemaAnalyzer( const GMLASXPathMatcher& oIgnoredXPathMatcher );
+        void SetUseArrays(bool b) { m_bUseArrays = b; }
+
+        bool Analyze(GMLASResourceCache& oCache,
+                     const CPLString& osBaseDirname,
                      const std::vector<PairURIFilename>& aoXSDs);
         const std::vector<GMLASFeatureClass>& GetClasses() const
                 { return m_aoClasses; }
@@ -528,6 +644,13 @@ class OGRGMLASDataSource: public GDALDataset
 
         std::vector<PairURIFilename>   m_aoXSDs;
 
+        GMLASConfiguration             m_oConf;
+
+        /** Schema cache */
+        GMLASResourceCache             m_oCache;
+
+        GMLASXPathMatcher              m_oIgnoredXPathMatcher;
+
         void TranslateClasses( OGRGMLASLayer* poParentLayer,
                                const GMLASFeatureClass& oFC );
 
@@ -555,11 +678,18 @@ class OGRGMLASDataSource: public GDALDataset
                                             { return m_poRelationshipsLayer; }
         OGRGMLASLayer*          GetLayerByXPath( const CPLString& osXPath );
 
+        GMLASResourceCache& GetCache() { return m_oCache; }
+
         void        RunFirstPassIfNeeded( GMLASReader* poReader );
 
         void        PushUnusedGMLFilePointer( VSILFILE* fpGML );
         VSILFILE   *PopUnusedGMLFilePointer();
         bool        IsLayerInitFinished() const { return m_bLayerInitFinished; }
+
+        const std::map<CPLString,bool>& GetMapIgnoredXPathToWarn() const {
+                                return m_oConf.m_oMapIgnoredXPathToWarn; }
+        const GMLASXPathMatcher& GetIgnoredXPathMatcher() const
+                                { return  m_oIgnoredXPathMatcher; }
 
 };
 
@@ -621,7 +751,7 @@ class OGRGMLASLayer: public OGRLayer
         virtual OGRFeature* GetNextFeature();
         virtual int TestCapability( const char* ) { return FALSE; }
 
-        void PostInit();
+        void PostInit(bool bIncludeGeometryXML);
 
         const GMLASFeatureClass& GetFeatureClass() const { return m_oFC; }
         int GetOGRFieldIndexFromXPath(const CPLString& osXPath) const;
@@ -640,6 +770,12 @@ class OGRGMLASLayer: public OGRLayer
 
 class GMLASReader : public DefaultHandler
 {
+        /** Schema cache */
+        GMLASResourceCache&        m_oCache;
+
+        /** Object to tell if a XPath must be ignored */
+        const GMLASXPathMatcher& m_oIgnoredXPathMatcher;
+
         /** Whether we should stop parsing */
         bool              m_bParsingError;
 
@@ -781,11 +917,13 @@ class GMLASReader : public DefaultHandler
         /** Whether this parsing involves schema validation */
         bool                       m_bValidate;
 
-        /** Schema cache */
-        GMLASResourceCache         m_oCache;
-
         /** Entity resolver used during schema validation */
         GMLASBaseEntityResolver* m_poEntityResolver;
+
+        /** Whether a warning should be emitted when an element or attribute is
+            found in the document parsed, but ignored because of the ignored
+            XPath defined.  */
+        std::map<CPLString, bool> m_oMapIgnoredXPathToWarn;
 
         static void SetField( OGRFeature* poFeature,
                               OGRGMLASLayer* poLayer,
@@ -808,7 +946,8 @@ class GMLASReader : public DefaultHandler
         void        ProcessGeometry();
 
     public:
-                        GMLASReader();
+                        GMLASReader(GMLASResourceCache& oCache,
+                                    const GMLASXPathMatcher& oIgnoredXPathMatcher);
                         ~GMLASReader();
 
         bool Init(const char* pszFilename,
@@ -819,6 +958,9 @@ class GMLASReader : public DefaultHandler
                   const std::vector<PairURIFilename>& aoXSDs = std::vector<PairURIFilename>() );
 
         void SetLayerOfInterest( OGRGMLASLayer* poLayer );
+
+        void SetMapIgnoredXPathToWarn(const std::map<CPLString,bool>& oMap)
+                    { m_oMapIgnoredXPathToWarn = oMap; }
 
         VSILFILE* GetFP() const { return m_fp; }
 

@@ -1,6 +1,4 @@
 /******************************************************************************
- * $Id$
- *
  * Project:  OGR
  * Purpose:  OGRGMLASDriver implementation
  * Author:   Even Rouault, <even dot rouault at spatialys dot com>
@@ -119,7 +117,7 @@ OGRGMLASLayer::OGRGMLASLayer( OGRGMLASDataSource* poDS,
 /*                             PostInit()                               */
 /************************************************************************/
 
-void OGRGMLASLayer::PostInit()
+void OGRGMLASLayer::PostInit( bool bIncludeGeometryXML )
 {
     const std::vector<GMLASField>& oFields = m_oFC.GetFields();
 
@@ -441,13 +439,11 @@ void OGRGMLASLayer::PostInit()
                 break;
         }
 
-/*
         if( oFields[i].GetType() == GMLAS_FT_GEOMETRY &&
-            !poDS->GetCreateGeometryXMLField() )
+            !bIncludeGeometryXML )
         {
             continue;
         }
-*/
 
         if( oFields[i].IsArray() )
         {
@@ -645,13 +641,19 @@ bool OGRGMLASLayer::InitReader()
             return false;
     }
 
-    m_poReader = new GMLASReader();
+    m_poReader = new GMLASReader( m_poDS->GetCache(),
+                                  m_poDS->GetIgnoredXPathMatcher() );
     m_poReader->Init( m_poDS->GetGMLFilename(),
                       m_fpGML,
                       m_poDS->GetMapURIToPrefix(),
                       m_poDS->GetLayers(),
                       false );
+
     m_poDS->RunFirstPassIfNeeded( m_poReader );
+
+    m_poReader->SetMapIgnoredXPathToWarn(
+                                    m_poDS->GetMapIgnoredXPathToWarn());
+
     m_poReader->SetLayerOfInterest( this );
 
     m_bLayerDefnFinalized = true;

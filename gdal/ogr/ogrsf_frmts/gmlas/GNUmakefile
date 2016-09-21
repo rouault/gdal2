@@ -3,10 +3,10 @@ include ../../../GDALmake.opt
 
 OBJ =	ogrgmlasdriver.o ogrgmlasdatasource.o ogrgmlaslayer.o \
         ogrgmlasreader.o ogrgmlasschemaanalyzer.o ogrgmlasfeatureclass.o \
-        ogrgmlasxsdcache.o ogrgmlasutils.o
+        ogrgmlasxsdcache.o ogrgmlasutils.o ogrgmlasconf.o ogrgmlasxpatchmatcher.o
 
 CPPFLAGS :=	-I../mem $(JSON_INCLUDE) -I.. -I../.. -DHAVE_XERCES=1 \
-		 $(XERCES_INCLUDE) $(CPPFLAGS)
+		 $(XERCES_INCLUDE) $(CPPFLAGS) -DDO_NOT_USE_DEBUG_BOOL
 
 default:	$(O_OBJ:.o=.$(OBJ_EXT))
 

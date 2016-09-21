@@ -1,6 +1,4 @@
 /******************************************************************************
- * $Id$
- *
  * Project:  OGR
  * Purpose:  OGRGMLASDriver implementation
  * Author:   Even Rouault, <even dot rouault at spatialys dot com>
@@ -102,6 +100,8 @@ void RegisterOGRGMLAS()
 "<OpenOptionList>"
 "  <Option name='XSD' type='string' description='Space separated list of "
             "filenames of XML schemas that apply to the data file'/>"
+"  <Option name='CONFIG_FILE' type='string' "
+            "description='Filename of the configuration file'/>"
 "  <Option name='EXPOSE_METADATA_LAYERS' type='boolean' "
         "description='Whether metadata layers should be reported by default.' "
         "default='NO'/>"
@@ -109,6 +109,9 @@ void RegisterOGRGMLAS()
         "against the schema should be done' default='NO'/>"
 "  <Option name='FAIL_IF_VALIDATION_ERROR' type='boolean' "
     "description='Whether a validation error should cause dataset opening to fail' "
+    "default='NO'/>"
+"  <Option name='REFRESH_CACHE' type='boolean' "
+    "description='Whether remote schemas should be downloaded from the server' "
     "default='NO'/>"
 "</OpenOptionList>" );
 

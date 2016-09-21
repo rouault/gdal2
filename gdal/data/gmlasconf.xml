@@ -1,0 +1,38 @@
+<!-- This file is under the public domain -->
+
+<Configuration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+               xsi:noNamespaceSchemaLocation="gmlasconf.xsd">
+
+    <AllowRemoteSchemaDownload>true</AllowRemoteSchemaDownload>
+    <SchemaCache enabled="true">
+        <Directory/> <!-- empty: use $HOME/.gdal/gmlas_xsd_cache by default -->
+    </SchemaCache>
+    <Validation enabled="false">
+        <FailIfError>false</FailIfError>
+    </Validation>
+    <LayerBuildingRules>
+        <UseArrays>true</UseArrays>
+        <IncludeGeometryXML>true</IncludeGeometryXML>
+    </LayerBuildingRules>
+
+    <IgnoredXPaths>
+        <WarnIfIgnoredXPathFoundInDocInstance>true</WarnIfIgnoredXPathFoundInDocInstance>
+        <Namespaces>
+            <Namespace prefix="gml" uri="http://www.opengis.net/gml"/>
+            <Namespace prefix="gml32" uri="http://www.opengis.net/gml/3.2"/>
+        </Namespaces>
+        <XPath warnIfIgnoredXPathFoundInDocInstance="false">gml:boundedBy</XPath>
+        <XPath warnIfIgnoredXPathFoundInDocInstance="false">gml32:boundedBy</XPath>
+        <XPath>gml:priorityLocation</XPath>
+        <XPath>gml32:priorityLocation</XPath>
+        <XPath>gml32:descriptionReference/@owns</XPath>
+        <XPath>@xlink:show</XPath>
+        <XPath>@xlink:type</XPath>
+        <XPath>@xlink:role</XPath>
+        <XPath>@xlink:arcrole</XPath>
+        <XPath>@xlink:actuate</XPath>
+        <XPath>@gml:remoteSchema</XPath>
+        <XPath>@gml32:remoteSchema</XPath>
+    </IgnoredXPaths>
+
+</Configuration>

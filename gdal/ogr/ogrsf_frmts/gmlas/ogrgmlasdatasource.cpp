@@ -1,6 +1,4 @@
 /******************************************************************************
- * $Id$
- *
  * Project:  OGR
  * Purpose:  OGRGMLASDriver implementation
  * Author:   Even Rouault, <even dot rouault at spatialys dot com>
@@ -375,8 +373,39 @@ void GMLASGuessXSDFilename::startElement(
 
 bool OGRGMLASDataSource::Open(GDALOpenInfo* poOpenInfo)
 {
-    GMLASSchemaAnalyzer oAnalyzer;
-    oAnalyzer.SetAllowArrays(true);
+    const char* pszConfigFile = CSLFetchNameValue(poOpenInfo->papszOpenOptions,
+                                                  "CONFIG_FILE");
+    if( pszConfigFile == NULL )
+        pszConfigFile = CPLFindFile("gdal", "gmlasconf.xml");
+    if( pszConfigFile == NULL )
+    {
+        CPLError(CE_Warning, CPLE_AppDefined,
+                 "No configuration file found. Using hard-coded defaults");
+        m_oConf.Finalize();
+    }
+    else
+    {
+        if( !m_oConf.Load(pszConfigFile) )
+        {
+            CPLError(CE_Failure, CPLE_AppDefined,
+                     "Loading of configuration failed");
+            return false;
+        }
+    }
+
+    m_oCache.SetCacheDirectory( m_oConf.m_osCacheDirectory );
+    m_oCache.SetRefreshMode( CPLTestBool(
+        CSLFetchNameValueDef(poOpenInfo->papszOpenOptions,
+                             "REFRESH_CACHE", "NO") ) );
+    m_oCache.SetAllowRemoteSchemaDownload(
+                                    m_oConf.m_bAllowRemoteSchemaDownload );
+
+    m_oIgnoredXPathMatcher.SetRefXPaths(
+                                    m_oConf.m_oMapPrefixToURIIgnoredXPaths,
+                                    m_oConf.m_aosIgnoredXPaths );
+
+    GMLASSchemaAnalyzer oAnalyzer(m_oIgnoredXPathMatcher);
+    oAnalyzer.SetUseArrays(m_oConf.m_bUseArrays);
 
     m_osGMLFilename = STARTS_WITH_CI(poOpenInfo->pszFilename, "GMLAS:") ?
         poOpenInfo->pszFilename + strlen("GMLAS:") : poOpenInfo->pszFilename;
@@ -411,10 +440,23 @@ bool OGRGMLASDataSource::Open(GDALOpenInfo* poOpenInfo)
     else
     {
         char** papszTokens = CSLTokenizeString2(osXSDFilename," ,",0);
+        char* pszCurDir = CPLGetCurrentDir();
         for( int i=0; papszTokens != NULL && papszTokens[i] != NULL; i++ )
         {
-            aoXSDs.push_back(PairURIFilename("",papszTokens[i]));
+            if( !STARTS_WITH(papszTokens[i], "http://") &&
+                !STARTS_WITH(papszTokens[i], "https://") &&
+                CPLIsFilenameRelative(papszTokens[i]) &&
+                pszCurDir != NULL )
+            {
+                aoXSDs.push_back(PairURIFilename("",
+                            CPLFormFilename(pszCurDir, papszTokens[i], NULL)));
+            }
+            else
+            {
+                aoXSDs.push_back(PairURIFilename("",papszTokens[i]));
+            }
         }
+        CPLFree(pszCurDir);
         CSLDestroy(papszTokens);
         m_aoXSDs = aoXSDs;
     }
@@ -436,7 +478,9 @@ bool OGRGMLASDataSource::Open(GDALOpenInfo* poOpenInfo)
         }
         return false;
     }
-    bool bRet = oAnalyzer.Analyze( CPLGetDirname(m_osGMLFilename), aoXSDs );
+    bool bRet = oAnalyzer.Analyze( m_oCache,
+                                   CPLGetDirname(m_osGMLFilename),
+                                   aoXSDs );
     if( !bRet )
     {
         return false;
@@ -467,21 +511,22 @@ bool OGRGMLASDataSource::Open(GDALOpenInfo* poOpenInfo)
     // to be able to do cross-layer links
     for( size_t i = 0; i < m_apoLayers.size(); i++ )
     {
-        m_apoLayers[i]->PostInit();
+        m_apoLayers[i]->PostInit( m_oConf.m_bIncludeGeometryXML );
     }
     m_bLayerInitFinished = true;
 
 
     // Do optional validation
-    m_bValidate = CPLTestBool(
-        CSLFetchNameValueDef(poOpenInfo->papszOpenOptions,
-                             "VALIDATE", "NO") );
+    m_bValidate = CPLFetchBool(poOpenInfo->papszOpenOptions,
+                              "VALIDATE",
+                               m_oConf.m_bValidate);
     if( m_bValidate )
     {
         CPLErrorReset();
         RunFirstPassIfNeeded( NULL );
-        if( CPLTestBool( CSLFetchNameValueDef(poOpenInfo->papszOpenOptions,
-                             "FAIL_IF_VALIDATION_ERROR", "NO") ) &&
+        if( CPLFetchBool( poOpenInfo->papszOpenOptions,
+                          "FAIL_IF_VALIDATION_ERROR",
+                          m_oConf.m_bFailIfValidationError ) &&
             CPLGetLastErrorType() != CE_None )
         {
             CPLError(CE_Failure, CPLE_AppDefined,
@@ -489,7 +534,8 @@ bool OGRGMLASDataSource::Open(GDALOpenInfo* poOpenInfo)
             return false;
         }
     }
-    CPLErrorReset();
+    if( CPLGetLastErrorType() == CE_Failure )
+        CPLErrorReset();
 
     return true;
 }
@@ -581,13 +627,20 @@ void OGRGMLASDataSource::RunFirstPassIfNeeded( GMLASReader* poReader )
             bJustOpenedFiled = true;
         }
 
-        GMLASReader* poReaderFirstPass = new GMLASReader();
+        GMLASReader* poReaderFirstPass = new GMLASReader(m_oCache,
+                                                         m_oIgnoredXPathMatcher );
         poReaderFirstPass->Init( GetGMLFilename(),
                                  fp,
                                  GetMapURIToPrefix(),
                                  GetLayers(),
                                  m_bValidate,
                                  m_aoXSDs );
+
+        poReaderFirstPass->SetMapIgnoredXPathToWarn(
+                                    m_oConf.m_oMapIgnoredXPathToWarn);
+        // No need to warn afterwards
+        m_oConf.m_oMapIgnoredXPathToWarn.clear();
+
         poReaderFirstPass->RunFirstPass();
 
         // Store 2 maps to reinject them in real readers

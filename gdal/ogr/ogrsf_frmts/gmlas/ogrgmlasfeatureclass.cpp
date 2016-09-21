@@ -1,6 +1,4 @@
 /******************************************************************************
- * $Id$
- *
  * Project:  OGR
  * Purpose:  OGRGMLASDriver implementation
  * Author:   Even Rouault, <even dot rouault at spatialys dot com>

@@ -1,6 +1,4 @@
 /******************************************************************************
- * $Id$
- *
  * Project:  OGR
  * Purpose:  OGRGMLASDriver implementation
  * Author:   Even Rouault, <even dot rouault at spatialys dot com>
@@ -34,6 +32,73 @@
 #include "cpl_sha256.h"
 
 CPL_CVSID("$Id$");
+
+/************************************************************************/
+/*                         GMLASResourceCache()                         */
+/************************************************************************/
+
+GMLASResourceCache::GMLASResourceCache()
+    : m_bHasCheckedCacheDirectory(false)
+    , m_bRefresh(false)
+    , m_bAllowRemoteSchemaDownload(true)
+{
+}
+
+/************************************************************************/
+/*                        ~GMLASResourceCache()                         */
+/************************************************************************/
+
+GMLASResourceCache::~GMLASResourceCache()
+{
+}
+
+/************************************************************************/
+/*                         SetCacheDirectory()                          */
+/************************************************************************/
+
+void GMLASResourceCache::SetCacheDirectory(const CPLString& osCacheDirectory)
+{
+    m_osCacheDirectory = osCacheDirectory;
+}
+
+
+/************************************************************************/
+/*                     RecursivelyCreateDirectoryIfNeeded()             */
+/************************************************************************/
+
+bool GMLASResourceCache::RecursivelyCreateDirectoryIfNeeded(
+                                                const CPLString& osDirname)
+{
+    VSIStatBufL sStat;
+    if( VSIStatL(osDirname, &sStat) == 0 )
+    {
+        return true;
+    }
+
+    CPLString osParent = CPLGetDirname(osDirname);
+    if( !osParent.empty() && osParent != "." )
+    {
+        if( !RecursivelyCreateDirectoryIfNeeded(osParent) )
+            return false;
+    }
+    return VSIMkdir( osDirname, 0755 ) == 0;
+}
+
+bool GMLASResourceCache::RecursivelyCreateDirectoryIfNeeded()
+{
+    if( !m_bHasCheckedCacheDirectory )
+    {
+        m_bHasCheckedCacheDirectory = true;
+        if( !RecursivelyCreateDirectoryIfNeeded(m_osCacheDirectory) )
+        {
+            CPLError(CE_Warning, CPLE_AppDefined,
+                     "Cannot create %s", m_osCacheDirectory.c_str());
+            m_osCacheDirectory.clear();
+            return false;
+        }
+    }
+    return true;
+}
 
 /************************************************************************/
 /*                               Open()                                 */
@@ -72,7 +137,9 @@ VSILFILE* GMLASResourceCache::Open( const CPLString& osResource,
                 osOutFilename.c_str());
 
     VSILFILE* fp = NULL;
-    if( osOutFilename.find("/vsicurl_streaming/") == 0 )
+    if( !m_osCacheDirectory.empty() &&
+        osOutFilename.find("/vsicurl_streaming/") == 0 &&
+        RecursivelyCreateDirectoryIfNeeded() )
     {
         CPLString osLaunderedName(osOutFilename);
         if( osOutFilename.find("/vsicurl_streaming/http://") == 0 )
@@ -100,31 +167,52 @@ VSILFILE* GMLASResourceCache::Open( const CPLString& osResource,
                      osLaunderedName.c_str());
         }
 
-        CPLString osCachedFileName("cache_xsd/" + osLaunderedName);
-        fp = VSIFOpenL( osCachedFileName, "rb");
+        CPLString osCachedFileName(CPLFormFilename(
+                                m_osCacheDirectory, osLaunderedName, NULL));
+        if( !m_bRefresh ||
+            m_aoSetRefreshedFiles.find(osCachedFileName) !=
+                                            m_aoSetRefreshedFiles.end() )
+        {
+            fp = VSIFOpenL( osCachedFileName, "rb");
+        }
         if( fp != NULL )
         {
             CPLDebug("GMLAS", "Use cached %s", osCachedFileName.c_str());
         }
-        else
+        else if( m_bAllowRemoteSchemaDownload )
         {
-            VSIStatBufL sStat;
-            if( VSIStatL("cache_xsd", &sStat) == 0 )
+            if( m_bRefresh )
+                m_aoSetRefreshedFiles.insert(osCachedFileName);
+
+            CPLString osTmpfilename( osCachedFileName + ".tmp" );
+            if( CPLCopyFile( osTmpfilename, osOutFilename) == 0 )
             {
-                CPLString osTmpfilename( osCachedFileName + ".tmp" );
-                CPLCopyFile( osTmpfilename, osOutFilename);
-                VSIRename( osTmpfilename, osCachedFileName );
-                fp = VSIFOpenL(osCachedFileName, "rb");
-            }
-            else
-            {
-                fp = VSIFOpenL(osOutFilename, "rb");
+                // Due to the caching done by /vsicurl_streaming/, if the
+                // web server is no longer available but was before in the
+                // same process, then file opening will succeed. Hence we
+                // check that the downloaded file is not 0. This will only
+                // happen in practice with the unit tests.
+                VSIStatBufL sStat;
+                if( VSIStatL(osTmpfilename, &sStat) == 0 &&
+                    sStat.st_size != 0 )
+                {
+                    VSIRename( osTmpfilename, osCachedFileName );
+                    fp = VSIFOpenL(osCachedFileName, "rb");
+                }
+                else
+                {
+                    VSIUnlink(osTmpfilename);
+                }
             }
         }
     }
     else
     {
-        fp = VSIFOpenL(osOutFilename, "rb");
+        if( m_bAllowRemoteSchemaDownload ||
+            osOutFilename.find("/vsicurl_streaming/") != 0 )
+        {
+            fp = VSIFOpenL(osOutFilename, "rb");
+        }
     }
 
     if( fp == NULL )

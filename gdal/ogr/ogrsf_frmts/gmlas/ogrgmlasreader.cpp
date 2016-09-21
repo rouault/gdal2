@@ -1,6 +1,4 @@
 /******************************************************************************
- * $Id$
- *
  * Project:  OGR
  * Purpose:  OGRGMLASDriver implementation
  * Author:   Even Rouault, <even dot rouault at spatialys dot com>
@@ -284,12 +282,12 @@ InputSource* GMLASBaseEntityResolver::resolveEntity(
     VSILFILE* fp = m_oCache.Open(osSystemId,
                                  m_aosPathStack.back(),
                                  osNewPath);
-    if( fp == NULL )
+
+    if( fp != NULL )
     {
-        return NULL;
+        CPLDebug("GMLAS", "Opening %s", osNewPath.c_str());
+        DoExtraSchemaProcessing( osNewPath, fp );
     }
-    CPLDebug("GMLAS", "Opening %s", osNewPath.c_str());
-    DoExtraSchemaProcessing( osNewPath, fp );
 
     m_aosPathStack.push_back( CPLGetDirname(osNewPath) );
     GMLASInputSource* poIS = new GMLASInputSource(osNewPath, fp, true);
@@ -327,7 +325,10 @@ void GMLASReader::Context::Dump()
 /*                             GMLASReader()                            */
 /************************************************************************/
 
-GMLASReader::GMLASReader()
+GMLASReader::GMLASReader(GMLASResourceCache& oCache,
+                         const GMLASXPathMatcher& oIgnoredXPathMatcher)
+    : m_oCache(oCache)
+    , m_oIgnoredXPathMatcher(oIgnoredXPathMatcher)
 {
     m_bParsingError = false;
     m_poSAXReader = NULL;
@@ -1228,8 +1229,16 @@ void GMLASReader::startElement(
             m_bIsXMLBlobIncludeUpper = false;
 
 #ifdef DEBUG_VERBOSE
-            CPLDebug("GMLAS", "Matches field %s", m_oCurCtxt.m_poLayer->
-                            GetLayerDefn()->GetFieldDefn(idx)->GetNameRef() );
+            if( idx >= 0 )
+            {
+                CPLDebug("GMLAS", "Matches field %s", m_oCurCtxt.m_poLayer->
+                         GetLayerDefn()->GetFieldDefn(idx)->GetNameRef() );
+            }
+            if( geom_idx >= 0 )
+            {
+                CPLDebug("GMLAS", "Matches geometry field %s", m_oCurCtxt.m_poLayer->
+                         GetLayerDefn()->GetGeomFieldDefn(geom_idx)->GetNameRef() );
+            }
 #endif
             if( nFCFieldIdx >= 0 )
             {
@@ -1385,8 +1394,33 @@ void GMLASReader::startElement(
             m_nCurGeomFieldIdx = -1;
             if( idx != IDX_COMPOUND_FOLDED )
             {
-                CPLDebug("GMLAS", "Unexpected element with xpath=%s (subxpath=%s) found",
-                         m_osCurXPath.c_str(), m_osCurSubXPath.c_str());
+                CPLString osMatchedXPath;
+                if( m_oIgnoredXPathMatcher.MatchesRefXPath(
+                                        m_osCurSubXPath, m_oMapURIToPrefix,
+                                        osMatchedXPath) )
+                {
+                    if( m_oMapIgnoredXPathToWarn[osMatchedXPath] )
+                    {
+                        CPLError(CE_Warning, CPLE_AppDefined,
+                                 "Element with xpath=%s found in document but "
+                                 "ignored according to configuration",
+                                 m_osCurSubXPath.c_str());
+                    }
+                    else
+                    {
+                        CPLDebug("GMLAS",
+                                 "Element with xpath=%s found in document but "
+                                 "ignored according to configuration",
+                                 m_osCurSubXPath.c_str());
+                    }
+                }
+                else
+                {
+                    CPLDebug("GMLAS",
+                             "Unexpected element with xpath=%s (subxpath=%s) found",
+                             m_osCurXPath.c_str(),
+                             m_osCurSubXPath.c_str());
+                }
             }
         }
         else
@@ -1397,7 +1431,7 @@ void GMLASReader::startElement(
 
         // Browse through attributes and match them with one of our fields
         const int nWildcardAttrIdx =
-            m_oCurCtxt.m_poLayer->GetOGRFieldIndexFromXPath(m_osCurSubXPath + "@*");
+            m_oCurCtxt.m_poLayer->GetOGRFieldIndexFromXPath(m_osCurSubXPath + "/@*");
         json_object* poWildcard = NULL;
 
         for(unsigned int i=0; i < attrs.getLength(); i++)
@@ -1406,7 +1440,7 @@ void GMLASReader::startElement(
                                             transcode( attrs.getURI(i) ) ] );
             CPLString osAttrLocalname( transcode(attrs.getLocalName(i)) );
             CPLString osAttrValue( transcode(attrs.getValue(i)) );
-            CPLString osAttrXPath = m_osCurSubXPath + "@";
+            CPLString osAttrXPath = m_osCurSubXPath + "/@";
             if( !osAttrNSPrefix.empty() )
                 osAttrXPath += osAttrNSPrefix + ":";
             osAttrXPath += osAttrLocalname;
@@ -1441,12 +1475,15 @@ void GMLASReader::startElement(
                      !(osAttrNSPrefix == "xsi" &&
                             osAttrLocalname == "schemaLocation") &&
                      !(osAttrNSPrefix == "xsi" &&
+                            osAttrLocalname == "noNamespaceSchemaLocation") &&
+                     !(osAttrNSPrefix == "xsi" &&
                             osAttrLocalname == "nil") &&
                      // Do not warn about fixed attributes on geometry properties
                      !(m_nCurGeomFieldIdx >= 0 && (
                         (osAttrNSPrefix == "xlink" && osAttrLocalname == "type") ||
                         (osAttrNSPrefix == "" && osAttrLocalname == "owns"))) )
             {
+                CPLString osMatchedXPath;
                 if( nWildcardAttrIdx >= 0 )
                 {
                     if( poWildcard == NULL )
@@ -1460,10 +1497,30 @@ void GMLASReader::startElement(
                         osKey,
                         json_object_new_string(osAttrValue));
                 }
+                else if( m_oIgnoredXPathMatcher.MatchesRefXPath(
+                                            osAttrXPath, m_oMapURIToPrefix,
+                                            osMatchedXPath) )
+                {
+                    if( m_oMapIgnoredXPathToWarn[osMatchedXPath] )
+                    {
+                        CPLError(CE_Warning, CPLE_AppDefined,
+                                "Attribute with xpath=%s found in document but "
+                                "ignored according to configuration",
+                                osAttrXPath.c_str());
+                    }
+                    else
+                    {
+                        CPLDebug("GMLAS",
+                                "Attribute with xpath=%s found in document but "
+                                "ignored according to configuration",
+                                osAttrXPath.c_str());
+                    }
+                }
                 else
                 {
                     // Emit debug message if unexpected attribute
-                    CPLDebug("GMLAS", "Unexpected attribute with xpath=%s found",
+                    CPLDebug("GMLAS",
+                                "Unexpected attribute with xpath=%s found",
                             osAttrXPath.c_str());
                 }
             }

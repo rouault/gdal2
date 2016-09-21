@@ -1,6 +1,4 @@
 /******************************************************************************
- * $Id$
- *
  * Project:  OGR
  * Purpose:  OGRGMLASDriver implementation
  * Author:   Even Rouault, <even dot rouault at spatialys dot com>
@@ -159,8 +157,10 @@ void GMLASAnalyzerEntityResolver::DoExtraSchemaProcessing(
 /*                        GMLASSchemaAnalyzer()                         */
 /************************************************************************/
 
-GMLASSchemaAnalyzer::GMLASSchemaAnalyzer()
-    : m_bAllowArrays(false)
+GMLASSchemaAnalyzer::GMLASSchemaAnalyzer(
+                            const GMLASXPathMatcher& oIgnoredXPathMatcher )
+    : m_oIgnoredXPathMatcher(oIgnoredXPathMatcher)
+    , m_bUseArrays(false)
 {
     // A few hardcoded namespace uri->prefix mappings
     m_oMapURIToPrefix[ pszXMLNS_URI ] = "xmlns";
@@ -433,11 +433,10 @@ static XSComplexTypeDefinition* IsEltCompatibleOfFC(
 /*                               Analyze()                              */
 /************************************************************************/
 
-bool GMLASSchemaAnalyzer::Analyze(const CPLString& osBaseDirname,
+bool GMLASSchemaAnalyzer::Analyze(GMLASResourceCache& oCache,
+                                  const CPLString& osBaseDirname,
                                   const std::vector<PairURIFilename>& aoXSDs)
 {
-    GMLASResourceCache oCache;
-
     GMLASUniquePtr<XMLGrammarPool> poGrammarPool(
          (new XMLGrammarPoolImpl(XMLPlatformUtils::fgMemoryManager)));
 
@@ -600,12 +599,19 @@ bool GMLASSchemaAnalyzer::Analyze(const CPLString& osBaseDirname,
             XSComplexTypeDefinition* poCT = IsEltCompatibleOfFC(poEltDecl);
             if( !poEltDecl->getAbstract() && poCT != NULL  )
             {
-                FindElementsWithMustBeToLevel(
-                        poCT->getParticle()->getModelGroupTerm(),
-                        0,
-                        oSetVisitedEltDecl,
-                        oSetVisitedModelGroups,
-                        poModel);
+                const CPLString osXPath(MakeXPath(
+                                  transcode(poEltDecl->getNamespace()),
+                                  transcode(poEltDecl->getName())));
+                if( !IsIgnoredXPath(osXPath ) )
+                {
+                    FindElementsWithMustBeToLevel(
+                            osXPath,
+                            poCT->getParticle()->getModelGroupTerm(),
+                            0,
+                            oSetVisitedEltDecl,
+                            oSetVisitedModelGroups,
+                            poModel);
+                }
             }
         }
 
@@ -716,6 +722,15 @@ bool GMLASSchemaAnalyzer::InstantiateClassFromEltDeclaration(
         const CPLString osXPath( MakeXPath(
                                 transcode(poEltDecl->getNamespace()),
                                 osEltName ) );
+
+        if( IsIgnoredXPath( osXPath ) )
+        {
+#ifdef DEBUG_VERBOSE
+            CPLDebug("GMLAS", "%s is in ignored xpaths",
+                        osXPath.c_str());
+#endif
+            return false;
+        }
 
         if( m_oMapEltNamesToInstanceCount[osEltName] > 1 )
         {
@@ -944,7 +959,7 @@ void GMLASSchemaAnalyzer::SetFieldFromAttribute(
     else
         oField.SetName( osNamePrefix + "_" + osName );
 
-    oField.SetXPath( osXPathPrefix + "@" +
+    oField.SetXPath( osXPathPrefix + "/@" +
                         MakeXPath( osNS, osName) );
     if( poAttr->getRequired() )
     {
@@ -1082,6 +1097,17 @@ void GMLASSchemaAnalyzer::CreateNonNestedRelationship(
             const CPLString osSubEltXPath(
                 MakeXPath(transcode(poSubElt->getNamespace()),
                           osSubEltName) );
+            const CPLString osRealFullXPath( oClass.GetXPath() + "/" +
+                                             osSubEltXPath );
+
+            if( IsIgnoredXPath( osRealFullXPath ) )
+            {
+#ifdef DEBUG_VERBOSE
+                CPLDebug("GMLAS", "%s is in ignored xpaths",
+                         osRealFullXPath.c_str());
+#endif
+                continue;
+            }
 
             GMLASField oField;
             if( apoImplEltList.size() > 1 )
@@ -1103,8 +1129,7 @@ void GMLASSchemaAnalyzer::CreateNonNestedRelationship(
             {
                 oField.SetName( transcode(poElt->getName()) + "_pkid" );
             }
-            oField.SetXPath( oClass.GetXPath() + "/" +
-                                                osSubEltXPath);
+            oField.SetXPath( osRealFullXPath );
             oField.SetMinOccurs( 0 );
             oField.SetMaxOccurs( nMaxOccurs );
             oField.SetCategory( GMLASField::PATH_TO_CHILD_ELEMENT_WITH_LINK );
@@ -1117,7 +1142,8 @@ void GMLASSchemaAnalyzer::CreateNonNestedRelationship(
                         m_oSetInstanciatedElements.end() )
             {
 #ifdef DEBUG_VERBOSE
-                CPLDebug("GMLAS", "Adding %s as (%s) needed type",
+                CPLDebug("GMLAS", "%d: Adding %s as (%s) needed type",
+                         __LINE__,
                          osSubEltXPath.c_str(),
                          transcode(poSubElt->getTypeDefinition()->
                                                         getName()).c_str());
@@ -1179,7 +1205,8 @@ void GMLASSchemaAnalyzer::CreateNonNestedRelationship(
                         m_oSetInstanciatedElements.end() )
             {
 #ifdef DEBUG_VERBOSE
-                CPLDebug("GMLAS", "Adding %s as (%s) needed type",
+                CPLDebug("GMLAS", "%d: Adding %s as (%s) needed type",
+                         __LINE__,
                          osSubEltXPath.c_str(),
                          transcode(poSubElt->getTypeDefinition()->
                                                     getName()).c_str());
@@ -1242,7 +1269,24 @@ void GMLASSchemaAnalyzer::CreateNonNestedRelationship(
 #endif
 }
 
+/************************************************************************/
+/*                          IsIgnoredXPath()                            */
+/************************************************************************/
+
+bool GMLASSchemaAnalyzer::IsIgnoredXPath(const CPLString& osXPath)
+{
+    CPLString osIgnored;
+    return m_oIgnoredXPathMatcher.MatchesRefXPath(osXPath,
+                                                  m_oMapURIToPrefix,
+                                                  osIgnored);
+}
+
+/************************************************************************/
+/*                     FindElementsWithMustBeToLevel()                  */
+/************************************************************************/
+
 bool GMLASSchemaAnalyzer::FindElementsWithMustBeToLevel(
+                            const CPLString& osParentXPath,
                             XSModelGroup* poModelGroup,
                             int nRecursionCounter,
                             std::set<XSElementDeclaration*>& oSetVisitedEltDecl,
@@ -1276,6 +1320,16 @@ bool GMLASSchemaAnalyzer::FindElementsWithMustBeToLevel(
             const CPLString osEltName(transcode(poElt->getName()));
             const CPLString osEltNS(transcode(poElt->getNamespace()));
             const CPLString osXPath( MakeXPath(osEltNS, osEltName) );
+            const CPLString osFullXPath( osParentXPath + "/" + osXPath );
+
+            if( IsIgnoredXPath( osFullXPath ) )
+            {
+#ifdef DEBUG_VERBOSE
+                CPLDebug("GMLAS", "%s is in ignored xpaths",
+                         osFullXPath.c_str());
+#endif
+                continue;
+            }
 
             std::vector<XSElementDeclaration*> apoImplEltList;
             GetConcreteImplementationTypes(poElt, apoImplEltList);
@@ -1306,6 +1360,15 @@ bool GMLASSchemaAnalyzer::FindElementsWithMustBeToLevel(
                     const CPLString osSubEltXPath(
                         MakeXPath(transcode(poSubElt->getNamespace()),
                                     transcode(poSubElt->getName())) );
+
+                    if( IsIgnoredXPath( osParentXPath + "/" + osSubEltXPath ) )
+                    {
+#ifdef DEBUG_VERBOSE
+                        CPLDebug("GMLAS", "%s is in ignored xpaths",
+                                 (osParentXPath + "/" + osSubEltXPath).c_str());
+#endif
+                        continue;
+                    }
 
                     // Make sure we will instanciate the referenced element
                     if( m_oSetTopLevelElements.find( poSubElt ) == 
@@ -1362,6 +1425,7 @@ bool GMLASSchemaAnalyzer::FindElementsWithMustBeToLevel(
                     if( poEltCT->getParticle() != NULL )
                     {
                         if( !FindElementsWithMustBeToLevel(
+                                        osFullXPath,
                                         poEltCT->getParticle()->getModelGroupTerm(),
                                         nRecursionCounter + 1,
                                         oSetVisitedEltDecl,
@@ -1378,7 +1442,9 @@ bool GMLASSchemaAnalyzer::FindElementsWithMustBeToLevel(
         else if( poParticle->getTermType() == XSParticle::TERM_MODELGROUP )
         {
             XSModelGroup* psSubModelGroup = poParticle->getModelGroupTerm();
-            if( !FindElementsWithMustBeToLevel( psSubModelGroup,
+            if( !FindElementsWithMustBeToLevel(
+                                    osParentXPath,
+                                    psSubModelGroup,
                                     nRecursionCounter + 1,
                                     oSetVisitedEltDecl,
                                     oSetVisitedModelGroups,
@@ -1443,6 +1509,16 @@ bool GMLASSchemaAnalyzer::ExploreModelGroup(
         GMLASField oField;
         XSAttributeUse* poAttr = poMainAttrList->elementAt(j);
         SetFieldFromAttribute(oField, poAttr, oClass.GetXPath());
+
+        if( IsIgnoredXPath( oField.GetXPath() ) )
+        {
+#ifdef DEBUG_VERBOSE
+            CPLDebug("GMLAS", "%s is in ignored xpaths",
+                     oField.GetXPath().c_str());
+#endif
+            continue;
+        }
+
         oClass.AddField(oField);
     }
 
@@ -1499,6 +1575,15 @@ bool GMLASSchemaAnalyzer::ExploreModelGroup(
 #ifdef DEBUG_VERBOSE
             CPLDebug("GMLAS", "Iterating through %s", osElementXPath.c_str());
 #endif
+
+            if( IsIgnoredXPath( osElementXPath ) )
+            {
+#ifdef DEBUG_VERBOSE
+                CPLDebug("GMLAS", "%s is in ignored xpaths",
+                         osElementXPath.c_str());
+#endif
+                continue;
+            }
 
             CPLString osTargetElement;
             if( poElt->getAnnotation() != NULL )
@@ -1616,7 +1701,7 @@ bool GMLASSchemaAnalyzer::ExploreModelGroup(
                 oField.SetMaxOccurs( nMaxOccurs );
 
                 bool bNeedAuxTable = false;
-                if( m_bAllowArrays && bRepeatedParticle &&
+                if( m_bUseArrays && bRepeatedParticle &&
                     IsCompatibleOfArray(oField.GetType()) )
                 {
                     oField.SetArray( true );
@@ -1668,7 +1753,7 @@ bool GMLASSchemaAnalyzer::ExploreModelGroup(
                         GMLASField oFieldNil;
                         oFieldNil.SetName( osEltName +
                                            "_nil" );
-                        oFieldNil.SetXPath( osElementXPath + "@xsi:nil" );
+                        oFieldNil.SetXPath( osElementXPath + "/@xsi:nil" );
                         oFieldNil.SetType( GMLAS_FT_BOOLEAN, "boolean" );
                         oFieldNil.SetMinOccurs( 0 );
                         oFieldNil.SetMaxOccurs( 1 );
@@ -1707,6 +1792,16 @@ bool GMLASSchemaAnalyzer::ExploreModelGroup(
                     SetFieldFromAttribute(oField, poAttr,
                                           osElementXPath,
                                           osNamePrefix);
+
+                    if( IsIgnoredXPath( oField.GetXPath() ) )
+                    {
+#ifdef DEBUG_VERBOSE
+                        CPLDebug("GMLAS", "%s is in ignored xpaths",
+                                 oField.GetXPath().c_str());
+#endif
+                        continue;
+                    }
+
                     aoFields.push_back(oField);
                 }
 
@@ -1726,7 +1821,7 @@ bool GMLASSchemaAnalyzer::ExploreModelGroup(
                         oField.SetName( osEltName +
                                                     "_anyAttributes" );
                     }
-                    oField.SetXPath(  osElementXPath + "@*" );
+                    oField.SetXPath(  osElementXPath + "/@*" );
                     aoFields.push_back(oField);
                 }
 
@@ -1738,7 +1833,7 @@ bool GMLASSchemaAnalyzer::ExploreModelGroup(
                     GMLASField oField;
                     SetFieldTypeAndWidthFromDefinition(poST, oField);
                     if( bRepeatedParticle && nAttrListSize == 0 &&
-                        m_bAllowArrays &&
+                        m_bUseArrays &&
                         IsCompatibleOfArray(oField.GetType()) )
                     {
                         /* We have a complex type, but no attributes, and */
@@ -1872,7 +1967,7 @@ bool GMLASSchemaAnalyzer::ExploreModelGroup(
                             // Fake xpath
                             oField.SetXPath(
                                 GMLASField::MakePKIDFieldFromXLinkHrefXPath(
-                                            osElementXPath + "@xlink:href"));
+                                            osElementXPath + "/@xlink:href"));
                             oField.SetName( osEltName +
                                                                     "_pkid" );
                             oField.SetMinOccurs(0);
@@ -1892,7 +1987,8 @@ bool GMLASSchemaAnalyzer::ExploreModelGroup(
                             {
 #ifdef DEBUG_VERBOSE
                                 CPLDebug("GMLAS",
-                                         "Adding %s as (%s) needed type",
+                                         "%d: Adding %s as (%s) needed type",
+                                         __LINE__,
                                         osTargetElement.c_str(),
                                         transcode(poTargetElt->
                                                     getTypeDefinition()->
@@ -1973,7 +2069,7 @@ bool GMLASSchemaAnalyzer::ExploreModelGroup(
                         //   <xs:element name="foo" maxOccurs="unbounded">
                         //      <xs:complexType>
                         //          <xs:sequence maxOccurs="unbounded">
-                        if( m_bAllowArrays && nAttrListSize == 0 &&
+                        if( m_bUseArrays && nAttrListSize == 0 &&
                             oNestedClass.GetNestedClasses().size() == 0 &&
                             oNestedClass.GetFields().size() == 1 &&
                             IsCompatibleOfArray(
@@ -2110,7 +2206,7 @@ bool GMLASSchemaAnalyzer::ExploreModelGroup(
                     return false;
                 }
 
-                if( m_bAllowArrays &&
+                if( m_bUseArrays &&
                     oNestedClass.GetFields().size() == 1 &&
                     IsCompatibleOfArray(oNestedClass.GetFields()[0].GetType()) )
                 {
