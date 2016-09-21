@@ -158,7 +158,7 @@ void GMLASAnalyzerEntityResolver::DoExtraSchemaProcessing(
 /************************************************************************/
 
 GMLASSchemaAnalyzer::GMLASSchemaAnalyzer(
-                            const GMLASXPathMatcher& oIgnoredXPathMatcher )
+                            GMLASXPathMatcher& oIgnoredXPathMatcher )
     : m_oIgnoredXPathMatcher(oIgnoredXPathMatcher)
     , m_bUseArrays(false)
 {
@@ -498,6 +498,8 @@ bool GMLASSchemaAnalyzer::Analyze(GMLASResourceCache& oCache,
         else
             aoNamespaces.push_back( osGrammarURI );
     }
+
+    m_oIgnoredXPathMatcher.SetDocumentMapURIToPrefix( m_oMapURIToPrefix );
 
     bool changed;
     XSModel* poModel = poGrammarPool->getXSModel(changed);
@@ -1276,9 +1278,7 @@ void GMLASSchemaAnalyzer::CreateNonNestedRelationship(
 bool GMLASSchemaAnalyzer::IsIgnoredXPath(const CPLString& osXPath)
 {
     CPLString osIgnored;
-    return m_oIgnoredXPathMatcher.MatchesRefXPath(osXPath,
-                                                  m_oMapURIToPrefix,
-                                                  osIgnored);
+    return m_oIgnoredXPathMatcher.MatchesRefXPath(osXPath, osIgnored);
 }
 
 /************************************************************************/

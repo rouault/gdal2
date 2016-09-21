@@ -256,16 +256,25 @@ class GMLASConfiguration
 /** Object to compares a user provided XPath against a set of test XPaths */
 class GMLASXPathMatcher
 {
+        class XPathComponent
+        {
+            public:
+                    CPLString m_osValue;
+                    bool      m_bDirectChild;
+        };
+
         /** For reference xpaths, map prefix namespace to its URI */
         std::map<CPLString, CPLString> m_oMapPrefixToURIReferenceXPaths;
 
         /** Reference xpaths */
-        std::vector<CPLString> m_aosReferenceXPaths;
+        std::vector<CPLString> m_aosReferenceXPathsUncompiled;
+
+        /** Reference xpaths "compiled" */
+        std::vector< std::vector<XPathComponent> > m_aosReferenceXPaths;
 
         bool MatchesRefXPath(
             const CPLString& osXPath,
-            const CPLString& osRefXPath,
-            const std::map<CPLString,CPLString>& oMapURIToPrefix) const;
+            const std::vector<XPathComponent>& oRefXPath) const;
 
     public:
                                 GMLASXPathMatcher();
@@ -276,12 +285,13 @@ class GMLASXPathMatcher
                                 const std::vector<CPLString>& 
                                     aosReferenceXPaths);
 
-        /** Return true if osXPath (with its associate namespace mappings
-            defined by oMapURIToPrefix) matches one of the XPath of
+        void    SetDocumentMapURIToPrefix(
+                    const std::map<CPLString,CPLString>& oMapURIToPrefix );
+
+        /** Return true if osXPath matches one of the XPath of
             m_aosReferenceXPaths */
         bool MatchesRefXPath(
             const CPLString& osXPath,
-            const std::map<CPLString,CPLString>& oMapURIToPrefix,
             CPLString& osOutMatchedXPath ) const;
 };
 
@@ -511,7 +521,7 @@ class GMLASFeatureClass
 
 class GMLASSchemaAnalyzer
 {
-        const GMLASXPathMatcher& m_oIgnoredXPathMatcher;
+        GMLASXPathMatcher& m_oIgnoredXPathMatcher;
 
         /** Whether repeated strings, integers, reals should be in corresponding
             OGR array types. */
@@ -602,7 +612,7 @@ class GMLASSchemaAnalyzer
         bool IsIgnoredXPath(const CPLString& osXPath);
 
     public:
-        GMLASSchemaAnalyzer( const GMLASXPathMatcher& oIgnoredXPathMatcher );
+        GMLASSchemaAnalyzer( GMLASXPathMatcher& oIgnoredXPathMatcher );
         void SetUseArrays(bool b) { m_bUseArrays = b; }
 
         bool Analyze(GMLASResourceCache& oCache,

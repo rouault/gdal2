@@ -58,86 +58,142 @@ void    GMLASXPathMatcher::SetRefXPaths(const std::map<CPLString, CPLString>&
                                                 aosReferenceXPaths)
 {
     m_oMapPrefixToURIReferenceXPaths = oMapPrefixToURIReferenceXPaths;
-    m_aosReferenceXPaths = aosReferenceXPaths;
+    m_aosReferenceXPathsUncompiled = aosReferenceXPaths;
+}
+
+/************************************************************************/
+/*                     SetDocumentMapURIToPrefix()                      */
+/************************************************************************/
+
+void    GMLASXPathMatcher::SetDocumentMapURIToPrefix(
+                        const std::map<CPLString,CPLString>& oMapURIToPrefix )
+{
+    m_aosReferenceXPaths.clear();
+
+    // Split each reference XPath into its components
+    for(size_t i = 0; i < m_aosReferenceXPathsUncompiled.size(); ++i )
+    {
+        const CPLString& osXPath( m_aosReferenceXPathsUncompiled[i] );
+
+        std::vector<XPathComponent> oVector;
+
+        size_t iPos = 0;
+        bool bDirectChild = false;
+        if( osXPath.size() >= 2 &&
+            osXPath[0] == '/' && osXPath[1] == '/' )
+        {
+            iPos += 2;
+        }
+        else if( osXPath.size() >= 1 && osXPath[0] == '/' )
+        {
+            iPos += 1;
+            bDirectChild = true;
+        }
+
+        while( iPos < osXPath.size() )
+        {
+            size_t iPosNextSlash = osXPath.find('/', iPos);
+
+            if( iPos == iPosNextSlash )
+            {
+                bDirectChild = false;
+                iPos ++;
+                continue;
+            }
+
+            CPLString osCurNode;
+            if( iPosNextSlash == std::string::npos )
+                osCurNode.assign(osXPath, iPos, std::string::npos);
+            else
+                osCurNode.assign(osXPath, iPos, iPosNextSlash - iPos);
+
+            // Translate the configuration prefix to the equivalent in
+            // this current schema
+            size_t iPosColumn = osCurNode.find(':');
+            if( iPosColumn != std::string::npos )
+            {
+                bool bIsAttr = ( osCurNode[0] == '@' );
+                CPLString osPrefix;
+                CPLString osLocalname;
+                osPrefix.assign(osCurNode, 
+                                bIsAttr ? 1 : 0,
+                                iPosColumn - (bIsAttr ? 1 : 0));
+                osLocalname.assign(osCurNode, iPosColumn+1,
+                                std::string::npos);
+
+                std::map<CPLString, CPLString>::const_iterator oIter =
+                    m_oMapPrefixToURIReferenceXPaths.find(osPrefix);
+                if( oIter != m_oMapPrefixToURIReferenceXPaths.end() )
+                {
+                    const CPLString& osURI( oIter->second );
+                    oIter = oMapURIToPrefix.find( osURI );
+                    if( oIter == oMapURIToPrefix.end() )
+                        break;
+                    osPrefix.assign(oIter->second);
+                }
+
+                osCurNode.clear();
+                if( bIsAttr )
+                    osCurNode.append(1, '@');
+                osCurNode.append(osPrefix);
+                osCurNode.append(1, ':');
+                osCurNode.append(osLocalname);
+            }
+
+            XPathComponent comp;
+            comp.m_osValue = osCurNode;
+            comp.m_bDirectChild = bDirectChild;
+            oVector.push_back(comp);
+
+            if( iPosNextSlash == std::string::npos )
+                iPos = osXPath.size();
+            else
+                iPos = iPosNextSlash + 1;
+
+            bDirectChild = true;
+        }
+
+        if ( iPos < osXPath.size() )
+            oVector.clear();
+        m_aosReferenceXPaths.push_back(oVector);
+    }
 }
 
 /************************************************************************/
 /*                         MatchesRefXPath()                            */
 /************************************************************************/
 
+// This is a performance critical function, especially on geosciml schemas,
+// and we make careful to not do any string copy or other memory allocation
+// in it.
 bool GMLASXPathMatcher::MatchesRefXPath(
                         const CPLString& osXPath,
-                        const CPLString& osRefXPath,
-                        const std::map<CPLString,CPLString>& oMapURIToPrefix)
-                                                                          const
+                        const std::vector<XPathComponent>& oRefXPath) const
 {
-    size_t iRefPos = 0;
     size_t iPos = 0;
-    bool bAbsoluteRef = false;
-    if( osRefXPath.size() >= 2 &&
-        osRefXPath[0] == '/' && osRefXPath[1] == '/' )
-    {
-        iRefPos += 2;
-    }
-    else if( osRefXPath.size() >= 1 && osRefXPath[0] == '/' )
-    {
-        iRefPos += 1;
-        bAbsoluteRef = true;
-    }
+    size_t iIdxInRef = 0;
 
-    while( iPos < osXPath.size() && iRefPos < osRefXPath.size() )
+    bool bDirectChild = oRefXPath[0].m_bDirectChild;
+    while( iPos < osXPath.size() && iIdxInRef < oRefXPath.size() )
     {
+        bDirectChild = oRefXPath[iIdxInRef].m_bDirectChild;
         size_t iPosNextSlash = osXPath.find('/', iPos);
-        size_t iRefPosNextSlash = osRefXPath.find('/', iRefPos);
 
-        if( iRefPos == iRefPosNextSlash )
-        {
-            bAbsoluteRef = false;
-            iRefPos ++;
-            continue;
-        }
-
-        CPLString osCurNode;
+        bool bNodeMatch;
         if( iPosNextSlash == std::string::npos )
-            osCurNode = osXPath.substr(iPos);
-        else
-            osCurNode = osXPath.substr(iPos, iPosNextSlash - iPos);
-        CPLString osRefCurNode;
-        if( iRefPosNextSlash == std::string::npos )
-            osRefCurNode = osRefXPath.substr(iRefPos);
-        else
-            osRefCurNode = osRefXPath.substr(iRefPos,
-                                    iRefPosNextSlash - iRefPos);
-
-        // Translate the configuration prefix to the equivalent in
-        // this current schema
-        size_t iRefPosColumn = osRefCurNode.find(':');
-        if( iRefPosColumn != std::string::npos )
         {
-            bool bIsAttr = ( osRefCurNode[0] == '@' );
-            CPLString osPrefix(
-                        osRefCurNode.substr(bIsAttr ? 1 : 0,
-                                    iRefPosColumn - (bIsAttr ? 1 : 0)) );
-            CPLString osLocalname(
-                        osRefCurNode.substr(iRefPosColumn+1) );
-
-            std::map<CPLString, CPLString>::const_iterator oIter =
-                m_oMapPrefixToURIReferenceXPaths.find(osPrefix);
-            if( oIter != m_oMapPrefixToURIReferenceXPaths.end() )
-            {
-                CPLString osURI( oIter->second );
-                oIter = oMapURIToPrefix.find( osURI );
-                if( oIter == oMapURIToPrefix.end() )
-                    return false;
-                osPrefix = oIter->second;
-            }
-            osRefCurNode = ((bIsAttr) ? "@": "") +
-                                 osPrefix + ":" + osLocalname;
+            bNodeMatch = osXPath.compare(iPos, std::string::npos,
+                                         oRefXPath[iIdxInRef].m_osValue) == 0;
+        }
+        else
+        {
+            bNodeMatch = osXPath.compare(iPos, iPosNextSlash - iPos,
+                                         oRefXPath[iIdxInRef].m_osValue) == 0;
         }
 
-        if( osCurNode != osRefCurNode )
+        if( !bNodeMatch )
         {
-            if( bAbsoluteRef )
+            if( bDirectChild )
                 return false;
 
             if( iPosNextSlash == std::string::npos )
@@ -150,17 +206,12 @@ bool GMLASXPathMatcher::MatchesRefXPath(
             iPos = osXPath.size();
         else
             iPos = iPosNextSlash + 1;
-
-        if( iRefPosNextSlash == std::string::npos )
-            iRefPos = osRefXPath.size();
-        else
-            iRefPos = iRefPosNextSlash + 1;
-
-        bAbsoluteRef = true;
+        iIdxInRef ++;
+        bDirectChild = true;
     }
 
-    return (!bAbsoluteRef || iPos == osXPath.size()) &&
-            iRefPos == osRefXPath.size();
+    return (!bDirectChild || iPos == osXPath.size()) &&
+            iIdxInRef == oRefXPath.size();
 }
 
 /************************************************************************/
@@ -169,15 +220,14 @@ bool GMLASXPathMatcher::MatchesRefXPath(
 
 bool GMLASXPathMatcher::MatchesRefXPath(
                             const CPLString& osXPath,
-                            const std::map<CPLString,CPLString>& oMapURIToPrefix,
                             CPLString& osOutMatchedXPath) const
 {
     for(size_t i = 0; i < m_aosReferenceXPaths.size(); ++i )
     {
-        const CPLString& osRefXPath( m_aosReferenceXPaths[i] );
-        if( MatchesRefXPath(osXPath, osRefXPath, oMapURIToPrefix) )
+        if( !m_aosReferenceXPaths[i].empty() &&
+            MatchesRefXPath(osXPath, m_aosReferenceXPaths[i]) )
         {
-            osOutMatchedXPath = osRefXPath;
+            osOutMatchedXPath = m_aosReferenceXPathsUncompiled[i];
             return true;
         }
     }

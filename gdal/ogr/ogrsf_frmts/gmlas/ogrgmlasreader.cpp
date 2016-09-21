@@ -1413,8 +1413,7 @@ void GMLASReader::startElement(
             {
                 CPLString osMatchedXPath;
                 if( m_oIgnoredXPathMatcher.MatchesRefXPath(
-                                        m_osCurSubXPath, m_oMapURIToPrefix,
-                                        osMatchedXPath) )
+                                        m_osCurSubXPath, osMatchedXPath) )
                 {
                     if( m_oMapIgnoredXPathToWarn[osMatchedXPath] )
                     {
@@ -1533,8 +1532,7 @@ void GMLASReader::ProcessAttributes(const Attributes& attrs)
                     json_object_new_string(osAttrValue));
             }
             else if( m_oIgnoredXPathMatcher.MatchesRefXPath(
-                                        osAttrXPath, m_oMapURIToPrefix,
-                                        osMatchedXPath) )
+                                        osAttrXPath, osMatchedXPath) )
             {
                 if( m_oMapIgnoredXPathToWarn[osMatchedXPath] )
                 {
