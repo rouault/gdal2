@@ -74,7 +74,7 @@ def ogr_gmlas_basic():
         open('tmp/ogr_gmlas_1.txt', 'wb').write(ret.encode('utf-8'))
         print('Diff:')
         os.system('diff -u data/gmlas_test1.txt tmp/ogr_gmlas_1.txt')
-        os.unlink('tmp/ogr_gmlas_1.txt')
+        #os.unlink('tmp/ogr_gmlas_1.txt')
         return 'fail'
 
     return 'success'
@@ -1337,6 +1337,91 @@ def ogr_gmlas_link_nested_independant_child():
     return 'success'
 
 ###############################################################################
+# Test some pattern found in geosciml schemas
+
+def ogr_gmlas_composition_compositionPart():
+
+    if ogr.GetDriverByName('GMLAS') is None:
+        return 'skip'
+
+    gdal.FileFromMemBuffer('/vsimem/ogr_gmlas_composition_compositionPart.xml',
+"""<first xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  xsi:noNamespaceSchemaLocation="ogr_gmlas_composition_compositionPart.xsd">
+    <composition>
+        <CompositionPart my_id="id1">
+            <a>a1</a>
+        </CompositionPart>
+    </composition>
+    <composition>
+        <CompositionPart my_id="id2">
+            <a>a2</a>
+        </CompositionPart>
+    </composition>
+</first>
+""")
+
+    gdal.FileFromMemBuffer('/vsimem/ogr_gmlas_composition_compositionPart.xsd',
+"""<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           elementFormDefault="qualified" attributeFormDefault="unqualified">
+
+<xs:element name="first">
+  <xs:complexType>
+    <xs:sequence>
+        <xs:element name="composition" maxOccurs="unbounded" minOccurs="0" type="CompositionPartPropertyType"/>
+    </xs:sequence>
+  </xs:complexType>
+</xs:element>
+
+<xs:complexType name="CompositionPartPropertyType">
+    <xs:sequence>
+        <xs:element ref="CompositionPart"/>
+    </xs:sequence>
+</xs:complexType>
+
+<xs:element name="CompositionPart">
+  <xs:complexType>
+    <xs:sequence>
+        <xs:element name="a" type="xs:string"/>
+    </xs:sequence>
+    <xs:attribute name="my_id" type="xs:ID" use="required"/>
+  </xs:complexType>
+</xs:element>
+
+</xs:schema>""")
+
+    ds = ogr.Open('GMLAS:/vsimem/ogr_gmlas_composition_compositionPart.xml')
+
+    lyr = ds.GetLayerByName('first_composition')
+    f = lyr.GetNextFeature()
+    if f.IsFieldSet('parent_ogr_pkid') == 0 or f.IsFieldSet('CompositionPart_pkid') == 0:
+        gdaltest.post_reason('fail')
+        f.DumpReadable()
+        return 'fail'
+    f = lyr.GetNextFeature()
+    if f.IsFieldSet('parent_ogr_pkid') == 0 or f.IsFieldSet('CompositionPart_pkid') == 0:
+        gdaltest.post_reason('fail')
+        f.DumpReadable()
+        return 'fail'
+
+    lyr = ds.GetLayerByName('CompositionPart')
+    f = lyr.GetNextFeature()
+    if f.IsFieldSet('my_id') == 0 or f.IsFieldSet('a') == 0:
+        gdaltest.post_reason('fail')
+        f.DumpReadable()
+        return 'fail'
+    f = lyr.GetNextFeature()
+    if f.IsFieldSet('my_id') == 0 or f.IsFieldSet('a') == 0:
+        gdaltest.post_reason('fail')
+        f.DumpReadable()
+        return 'fail'
+
+
+    gdal.Unlink('/vsimem/ogr_gmlas_composition_compositionPart.xml')
+    gdal.Unlink('/vsimem/ogr_gmlas_composition_compositionPart.xsd')
+
+    return 'success'
+
+###############################################################################
 #  Cleanup
 
 def ogr_gmlas_cleanup():
@@ -1377,6 +1462,7 @@ gdaltest_list = [
     ogr_gmlas_conf_ignored_xpath,
     ogr_gmlas_cache,
     ogr_gmlas_link_nested_independant_child,
+    ogr_gmlas_composition_compositionPart,
     ogr_gmlas_cleanup ]
 
 if __name__ == '__main__':

@@ -545,24 +545,12 @@ class GMLASSchemaAnalyzer
         /** Map from a XSModelGroup* object to the name of its group. */
         std::map< XSModelGroup*, CPLString> m_oMapModelGroupDefinitionToName;
 
-        /** Set of instanciated elements. That is elements for wich a class
-            is added to m_aoClasses */
-        std::set< XSElementDeclaration* > m_oSetInstanciatedElements;
-
-        /** Set of elements that must eventually be instanciated elements. This
-            set is built when instanciating other elements. This is for
-            elements that are in relationships */
-        std::set< XSElementDeclaration* > m_oSetNeededElements;
-
-        /** Set of elements on which exploration must stop, that is elements
-            that must be exposed as top-level classes to avoid too deep
-            flattening of element hierarchy.
-        */
-        std::set< XSElementDeclaration* > m_oSetTopLevelElements;
-
         /** Map from (non namespace prefixed) element names to the number of
             elements that share the same namespace (in different namespaces) */
         std::map<CPLString, int> m_oMapEltNamesToInstanceCount;
+
+        /** Set of elements that match a OGR layer */
+        std::set<XSElementDeclaration*> m_oSetEltsForTopClass;
 
         static bool IsSame( const XSModelGroup* poModelGroup1,
                                   const XSModelGroup* poModelGroup2 );
@@ -580,6 +568,7 @@ class GMLASSchemaAnalyzer
                             int nRecursionCounter,
                             std::set<XSElementDeclaration*>& oSetVisitedEltDecl,
                             std::set<XSModelGroup*>& oSetVisitedModelGroups,
+                            std::vector<XSElementDeclaration*>& oVectorEltsForTopClass,
                             XSModel* poModel);
         bool ExploreModelGroup( XSModelGroup* psMainModelGroup,
                                 XSAttributeUseList* poMainAttrList,

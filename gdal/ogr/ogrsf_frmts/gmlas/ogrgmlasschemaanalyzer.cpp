@@ -586,121 +586,92 @@ bool GMLASSchemaAnalyzer::Analyze(GMLASResourceCache& oCache,
     // times)
     std::set<XSElementDeclaration*> oSetVisitedEltDecl;
     std::set<XSModelGroup*> oSetVisitedModelGroups;
-    for( size_t iNS = 0; iNS < aoNamespaces.size(); iNS++ )
+    std::vector<XSElementDeclaration*> oVectorEltsForTopClass;
+    for( int iPass = 0; iPass < 2; ++iPass )
     {
-        XMLCh* xmlNamespace = XMLString::transcode(aoNamespaces[iNS].c_str());
-
-        XSNamedMap<XSObject>* poMapElements = poModel->getComponentsByNamespace(
-            XSConstants::ELEMENT_DECLARATION, xmlNamespace);
-
-        for(XMLSize_t i = 0; poMapElements != NULL &&
-                             i < poMapElements->getLength(); i++ )
+        for( size_t iNS = 0; iNS < aoNamespaces.size(); iNS++ )
         {
-            XSElementDeclaration* poEltDecl =
-                reinterpret_cast<XSElementDeclaration*>(poMapElements->item(i));
-            XSComplexTypeDefinition* poCT = IsEltCompatibleOfFC(poEltDecl);
-            if( !poEltDecl->getAbstract() && poCT != NULL  )
+            XMLCh* xmlNamespace = XMLString::transcode(aoNamespaces[iNS].c_str());
+
+            XSNamedMap<XSObject>* poMapElements = poModel->getComponentsByNamespace(
+                XSConstants::ELEMENT_DECLARATION, xmlNamespace);
+
+            for(XMLSize_t i = 0; poMapElements != NULL &&
+                                i < poMapElements->getLength(); i++ )
             {
-                const CPLString osXPath(MakeXPath(
-                                  transcode(poEltDecl->getNamespace()),
-                                  transcode(poEltDecl->getName())));
-                if( !IsIgnoredXPath(osXPath ) )
+                XSElementDeclaration* poEltDecl =
+                    reinterpret_cast<XSElementDeclaration*>(poMapElements->item(i));
+                XSComplexTypeDefinition* poCT = IsEltCompatibleOfFC(poEltDecl);
+                if( !poEltDecl->getAbstract() && poCT != NULL  )
                 {
-                    FindElementsWithMustBeToLevel(
-                            osXPath,
-                            poCT->getParticle()->getModelGroupTerm(),
-                            0,
-                            oSetVisitedEltDecl,
-                            oSetVisitedModelGroups,
-                            poModel);
+                    const CPLString osXPath(MakeXPath(
+                                    transcode(poEltDecl->getNamespace()),
+                                    transcode(poEltDecl->getName())));
+                    if( !IsIgnoredXPath(osXPath ) )
+                    {
+                        if( iPass == 0)
+                        {
+                            oSetVisitedEltDecl.insert( poEltDecl );
+                            m_oSetEltsForTopClass.insert( poEltDecl );
+                            oVectorEltsForTopClass.push_back( poEltDecl );
+                        }
+                        else
+                        {
+                            FindElementsWithMustBeToLevel(
+                                    osXPath,
+                                    poCT->getParticle()->getModelGroupTerm(),
+                                    0,
+                                    oSetVisitedEltDecl,
+                                    oSetVisitedModelGroups,
+                                    oVectorEltsForTopClass,
+                                    poModel);
+                        }
+                    }
                 }
             }
-        }
 
-        XMLString::release(&xmlNamespace);
+            XMLString::release(&xmlNamespace);
+        }
     }
 
     // Find ambiguous class names
     {
         std::set<XSElementDeclaration*>::const_iterator oIter =
-                                            m_oSetTopLevelElements.begin();
-        for(; oIter != m_oSetTopLevelElements.end(); ++oIter )
+                                            m_oSetEltsForTopClass.begin();
+        for(; oIter != m_oSetEltsForTopClass.end(); ++oIter )
         {
             CPLString osName(transcode((*oIter)->getName()));
             m_oMapEltNamesToInstanceCount[osName] ++;
         }
     }
 
-    // Iterate over top level elements of namespaces of interest to instanciate
-    // classes
-    for( size_t iNS = 0; iNS < aoNamespaces.size(); iNS++ )
+    // Instanciate all needed typenames
+    std::vector<XSElementDeclaration*>::iterator oIter =
+                                        oVectorEltsForTopClass.begin();
+    for(; oIter != oVectorEltsForTopClass.end(); ++oIter )
     {
-        XMLCh* xmlNamespace = XMLString::transcode(aoNamespaces[iNS].c_str());
+        XSElementDeclaration* poEltDecl = *oIter;
 
-        XSNamedMap<XSObject>* poMapElements = poModel->getComponentsByNamespace(
-            XSConstants::ELEMENT_DECLARATION, xmlNamespace);
-
-        for(XMLSize_t i = 0; poMapElements != NULL &&
-                             i < poMapElements->getLength(); i++ )
+        const CPLString osXPath(MakeXPath(
+                            transcode(poEltDecl->getNamespace()),
+                            transcode(poEltDecl->getName())));
+        bool bError = false;
+        bool bResolvedType = InstantiateClassFromEltDeclaration(poEltDecl,
+                                                                poModel,
+                                                                bError);
+        if( bError )
         {
-            XSElementDeclaration* poEltDecl =
-                reinterpret_cast<XSElementDeclaration*>(poMapElements->item(i));
-            bool bError = false;
-            InstantiateClassFromEltDeclaration(poEltDecl, poModel, bError);
-            if( bError )
-            {
-                XMLString::release(&xmlNamespace);
-                return false;
-            }
+            return false;
         }
-
-        XMLString::release(&xmlNamespace);
-    }
-
-    // Make sure that all needed typenames are instanciated
-    // This can happen if the main schema references abstract types of other
-    // namespaces
-    while( true )
-    {
-        bool bChangeMade = false;
-        // Make a local copy of m_oSetNeededElements since it might be
-        // modified by InstantiateClassFromEltDeclaration()
-        std::set<XSElementDeclaration*> oSetNeeded(m_oSetNeededElements);
-        std::set<XSElementDeclaration*>::iterator oIter = oSetNeeded.begin();
-        for(; oIter != oSetNeeded.end(); ++oIter )
+        if( !bResolvedType )
         {
-            XSElementDeclaration* poEltDecl = *oIter;
-            if( m_oSetInstanciatedElements.find(poEltDecl) !=
-                                        m_oSetInstanciatedElements.end() )
-                continue;
-
-            bool bError = false;
-            bool bResolvedType = InstantiateClassFromEltDeclaration(poEltDecl,
-                                                                    poModel,
-                                                                    bError);
-            if( bError )
-            {
-                return false;
-            }
-            if( bResolvedType )
-            {
-                bChangeMade = true;
-            }
-            else
-            {
-                CPLString osTypenameXPath( MakeXPath(
-                                    transcode(poEltDecl->getNamespace()),
-                                    transcode(poEltDecl->getName()) ) );
-                CPLError(CE_Failure, CPLE_AppDefined,
-                         "Couldn't resolve %s (%s)",
-                         osTypenameXPath.c_str(),
-                         transcode(poEltDecl->getTypeDefinition()->getName()).c_str()
-                         );
-                return false;
-            }
+            CPLError(CE_Failure, CPLE_AppDefined,
+                        "Couldn't resolve %s (%s)",
+                        osXPath.c_str(),
+                        transcode(poEltDecl->getTypeDefinition()->getName()).c_str()
+                        );
+            return false;
         }
-        if( !bChangeMade )
-            break;
     }
 
     return true;
@@ -750,7 +721,6 @@ bool GMLASSchemaAnalyzer::InstantiateClassFromEltDeclaration(
         oClass.SetIsTopLevelElt(
             GetTopElementDeclarationFromXPath(osXPath, poModel) != NULL );
 
-        m_oSetInstanciatedElements.insert( poEltDecl );
         std::set<XSModelGroup*> oSetVisitedModelGroups;
         if( !ExploreModelGroup(
                             poCT->getParticle()->getModelGroupTerm(),
@@ -1138,20 +1108,6 @@ void GMLASSchemaAnalyzer::CreateNonNestedRelationship(
             oField.SetRelatedClassXPath(osSubEltXPath);
             oField.SetType( GMLAS_FT_STRING, "string" );
             oClass.AddField( oField );
-
-            // Make sure we will instanciate the referenced element
-            if( m_oSetInstanciatedElements.find( poSubElt ) == 
-                        m_oSetInstanciatedElements.end() )
-            {
-#ifdef DEBUG_VERBOSE
-                CPLDebug("GMLAS", "%d: Adding %s as (%s) needed type",
-                         __LINE__,
-                         osSubEltXPath.c_str(),
-                         transcode(poSubElt->getTypeDefinition()->
-                                                        getName()).c_str());
-#endif
-                m_oSetNeededElements.insert( poSubElt );
-            }
         }
     }
     else
@@ -1201,20 +1157,6 @@ void GMLASSchemaAnalyzer::CreateNonNestedRelationship(
             oField.SetCategory(
                     GMLASField::PATH_TO_CHILD_ELEMENT_WITH_JUNCTION_TABLE );
             oClass.AddField( oField );
-
-            // Make sure we will instanciate the referenced element
-            if( m_oSetInstanciatedElements.find( poSubElt ) == 
-                        m_oSetInstanciatedElements.end() )
-            {
-#ifdef DEBUG_VERBOSE
-                CPLDebug("GMLAS", "%d: Adding %s as (%s) needed type",
-                         __LINE__,
-                         osSubEltXPath.c_str(),
-                         transcode(poSubElt->getTypeDefinition()->
-                                                    getName()).c_str());
-#endif
-                m_oSetNeededElements.insert( poSubElt );
-            }
         }
 
     }
@@ -1291,13 +1233,13 @@ bool GMLASSchemaAnalyzer::FindElementsWithMustBeToLevel(
                             int nRecursionCounter,
                             std::set<XSElementDeclaration*>& oSetVisitedEltDecl,
                             std::set<XSModelGroup*>& oSetVisitedModelGroups,
+                            std::vector<XSElementDeclaration*>&
+                                                        oVectorEltsForTopClass,
                             XSModel* poModel)
 {
-    if( oSetVisitedModelGroups.find(poModelGroup) !=
-                                                oSetVisitedModelGroups.end() )
-    {
-        return true;
-    }
+    const bool bAlreadyVisitedMG =
+            ( oSetVisitedModelGroups.find(poModelGroup) !=
+                                                oSetVisitedModelGroups.end() );
 
     oSetVisitedModelGroups.insert(poModelGroup);
 
@@ -1322,6 +1264,11 @@ bool GMLASSchemaAnalyzer::FindElementsWithMustBeToLevel(
             const CPLString osXPath( MakeXPath(osEltNS, osEltName) );
             const CPLString osFullXPath( osParentXPath + "/" + osXPath );
 
+#ifdef DEBUG_SUPER_VERBOSE
+            CPLDebug("GMLAS", "FindElementsWithMustBeToLevel: %s",
+                     osFullXPath.c_str());
+#endif
+
             if( IsIgnoredXPath( osFullXPath ) )
             {
 #ifdef DEBUG_VERBOSE
@@ -1343,7 +1290,8 @@ bool GMLASSchemaAnalyzer::FindElementsWithMustBeToLevel(
             // Any GML abstract type
             else if( poElt->getAbstract() &&
                      IsGMLNamespace(osEltNS) &&
-                     osEltName != "_Feature" )
+                     osEltName != "_Feature" &&
+                     osEltName != "AbstractFeature" )
             {
                 // Do nothing
             }
@@ -1371,21 +1319,38 @@ bool GMLASSchemaAnalyzer::FindElementsWithMustBeToLevel(
                     }
 
                     // Make sure we will instanciate the referenced element
-                    if( m_oSetTopLevelElements.find( poSubElt ) == 
-                                m_oSetTopLevelElements.end() )
+                    if( m_oSetEltsForTopClass.find( poSubElt ) == 
+                                m_oSetEltsForTopClass.end() )
                     {
 #ifdef DEBUG_VERBOSE
                         CPLDebug("GMLAS", "%s (%s) must be exposed as "
                                      "top-level (derived class)",
                                 osSubEltXPath.c_str(),
                                 transcode(poSubElt->getTypeDefinition()->
-                                                                getName()).c_str());
+                                                            getName()).c_str());
 #endif
-                        m_oSetTopLevelElements.insert(poSubElt);
-                        if( m_oSetInstanciatedElements.find( poSubElt ) == 
-                                        m_oSetInstanciatedElements.end() )
+
+                        oSetVisitedEltDecl.insert(poSubElt);
+                        m_oSetEltsForTopClass.insert(poSubElt);
+                        oVectorEltsForTopClass.push_back(poSubElt);
+
+                        XSComplexTypeDefinition* poSubEltCT =
+                                            IsEltCompatibleOfFC(poSubElt);
+                        if( !bAlreadyVisitedMG &&
+                            poSubEltCT->getParticle() != NULL )
                         {
-                            m_oSetNeededElements.insert( poSubElt );
+                            if( !FindElementsWithMustBeToLevel(
+                                            osSubEltXPath,
+                                            poSubEltCT->getParticle()->
+                                                        getModelGroupTerm(),
+                                            nRecursionCounter + 1,
+                                            oSetVisitedEltDecl,
+                                            oSetVisitedModelGroups,
+                                            oVectorEltsForTopClass,
+                                            poModel ) )
+                            {
+                                return false;
+                            }
                         }
                     }
                 }
@@ -1400,46 +1365,137 @@ bool GMLASSchemaAnalyzer::FindElementsWithMustBeToLevel(
                     if( oSetVisitedEltDecl.find(poElt) !=
                                     oSetVisitedEltDecl.end() )
                     {
-                        if( m_oSetTopLevelElements.find(poElt) ==
-                                                m_oSetTopLevelElements.end() )
+                        if( m_oSetEltsForTopClass.find(poElt) ==
+                                                m_oSetEltsForTopClass.end() )
                         {
 #ifdef DEBUG_VERBOSE
                             CPLDebug("GMLAS", "%s (%s) must be exposed as "
                                      "top-level (multiple time referenced)",
                                      osXPath.c_str(),
-                                     transcode(poTypeDef->getNamespace()).c_str());
+                                     transcode(
+                                        poTypeDef->getNamespace()).c_str());
 #endif
-                            m_oSetTopLevelElements.insert(poElt);
-                            if( m_oSetInstanciatedElements.find( poElt ) == 
-                                            m_oSetInstanciatedElements.end() )
-                            {
-                                m_oSetNeededElements.insert( poElt );
-                            }
+                            m_oSetEltsForTopClass.insert(poElt);
+                            oVectorEltsForTopClass.push_back(poElt);
                         }
                     }
                     else
                     {
                         oSetVisitedEltDecl.insert(poElt);
-                    }
 
-                    if( poEltCT->getParticle() != NULL )
-                    {
-                        if( !FindElementsWithMustBeToLevel(
-                                        osFullXPath,
-                                        poEltCT->getParticle()->getModelGroupTerm(),
-                                        nRecursionCounter + 1,
-                                        oSetVisitedEltDecl,
-                                        oSetVisitedModelGroups,
-                                        poModel ) )
+                        if( !bAlreadyVisitedMG &&
+                            poEltCT->getParticle() != NULL )
                         {
-                            return false;
+                            if( !FindElementsWithMustBeToLevel(
+                                            osFullXPath,
+                                            poEltCT->getParticle()->
+                                                            getModelGroupTerm(),
+                                            nRecursionCounter + 1,
+                                            oSetVisitedEltDecl,
+                                            oSetVisitedModelGroups,
+                                            oVectorEltsForTopClass,
+                                            poModel ) )
+                            {
+                                return false;
+                            }
+                        }
+                    }
+                }
+
+                CPLString osTargetElement;
+                if( poElt->getAnnotation() != NULL )
+                {
+                    CPLString osAnnot(transcode(
+                        poElt->getAnnotation()->getAnnotationString()));
+
+#ifdef DEBUG_SUPER_VERBOSE
+                    CPLDebug("GMLAS", "Annot: %s", osAnnot.c_str());
+#endif
+                    CPLXMLNode* psRoot = CPLParseXMLString(osAnnot);
+                    CPLStripXMLNamespace(psRoot, NULL, TRUE);
+                    osTargetElement =
+                        CPLGetXMLValue(psRoot,
+                                       "=annotation.appinfo.targetElement", "");
+                    CPLDestroyXMLNode(psRoot);
+#ifdef DEBUG_VERBOSE
+                    if( !osTargetElement.empty() )
+                        CPLDebug("GMLAS", "targetElement: %s",
+                                osTargetElement.c_str());
+#endif
+                }
+
+                // If we have a element of type gml:ReferenceType that has
+                // a targetElement in its annotation.appinfo, then create
+                // a dedicated field to have cross-layer relationships.
+                if( IsGMLNamespace(transcode(poTypeDef->getNamespace())) &&
+                    transcode(poTypeDef->getName()) == "ReferenceType" &&
+                    !osTargetElement.empty() )
+                {
+                    XSElementDeclaration* poTargetElt =
+                        GetTopElementDeclarationFromXPath(osTargetElement,
+                                                            poModel);
+                    // TODO: even for non abstract we should probably
+                    // handle substitutions
+                    if( poTargetElt != NULL && !poTargetElt->getAbstract() )
+                    {
+                        const CPLString osTargetEltXPath( MakeXPath(
+                                    transcode(poTargetElt->getNamespace()),
+                                    transcode(poTargetElt->getName())) );
+
+                        if( IsIgnoredXPath( osTargetEltXPath ) )
+                        {
+#ifdef DEBUG_VERBOSE
+                            CPLDebug("GMLAS", "%s is in ignored xpaths",
+                                    osTargetEltXPath.c_str());
+#endif
+                            continue;
+                        }
+
+                        // Make sure we will instanciate the referenced
+                        //element
+                        if( m_oSetEltsForTopClass.find( poTargetElt ) == 
+                                    m_oSetEltsForTopClass.end() )
+                        {
+#ifdef DEBUG_VERBOSE
+                            CPLDebug("GMLAS",
+                                        "%d: Adding %s as (%s) needed type",
+                                        __LINE__,
+                                    osTargetElement.c_str(),
+                                    transcode(poTargetElt->
+                                                getTypeDefinition()->
+                                                    getName()).c_str());
+#endif
+                            oSetVisitedEltDecl.insert(poTargetElt);
+                            m_oSetEltsForTopClass.insert( poTargetElt );
+                            oVectorEltsForTopClass.push_back(poTargetElt);
+                        }
+
+                        XSComplexTypeDefinition* poTargetEltCT =
+                                    IsEltCompatibleOfFC(poTargetElt);
+                        if( !bAlreadyVisitedMG &&
+                            poTargetEltCT &&
+                            poTargetEltCT->getParticle() != NULL )
+                        {
+                            if( !FindElementsWithMustBeToLevel(
+                                            osTargetEltXPath,
+                                            poTargetEltCT->getParticle()->
+                                                            getModelGroupTerm(),
+                                            nRecursionCounter + 1,
+                                            oSetVisitedEltDecl,
+                                            oSetVisitedModelGroups,
+                                            oVectorEltsForTopClass,
+                                            poModel ) )
+                            {
+                                return false;
+                            }
                         }
                     }
                 }
             }
 
         }
-        else if( poParticle->getTermType() == XSParticle::TERM_MODELGROUP )
+        else if( !bAlreadyVisitedMG && 
+                 poParticle->getTermType() == XSParticle::TERM_MODELGROUP )
         {
             XSModelGroup* psSubModelGroup = poParticle->getModelGroupTerm();
             if( !FindElementsWithMustBeToLevel(
@@ -1448,6 +1504,7 @@ bool GMLASSchemaAnalyzer::FindElementsWithMustBeToLevel(
                                     nRecursionCounter + 1,
                                     oSetVisitedEltDecl,
                                     oSetVisitedModelGroups,
+                                    oVectorEltsForTopClass,
                                     poModel ) )
             {
                 return false;
@@ -1639,7 +1696,8 @@ bool GMLASSchemaAnalyzer::ExploreModelGroup(
             // Any GML abstract type
             else if( poElt->getAbstract() &&
                      IsGMLNamespace(osEltNS) &&
-                     osEltName != "_Feature" )
+                     osEltName != "_Feature" &&
+                     osEltName != "AbstractFeature" )
             {
                 GMLASField oField;
                 oField.SetName( osEltName );
@@ -1672,8 +1730,8 @@ bool GMLASSchemaAnalyzer::ExploreModelGroup(
             // Are there substitution groups for this element ?
             // or is this element already identified as being a top-level one ?
             else if( !apoImplEltList.empty() ||
-                     m_oSetTopLevelElements.find(poElt) !=
-                                                m_oSetTopLevelElements.end() )
+                     m_oSetEltsForTopClass.find(poElt) !=
+                                                m_oSetEltsForTopClass.end() )
             {
                 CreateNonNestedRelationship(poElt,
                                             apoImplEltList,
@@ -1834,7 +1892,9 @@ bool GMLASSchemaAnalyzer::ExploreModelGroup(
                     SetFieldTypeAndWidthFromDefinition(poST, oField);
                     if( bRepeatedParticle && nAttrListSize == 0 &&
                         m_bUseArrays &&
-                        IsCompatibleOfArray(oField.GetType()) )
+                        IsCompatibleOfArray(oField.GetType()) &&
+                        oField.GetCategory() !=
+                                GMLASField::PATH_TO_CHILD_ELEMENT_WITH_LINK )
                     {
                         /* We have a complex type, but no attributes, and */
                         /* compatible of arrays, so move it to top level! */
@@ -1977,25 +2037,6 @@ bool GMLASSchemaAnalyzer::ExploreModelGroup(
                                 GMLASField::PATH_TO_CHILD_ELEMENT_WITH_LINK );
                             oField.SetRelatedClassXPath(osTargetElement);
                             aoFields.push_back( oField );
-
-                            // Make sure we will instanciate the referenced
-                            //element
-                            if( m_oSetInstanciatedElements.find( poTargetElt ) == 
-                                        m_oSetInstanciatedElements.end()  &&
-                                m_oSetNeededElements.find( poTargetElt ) == 
-                                        m_oSetNeededElements.end() )
-                            {
-#ifdef DEBUG_VERBOSE
-                                CPLDebug("GMLAS",
-                                         "%d: Adding %s as (%s) needed type",
-                                         __LINE__,
-                                        osTargetElement.c_str(),
-                                        transcode(poTargetElt->
-                                                    getTypeDefinition()->
-                                                        getName()).c_str());
-#endif
-                                m_oSetNeededElements.insert( poTargetElt );
-                            }
                         }
                         else if( poTargetElt != NULL && poTargetElt->getAbstract() )
                         {
@@ -2073,7 +2114,9 @@ bool GMLASSchemaAnalyzer::ExploreModelGroup(
                             oNestedClass.GetNestedClasses().size() == 0 &&
                             oNestedClass.GetFields().size() == 1 &&
                             IsCompatibleOfArray(
-                                    oNestedClass.GetFields()[0].GetType()) )
+                                    oNestedClass.GetFields()[0].GetType()) &&
+                            oNestedClass.GetFields()[0].GetCategory() !=
+                                GMLASField::PATH_TO_CHILD_ELEMENT_WITH_LINK )
                         {
                             // In the case the sequence has a single element,
                             // compatible of array type, and no attribute and

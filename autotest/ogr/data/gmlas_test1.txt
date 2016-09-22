@@ -481,42 +481,52 @@ Feature Count: 4
 Layer SRS WKT:
 (unknown)
 ogr_pkid: String (0.0) NOT NULL
-rec_B_rec_A_pkid: String (0.0)
-rec_B_elt_B: String (0.0)
+rec_B_pkid: String (0.0)
 elt_A: String (0.0)
 OGRFeature(rec_A):4
   ogr_pkid (String) = _rec_A_4
-  rec_B_rec_A_pkid (String) = (null)
-  rec_B_elt_B (String) = (null)
+  rec_B_pkid (String) = (null)
   elt_A (String) = elt_A4
 
 OGRFeature(rec_A):3
   ogr_pkid (String) = _rec_A_3
-  rec_B_rec_A_pkid (String) = _rec_A_4
-  rec_B_elt_B (String) = elt_B3
+  rec_B_pkid (String) = _rec_B_3
   elt_A (String) = elt_A3
 
 OGRFeature(rec_A):2
   ogr_pkid (String) = _rec_A_2
-  rec_B_rec_A_pkid (String) = _rec_A_3
-  rec_B_elt_B (String) = elt_B2
+  rec_B_pkid (String) = _rec_B_2
   elt_A (String) = elt_A2
 
 OGRFeature(rec_A):1
   ogr_pkid (String) = _rec_A_1
-  rec_B_rec_A_pkid (String) = _rec_A_2
-  rec_B_elt_B (String) = elt_B
+  rec_B_pkid (String) = _rec_B_1
   elt_A (String) = elt_A
 
 
 Layer name: rec_B
 Geometry: None
-Feature Count: 0
+Feature Count: 3
 Layer SRS WKT:
 (unknown)
 ogr_pkid: String (0.0) NOT NULL
 rec_A_pkid: String (0.0)
 elt_B: String (0.0)
+OGRFeature(rec_B):3
+  ogr_pkid (String) = _rec_B_3
+  rec_A_pkid (String) = _rec_A_4
+  elt_B (String) = elt_B3
+
+OGRFeature(rec_B):2
+  ogr_pkid (String) = _rec_B_2
+  rec_A_pkid (String) = _rec_A_3
+  elt_B (String) = elt_B2
+
+OGRFeature(rec_B):1
+  ogr_pkid (String) = _rec_B_1
+  rec_A_pkid (String) = _rec_A_2
+  elt_B (String) = elt_B
+
 
 Layer name: an_abstract_element_in_other_ns_realization1
 Geometry: None
