@@ -10,7 +10,7 @@
 
 <xs:element name="existing_abstract_target_elt" abstract="true"/>
 
-<xs:element name="main_elt" substitutionGroup="gml:Feature">
+<xs:element name="main_elt" substitutionGroup="gml:_Feature">
   <xs:complexType>
     <xs:sequence>
 

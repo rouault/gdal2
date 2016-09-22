@@ -204,6 +204,7 @@ class GMLASConfiguration
         static const bool ALLOW_REMOTE_SCHEMA_DOWNLOAD_DEFAULT = true;
         static const bool USE_ARRAYS_DEFAULT = true;
         static const bool INCLUDE_GEOMETRY_XML_DEFAULT = true;
+        static const bool INSTANTIATE_GML_FEATURES_ONLY_DEFAULT = true;
         static const bool ALLOW_XSD_CACHE_DEFAULT = true;
         static const bool VALIDATE_DEFAULT = false;
         static const bool FAIL_IF_VALIDATION_ERROR_DEFAULT = false;
@@ -218,6 +219,15 @@ class GMLASConfiguration
 
         /** Whether geometries should be stored as XML in a OGR string field. */
         bool            m_bIncludeGeometryXML;
+
+        /** Whether, when dealing with schemas that import the
+            GML namespace, and that at least one of them has
+            elements that derive from gml:_Feature or
+            gml:AbstractFeatureonly, only such elements should be
+            instantiated as OGR layers, during the first pass that
+            iterates over top level elements of the imported
+            schemas. */
+        bool            m_bInstantiateGMLFeaturesOnly;
 
         /** Whether remote XSD schemas should be locally cached. */
         bool            m_bAllowXSDCache;
@@ -527,6 +537,15 @@ class GMLASSchemaAnalyzer
             OGR array types. */
         bool m_bUseArrays;
 
+        /** Whether, when dealing with schemas that import the
+            GML namespace, and that at least one of them has
+            elements that derive from gml:_Feature or
+            gml:AbstractFeatureonly, only such elements should be
+            instantiated as OGR layers, during the first pass that
+            iterates over top level elements of the imported
+            schemas. */
+        bool            m_bInstantiateGMLFeaturesOnly;
+
         /** Vector of feature classes */
         std::vector<GMLASFeatureClass> m_aoClasses;
 
@@ -598,11 +617,15 @@ class GMLASSchemaAnalyzer
 
         bool IsGMLNamespace(const CPLString& osURI);
 
+        bool DerivesFromGMLFeature(XSElementDeclaration* poEltDecl);
+
         bool IsIgnoredXPath(const CPLString& osXPath);
 
     public:
         GMLASSchemaAnalyzer( GMLASXPathMatcher& oIgnoredXPathMatcher );
         void SetUseArrays(bool b) { m_bUseArrays = b; }
+        void SetInstantiateGMLFeaturesOnly(bool b)
+                                    { m_bInstantiateGMLFeaturesOnly = b; }
 
         bool Analyze(GMLASResourceCache& oCache,
                      const CPLString& osBaseDirname,

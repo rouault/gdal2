@@ -12,7 +12,10 @@
     </Validation>
     <LayerBuildingRules>
         <UseArrays>true</UseArrays>
-        <IncludeGeometryXML>true</IncludeGeometryXML>
+        <GML>
+            <IncludeGeometryXML>true</IncludeGeometryXML>
+            <InstantiateGMLFeaturesOnly>true</InstantiateGMLFeaturesOnly>
+        </GML>
     </LayerBuildingRules>
 
     <IgnoredXPaths>

@@ -41,6 +41,7 @@ GMLASConfiguration::GMLASConfiguration()
     : m_bAllowRemoteSchemaDownload(ALLOW_REMOTE_SCHEMA_DOWNLOAD_DEFAULT)
     , m_bUseArrays(USE_ARRAYS_DEFAULT)
     , m_bIncludeGeometryXML(INCLUDE_GEOMETRY_XML_DEFAULT)
+    , m_bInstantiateGMLFeaturesOnly(INSTANTIATE_GML_FEATURES_ONLY_DEFAULT)
     , m_bAllowXSDCache(ALLOW_XSD_CACHE_DEFAULT)
     , m_bValidate(VALIDATE_DEFAULT)
     , m_bFailIfValidationError(FAIL_IF_VALIDATION_ERROR_DEFAULT)
@@ -222,8 +223,11 @@ bool GMLASConfiguration::Load(const char* pszFilename)
                                 "=Configuration.LayerBuildingRules.UseArrays",
                                 USE_ARRAYS_DEFAULT );
     m_bIncludeGeometryXML = CPLGetXMLBoolValue( psRoot,
-                       "=Configuration.LayerBuildingRules.IncludeGeometryXML",
+                       "=Configuration.LayerBuildingRules.GML.IncludeGeometryXML",
                        INCLUDE_GEOMETRY_XML_DEFAULT );
+    m_bInstantiateGMLFeaturesOnly = CPLGetXMLBoolValue( psRoot,
+                "=Configuration.LayerBuildingRules.GML.InstantiateGMLFeaturesOnly",
+                INSTANTIATE_GML_FEATURES_ONLY_DEFAULT );
 
     CPLXMLNode* psIgnoredXPaths = CPLGetXMLNode(psRoot,
                                             "=Configuration.IgnoredXPaths");

@@ -948,7 +948,7 @@ def ogr_gmlas_conf():
 
     # IncludeGeometryXML = false
     ds = gdal.OpenEx('GMLAS:data/gmlas_geometryproperty_gml32.gml', open_options = [
-            'CONFIG_FILE=<Configuration><LayerBuildingRules><IncludeGeometryXML>false</IncludeGeometryXML></LayerBuildingRules></Configuration>'])
+            'CONFIG_FILE=<Configuration><LayerBuildingRules><GML><IncludeGeometryXML>false</IncludeGeometryXML></GML></LayerBuildingRules></Configuration>'])
     if ds is None:
         gdaltest.post_reason('fail')
         return 'fail'
@@ -1422,6 +1422,82 @@ def ogr_gmlas_composition_compositionPart():
     return 'success'
 
 ###############################################################################
+# Test that when importing GML we expose by default only elements deriving
+# from _Feature/AbstractFeature
+
+def ogr_gmlas_instantiate_only_gml_feature():
+
+    if ogr.GetDriverByName('GMLAS') is None:
+        return 'skip'
+
+    gdal.FileFromMemBuffer('/vsimem/gmlas_fake_gml32.xsd',
+                           open('data/gmlas_fake_gml32.xsd', 'rb').read())
+
+    gdal.FileFromMemBuffer('/vsimem/ogr_gmlas_instantiate_only_gml_feature.xsd',
+"""<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+              xmlns:gml="http://fake_gml32"
+              elementFormDefault="qualified" attributeFormDefault="unqualified">
+
+<xs:import namespace="http://fake_gml32" schemaLocation="gmlas_fake_gml32.xsd"/>
+
+<!--
+    Xerces correctly detects circular dependencies
+
+  <xs:complexType name="typeA">
+    <xs:complexContent>
+      <xs:extension base="typeB">
+        <xs:sequence/>
+      </xs:extension> 
+    </xs:complexContent>
+  </xs:complexType>
+
+  <xs:complexType name="typeB">
+    <xs:complexContent>
+      <xs:extension base="typeA">
+        <xs:sequence/>
+      </xs:extension> 
+    </xs:complexContent>
+  </xs:complexType>
+
+<xs:element name="A" substitutionGroup="B" type="typeA"/>
+<xs:element name="B" substitutionGroup="A" type="typeB"/>
+-->
+
+<xs:element name="nonFeature">
+  <xs:complexType>
+    <xs:sequence>
+        <xs:element name="a" type="xs:string"/>
+    </xs:sequence>
+  </xs:complexType>
+</xs:element>
+
+<xs:element name="someFeature" substitutionGroup="gml:AbstractFeature">
+  <xs:complexType>
+    <xs:complexContent>
+      <xs:extension base="gml:AbstractFeatureType">
+        <xs:sequence>
+            <xs:element ref="nonFeature"/>
+        </xs:sequence>
+      </xs:extension> 
+    </xs:complexContent>
+  </xs:complexType>
+</xs:element>
+
+</xs:schema>""")
+
+    ds = gdal.OpenEx('GMLAS:',
+        open_options = ['XSD=/vsimem/ogr_gmlas_instantiate_only_gml_feature.xsd'])
+    if ds.GetLayerCount() != 1:
+        gdaltest.post_reason('fail')
+        return 'fail'
+    ds = None
+
+    gdal.Unlink('/vsimem/ogr_gmlas_instantiate_only_gml_feature.xsd')
+    gdal.Unlink('/vsimem/gmlas_fake_gml32.xsd')
+
+    return 'success'
+
+###############################################################################
 #  Cleanup
 
 def ogr_gmlas_cleanup():
@@ -1463,7 +1539,10 @@ gdaltest_list = [
     ogr_gmlas_cache,
     ogr_gmlas_link_nested_independant_child,
     ogr_gmlas_composition_compositionPart,
+    ogr_gmlas_instantiate_only_gml_feature,
     ogr_gmlas_cleanup ]
+
+#gdaltest_list = [ ogr_gmlas_instantiate_only_gml_feature ]
 
 if __name__ == '__main__':
 

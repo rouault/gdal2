@@ -12,12 +12,12 @@
     <xs:attribute ref="xlink:href"/>
 </xs:complexType>
 
-<xs:element name="Feature" abstract="true"/>
+<xs:element name="_Feature" abstract="true"/>
 
 <xs:element name="FeatureCollection">
     <xs:complexType>
         <xs:sequence>
-            <xs:element ref="gml:Feature" minOccurs="0" maxOccurs="unbounded"/>
+            <xs:element ref="gml:_Feature" minOccurs="0" maxOccurs="unbounded"/>
         </xs:sequence>
     </xs:complexType>
 </xs:element>

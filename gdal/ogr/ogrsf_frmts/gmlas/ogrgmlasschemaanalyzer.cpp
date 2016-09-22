@@ -160,7 +160,8 @@ void GMLASAnalyzerEntityResolver::DoExtraSchemaProcessing(
 GMLASSchemaAnalyzer::GMLASSchemaAnalyzer(
                             GMLASXPathMatcher& oIgnoredXPathMatcher )
     : m_oIgnoredXPathMatcher(oIgnoredXPathMatcher)
-    , m_bUseArrays(false)
+    , m_bUseArrays(true)
+    , m_bInstantiateGMLFeaturesOnly(true)
 {
     // A few hardcoded namespace uri->prefix mappings
     m_oMapURIToPrefix[ pszXMLNS_URI ] = "xmlns";
@@ -430,6 +431,34 @@ static XSComplexTypeDefinition* IsEltCompatibleOfFC(
 }
 
 /************************************************************************/
+/*                          DerivesFromGMLFeature()                     */
+/************************************************************************/
+
+bool GMLASSchemaAnalyzer::DerivesFromGMLFeature(XSElementDeclaration* poEltDecl)
+{
+    XSElementDeclaration* poIter = poEltDecl;
+    while( true )
+    {
+        XSElementDeclaration* poSubstGroup =
+            poIter->getSubstitutionGroupAffiliation();
+        if( poSubstGroup == NULL )
+            break;
+        const CPLString osSubstNS(
+                    transcode(poSubstGroup->getNamespace()) );
+        const CPLString osSubstName(
+                    transcode(poSubstGroup->getName()) );
+        if( IsGMLNamespace(osSubstNS) &&
+            (osSubstName == "AbstractFeature" ||
+                osSubstName == "_Feature") )
+        {
+            return true;
+        }
+        poIter = poSubstGroup;
+    }
+    return false;
+}
+
+/************************************************************************/
 /*                               Analyze()                              */
 /************************************************************************/
 
@@ -517,11 +546,15 @@ bool GMLASSchemaAnalyzer::Analyze(GMLASResourceCache& oCache,
     }
 #endif
 
+    bool bFoundGMLFeature = false;
+
     // Initial pass, in all namespaces, to figure out inheritance relationships
     // and group models that have names
+    std::map<CPLString, CPLString> oMapURIToPrefixWithEmpty(m_oMapURIToPrefix);
+    oMapURIToPrefixWithEmpty[""] = "";
     std::map<CPLString, CPLString>::const_iterator oIterNS =
-                                                    m_oMapURIToPrefix.begin();
-    for( ; oIterNS != m_oMapURIToPrefix.end(); ++oIterNS)
+                                                oMapURIToPrefixWithEmpty.begin();
+    for( ; oIterNS != oMapURIToPrefixWithEmpty.end(); ++oIterNS)
     {
         const CPLString& osNSURI(oIterNS->first);
         if( osNSURI == pszXS_URI ||
@@ -562,6 +595,9 @@ bool GMLASSchemaAnalyzer::Analyze(GMLASResourceCache& oCache,
                 reinterpret_cast<XSElementDeclaration*>(poMapElements->item(i));
             XSElementDeclaration* poSubstGroup =
                             poEltDecl->getSubstitutionGroupAffiliation();
+            const CPLString osEltXPath(
+                            transcode(poEltDecl->getNamespace()) + ":" +
+                            transcode(poEltDecl->getName()));
             if( poSubstGroup )
             {
                 m_oMapParentEltToChildElt[poSubstGroup].push_back(poEltDecl);
@@ -569,13 +605,26 @@ bool GMLASSchemaAnalyzer::Analyze(GMLASResourceCache& oCache,
                 CPLString osParentType(
                             transcode(poSubstGroup->getNamespace()) + ":" +
                             transcode(poSubstGroup->getName()));
-                CPLString osChildType(
-                            transcode(poEltDecl->getNamespace()) + ":" +
-                            transcode(poEltDecl->getName()));
                 CPLDebug("GMLAS", "%s is a substitution for %s",
-                        osChildType.c_str(),
+                        osEltXPath.c_str(),
                         osParentType.c_str());
 #endif
+
+                // Check if this element derives from gml:_Feature/AbstractFeature
+                if( !bFoundGMLFeature &&
+                    m_bInstantiateGMLFeaturesOnly &&
+                    !IsGMLNamespace(osNSURI) &&
+                    DerivesFromGMLFeature(poEltDecl) )
+                {
+                    CPLDebug("GMLAS",
+                                "Restricting (in first pass) top level "
+                                "elements to those deriving from "
+                                "gml:_Feature/gml:AbstractFeature (due "
+                                "to %s found)",
+                                osEltXPath.c_str());
+                    bFoundGMLFeature = true;
+                }
+
             }
         }
 
@@ -609,8 +658,21 @@ bool GMLASSchemaAnalyzer::Analyze(GMLASResourceCache& oCache,
                                     transcode(poEltDecl->getName())));
                     if( !IsIgnoredXPath(osXPath ) )
                     {
-                        if( iPass == 0)
+                        if( bFoundGMLFeature && 
+                            m_bInstantiateGMLFeaturesOnly &&
+                            !DerivesFromGMLFeature(poEltDecl) )
                         {
+                            // Do nothing
+                        }
+                        else if( iPass == 0)
+                        {
+#ifdef DEBUG_VERBOSE
+                        CPLDebug("GMLAS", "%s (%s) must be exposed as "
+                                 "top-level (is top level in imported schemas)",
+                                osXPath.c_str(),
+                                transcode(poEltDecl->getTypeDefinition()->
+                                                            getName()).c_str());
+#endif
                             oSetVisitedEltDecl.insert( poEltDecl );
                             m_oSetEltsForTopClass.insert( poEltDecl );
                             oVectorEltsForTopClass.push_back( poEltDecl );
