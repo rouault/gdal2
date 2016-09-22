@@ -942,6 +942,10 @@ class GMLASReader : public DefaultHandler
         /** Entity resolver used during schema validation */
         GMLASBaseEntityResolver* m_poEntityResolver;
 
+        /** First level from which warnings about ignored XPath should be
+            silent. */
+        int                        m_nLevelSilentIgnoredXPath;
+
         /** Whether a warning should be emitted when an element or attribute is
             found in the document parsed, but ignored because of the ignored
             XPath defined.  */

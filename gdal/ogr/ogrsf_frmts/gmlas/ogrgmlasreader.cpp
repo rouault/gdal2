@@ -355,6 +355,7 @@ GMLASReader::GMLASReader(GMLASResourceCache& oCache,
           atoi(CPLGetConfigOption("GMLAS_XML_MAX_CONTENT_SIZE", "512000000")));
     m_bValidate = false;
     m_poEntityResolver = NULL;
+    m_nLevelSilentIgnoredXPath = -1;
 }
 
 /************************************************************************/
@@ -1409,7 +1410,7 @@ void GMLASReader::startElement(
 
             m_nCurFieldIdx = -1;
             m_nCurGeomFieldIdx = -1;
-            if( idx != IDX_COMPOUND_FOLDED )
+            if( idx != IDX_COMPOUND_FOLDED && m_nLevelSilentIgnoredXPath < 0 )
             {
                 CPLString osMatchedXPath;
                 if( m_oIgnoredXPathMatcher.MatchesRefXPath(
@@ -1418,17 +1419,18 @@ void GMLASReader::startElement(
                     if( m_oMapIgnoredXPathToWarn[osMatchedXPath] )
                     {
                         CPLError(CE_Warning, CPLE_AppDefined,
-                                 "Element with xpath=%s found in document but "
-                                 "ignored according to configuration",
-                                 m_osCurSubXPath.c_str());
+                                "Element with xpath=%s found in document but "
+                                "ignored according to configuration",
+                                m_osCurSubXPath.c_str());
                     }
                     else
                     {
                         CPLDebug("GMLAS",
-                                 "Element with xpath=%s found in document but "
-                                 "ignored according to configuration",
-                                 m_osCurSubXPath.c_str());
+                                "Element with xpath=%s found in document but "
+                                "ignored according to configuration",
+                                m_osCurSubXPath.c_str());
                     }
+                    m_nLevelSilentIgnoredXPath = m_nLevel;
                 }
                 else
                 {
@@ -1609,6 +1611,11 @@ void GMLASReader::endElement(
         )
 {
     m_nLevel --;
+
+    if( m_nLevelSilentIgnoredXPath == m_nLevel )
+    {
+        m_nLevelSilentIgnoredXPath = -1;
+    }
 
     // Make sure to set field only if we are at the expected nesting level
     if( (m_nCurFieldIdx >= 0 || m_nCurGeomFieldIdx >= 0) &&
