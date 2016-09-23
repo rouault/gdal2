@@ -489,9 +489,9 @@ bool OGRGMLASDataSource::Open(GDALOpenInfo* poOpenInfo)
 
     m_oMapURIToPrefix = oAnalyzer.GetMapURIToPrefix();
 
-    m_bExposeMetadataLayers = CPLTestBool(
-        CSLFetchNameValueDef(poOpenInfo->papszOpenOptions,
-                             "EXPOSE_METADATA_LAYERS", "NO") );
+    m_bExposeMetadataLayers = CPLFetchBool(poOpenInfo->papszOpenOptions,
+                                           "EXPOSE_METADATA_LAYERS",
+                                           m_oConf.m_bExposeMetadataLayers);
 
     const std::vector<GMLASFeatureClass>& aoClasses = oAnalyzer.GetClasses();
 

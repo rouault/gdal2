@@ -98,6 +98,17 @@
             </xs:attribute>
           </xs:complexType>
         </xs:element>
+        <xs:element name="ExposeMetadataLayers" minOccurs="0" type="xs:boolean">
+          <xs:annotation>
+            <xs:documentation>
+                Whether the _ogr_layers_metadata, _ogr_fields_metadata and
+                _ogr_layer_relationships layers that show how OGR layers and
+                fields are built from the schemas should be exposed as
+                available layers.
+                Default is false.
+            </xs:documentation>
+          </xs:annotation>
+        </xs:element>
         <xs:element name="LayerBuildingRules" minOccurs="0">
           <xs:annotation>
             <xs:documentation>

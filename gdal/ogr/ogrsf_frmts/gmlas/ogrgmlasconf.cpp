@@ -45,6 +45,7 @@ GMLASConfiguration::GMLASConfiguration()
     , m_bAllowXSDCache(ALLOW_XSD_CACHE_DEFAULT)
     , m_bValidate(VALIDATE_DEFAULT)
     , m_bFailIfValidationError(FAIL_IF_VALIDATION_ERROR_DEFAULT)
+    , m_bExposeMetadataLayers(WARN_IF_EXCLUDED_XPATH_FOUND_DEFAULT)
 {
 }
 
@@ -218,6 +219,10 @@ bool GMLASConfiguration::Load(const char* pszFilename)
                                         "=Configuration.Validation.FailIfError",
                                         FAIL_IF_VALIDATION_ERROR_DEFAULT );
     }
+
+    m_bExposeMetadataLayers = CPLGetXMLBoolValue( psRoot,
+                                      "=Configuration.ExposeMetadataLayers",
+                                      EXPOSE_METADATA_LAYERS_DEFAULT );
 
     m_bUseArrays = CPLGetXMLBoolValue( psRoot,
                                 "=Configuration.LayerBuildingRules.UseArrays",

@@ -208,6 +208,7 @@ class GMLASConfiguration
         static const bool ALLOW_XSD_CACHE_DEFAULT = true;
         static const bool VALIDATE_DEFAULT = false;
         static const bool FAIL_IF_VALIDATION_ERROR_DEFAULT = false;
+        static const bool EXPOSE_METADATA_LAYERS_DEFAULT = false;
         static const bool WARN_IF_EXCLUDED_XPATH_FOUND_DEFAULT = true;
 
         /** Whether remote schemas are allowed to be download. */
@@ -240,6 +241,9 @@ class GMLASConfiguration
 
         /** Whether a validation error should prevent dataset opening.  */
         bool            m_bFailIfValidationError;
+
+        /** Whether technical layers should be exposed.  */
+        bool            m_bExposeMetadataLayers;
 
         /** For ignored xpaths, map prefix namespace to its URI */
         std::map<CPLString, CPLString> m_oMapPrefixToURIIgnoredXPaths;

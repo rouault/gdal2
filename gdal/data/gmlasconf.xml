@@ -10,6 +10,7 @@
     <Validation enabled="false">
         <FailIfError>false</FailIfError>
     </Validation>
+    <ExposeMetadataLayers>false</ExposeMetadataLayers>
     <LayerBuildingRules>
         <UseArrays>true</UseArrays>
         <GML>

@@ -965,6 +965,28 @@ def ogr_gmlas_conf():
         f.DumpReadable()
         return 'fail'
 
+    # ExposeMetadataLayers = true
+    ds = gdal.OpenEx('GMLAS:data/gmlas_abstractgeometry_gml32.gml', open_options = [
+            'CONFIG_FILE=<Configuration><ExposeMetadataLayers>true</ExposeMetadataLayers></Configuration>'])
+    if ds is None:
+        gdaltest.post_reason('fail')
+        return 'fail'
+    if ds.GetLayerCount() != 4:
+        gdaltest.post_reason('fail')
+        print(ds.GetLayerCount())
+        return 'fail'
+    # Test override with open option
+    ds = gdal.OpenEx('GMLAS:data/gmlas_abstractgeometry_gml32.gml', open_options = [
+            'EXPOSE_METADATA_LAYERS=NO',
+            'CONFIG_FILE=<Configuration><ExposeMetadataLayers>true</ExposeMetadataLayers></Configuration>'])
+    if ds is None:
+        gdaltest.post_reason('fail')
+        return 'fail'
+    if ds.GetLayerCount() != 1:
+        gdaltest.post_reason('fail')
+        print(ds.GetLayerCount())
+        return 'fail'
+
     gdal.FileFromMemBuffer('/vsimem/ogr_gmlas_conf_invalid.xml',
 """<main_elt xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
                   xsi:noNamespaceSchemaLocation="ogr_gmlas_conf_invalid.xsd">
@@ -1210,6 +1232,7 @@ def ogr_gmlas_cache():
         return 'fail'
     if ds.GetLayerCount() != 1:
         gdaltest.post_reason('fail')
+        print(ds.GetLayerCount())
         webserver.server_stop(webserver_process, webserver_port)
         return 'fail'
 
