@@ -357,6 +357,7 @@ GMLASReader::GMLASReader(GMLASResourceCache& oCache,
     m_poEntityResolver = NULL;
     m_nLevelSilentIgnoredXPath = -1;
     m_eSwapCoordinates = GMLAS_SWAP_AUTO;
+    m_bInitialPass = false;
 }
 
 /************************************************************************/
@@ -730,14 +731,18 @@ void GMLASReader::BuildXMLBlobStartElement(const CPLString& osNSPrefix,
                                            const CPLString& osLocalname,
                                            const  Attributes& attrs)
 {
-    m_osTextContent += "<";
     CPLString osElementName;
     if( !osNSPrefix.empty() )
     {
         osElementName += osNSPrefix + ":";
     }
     osElementName += osLocalname;
-    m_osTextContent += osElementName;
+
+    if( !m_bInitialPass )
+    {
+        m_osTextContent += "<";
+        m_osTextContent += osElementName;
+    }
 
     CPLXMLNode* psNode = NULL;
     if( m_nCurGeomFieldIdx >= 0 )
@@ -780,17 +785,21 @@ void GMLASReader::BuildXMLBlobStartElement(const CPLString& osNSPrefix,
             psLastChild = psAttrNode;
         }
 
-        m_osTextContent += " ";
-        m_osTextContent += osAttributeName;
-        m_osTextContent += "=\"";
-        char* pszEscaped = CPLEscapeString( osAttrValue.c_str(),
-                                    static_cast<int>(osAttrValue.size()),
-                                    CPLES_XML );
-        m_osTextContent += pszEscaped;
-        CPLFree(pszEscaped);
-        m_osTextContent += '"';
+        if( !m_bInitialPass )
+        {
+            m_osTextContent += " ";
+            m_osTextContent += osAttributeName;
+            m_osTextContent += "=\"";
+            char* pszEscaped = CPLEscapeString( osAttrValue.c_str(),
+                                        static_cast<int>(osAttrValue.size()),
+                                        CPLES_XML );
+            m_osTextContent += pszEscaped;
+            CPLFree(pszEscaped);
+            m_osTextContent += '"';
+        }
     }
-    m_osTextContent += ">";
+    if( !m_bInitialPass )
+        m_osTextContent += ">";
 
     if( psNode != NULL )
     {
@@ -1659,7 +1668,7 @@ void GMLASReader::endElement(
         }
         else 
         {
-            if( m_bIsXMLBlobIncludeUpper )
+            if( m_bIsXMLBlobIncludeUpper && !m_bInitialPass )
             {
                 CPLString osLocalname( transcode(localname) );
                 CPLString osNSPrefix( m_oMapURIToPrefix[ transcode(uri) ] );
@@ -1708,22 +1717,25 @@ void GMLASReader::endElement(
                 m_apsXMLNodeStack.pop_back();
         }
 
-        CPLString osLocalname( transcode(localname) );
-        CPLString osNSPrefix( m_oMapURIToPrefix[ transcode(uri) ] );
-
-        m_osTextContent += "</";
-        if( !osNSPrefix.empty() )
+        if(  !m_bInitialPass )
         {
-            m_osTextContent += osNSPrefix + ":";
-        }
-        m_osTextContent += osLocalname;
-        m_osTextContent += ">";
+            CPLString osLocalname( transcode(localname) );
+            CPLString osNSPrefix( m_oMapURIToPrefix[ transcode(uri) ] );
 
-        if( m_osTextContent.size() > m_nMaxContentSize )
-        {
-            CPLError(CE_Failure, CPLE_OutOfMemory,
-                    "Too much data in a single element");
-            m_bParsingError = true;
+            m_osTextContent += "</";
+            if( !osNSPrefix.empty() )
+            {
+                m_osTextContent += osNSPrefix + ":";
+            }
+            m_osTextContent += osLocalname;
+            m_osTextContent += ">";
+
+            if( m_osTextContent.size() > m_nMaxContentSize )
+            {
+                CPLError(CE_Failure, CPLE_OutOfMemory,
+                        "Too much data in a single element");
+                m_bParsingError = true;
+            }
         }
     }
     else
@@ -1820,26 +1832,14 @@ void GMLASReader::ProcessGeometry()
     CPLXMLNode* psInterestNode = m_apsXMLNodeStack.back().psNode;
     m_apsXMLNodeStack.pop_back();
 
-#ifdef DEBUG_VERBOSE
+    OGRGeomFieldDefn* poGeomFieldDefn =
+        m_oCurCtxt.m_poFeature->GetGeomFieldDefnRef(
+                                    m_nCurGeomFieldIdx);
+
+    if( m_bInitialPass )
     {
-        char* pszXML = CPLSerializeXMLTree(psInterestNode);
-        CPLDebug("GML", "geometry = %s", pszXML);
-        CPLFree(pszXML);
-    }
-#endif
-
-    OGRGeometry* poGeom = reinterpret_cast<OGRGeometry*>
-                    (OGR_G_CreateFromGMLTree( psInterestNode ));
-    if( poGeom != NULL )
-    {
-        OGRGeomFieldDefn* poGeomFieldDefn =
-            m_oCurCtxt.m_poFeature->GetGeomFieldDefnRef(
-                                        m_nCurGeomFieldIdx);
-
-
         const char* pszSRSName = CPLGetXMLValue(psInterestNode,
                                                 "srsName", NULL);
-        bool bSwapXY = false;
         if( pszSRSName != NULL )
         {
             // If we are doing a first pass, store the SRS of the geometry
@@ -1869,7 +1869,28 @@ void GMLASReader::ProcessGeometry()
                 poSRS->Release();
                 m_oSetGeomFieldsWithUnknownSRS.erase(poGeomFieldDefn);
             }
+        }
+        CPLDestroyXMLNode( psInterestNode );
+        return;
+    }
 
+#ifdef DEBUG_VERBOSE
+    {
+        char* pszXML = CPLSerializeXMLTree(psInterestNode);
+        CPLDebug("GML", "geometry = %s", pszXML);
+        CPLFree(pszXML);
+    }
+#endif
+
+    OGRGeometry* poGeom = reinterpret_cast<OGRGeometry*>
+                    (OGR_G_CreateFromGMLTree( psInterestNode ));
+    if( poGeom != NULL )
+    {
+        const char* pszSRSName = CPLGetXMLValue(psInterestNode,
+                                                "srsName", NULL);
+        bool bSwapXY = false;
+        if( pszSRSName != NULL )
+        {
             // Check if the srsName indicates unusual axis order,
             // and if so swap x and y coordinates.
             std::map<CPLString, bool>::iterator oIter =
@@ -1893,13 +1914,8 @@ void GMLASReader::ProcessGeometry()
             poGeom->swapXY();
         }
 
-        if( !m_oSetGeomFieldsWithUnknownSRS.empty() )
-        {
-            delete poGeom;
-            poGeom = NULL;
-        }
         // Do we need to do reprojection ?
-        else if( pszSRSName != NULL && poGeomFieldDefn->GetSpatialRef() != NULL &&
+        if( pszSRSName != NULL && poGeomFieldDefn->GetSpatialRef() != NULL &&
             m_oMapGeomFieldDefnToSRSName[poGeomFieldDefn] != pszSRSName )
         {
             bool bReprojectionOK = false;
@@ -1983,6 +1999,9 @@ void GMLASReader::ProcessGeometry()
 void GMLASReader::characters( const XMLCh *const chars,
                               const XMLSize_t length )
 {
+    if( m_bInitialPass )
+        return;
+
     if( m_bIsXMLBlob )
     {
         const CPLString osText( transcode(chars, static_cast<int>(length) ) );
@@ -2147,6 +2166,8 @@ OGRFeature* GMLASReader::GetNextFeature( OGRLayer** ppoBelongingLayer )
 
 void GMLASReader::RunFirstPass()
 {
+    m_bInitialPass = true;
+
     // Store in m_oSetGeomFieldsWithUnknownSRS the geometry fields
     for(size_t i=0; i < m_papoLayers->size(); i++ )
     {

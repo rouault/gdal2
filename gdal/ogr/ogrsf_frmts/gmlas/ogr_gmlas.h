@@ -969,6 +969,9 @@ class GMLASReader : public DefaultHandler
         /** Policy to decide when to invert coordinates */
         GMLASSwapCoordinatesEnum       m_eSwapCoordinates;
 
+        /** Initial pass to guess SRS, etc... */
+        bool                        m_bInitialPass;
+
         static void SetField( OGRFeature* poFeature,
                               OGRGMLASLayer* poLayer,
                               int nAttrIdx,
