@@ -75,6 +75,13 @@ namespace OGRGMLAS
 }
 using OGRGMLAS::transcode;
 
+typedef enum
+{
+    GMLAS_SWAP_AUTO,
+    GMLAS_SWAP_YES,
+    GMLAS_SWAP_NO,
+} GMLASSwapCoordinatesEnum;
+
 /************************************************************************/
 /*                          IGMLASInputSourceClosing                    */
 /************************************************************************/
@@ -677,6 +684,8 @@ class OGRGMLASDataSource: public GDALDataset
 
         GMLASXPathMatcher              m_oIgnoredXPathMatcher;
 
+        GMLASSwapCoordinatesEnum       m_eSwapCoordinates;
+
         void TranslateClasses( OGRGMLASLayer* poParentLayer,
                                const GMLASFeatureClass& oFC );
 
@@ -711,6 +720,8 @@ class OGRGMLASDataSource: public GDALDataset
         void        PushUnusedGMLFilePointer( VSILFILE* fpGML );
         VSILFILE   *PopUnusedGMLFilePointer();
         bool        IsLayerInitFinished() const { return m_bLayerInitFinished; }
+        GMLASSwapCoordinatesEnum GetSwapCoordinates() const
+                                                { return m_eSwapCoordinates; }
 
         const std::map<CPLString,bool>& GetMapIgnoredXPathToWarn() const {
                                 return m_oConf.m_oMapIgnoredXPathToWarn; }
@@ -955,6 +966,9 @@ class GMLASReader : public DefaultHandler
             XPath defined.  */
         std::map<CPLString, bool> m_oMapIgnoredXPathToWarn;
 
+        /** Policy to decide when to invert coordinates */
+        GMLASSwapCoordinatesEnum       m_eSwapCoordinates;
+
         static void SetField( OGRFeature* poFeature,
                               OGRGMLASLayer* poLayer,
                               int nAttrIdx,
@@ -993,6 +1007,9 @@ class GMLASReader : public DefaultHandler
 
         void SetMapIgnoredXPathToWarn(const std::map<CPLString,bool>& oMap)
                     { m_oMapIgnoredXPathToWarn = oMap; }
+
+        void SetSwapCoordinates(GMLASSwapCoordinatesEnum eVal)
+                                            { m_eSwapCoordinates = eVal; }
 
         VSILFILE* GetFP() const { return m_fp; }
 

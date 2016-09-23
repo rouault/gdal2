@@ -356,6 +356,7 @@ GMLASReader::GMLASReader(GMLASResourceCache& oCache,
     m_bValidate = false;
     m_poEntityResolver = NULL;
     m_nLevelSilentIgnoredXPath = -1;
+    m_eSwapCoordinates = GMLAS_SWAP_AUTO;
 }
 
 /************************************************************************/
@@ -1886,8 +1887,11 @@ void GMLASReader::ProcessGeometry()
                 bSwapXY = oIter->second;
             }
         }
-        if( bSwapXY )
+        if( (bSwapXY && m_eSwapCoordinates == GMLAS_SWAP_AUTO) ||
+            m_eSwapCoordinates == GMLAS_SWAP_YES )
+        {
             poGeom->swapXY();
+        }
 
         if( !m_oSetGeomFieldsWithUnknownSRS.empty() )
         {

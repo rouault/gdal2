@@ -652,6 +652,8 @@ bool OGRGMLASLayer::InitReader()
                       m_poDS->GetLayers(),
                       false );
 
+    m_poReader->SetSwapCoordinates( m_poDS->GetSwapCoordinates() );
+
     m_poDS->RunFirstPassIfNeeded( m_poReader );
 
     m_poReader->SetMapIgnoredXPathToWarn(

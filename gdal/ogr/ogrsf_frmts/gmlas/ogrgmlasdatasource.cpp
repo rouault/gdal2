@@ -47,6 +47,7 @@ OGRGMLASDataSource::OGRGMLASDataSource()
     m_bLayerInitFinished = false;
     m_bValidate = false;
     m_bFirstPassDone = false;
+    m_eSwapCoordinates = GMLAS_SWAP_AUTO;
 
     m_poFieldsMetadataLayer = new OGRMemLayer
                                     ("_ogr_fields_metadata", NULL, wkbNone );
@@ -492,6 +493,23 @@ bool OGRGMLASDataSource::Open(GDALOpenInfo* poOpenInfo)
     m_bExposeMetadataLayers = CPLFetchBool(poOpenInfo->papszOpenOptions,
                                            "EXPOSE_METADATA_LAYERS",
                                            m_oConf.m_bExposeMetadataLayers);
+
+    const char* pszSwapCoordinates = CSLFetchNameValueDef(
+                                           poOpenInfo->papszOpenOptions,
+                                           "SWAP_COORDINATES",
+                                           "AUTO");
+    if( EQUAL(pszSwapCoordinates, "AUTO") )
+    {
+        m_eSwapCoordinates = GMLAS_SWAP_AUTO;
+    }
+    else if( CPLTestBool(pszSwapCoordinates) )
+    {
+        m_eSwapCoordinates = GMLAS_SWAP_YES;
+    }
+    else
+    {
+        m_eSwapCoordinates = GMLAS_SWAP_NO;
+    }
 
     const std::vector<GMLASFeatureClass>& aoClasses = oAnalyzer.GetClasses();
 

@@ -113,6 +113,13 @@ void RegisterOGRGMLAS()
 "  <Option name='REFRESH_CACHE' type='boolean' "
     "description='Whether remote schemas should be downloaded from the server' "
     "default='NO'/>"
+"  <Option name='SWAP_COORDINATES' type='string-select' "
+    "description='Whether the order of geometry coordinates should be inverted.' "
+    "default='AUTO'>"
+"    <Value>AUTO</Value>"
+"    <Value>YES</Value>"
+"    <Value>NO</Value>"
+"  </Option>"
 "</OpenOptionList>" );
 
     poDriver->SetMetadataItem( GDAL_DCAP_VIRTUALIO, "YES" );

@@ -685,6 +685,48 @@ def ogr_gmlas_geometryproperty():
         f.DumpReadable()
         return 'fail'
 
+    # Test SWAP_COORDINATES=NO
+    ds = gdal.OpenEx('GMLAS:data/gmlas_geometryproperty_gml32.gml',
+                     open_options= ['SWAP_COORDINATES=NO'])
+    lyr = ds.GetLayer(0)
+    with gdaltest.error_handler():
+        f = lyr.GetNextFeature()
+    geom_idx = lyr.GetLayerDefn().GetGeomFieldIndex('geometryProperty')
+    wkt = f.GetGeomFieldRef(geom_idx).ExportToWkt()
+    # Axis swapping
+    if wkt != 'POINT (49 2)':
+        gdaltest.post_reason('fail')
+        f.DumpReadable()
+        return 'fail'
+    geom_idx = lyr.GetLayerDefn().GetGeomFieldIndex('lineStringProperty')
+    wkt = f.GetGeomFieldRef(geom_idx).ExportToWkt()
+    # Axis swapping
+    if wkt != 'LINESTRING (2 49)':
+        gdaltest.post_reason('fail')
+        f.DumpReadable()
+        return 'fail'
+
+    # Test SWAP_COORDINATES=YES
+    ds = gdal.OpenEx('GMLAS:data/gmlas_geometryproperty_gml32.gml',
+                     open_options= ['SWAP_COORDINATES=YES'])
+    lyr = ds.GetLayer(0)
+    with gdaltest.error_handler():
+        f = lyr.GetNextFeature()
+    geom_idx = lyr.GetLayerDefn().GetGeomFieldIndex('geometryProperty')
+    wkt = f.GetGeomFieldRef(geom_idx).ExportToWkt()
+    # Axis swapping
+    if wkt != 'POINT (2 49)':
+        gdaltest.post_reason('fail')
+        f.DumpReadable()
+        return 'fail'
+    geom_idx = lyr.GetLayerDefn().GetGeomFieldIndex('lineStringProperty')
+    wkt = f.GetGeomFieldRef(geom_idx).ExportToWkt()
+    # Axis swapping
+    if wkt != 'LINESTRING (49 2)':
+        gdaltest.post_reason('fail')
+        f.DumpReadable()
+        return 'fail'
+
     return 'success'
 
 ###############################################################################
