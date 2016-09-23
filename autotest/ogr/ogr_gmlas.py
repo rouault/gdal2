@@ -584,7 +584,8 @@ def ogr_gmlas_geometryproperty():
     if ogr.GetDriverByName('GMLAS') is None:
         return 'skip'
 
-    ds = gdal.OpenEx('GMLAS:data/gmlas_geometryproperty_gml32.gml')
+    ds = gdal.OpenEx('GMLAS:data/gmlas_geometryproperty_gml32.gml', open_options = [
+            'CONFIG_FILE=<Configuration><LayerBuildingRules><GML><IncludeGeometryXML>true</IncludeGeometryXML></GML></LayerBuildingRules></Configuration>'])
     lyr = ds.GetLayer(0)
     with gdaltest.error_handler():
         geom_field_count = lyr.GetLayerDefn().GetGeomFieldCount()
@@ -737,7 +738,8 @@ def ogr_gmlas_abstractgeometry():
     if ogr.GetDriverByName('GMLAS') is None:
         return 'skip'
 
-    ds = gdal.OpenEx('GMLAS:data/gmlas_abstractgeometry_gml32.gml')
+    ds = gdal.OpenEx('GMLAS:data/gmlas_abstractgeometry_gml32.gml', open_options = [
+            'CONFIG_FILE=<Configuration><LayerBuildingRules><GML><IncludeGeometryXML>true</IncludeGeometryXML></GML></LayerBuildingRules></Configuration>'])
     lyr = ds.GetLayer(0)
     if lyr.GetLayerDefn().GetGeomFieldCount() != 2:
         gdaltest.post_reason('fail')

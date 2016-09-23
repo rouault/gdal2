@@ -210,7 +210,7 @@ class GMLASConfiguration
     public:
         static const bool ALLOW_REMOTE_SCHEMA_DOWNLOAD_DEFAULT = true;
         static const bool USE_ARRAYS_DEFAULT = true;
-        static const bool INCLUDE_GEOMETRY_XML_DEFAULT = true;
+        static const bool INCLUDE_GEOMETRY_XML_DEFAULT = false;
         static const bool INSTANTIATE_GML_FEATURES_ONLY_DEFAULT = true;
         static const bool ALLOW_XSD_CACHE_DEFAULT = true;
         static const bool VALIDATE_DEFAULT = false;

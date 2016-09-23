@@ -14,7 +14,7 @@
     <LayerBuildingRules>
         <UseArrays>true</UseArrays>
         <GML>
-            <IncludeGeometryXML>true</IncludeGeometryXML>
+            <IncludeGeometryXML>false</IncludeGeometryXML>
             <InstantiateGMLFeaturesOnly>true</InstantiateGMLFeaturesOnly>
         </GML>
     </LayerBuildingRules>
