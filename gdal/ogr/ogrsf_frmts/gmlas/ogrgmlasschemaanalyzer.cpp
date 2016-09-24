@@ -1109,9 +1109,10 @@ void GMLASSchemaAnalyzer::CreateNonNestedRelationship(
                         int nMaxOccurs,
                         bool bForceJunctionTable )
 {
+    const CPLString osEltName(transcode(poElt->getName()));
     const CPLString osOnlyElementXPath(
                     MakeXPath(transcode(poElt->getNamespace()),
-                            transcode(poElt->getName())) );
+                              osEltName) );
     const CPLString osElementXPath( oClass.GetXPath() + "/" +
                                     osOnlyElementXPath );
 
@@ -1210,6 +1211,7 @@ void GMLASSchemaAnalyzer::CreateNonNestedRelationship(
 
             // Add an abstract field
             GMLASField oField;
+            oField.SetName( osEltName + "_" + osSubEltName );
             oField.SetXPath( oClass.GetXPath() + "/" +
                                                 osSubEltXPath);
             oField.SetMinOccurs( 0 );
@@ -1850,6 +1852,7 @@ bool GMLASSchemaAnalyzer::ExploreModelGroup(
                     oField.SetXPath( osElementXPath );
                     oField.SetCategory(
                                     GMLASField::PATH_TO_CHILD_ELEMENT_NO_LINK);
+                    oField.SetRelatedClassXPath( oField.GetXPath() );
                     oClass.AddField(oField);
                 }
                 else
@@ -2216,12 +2219,15 @@ bool GMLASSchemaAnalyzer::ExploreModelGroup(
 
                                 oNestedClass.SetName( oClass.GetName() + "_" +
                                         osEltName + "_sequence" );
+                                oNestedClass.SetXPath( oNestedClass.GetXPath() +
+                                        ";extra=sequence");
                                 oNestedClass.SetIsRepeatedSequence( true );
 
                                 GMLASField oField;
-                                oField.SetXPath( oNestedClass.GetXPath() );
+                                oField.SetXPath( osElementXPath );
                                 oField.SetCategory(
                                     GMLASField::PATH_TO_CHILD_ELEMENT_NO_LINK);
+                                oField.SetRelatedClassXPath( oNestedClass.GetXPath() );
                                 oIntermNestedClass.AddField(oField);
 
                                 oIntermNestedClass.AddNestedClass( oNestedClass );
@@ -2241,6 +2247,7 @@ bool GMLASSchemaAnalyzer::ExploreModelGroup(
                             oField.SetXPath( osElementXPath );
                             oField.SetCategory(
                                     GMLASField::PATH_TO_CHILD_ELEMENT_NO_LINK);
+                            oField.SetRelatedClassXPath( oField.GetXPath() );
                             oClass.AddField(oField);
                         }
 
@@ -2266,6 +2273,7 @@ bool GMLASSchemaAnalyzer::ExploreModelGroup(
                     oField.SetXPath( osElementXPath );
                     oField.SetCategory(
                                     GMLASField::PATH_TO_CHILD_ELEMENT_NO_LINK);
+                    oField.SetRelatedClassXPath( oField.GetXPath() );
                     oClass.AddField(oField);
                 }
                 else
@@ -2286,18 +2294,15 @@ bool GMLASSchemaAnalyzer::ExploreModelGroup(
             {
                 GMLASFeatureClass oNestedClass;
                 CPLString osGroupName = GetGroupName(psSubModelGroup);
-                if( !osGroupName.empty() )
-                {
-                    oNestedClass.SetName( oClass.GetName() + "_" + osGroupName);
-                }
-                else
+                if( osGroupName.empty() )
                 {
                     // Shouldn't happen normally
                     nGroup ++;
-                    oNestedClass.SetName( oClass.GetName() +
-                                          CPLSPrintf("_group%d", nGroup) );
+                    osGroupName = CPLSPrintf("_group%d", nGroup);
                 }
+                oNestedClass.SetName( oClass.GetName() + "_" + osGroupName);
                 oNestedClass.SetIsRepeatedSequence(true);
+                // Caution: we will change it afterwards !
                 oNestedClass.SetXPath( oClass.GetXPath() );
                 std::set<XSModelGroup*>
                     oSetNewVisitedModelGroups(oSetVisitedModelGroups);
@@ -2310,6 +2315,10 @@ bool GMLASSchemaAnalyzer::ExploreModelGroup(
                 {
                     return false;
                 }
+                // This is a nasty hack. We set a unique fake xpath *AFTER*
+                // processing the group, so that we can add a fake GROUP field
+                // pointing to the nested class
+                oNestedClass.SetXPath( oClass.GetXPath() + ";extra=" + osGroupName );
 
                 if( m_bUseArrays &&
                     oNestedClass.GetFields().size() == 1 &&
@@ -2322,6 +2331,13 @@ bool GMLASSchemaAnalyzer::ExploreModelGroup(
                 else
                 {
                     oClass.AddNestedClass( oNestedClass );
+
+                    GMLASField oField;
+                    oField.SetCategory( GMLASField::GROUP );
+                    oField.SetMinOccurs( nMinOccurs );
+                    oField.SetMaxOccurs( nMaxOccurs );
+                    oField.SetRelatedClassXPath( oNestedClass.GetXPath() );
+                    oClass.AddField(oField);
                 }
             }
             else

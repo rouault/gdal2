@@ -366,7 +366,10 @@ class GMLASField
             /** Non-instanciable field. The corresponding element to the XPath
                 is stored in a child layer. And the link between both will be
                 done through a junction table. */
-            PATH_TO_CHILD_ELEMENT_WITH_JUNCTION_TABLE
+            PATH_TO_CHILD_ELEMENT_WITH_JUNCTION_TABLE,
+
+            /** Non-instanciable field. Corresponds to a group of an element. */
+            GROUP
         } Category;
 
     private:
@@ -412,8 +415,9 @@ class GMLASField
         CPLString m_osAbstractElementXPath;
 
         /** Only used for PATH_TO_CHILD_ELEMENT_WITH_LINK and
-            PATH_TO_CHILD_ELEMENT_WITH_JUNCTION_TABLE. The XPath of the
-            child element. */
+            PATH_TO_CHILD_ELEMENT_WITH_JUNCTION_TABLE (and also for
+            PATH_TO_CHILD_ELEMENT_NO_LINK and GROUP but for metadata layers only).
+            The XPath of the child element. */
         CPLString m_osRelatedClassXPath;
 
     public:

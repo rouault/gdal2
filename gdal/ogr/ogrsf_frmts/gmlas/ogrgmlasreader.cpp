@@ -942,23 +942,33 @@ void GMLASReader::startElement(
     // Look which layer might match the current XPath
     for(size_t i = 0; i < m_papoLayers->size(); i++ )
     {
+        CPLString osLayerXPath((*m_papoLayers)[i]->GetFeatureClass().GetXPath());
+        if( (*m_papoLayers)[i]->GetFeatureClass().IsRepeatedSequence() )
+        {
+            size_t iPosExtra = osLayerXPath.find(";extra=");
+            if (iPosExtra != std::string::npos)
+            {
+                osLayerXPath.resize(iPosExtra);
+            }
+        }
+
         // Are we entering a group ?
         const bool bIsRepeatedSequenceLayer =
             ((*m_papoLayers)[i]->GetFeatureClass().IsRepeatedSequence() &&
              m_oCurCtxt.m_poLayer != NULL &&
              m_oCurCtxt.m_poLayer != (*m_papoLayers)[i] &&
              m_oCurCtxt.m_poLayer->GetFeatureClass().GetXPath() ==
-                    (*m_papoLayers)[i]->GetFeatureClass().GetXPath() &&
+                    osLayerXPath &&
              (*m_papoLayers)[i]->GetOGRFieldIndexFromXPath(m_osCurSubXPath) >= 0 );
 
         if( // Case where we haven't yet entered the top-level element, which may
             // be in container elements
             (m_osCurSubXPath.empty() &&
-             (*m_papoLayers)[i]->GetFeatureClass().GetXPath() == osXPath) ||
+             osLayerXPath == osXPath) ||
 
             // Case where we are a sub-element of a top-level feature
             (!m_osCurSubXPath.empty() &&
-             (*m_papoLayers)[i]->GetFeatureClass().GetXPath() == m_osCurSubXPath) ||
+             osLayerXPath == m_osCurSubXPath) ||
 
             // Case where we are a sub-element of a (repeated) group of a
             //top-level feature

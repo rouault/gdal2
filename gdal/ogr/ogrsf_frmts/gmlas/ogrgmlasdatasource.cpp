@@ -92,6 +92,10 @@ OGRGMLASDataSource::OGRGMLASDataSource()
         m_poFieldsMetadataLayer->CreateField(&oFieldDefn);
     }
     {
+        OGRFieldDefn oFieldDefn("field_junction_layer", OFTString);
+        m_poFieldsMetadataLayer->CreateField(&oFieldDefn);
+    }
+    {
         OGRFieldDefn oFieldDefn("field_documentation", OFTString);
         m_poFieldsMetadataLayer->CreateField(&oFieldDefn);
     }
@@ -110,19 +114,23 @@ OGRGMLASDataSource::OGRGMLASDataSource()
         OGRFieldDefn oFieldDefn("layer_category", OFTString);
         m_poLayersMetadataLayer->CreateField(&oFieldDefn);
     }
+    {
+        OGRFieldDefn oFieldDefn("layer_documentation", OFTString);
+        m_poFieldsMetadataLayer->CreateField(&oFieldDefn);
+    }
 
     m_poRelationshipsLayer = new OGRMemLayer("_ogr_layer_relationships",
                                              NULL, wkbNone );
-    {
-        OGRFieldDefn oFieldDefn("relation_name", OFTString);
-        m_poRelationshipsLayer->CreateField(&oFieldDefn);
-    }
     {
         OGRFieldDefn oFieldDefn("parent_layer", OFTString);
         m_poRelationshipsLayer->CreateField(&oFieldDefn);
     }
     {
-        OGRFieldDefn oFieldDefn("parent_field", OFTString);
+        OGRFieldDefn oFieldDefn("parent_pkid", OFTString);
+        m_poRelationshipsLayer->CreateField(&oFieldDefn);
+    }
+    {
+        OGRFieldDefn oFieldDefn("parent_element_name", OFTString);
         m_poRelationshipsLayer->CreateField(&oFieldDefn);
     }
     {
@@ -130,7 +138,7 @@ OGRGMLASDataSource::OGRGMLASDataSource()
         m_poRelationshipsLayer->CreateField(&oFieldDefn);
     }
     {
-        OGRFieldDefn oFieldDefn("child_field", OFTString);
+        OGRFieldDefn oFieldDefn("child_pkid", OFTString);
         m_poRelationshipsLayer->CreateField(&oFieldDefn);
     }
 }

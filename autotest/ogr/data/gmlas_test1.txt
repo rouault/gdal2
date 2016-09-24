@@ -572,3 +572,1867 @@ OGRFeature(main_elt_an_abstract_element_abstract_element_realization2):1
   parent_pkid (String) = otherns_id
   child_pkid (String) = _abstract_element_realization2_1
 
+
+Layer name: _ogr_fields_metadata
+Geometry: None
+Feature Count: 105
+Layer SRS WKT:
+(unknown)
+layer_name: String (0.0)
+field_name: String (0.0)
+field_xpath: String (0.0)
+field_type: String (0.0)
+field_min_occurs: Integer (0.0)
+field_max_occurs: Integer (0.0)
+field_default_value: String (0.0)
+field_fixed_value: String (0.0)
+field_category: String (0.0)
+field_related_layer: String (0.0)
+field_junction_layer: String (0.0)
+field_documentation: String (0.0)
+layer_documentation: String (0.0)
+OGRFeature(_ogr_fields_metadata):0
+  layer_name (String) = abstract_element_realization1
+  field_name (String) = a_int
+  field_xpath (String) = myns:abstract_element_realization1/myns:a_int
+  field_type (String) = int
+  field_min_occurs (Integer) = 1
+  field_max_occurs (Integer) = 1
+  field_default_value (String) = (null)
+  field_fixed_value (String) = (null)
+  field_category (String) = REGULAR
+  field_related_layer (String) = (null)
+  field_junction_layer (String) = (null)
+  field_documentation (String) = (null)
+  layer_documentation (String) = (null)
+
+OGRFeature(_ogr_fields_metadata):1
+  layer_name (String) = abstract_element_realization2
+  field_name (String) = b_int
+  field_xpath (String) = myns:abstract_element_realization2/myns:b_int
+  field_type (String) = int
+  field_min_occurs (Integer) = 1
+  field_max_occurs (Integer) = 1
+  field_default_value (String) = (null)
+  field_fixed_value (String) = (null)
+  field_category (String) = REGULAR
+  field_related_layer (String) = (null)
+  field_junction_layer (String) = (null)
+  field_documentation (String) = (null)
+  layer_documentation (String) = (null)
+
+OGRFeature(_ogr_fields_metadata):2
+  layer_name (String) = main_elt
+  field_name (String) = optionalStrAttr
+  field_xpath (String) = myns:main_elt/@optionalStrAttr
+  field_type (String) = string
+  field_min_occurs (Integer) = 0
+  field_max_occurs (Integer) = 1
+  field_default_value (String) = (null)
+  field_fixed_value (String) = (null)
+  field_category (String) = REGULAR
+  field_related_layer (String) = (null)
+  field_junction_layer (String) = (null)
+  field_documentation (String) = (null)
+  layer_documentation (String) = (null)
+
+OGRFeature(_ogr_fields_metadata):3
+  layer_name (String) = main_elt
+  field_name (String) = fixedValUnset
+  field_xpath (String) = myns:main_elt/@fixedValUnset
+  field_type (String) = string
+  field_min_occurs (Integer) = 0
+  field_max_occurs (Integer) = 1
+  field_default_value (String) = (null)
+  field_fixed_value (String) = fixed_value
+  field_category (String) = REGULAR
+  field_related_layer (String) = (null)
+  field_junction_layer (String) = (null)
+  field_documentation (String) = (null)
+  layer_documentation (String) = (null)
+
+OGRFeature(_ogr_fields_metadata):4
+  layer_name (String) = main_elt
+  field_name (String) = fixedValSet
+  field_xpath (String) = myns:main_elt/@fixedValSet
+  field_type (String) = string
+  field_min_occurs (Integer) = 0
+  field_max_occurs (Integer) = 1
+  field_default_value (String) = (null)
+  field_fixed_value (String) = fixed_value
+  field_category (String) = REGULAR
+  field_related_layer (String) = (null)
+  field_junction_layer (String) = (null)
+  field_documentation (String) = (null)
+  layer_documentation (String) = (null)
+
+OGRFeature(_ogr_fields_metadata):5
+  layer_name (String) = main_elt
+  field_name (String) = defaultValUnset
+  field_xpath (String) = myns:main_elt/@defaultValUnset
+  field_type (String) = string
+  field_min_occurs (Integer) = 0
+  field_max_occurs (Integer) = 1
+  field_default_value (String) = default_value
+  field_fixed_value (String) = (null)
+  field_category (String) = REGULAR
+  field_related_layer (String) = (null)
+  field_junction_layer (String) = (null)
+  field_documentation (String) = (null)
+  layer_documentation (String) = (null)
+
+OGRFeature(_ogr_fields_metadata):6
+  layer_name (String) = main_elt
+  field_name (String) = defaultValSet
+  field_xpath (String) = myns:main_elt/@defaultValSet
+  field_type (String) = string
+  field_min_occurs (Integer) = 0
+  field_max_occurs (Integer) = 1
+  field_default_value (String) = default_value
+  field_fixed_value (String) = (null)
+  field_category (String) = REGULAR
+  field_related_layer (String) = (null)
+  field_junction_layer (String) = (null)
+  field_documentation (String) = (null)
+  layer_documentation (String) = (null)
+
+OGRFeature(_ogr_fields_metadata):7
+  layer_name (String) = main_elt
+  field_name (String) = otherns_id
+  field_xpath (String) = myns:main_elt/@otherns:id
+  field_type (String) = ID
+  field_min_occurs (Integer) = 1
+  field_max_occurs (Integer) = 1
+  field_default_value (String) = (null)
+  field_fixed_value (String) = (null)
+  field_category (String) = REGULAR
+  field_related_layer (String) = (null)
+  field_junction_layer (String) = (null)
+  field_documentation (String) = (null)
+  layer_documentation (String) = (null)
+
+OGRFeature(_ogr_fields_metadata):8
+  layer_name (String) = main_elt
+  field_name (String) = myAttributeGroupAttr1
+  field_xpath (String) = myns:main_elt/@myAttributeGroupAttr1
+  field_type (String) = string
+  field_min_occurs (Integer) = 0
+  field_max_occurs (Integer) = 1
+  field_default_value (String) = (null)
+  field_fixed_value (String) = (null)
+  field_category (String) = REGULAR
+  field_related_layer (String) = (null)
+  field_junction_layer (String) = (null)
+  field_documentation (String) = (null)
+  layer_documentation (String) = (null)
+
+OGRFeature(_ogr_fields_metadata):9
+  layer_name (String) = main_elt
+  field_name (String) = myAttributeGroupAttr2
+  field_xpath (String) = myns:main_elt/@myAttributeGroupAttr2
+  field_type (String) = integer
+  field_min_occurs (Integer) = 1
+  field_max_occurs (Integer) = 1
+  field_default_value (String) = (null)
+  field_fixed_value (String) = (null)
+  field_category (String) = REGULAR
+  field_related_layer (String) = (null)
+  field_junction_layer (String) = (null)
+  field_documentation (String) = (null)
+  layer_documentation (String) = (null)
+
+OGRFeature(_ogr_fields_metadata):10
+  layer_name (String) = main_elt
+  field_name (String) = id_attr
+  field_xpath (String) = myns:main_elt/@id
+  field_type (String) = string
+  field_min_occurs (Integer) = 0
+  field_max_occurs (Integer) = 1
+  field_default_value (String) = (null)
+  field_fixed_value (String) = (null)
+  field_category (String) = REGULAR
+  field_related_layer (String) = (null)
+  field_junction_layer (String) = (null)
+  field_documentation (String) = (null)
+  layer_documentation (String) = (null)
+
+OGRFeature(_ogr_fields_metadata):11
+  layer_name (String) = main_elt
+  field_name (String) = base_int
+  field_xpath (String) = myns:main_elt/myns:base_int
+  field_type (String) = int
+  field_min_occurs (Integer) = 1
+  field_max_occurs (Integer) = 1
+  field_default_value (String) = (null)
+  field_fixed_value (String) = (null)
+  field_category (String) = REGULAR
+  field_related_layer (String) = (null)
+  field_junction_layer (String) = (null)
+  field_documentation (String) = (null)
+  layer_documentation (String) = (null)
+
+OGRFeature(_ogr_fields_metadata):12
+  layer_name (String) = main_elt
+  field_name (String) = id
+  field_xpath (String) = myns:main_elt/myns:id
+  field_type (String) = string
+  field_min_occurs (Integer) = 1
+  field_max_occurs (Integer) = 1
+  field_default_value (String) = (null)
+  field_fixed_value (String) = (null)
+  field_category (String) = REGULAR
+  field_related_layer (String) = (null)
+  field_junction_layer (String) = (null)
+  field_documentation (String) = (null)
+  layer_documentation (String) = (null)
+
+OGRFeature(_ogr_fields_metadata):13
+  layer_name (String) = main_elt
+  field_name (String) = string
+  field_xpath (String) = myns:main_elt/myns:string
+  field_type (String) = string
+  field_min_occurs (Integer) = 1
+  field_max_occurs (Integer) = 1
+  field_default_value (String) = (null)
+  field_fixed_value (String) = (null)
+  field_category (String) = REGULAR
+  field_related_layer (String) = (null)
+  field_junction_layer (String) = (null)
+  field_documentation (String) = (null)
+  layer_documentation (String) = (null)
+
+OGRFeature(_ogr_fields_metadata):14
+  layer_name (String) = main_elt
+  field_name (String) = string_array
+  field_xpath (String) = myns:main_elt/myns:string_array
+  field_type (String) = string
+  field_min_occurs (Integer) = 1
+  field_max_occurs (Integer) = 2147483647
+  field_default_value (String) = (null)
+  field_fixed_value (String) = (null)
+  field_category (String) = REGULAR
+  field_related_layer (String) = (null)
+  field_junction_layer (String) = (null)
+  field_documentation (String) = (null)
+  layer_documentation (String) = (null)
+
+OGRFeature(_ogr_fields_metadata):15
+  layer_name (String) = main_elt
+  field_name (String) = int
+  field_xpath (String) = myns:main_elt/myns:int
+  field_type (String) = int
+  field_min_occurs (Integer) = 1
+  field_max_occurs (Integer) = 1
+  field_default_value (String) = (null)
+  field_fixed_value (String) = (null)
+  field_category (String) = REGULAR
+  field_related_layer (String) = (null)
+  field_junction_layer (String) = (null)
+  field_documentation (String) = (null)
+  layer_documentation (String) = (null)
+
+OGRFeature(_ogr_fields_metadata):16
+  layer_name (String) = main_elt
+  field_name (String) = int_array
+  field_xpath (String) = myns:main_elt/myns:int_array
+  field_type (String) = int
+  field_min_occurs (Integer) = 1
+  field_max_occurs (Integer) = 2
+  field_default_value (String) = (null)
+  field_fixed_value (String) = (null)
+  field_category (String) = REGULAR
+  field_related_layer (String) = (null)
+  field_junction_layer (String) = (null)
+  field_documentation (String) = (null)
+  layer_documentation (String) = (null)
+
+OGRFeature(_ogr_fields_metadata):17
+  layer_name (String) = main_elt
+  field_name (String) = long
+  field_xpath (String) = myns:main_elt/myns:long
+  field_type (String) = long
+  field_min_occurs (Integer) = 1
+  field_max_occurs (Integer) = 1
+  field_default_value (String) = (null)
+  field_fixed_value (String) = (null)
+  field_category (String) = REGULAR
+  field_related_layer (String) = (null)
+  field_junction_layer (String) = (null)
+  field_documentation (String) = (null)
+  layer_documentation (String) = (null)
+
+OGRFeature(_ogr_fields_metadata):18
+  layer_name (String) = main_elt
+  field_name (String) = long_array
+  field_xpath (String) = myns:main_elt/myns:long_array
+  field_type (String) = long
+  field_min_occurs (Integer) = 1
+  field_max_occurs (Integer) = 2147483647
+  field_default_value (String) = (null)
+  field_fixed_value (String) = (null)
+  field_category (String) = REGULAR
+  field_related_layer (String) = (null)
+  field_junction_layer (String) = (null)
+  field_documentation (String) = (null)
+  layer_documentation (String) = (null)
+
+OGRFeature(_ogr_fields_metadata):19
+  layer_name (String) = main_elt
+  field_name (String) = float
+  field_xpath (String) = myns:main_elt/myns:float
+  field_type (String) = float
+  field_min_occurs (Integer) = 1
+  field_max_occurs (Integer) = 1
+  field_default_value (String) = (null)
+  field_fixed_value (String) = (null)
+  field_category (String) = REGULAR
+  field_related_layer (String) = (null)
+  field_junction_layer (String) = (null)
+  field_documentation (String) = (null)
+  layer_documentation (String) = (null)
+
+OGRFeature(_ogr_fields_metadata):20
+  layer_name (String) = main_elt
+  field_name (String) = float_array
+  field_xpath (String) = myns:main_elt/myns:float_array
+  field_type (String) = float
+  field_min_occurs (Integer) = 1
+  field_max_occurs (Integer) = 2147483647
+  field_default_value (String) = (null)
+  field_fixed_value (String) = (null)
+  field_category (String) = REGULAR
+  field_related_layer (String) = (null)
+  field_junction_layer (String) = (null)
+  field_documentation (String) = (null)
+  layer_documentation (String) = (null)
+
+OGRFeature(_ogr_fields_metadata):21
+  layer_name (String) = main_elt
+  field_name (String) = double
+  field_xpath (String) = myns:main_elt/myns:double
+  field_type (String) = double
+  field_min_occurs (Integer) = 1
+  field_max_occurs (Integer) = 1
+  field_default_value (String) = (null)
+  field_fixed_value (String) = (null)
+  field_category (String) = REGULAR
+  field_related_layer (String) = (null)
+  field_junction_layer (String) = (null)
+  field_documentation (String) = (null)
+  layer_documentation (String) = (null)
+
+OGRFeature(_ogr_fields_metadata):22
+  layer_name (String) = main_elt
+  field_name (String) = double_array
+  field_xpath (String) = myns:main_elt/myns:double_array
+  field_type (String) = double
+  field_min_occurs (Integer) = 1
+  field_max_occurs (Integer) = 2147483647
+  field_default_value (String) = (null)
+  field_fixed_value (String) = (null)
+  field_category (String) = REGULAR
+  field_related_layer (String) = (null)
+  field_junction_layer (String) = (null)
+  field_documentation (String) = (null)
+  layer_documentation (String) = (null)
+
+OGRFeature(_ogr_fields_metadata):23
+  layer_name (String) = main_elt
+  field_name (String) = decimal
+  field_xpath (String) = myns:main_elt/myns:decimal
+  field_type (String) = decimal
+  field_min_occurs (Integer) = 1
+  field_max_occurs (Integer) = 1
+  field_default_value (String) = (null)
+  field_fixed_value (String) = (null)
+  field_category (String) = REGULAR
+  field_related_layer (String) = (null)
+  field_junction_layer (String) = (null)
+  field_documentation (String) = (null)
+  layer_documentation (String) = (null)
+
+OGRFeature(_ogr_fields_metadata):24
+  layer_name (String) = main_elt
+  field_name (String) = byte
+  field_xpath (String) = myns:main_elt/myns:byte
+  field_type (String) = byte
+  field_min_occurs (Integer) = 1
+  field_max_occurs (Integer) = 1
+  field_default_value (String) = (null)
+  field_fixed_value (String) = (null)
+  field_category (String) = REGULAR
+  field_related_layer (String) = (null)
+  field_junction_layer (String) = (null)
+  field_documentation (String) = (null)
+  layer_documentation (String) = (null)
+
+OGRFeature(_ogr_fields_metadata):25
+  layer_name (String) = main_elt
+  field_name (String) = short
+  field_xpath (String) = myns:main_elt/myns:short
+  field_type (String) = short
+  field_min_occurs (Integer) = 1
+  field_max_occurs (Integer) = 1
+  field_default_value (String) = (null)
+  field_fixed_value (String) = (null)
+  field_category (String) = REGULAR
+  field_related_layer (String) = (null)
+  field_junction_layer (String) = (null)
+  field_documentation (String) = (null)
+  layer_documentation (String) = (null)
+
+OGRFeature(_ogr_fields_metadata):26
+  layer_name (String) = main_elt
+  field_name (String) = positiveInteger
+  field_xpath (String) = myns:main_elt/myns:positiveInteger
+  field_type (String) = positiveInteger
+  field_min_occurs (Integer) = 1
+  field_max_occurs (Integer) = 1
+  field_default_value (String) = (null)
+  field_fixed_value (String) = (null)
+  field_category (String) = REGULAR
+  field_related_layer (String) = (null)
+  field_junction_layer (String) = (null)
+  field_documentation (String) = (null)
+  layer_documentation (String) = (null)
+
+OGRFeature(_ogr_fields_metadata):27
+  layer_name (String) = main_elt
+  field_name (String) = dt
+  field_xpath (String) = myns:main_elt/myns:dt
+  field_type (String) = dateTime
+  field_min_occurs (Integer) = 1
+  field_max_occurs (Integer) = 1
+  field_default_value (String) = (null)
+  field_fixed_value (String) = (null)
+  field_category (String) = REGULAR
+  field_related_layer (String) = (null)
+  field_junction_layer (String) = (null)
+  field_documentation (String) = (null)
+  layer_documentation (String) = (null)
+
+OGRFeature(_ogr_fields_metadata):28
+  layer_name (String) = main_elt
+  field_name (String) = dt_array
+  field_xpath (String) = myns:main_elt/myns:dt_array
+  field_type (String) = dateTime
+  field_min_occurs (Integer) = 1
+  field_max_occurs (Integer) = 2147483647
+  field_default_value (String) = (null)
+  field_fixed_value (String) = (null)
+  field_category (String) = PATH_TO_CHILD_ELEMENT_NO_LINK
+  field_related_layer (String) = main_elt_dt_array
+  field_junction_layer (String) = (null)
+  field_documentation (String) = (null)
+  layer_documentation (String) = (null)
+
+OGRFeature(_ogr_fields_metadata):29
+  layer_name (String) = main_elt
+  field_name (String) = boolean
+  field_xpath (String) = myns:main_elt/myns:boolean
+  field_type (String) = boolean
+  field_min_occurs (Integer) = 1
+  field_max_occurs (Integer) = 1
+  field_default_value (String) = (null)
+  field_fixed_value (String) = (null)
+  field_category (String) = REGULAR
+  field_related_layer (String) = (null)
+  field_junction_layer (String) = (null)
+  field_documentation (String) = (null)
+  layer_documentation (String) = (null)
+
+OGRFeature(_ogr_fields_metadata):30
+  layer_name (String) = main_elt
+  field_name (String) = boolean_array
+  field_xpath (String) = myns:main_elt/myns:boolean_array
+  field_type (String) = boolean
+  field_min_occurs (Integer) = 1
+  field_max_occurs (Integer) = 2
+  field_default_value (String) = (null)
+  field_fixed_value (String) = (null)
+  field_category (String) = REGULAR
+  field_related_layer (String) = (null)
+  field_junction_layer (String) = (null)
+  field_documentation (String) = (null)
+  layer_documentation (String) = (null)
+
+OGRFeature(_ogr_fields_metadata):31
+  layer_name (String) = main_elt
+  field_name (String) = base64Binary
+  field_xpath (String) = myns:main_elt/myns:base64Binary
+  field_type (String) = base64Binary
+  field_min_occurs (Integer) = 1
+  field_max_occurs (Integer) = 1
+  field_default_value (String) = (null)
+  field_fixed_value (String) = (null)
+  field_category (String) = REGULAR
+  field_related_layer (String) = (null)
+  field_junction_layer (String) = (null)
+  field_documentation (String) = (null)
+  layer_documentation (String) = (null)
+
+OGRFeature(_ogr_fields_metadata):32
+  layer_name (String) = main_elt
+  field_name (String) = hexBinary
+  field_xpath (String) = myns:main_elt/myns:hexBinary
+  field_type (String) = hexBinary
+  field_min_occurs (Integer) = 1
+  field_max_occurs (Integer) = 1
+  field_default_value (String) = (null)
+  field_fixed_value (String) = (null)
+  field_category (String) = REGULAR
+  field_related_layer (String) = (null)
+  field_junction_layer (String) = (null)
+  field_documentation (String) = (null)
+  layer_documentation (String) = (null)
+
+OGRFeature(_ogr_fields_metadata):33
+  layer_name (String) = main_elt
+  field_name (String) = myint_myAttr
+  field_xpath (String) = myns:main_elt/myns:myint/@myAttr
+  field_type (String) = string
+  field_min_occurs (Integer) = 0
+  field_max_occurs (Integer) = 1
+  field_default_value (String) = (null)
+  field_fixed_value (String) = (null)
+  field_category (String) = REGULAR
+  field_related_layer (String) = (null)
+  field_junction_layer (String) = (null)
+  field_documentation (String) = (null)
+  layer_documentation (String) = (null)
+
+OGRFeature(_ogr_fields_metadata):34
+  layer_name (String) = main_elt
+  field_name (String) = myint
+  field_xpath (String) = myns:main_elt/myns:myint
+  field_type (String) = int
+  field_min_occurs (Integer) = 1
+  field_max_occurs (Integer) = 1
+  field_default_value (String) = (null)
+  field_fixed_value (String) = (null)
+  field_category (String) = REGULAR
+  field_related_layer (String) = (null)
+  field_junction_layer (String) = (null)
+  field_documentation (String) = (null)
+  layer_documentation (String) = (null)
+
+OGRFeature(_ogr_fields_metadata):35
+  layer_name (String) = main_elt
+  field_name (String) = myint_repeated
+  field_xpath (String) = myns:main_elt/myns:myint_repeated
+  field_type (String) = (null)
+  field_min_occurs (Integer) = (null)
+  field_max_occurs (Integer) = (null)
+  field_default_value (String) = (null)
+  field_fixed_value (String) = (null)
+  field_category (String) = PATH_TO_CHILD_ELEMENT_NO_LINK
+  field_related_layer (String) = main_elt_myint_repeated
+  field_junction_layer (String) = (null)
+  field_documentation (String) = (null)
+  layer_documentation (String) = (null)
+
+OGRFeature(_ogr_fields_metadata):36
+  layer_name (String) = main_elt
+  field_name (String) = int_min_occurs_0
+  field_xpath (String) = myns:main_elt/myns:int_min_occurs_0
+  field_type (String) = int
+  field_min_occurs (Integer) = 0
+  field_max_occurs (Integer) = 1
+  field_default_value (String) = (null)
+  field_fixed_value (String) = (null)
+  field_category (String) = REGULAR
+  field_related_layer (String) = (null)
+  field_junction_layer (String) = (null)
+  field_documentation (String) = (null)
+  layer_documentation (String) = (null)
+
+OGRFeature(_ogr_fields_metadata):37
+  layer_name (String) = main_elt
+  field_name (String) = int_nillable
+  field_xpath (String) = myns:main_elt/myns:int_nillable
+  field_type (String) = int
+  field_min_occurs (Integer) = 1
+  field_max_occurs (Integer) = 1
+  field_default_value (String) = (null)
+  field_fixed_value (String) = (null)
+  field_category (String) = REGULAR
+  field_related_layer (String) = (null)
+  field_junction_layer (String) = (null)
+  field_documentation (String) = (null)
+  layer_documentation (String) = (null)
+
+OGRFeature(_ogr_fields_metadata):38
+  layer_name (String) = main_elt
+  field_name (String) = int_nillable_nil
+  field_xpath (String) = myns:main_elt/myns:int_nillable/@xsi:nil
+  field_type (String) = boolean
+  field_min_occurs (Integer) = 0
+  field_max_occurs (Integer) = 1
+  field_default_value (String) = (null)
+  field_fixed_value (String) = (null)
+  field_category (String) = REGULAR
+  field_related_layer (String) = (null)
+  field_junction_layer (String) = (null)
+  field_documentation (String) = (null)
+  layer_documentation (String) = (null)
+
+OGRFeature(_ogr_fields_metadata):39
+  layer_name (String) = main_elt
+  field_name (String) = int_min_occurs_0_nillable
+  field_xpath (String) = myns:main_elt/myns:int_min_occurs_0_nillable
+  field_type (String) = int
+  field_min_occurs (Integer) = 0
+  field_max_occurs (Integer) = 1
+  field_default_value (String) = (null)
+  field_fixed_value (String) = (null)
+  field_category (String) = REGULAR
+  field_related_layer (String) = (null)
+  field_junction_layer (String) = (null)
+  field_documentation (String) = (null)
+  layer_documentation (String) = (null)
+
+OGRFeature(_ogr_fields_metadata):40
+  layer_name (String) = main_elt
+  field_name (String) = int_min_occurs_0_nillable_bis
+  field_xpath (String) = myns:main_elt/myns:int_min_occurs_0_nillable_bis
+  field_type (String) = int
+  field_min_occurs (Integer) = 0
+  field_max_occurs (Integer) = 1
+  field_default_value (String) = (null)
+  field_fixed_value (String) = (null)
+  field_category (String) = REGULAR
+  field_related_layer (String) = (null)
+  field_junction_layer (String) = (null)
+  field_documentation (String) = (null)
+  layer_documentation (String) = (null)
+
+OGRFeature(_ogr_fields_metadata):41
+  layer_name (String) = main_elt
+  field_name (String) = anonymous_type
+  field_xpath (String) = myns:main_elt/myns:anonymous_type
+  field_type (String) = int
+  field_min_occurs (Integer) = 1
+  field_max_occurs (Integer) = 1
+  field_default_value (String) = (null)
+  field_fixed_value (String) = (null)
+  field_category (String) = REGULAR
+  field_related_layer (String) = (null)
+  field_junction_layer (String) = (null)
+  field_documentation (String) = (null)
+  layer_documentation (String) = (null)
+
+OGRFeature(_ogr_fields_metadata):42
+  layer_name (String) = main_elt
+  field_name (String) = union
+  field_xpath (String) = myns:main_elt/myns:union
+  field_type (String) = anySimpleType
+  field_min_occurs (Integer) = 1
+  field_max_occurs (Integer) = 1
+  field_default_value (String) = (null)
+  field_fixed_value (String) = (null)
+  field_category (String) = REGULAR
+  field_related_layer (String) = (null)
+  field_junction_layer (String) = (null)
+  field_documentation (String) = (null)
+  layer_documentation (String) = (null)
+
+OGRFeature(_ogr_fields_metadata):43
+  layer_name (String) = main_elt
+  field_name (String) = compound_simplifiable_subelement
+  field_xpath (String) = myns:main_elt/myns:compound_simplifiable/myns:subelement
+  field_type (String) = string
+  field_min_occurs (Integer) = 0
+  field_max_occurs (Integer) = 1
+  field_default_value (String) = (null)
+  field_fixed_value (String) = (null)
+  field_category (String) = REGULAR
+  field_related_layer (String) = (null)
+  field_junction_layer (String) = (null)
+  field_documentation (String) = (null)
+  layer_documentation (String) = (null)
+
+OGRFeature(_ogr_fields_metadata):44
+  layer_name (String) = main_elt
+  field_name (String) = compound_simplifiable_subelement2
+  field_xpath (String) = myns:main_elt/myns:compound_simplifiable/myns:subelement2
+  field_type (String) = string
+  field_min_occurs (Integer) = 1
+  field_max_occurs (Integer) = 1
+  field_default_value (String) = (null)
+  field_fixed_value (String) = (null)
+  field_category (String) = REGULAR
+  field_related_layer (String) = (null)
+  field_junction_layer (String) = (null)
+  field_documentation (String) = (null)
+  layer_documentation (String) = (null)
+
+OGRFeature(_ogr_fields_metadata):45
+  layer_name (String) = main_elt
+  field_name (String) = compound_simplifiable_optional_attr
+  field_xpath (String) = myns:main_elt/myns:compound_simplifiable_optional/@attr
+  field_type (String) = string
+  field_min_occurs (Integer) = 0
+  field_max_occurs (Integer) = 1
+  field_default_value (String) = (null)
+  field_fixed_value (String) = (null)
+  field_category (String) = REGULAR
+  field_related_layer (String) = (null)
+  field_junction_layer (String) = (null)
+  field_documentation (String) = (null)
+  layer_documentation (String) = (null)
+
+OGRFeature(_ogr_fields_metadata):46
+  layer_name (String) = main_elt
+  field_name (String) = compound_simplifiable_optional
+  field_xpath (String) = myns:main_elt/myns:compound_simplifiable_optional
+  field_type (String) = string
+  field_min_occurs (Integer) = 0
+  field_max_occurs (Integer) = 1
+  field_default_value (String) = (null)
+  field_fixed_value (String) = (null)
+  field_category (String) = REGULAR
+  field_related_layer (String) = (null)
+  field_junction_layer (String) = (null)
+  field_documentation (String) = (null)
+  layer_documentation (String) = (null)
+
+OGRFeature(_ogr_fields_metadata):47
+  layer_name (String) = main_elt
+  field_name (String) = sequence_1_string_unbounded_subelement
+  field_xpath (String) = myns:main_elt/myns:sequence_1_string_unbounded/myns:subelement
+  field_type (String) = string
+  field_min_occurs (Integer) = 1
+  field_max_occurs (Integer) = 2147483647
+  field_default_value (String) = (null)
+  field_fixed_value (String) = (null)
+  field_category (String) = REGULAR
+  field_related_layer (String) = (null)
+  field_junction_layer (String) = (null)
+  field_documentation (String) = (null)
+  layer_documentation (String) = (null)
+
+OGRFeature(_ogr_fields_metadata):48
+  layer_name (String) = main_elt
+  field_name (String) = sequence_unbounded_string_1_subelement
+  field_xpath (String) = myns:main_elt/myns:sequence_unbounded_string_1/myns:subelement
+  field_type (String) = string
+  field_min_occurs (Integer) = 1
+  field_max_occurs (Integer) = 1
+  field_default_value (String) = (null)
+  field_fixed_value (String) = (null)
+  field_category (String) = REGULAR
+  field_related_layer (String) = (null)
+  field_junction_layer (String) = (null)
+  field_documentation (String) = (null)
+  layer_documentation (String) = (null)
+
+OGRFeature(_ogr_fields_metadata):49
+  layer_name (String) = main_elt
+  field_name (String) = sequence_1_dt_unbounded_subelement
+  field_xpath (String) = myns:main_elt/myns:sequence_1_dt_unbounded/myns:subelement
+  field_type (String) = dateTime
+  field_min_occurs (Integer) = 1
+  field_max_occurs (Integer) = 2147483647
+  field_default_value (String) = (null)
+  field_fixed_value (String) = (null)
+  field_category (String) = PATH_TO_CHILD_ELEMENT_NO_LINK
+  field_related_layer (String) = main_elt_sequence_1_dt_unbounded_subelement
+  field_junction_layer (String) = (null)
+  field_documentation (String) = (null)
+  layer_documentation (String) = (null)
+
+OGRFeature(_ogr_fields_metadata):50
+  layer_name (String) = main_elt
+  field_name (String) = sequence_unbounded_dt_1_subelement
+  field_xpath (String) = myns:main_elt/myns:sequence_unbounded_dt_1/myns:subelement
+  field_type (String) = dateTime
+  field_min_occurs (Integer) = 1
+  field_max_occurs (Integer) = 2147483647
+  field_default_value (String) = (null)
+  field_fixed_value (String) = (null)
+  field_category (String) = PATH_TO_CHILD_ELEMENT_NO_LINK
+  field_related_layer (String) = main_elt_sequence_unbounded_dt_1_subelement
+  field_junction_layer (String) = (null)
+  field_documentation (String) = (null)
+  layer_documentation (String) = (null)
+
+OGRFeature(_ogr_fields_metadata):51
+  layer_name (String) = main_elt
+  field_name (String) = sequence_sequence_subsequence
+  field_xpath (String) = myns:main_elt/myns:sequence_sequence/myns:subsequence
+  field_type (String) = (null)
+  field_min_occurs (Integer) = (null)
+  field_max_occurs (Integer) = (null)
+  field_default_value (String) = (null)
+  field_fixed_value (String) = (null)
+  field_category (String) = PATH_TO_CHILD_ELEMENT_NO_LINK
+  field_related_layer (String) = main_elt_sequence_sequence_subsequence
+  field_junction_layer (String) = (null)
+  field_documentation (String) = (null)
+  layer_documentation (String) = (null)
+
+OGRFeature(_ogr_fields_metadata):52
+  layer_name (String) = main_elt
+  field_name (String) = sequence_1_unbounded_with_2_subelts
+  field_xpath (String) = myns:main_elt/myns:sequence_1_unbounded_with_2_subelts
+  field_type (String) = (null)
+  field_min_occurs (Integer) = (null)
+  field_max_occurs (Integer) = (null)
+  field_default_value (String) = (null)
+  field_fixed_value (String) = (null)
+  field_category (String) = PATH_TO_CHILD_ELEMENT_NO_LINK
+  field_related_layer (String) = main_elt_sequence_1_unbounded_with_2_subelts
+  field_junction_layer (String) = (null)
+  field_documentation (String) = (null)
+  layer_documentation (String) = (null)
+
+OGRFeature(_ogr_fields_metadata):53
+  layer_name (String) = main_elt
+  field_name (String) = sequence_1_unbounded_non_simplifiable
+  field_xpath (String) = myns:main_elt/myns:sequence_1_unbounded_non_simplifiable
+  field_type (String) = (null)
+  field_min_occurs (Integer) = (null)
+  field_max_occurs (Integer) = (null)
+  field_default_value (String) = (null)
+  field_fixed_value (String) = (null)
+  field_category (String) = PATH_TO_CHILD_ELEMENT_NO_LINK
+  field_related_layer (String) = main_elt_sequence_1_unbounded_non_simplifiable
+  field_junction_layer (String) = (null)
+  field_documentation (String) = (null)
+  layer_documentation (String) = (null)
+
+OGRFeature(_ogr_fields_metadata):54
+  layer_name (String) = main_elt
+  field_name (String) = sequence_unbounded_1_with_2_subelts
+  field_xpath (String) = myns:main_elt/myns:sequence_unbounded_1_with_2_subelts
+  field_type (String) = (null)
+  field_min_occurs (Integer) = (null)
+  field_max_occurs (Integer) = (null)
+  field_default_value (String) = (null)
+  field_fixed_value (String) = (null)
+  field_category (String) = PATH_TO_CHILD_ELEMENT_NO_LINK
+  field_related_layer (String) = main_elt_sequence_unbounded_1_with_2_subelts
+  field_junction_layer (String) = (null)
+  field_documentation (String) = (null)
+  layer_documentation (String) = (null)
+
+OGRFeature(_ogr_fields_metadata):55
+  layer_name (String) = main_elt
+  field_name (String) = sequence_with_attr_unbounded
+  field_xpath (String) = myns:main_elt/myns:sequence_with_attr_unbounded
+  field_type (String) = (null)
+  field_min_occurs (Integer) = (null)
+  field_max_occurs (Integer) = (null)
+  field_default_value (String) = (null)
+  field_fixed_value (String) = (null)
+  field_category (String) = PATH_TO_CHILD_ELEMENT_NO_LINK
+  field_related_layer (String) = main_elt_sequence_with_attr_unbounded
+  field_junction_layer (String) = (null)
+  field_documentation (String) = (null)
+  layer_documentation (String) = (null)
+
+OGRFeature(_ogr_fields_metadata):56
+  layer_name (String) = main_elt
+  field_name (String) = int_complex_simplifiable
+  field_xpath (String) = myns:main_elt/myns:int_complex_simplifiable
+  field_type (String) = int
+  field_min_occurs (Integer) = 1
+  field_max_occurs (Integer) = 2
+  field_default_value (String) = (null)
+  field_fixed_value (String) = (null)
+  field_category (String) = REGULAR
+  field_related_layer (String) = (null)
+  field_junction_layer (String) = (null)
+  field_documentation (String) = (null)
+  layer_documentation (String) = (null)
+
+OGRFeature(_ogr_fields_metadata):57
+  layer_name (String) = main_elt
+  field_name (String) = an_abstract_element_abstract_element_realization1
+  field_xpath (String) = myns:main_elt/myns:abstract_element_realization1
+  field_type (String) = (null)
+  field_min_occurs (Integer) = 0
+  field_max_occurs (Integer) = 2147483647
+  field_default_value (String) = (null)
+  field_fixed_value (String) = (null)
+  field_category (String) = PATH_TO_CHILD_ELEMENT_WITH_JUNCTION_TABLE
+  field_related_layer (String) = abstract_element_realization1
+  field_junction_layer (String) = main_elt_an_abstract_element_abstract_element_realization1
+  field_documentation (String) = (null)
+  layer_documentation (String) = (null)
+
+OGRFeature(_ogr_fields_metadata):58
+  layer_name (String) = main_elt
+  field_name (String) = an_abstract_element_abstract_element_realization2
+  field_xpath (String) = myns:main_elt/myns:abstract_element_realization2
+  field_type (String) = (null)
+  field_min_occurs (Integer) = 0
+  field_max_occurs (Integer) = 2147483647
+  field_default_value (String) = (null)
+  field_fixed_value (String) = (null)
+  field_category (String) = PATH_TO_CHILD_ELEMENT_WITH_JUNCTION_TABLE
+  field_related_layer (String) = abstract_element_realization2
+  field_junction_layer (String) = main_elt_an_abstract_element_abstract_element_realization2
+  field_documentation (String) = (null)
+  layer_documentation (String) = (null)
+
+OGRFeature(_ogr_fields_metadata):59
+  layer_name (String) = main_elt
+  field_name (String) = an_abstract_element_in_other_ns_pkid
+  field_xpath (String) = myns:main_elt/otherns:an_abstract_element_in_other_ns_realization1
+  field_type (String) = string
+  field_min_occurs (Integer) = 0
+  field_max_occurs (Integer) = 1
+  field_default_value (String) = (null)
+  field_fixed_value (String) = (null)
+  field_category (String) = PATH_TO_CHILD_ELEMENT_WITH_LINK
+  field_related_layer (String) = an_abstract_element_in_other_ns_realization1
+  field_junction_layer (String) = (null)
+  field_documentation (String) = (null)
+  layer_documentation (String) = (null)
+
+OGRFeature(_ogr_fields_metadata):60
+  layer_name (String) = main_elt
+  field_name (String) = any_type_anyAttributes
+  field_xpath (String) = myns:main_elt/myns:any_type/@*
+  field_type (String) = json_dict
+  field_min_occurs (Integer) = (null)
+  field_max_occurs (Integer) = (null)
+  field_default_value (String) = (null)
+  field_fixed_value (String) = (null)
+  field_category (String) = REGULAR
+  field_related_layer (String) = (null)
+  field_junction_layer (String) = (null)
+  field_documentation (String) = (null)
+  layer_documentation (String) = (null)
+
+OGRFeature(_ogr_fields_metadata):61
+  layer_name (String) = main_elt
+  field_name (String) = any_type
+  field_xpath (String) = myns:main_elt/myns:any_type
+  field_type (String) = anyType
+  field_min_occurs (Integer) = 1
+  field_max_occurs (Integer) = 1
+  field_default_value (String) = (null)
+  field_fixed_value (String) = (null)
+  field_category (String) = REGULAR
+  field_related_layer (String) = (null)
+  field_junction_layer (String) = (null)
+  field_documentation (String) = (null)
+  layer_documentation (String) = (null)
+
+OGRFeature(_ogr_fields_metadata):62
+  layer_name (String) = main_elt
+  field_name (String) = any_attr_anyAttributes
+  field_xpath (String) = myns:main_elt/myns:any_attr/@*
+  field_type (String) = json_dict
+  field_min_occurs (Integer) = (null)
+  field_max_occurs (Integer) = (null)
+  field_default_value (String) = (null)
+  field_fixed_value (String) = (null)
+  field_category (String) = REGULAR
+  field_related_layer (String) = (null)
+  field_junction_layer (String) = (null)
+  field_documentation (String) = (null)
+  layer_documentation (String) = (null)
+
+OGRFeature(_ogr_fields_metadata):63
+  layer_name (String) = main_elt
+  field_name (String) = any_attr
+  field_xpath (String) = myns:main_elt/myns:any_attr
+  field_type (String) = int
+  field_min_occurs (Integer) = 1
+  field_max_occurs (Integer) = 1
+  field_default_value (String) = (null)
+  field_fixed_value (String) = (null)
+  field_category (String) = REGULAR
+  field_related_layer (String) = (null)
+  field_junction_layer (String) = (null)
+  field_documentation (String) = (null)
+  layer_documentation (String) = (null)
+
+OGRFeature(_ogr_fields_metadata):64
+  layer_name (String) = main_elt
+  field_name (String) = any_attr_no_attr_anyAttributes
+  field_xpath (String) = myns:main_elt/myns:any_attr_no_attr/@*
+  field_type (String) = json_dict
+  field_min_occurs (Integer) = (null)
+  field_max_occurs (Integer) = (null)
+  field_default_value (String) = (null)
+  field_fixed_value (String) = (null)
+  field_category (String) = REGULAR
+  field_related_layer (String) = (null)
+  field_junction_layer (String) = (null)
+  field_documentation (String) = (null)
+  layer_documentation (String) = (null)
+
+OGRFeature(_ogr_fields_metadata):65
+  layer_name (String) = main_elt
+  field_name (String) = any_attr_no_attr
+  field_xpath (String) = myns:main_elt/myns:any_attr_no_attr
+  field_type (String) = int
+  field_min_occurs (Integer) = 1
+  field_max_occurs (Integer) = 1
+  field_default_value (String) = (null)
+  field_fixed_value (String) = (null)
+  field_category (String) = REGULAR
+  field_related_layer (String) = (null)
+  field_junction_layer (String) = (null)
+  field_documentation (String) = (null)
+  layer_documentation (String) = (null)
+
+OGRFeature(_ogr_fields_metadata):66
+  layer_name (String) = main_elt
+  field_name (String) = (null)
+  field_xpath (String) = (null)
+  field_type (String) = (null)
+  field_min_occurs (Integer) = 1
+  field_max_occurs (Integer) = 2147483647
+  field_default_value (String) = (null)
+  field_fixed_value (String) = (null)
+  field_category (String) = GROUP
+  field_related_layer (String) = main_elt_group1
+  field_junction_layer (String) = (null)
+  field_documentation (String) = (null)
+  layer_documentation (String) = (null)
+
+OGRFeature(_ogr_fields_metadata):67
+  layer_name (String) = main_elt
+  field_name (String) = group2_elt
+  field_xpath (String) = myns:main_elt/myns:group2_elt
+  field_type (String) = string
+  field_min_occurs (Integer) = 1
+  field_max_occurs (Integer) = 1
+  field_default_value (String) = (null)
+  field_fixed_value (String) = (null)
+  field_category (String) = REGULAR
+  field_related_layer (String) = (null)
+  field_junction_layer (String) = (null)
+  field_documentation (String) = (null)
+  layer_documentation (String) = (null)
+
+OGRFeature(_ogr_fields_metadata):68
+  layer_name (String) = main_elt
+  field_name (String) = (null)
+  field_xpath (String) = (null)
+  field_type (String) = (null)
+  field_min_occurs (Integer) = 1
+  field_max_occurs (Integer) = 2147483647
+  field_default_value (String) = (null)
+  field_fixed_value (String) = (null)
+  field_category (String) = GROUP
+  field_related_layer (String) = main_elt_group3
+  field_junction_layer (String) = (null)
+  field_documentation (String) = (null)
+  layer_documentation (String) = (null)
+
+OGRFeature(_ogr_fields_metadata):69
+  layer_name (String) = main_elt
+  field_name (String) = group4_elt
+  field_xpath (String) = myns:main_elt/myns:group4_elt
+  field_type (String) = string
+  field_min_occurs (Integer) = 1
+  field_max_occurs (Integer) = 1
+  field_default_value (String) = (null)
+  field_fixed_value (String) = (null)
+  field_category (String) = REGULAR
+  field_related_layer (String) = (null)
+  field_junction_layer (String) = (null)
+  field_documentation (String) = (null)
+  layer_documentation (String) = (null)
+
+OGRFeature(_ogr_fields_metadata):70
+  layer_name (String) = main_elt
+  field_name (String) = rec_A_pkid
+  field_xpath (String) = myns:main_elt/myns:rec_A
+  field_type (String) = string
+  field_min_occurs (Integer) = 0
+  field_max_occurs (Integer) = 1
+  field_default_value (String) = (null)
+  field_fixed_value (String) = (null)
+  field_category (String) = PATH_TO_CHILD_ELEMENT_WITH_LINK
+  field_related_layer (String) = rec_A
+  field_junction_layer (String) = (null)
+  field_documentation (String) = (null)
+  layer_documentation (String) = (null)
+
+OGRFeature(_ogr_fields_metadata):71
+  layer_name (String) = main_elt_dt_array
+  field_name (String) = value
+  field_xpath (String) = myns:main_elt/myns:dt_array
+  field_type (String) = dateTime
+  field_min_occurs (Integer) = 1
+  field_max_occurs (Integer) = 1
+  field_default_value (String) = (null)
+  field_fixed_value (String) = (null)
+  field_category (String) = REGULAR
+  field_related_layer (String) = (null)
+  field_junction_layer (String) = (null)
+  field_documentation (String) = (null)
+  layer_documentation (String) = (null)
+
+OGRFeature(_ogr_fields_metadata):72
+  layer_name (String) = main_elt_myint_repeated
+  field_name (String) = myAttr
+  field_xpath (String) = myns:main_elt/myns:myint_repeated/@myAttr
+  field_type (String) = string
+  field_min_occurs (Integer) = 0
+  field_max_occurs (Integer) = 1
+  field_default_value (String) = (null)
+  field_fixed_value (String) = (null)
+  field_category (String) = REGULAR
+  field_related_layer (String) = (null)
+  field_junction_layer (String) = (null)
+  field_documentation (String) = (null)
+  layer_documentation (String) = (null)
+
+OGRFeature(_ogr_fields_metadata):73
+  layer_name (String) = main_elt_myint_repeated
+  field_name (String) = value
+  field_xpath (String) = myns:main_elt/myns:myint_repeated
+  field_type (String) = int
+  field_min_occurs (Integer) = 1
+  field_max_occurs (Integer) = 1
+  field_default_value (String) = (null)
+  field_fixed_value (String) = (null)
+  field_category (String) = REGULAR
+  field_related_layer (String) = (null)
+  field_junction_layer (String) = (null)
+  field_documentation (String) = (null)
+  layer_documentation (String) = (null)
+
+OGRFeature(_ogr_fields_metadata):74
+  layer_name (String) = main_elt_sequence_1_dt_unbounded_subelement
+  field_name (String) = value
+  field_xpath (String) = myns:main_elt/myns:sequence_1_dt_unbounded/myns:subelement
+  field_type (String) = dateTime
+  field_min_occurs (Integer) = 1
+  field_max_occurs (Integer) = 1
+  field_default_value (String) = (null)
+  field_fixed_value (String) = (null)
+  field_category (String) = REGULAR
+  field_related_layer (String) = (null)
+  field_junction_layer (String) = (null)
+  field_documentation (String) = (null)
+  layer_documentation (String) = (null)
+
+OGRFeature(_ogr_fields_metadata):75
+  layer_name (String) = main_elt_sequence_unbounded_dt_1_subelement
+  field_name (String) = value
+  field_xpath (String) = myns:main_elt/myns:sequence_unbounded_dt_1/myns:subelement
+  field_type (String) = dateTime
+  field_min_occurs (Integer) = 1
+  field_max_occurs (Integer) = 1
+  field_default_value (String) = (null)
+  field_fixed_value (String) = (null)
+  field_category (String) = REGULAR
+  field_related_layer (String) = (null)
+  field_junction_layer (String) = (null)
+  field_documentation (String) = (null)
+  layer_documentation (String) = (null)
+
+OGRFeature(_ogr_fields_metadata):76
+  layer_name (String) = main_elt_sequence_sequence_subsequence
+  field_name (String) = subelement
+  field_xpath (String) = myns:main_elt/myns:sequence_sequence/myns:subsequence/myns:subelement
+  field_type (String) = dateTime
+  field_min_occurs (Integer) = 1
+  field_max_occurs (Integer) = 2147483647
+  field_default_value (String) = (null)
+  field_fixed_value (String) = (null)
+  field_category (String) = PATH_TO_CHILD_ELEMENT_NO_LINK
+  field_related_layer (String) = main_elt_sequence_sequence_subsequence_subelement
+  field_junction_layer (String) = (null)
+  field_documentation (String) = (null)
+  layer_documentation (String) = (null)
+
+OGRFeature(_ogr_fields_metadata):77
+  layer_name (String) = main_elt_sequence_sequence_subsequence_subelement
+  field_name (String) = value
+  field_xpath (String) = myns:main_elt/myns:sequence_sequence/myns:subsequence/myns:subelement
+  field_type (String) = dateTime
+  field_min_occurs (Integer) = 1
+  field_max_occurs (Integer) = 1
+  field_default_value (String) = (null)
+  field_fixed_value (String) = (null)
+  field_category (String) = REGULAR
+  field_related_layer (String) = (null)
+  field_junction_layer (String) = (null)
+  field_documentation (String) = (null)
+  layer_documentation (String) = (null)
+
+OGRFeature(_ogr_fields_metadata):78
+  layer_name (String) = main_elt_sequence_1_unbounded_with_2_subelts
+  field_name (String) = subelement
+  field_xpath (String) = myns:main_elt/myns:sequence_1_unbounded_with_2_subelts/myns:subelement
+  field_type (String) = string
+  field_min_occurs (Integer) = 1
+  field_max_occurs (Integer) = 1
+  field_default_value (String) = (null)
+  field_fixed_value (String) = (null)
+  field_category (String) = REGULAR
+  field_related_layer (String) = (null)
+  field_junction_layer (String) = (null)
+  field_documentation (String) = (null)
+  layer_documentation (String) = (null)
+
+OGRFeature(_ogr_fields_metadata):79
+  layer_name (String) = main_elt_sequence_1_unbounded_with_2_subelts
+  field_name (String) = subelement2
+  field_xpath (String) = myns:main_elt/myns:sequence_1_unbounded_with_2_subelts/myns:subelement2
+  field_type (String) = string
+  field_min_occurs (Integer) = 0
+  field_max_occurs (Integer) = 1
+  field_default_value (String) = (null)
+  field_fixed_value (String) = (null)
+  field_category (String) = REGULAR
+  field_related_layer (String) = (null)
+  field_junction_layer (String) = (null)
+  field_documentation (String) = (null)
+  layer_documentation (String) = (null)
+
+OGRFeature(_ogr_fields_metadata):80
+  layer_name (String) = main_elt_sequence_1_unbounded_non_simplifiable
+  field_name (String) = id
+  field_xpath (String) = myns:main_elt/myns:sequence_1_unbounded_non_simplifiable/@id
+  field_type (String) = string
+  field_min_occurs (Integer) = 0
+  field_max_occurs (Integer) = 1
+  field_default_value (String) = (null)
+  field_fixed_value (String) = (null)
+  field_category (String) = REGULAR
+  field_related_layer (String) = (null)
+  field_junction_layer (String) = (null)
+  field_documentation (String) = (null)
+  layer_documentation (String) = (null)
+
+OGRFeature(_ogr_fields_metadata):81
+  layer_name (String) = main_elt_sequence_1_unbounded_non_simplifiable
+  field_name (String) = (null)
+  field_xpath (String) = myns:main_elt/myns:sequence_1_unbounded_non_simplifiable
+  field_type (String) = (null)
+  field_min_occurs (Integer) = (null)
+  field_max_occurs (Integer) = (null)
+  field_default_value (String) = (null)
+  field_fixed_value (String) = (null)
+  field_category (String) = PATH_TO_CHILD_ELEMENT_NO_LINK
+  field_related_layer (String) = main_elt_sequence_1_unbounded_non_simplifiable_sequence
+  field_junction_layer (String) = (null)
+  field_documentation (String) = (null)
+  layer_documentation (String) = (null)
+
+OGRFeature(_ogr_fields_metadata):82
+  layer_name (String) = main_elt_sequence_1_unbounded_non_simplifiable_sequence
+  field_name (String) = subelement
+  field_xpath (String) = myns:main_elt/myns:sequence_1_unbounded_non_simplifiable/myns:subelement
+  field_type (String) = string
+  field_min_occurs (Integer) = 1
+  field_max_occurs (Integer) = 1
+  field_default_value (String) = (null)
+  field_fixed_value (String) = (null)
+  field_category (String) = REGULAR
+  field_related_layer (String) = (null)
+  field_junction_layer (String) = (null)
+  field_documentation (String) = (null)
+  layer_documentation (String) = (null)
+
+OGRFeature(_ogr_fields_metadata):83
+  layer_name (String) = main_elt_sequence_unbounded_1_with_2_subelts
+  field_name (String) = subelement
+  field_xpath (String) = myns:main_elt/myns:sequence_unbounded_1_with_2_subelts/myns:subelement
+  field_type (String) = string
+  field_min_occurs (Integer) = 1
+  field_max_occurs (Integer) = 1
+  field_default_value (String) = (null)
+  field_fixed_value (String) = (null)
+  field_category (String) = REGULAR
+  field_related_layer (String) = (null)
+  field_junction_layer (String) = (null)
+  field_documentation (String) = (null)
+  layer_documentation (String) = (null)
+
+OGRFeature(_ogr_fields_metadata):84
+  layer_name (String) = main_elt_sequence_unbounded_1_with_2_subelts
+  field_name (String) = subelement2
+  field_xpath (String) = myns:main_elt/myns:sequence_unbounded_1_with_2_subelts/myns:subelement2
+  field_type (String) = string
+  field_min_occurs (Integer) = 0
+  field_max_occurs (Integer) = 1
+  field_default_value (String) = (null)
+  field_fixed_value (String) = (null)
+  field_category (String) = REGULAR
+  field_related_layer (String) = (null)
+  field_junction_layer (String) = (null)
+  field_documentation (String) = (null)
+  layer_documentation (String) = (null)
+
+OGRFeature(_ogr_fields_metadata):85
+  layer_name (String) = main_elt_sequence_with_attr_unbounded
+  field_name (String) = id
+  field_xpath (String) = myns:main_elt/myns:sequence_with_attr_unbounded/@id
+  field_type (String) = string
+  field_min_occurs (Integer) = 0
+  field_max_occurs (Integer) = 1
+  field_default_value (String) = (null)
+  field_fixed_value (String) = (null)
+  field_category (String) = REGULAR
+  field_related_layer (String) = (null)
+  field_junction_layer (String) = (null)
+  field_documentation (String) = (null)
+  layer_documentation (String) = (null)
+
+OGRFeature(_ogr_fields_metadata):86
+  layer_name (String) = main_elt_sequence_with_attr_unbounded
+  field_name (String) = subelement
+  field_xpath (String) = myns:main_elt/myns:sequence_with_attr_unbounded/myns:subelement
+  field_type (String) = string
+  field_min_occurs (Integer) = 1
+  field_max_occurs (Integer) = 1
+  field_default_value (String) = (null)
+  field_fixed_value (String) = (null)
+  field_category (String) = REGULAR
+  field_related_layer (String) = (null)
+  field_junction_layer (String) = (null)
+  field_documentation (String) = (null)
+  layer_documentation (String) = (null)
+
+OGRFeature(_ogr_fields_metadata):87
+  layer_name (String) = main_elt_sequence_with_attr_unbounded
+  field_name (String) = subelement2
+  field_xpath (String) = myns:main_elt/myns:sequence_with_attr_unbounded/myns:subelement2
+  field_type (String) = string
+  field_min_occurs (Integer) = 0
+  field_max_occurs (Integer) = 1
+  field_default_value (String) = (null)
+  field_fixed_value (String) = (null)
+  field_category (String) = REGULAR
+  field_related_layer (String) = (null)
+  field_junction_layer (String) = (null)
+  field_documentation (String) = (null)
+  layer_documentation (String) = (null)
+
+OGRFeature(_ogr_fields_metadata):88
+  layer_name (String) = main_elt_group1
+  field_name (String) = group1_elt_1
+  field_xpath (String) = myns:main_elt/myns:group1_elt_1
+  field_type (String) = string
+  field_min_occurs (Integer) = 1
+  field_max_occurs (Integer) = 2
+  field_default_value (String) = (null)
+  field_fixed_value (String) = (null)
+  field_category (String) = REGULAR
+  field_related_layer (String) = (null)
+  field_junction_layer (String) = (null)
+  field_documentation (String) = (null)
+  layer_documentation (String) = (null)
+
+OGRFeature(_ogr_fields_metadata):89
+  layer_name (String) = main_elt_group1
+  field_name (String) = group1_elt_2
+  field_xpath (String) = myns:main_elt/myns:group1_elt_2
+  field_type (String) = string
+  field_min_occurs (Integer) = 1
+  field_max_occurs (Integer) = 1
+  field_default_value (String) = (null)
+  field_fixed_value (String) = (null)
+  field_category (String) = REGULAR
+  field_related_layer (String) = (null)
+  field_junction_layer (String) = (null)
+  field_documentation (String) = (null)
+  layer_documentation (String) = (null)
+
+OGRFeature(_ogr_fields_metadata):90
+  layer_name (String) = main_elt_group3
+  field_name (String) = group3_elt1
+  field_xpath (String) = myns:main_elt/myns:group3_elt1
+  field_type (String) = string
+  field_min_occurs (Integer) = 1
+  field_max_occurs (Integer) = 1
+  field_default_value (String) = (null)
+  field_fixed_value (String) = (null)
+  field_category (String) = REGULAR
+  field_related_layer (String) = (null)
+  field_junction_layer (String) = (null)
+  field_documentation (String) = (null)
+  layer_documentation (String) = (null)
+
+OGRFeature(_ogr_fields_metadata):91
+  layer_name (String) = main_elt_group3
+  field_name (String) = group3_elt2_b
+  field_xpath (String) = myns:main_elt/myns:group3_elt2/myns:b
+  field_type (String) = string
+  field_min_occurs (Integer) = 0
+  field_max_occurs (Integer) = 1
+  field_default_value (String) = (null)
+  field_fixed_value (String) = (null)
+  field_category (String) = REGULAR
+  field_related_layer (String) = (null)
+  field_junction_layer (String) = (null)
+  field_documentation (String) = (null)
+  layer_documentation (String) = (null)
+
+OGRFeature(_ogr_fields_metadata):92
+  layer_name (String) = main_elt_group3
+  field_name (String) = group3_elt3_b2
+  field_xpath (String) = myns:main_elt/myns:group3_elt3/myns:b2
+  field_type (String) = dateTime
+  field_min_occurs (Integer) = 0
+  field_max_occurs (Integer) = 2147483647
+  field_default_value (String) = (null)
+  field_fixed_value (String) = (null)
+  field_category (String) = PATH_TO_CHILD_ELEMENT_NO_LINK
+  field_related_layer (String) = main_elt_group3_group3_elt3_b2
+  field_junction_layer (String) = (null)
+  field_documentation (String) = (null)
+  layer_documentation (String) = (null)
+
+OGRFeature(_ogr_fields_metadata):93
+  layer_name (String) = main_elt_group3_group3_elt3_b2
+  field_name (String) = value
+  field_xpath (String) = myns:main_elt/myns:group3_elt3/myns:b2
+  field_type (String) = dateTime
+  field_min_occurs (Integer) = 1
+  field_max_occurs (Integer) = 1
+  field_default_value (String) = (null)
+  field_fixed_value (String) = (null)
+  field_category (String) = REGULAR
+  field_related_layer (String) = (null)
+  field_junction_layer (String) = (null)
+  field_documentation (String) = (null)
+  layer_documentation (String) = (null)
+
+OGRFeature(_ogr_fields_metadata):94
+  layer_name (String) = rec_A
+  field_name (String) = rec_B_pkid
+  field_xpath (String) = myns:rec_A/myns:rec_B
+  field_type (String) = string
+  field_min_occurs (Integer) = 0
+  field_max_occurs (Integer) = 1
+  field_default_value (String) = (null)
+  field_fixed_value (String) = (null)
+  field_category (String) = PATH_TO_CHILD_ELEMENT_WITH_LINK
+  field_related_layer (String) = rec_B
+  field_junction_layer (String) = (null)
+  field_documentation (String) = (null)
+  layer_documentation (String) = (null)
+
+OGRFeature(_ogr_fields_metadata):95
+  layer_name (String) = rec_A
+  field_name (String) = elt_A
+  field_xpath (String) = myns:rec_A/myns:elt_A
+  field_type (String) = string
+  field_min_occurs (Integer) = 0
+  field_max_occurs (Integer) = 1
+  field_default_value (String) = (null)
+  field_fixed_value (String) = (null)
+  field_category (String) = REGULAR
+  field_related_layer (String) = (null)
+  field_junction_layer (String) = (null)
+  field_documentation (String) = (null)
+  layer_documentation (String) = (null)
+
+OGRFeature(_ogr_fields_metadata):96
+  layer_name (String) = rec_B
+  field_name (String) = rec_A_pkid
+  field_xpath (String) = myns:rec_B/myns:rec_A
+  field_type (String) = string
+  field_min_occurs (Integer) = 0
+  field_max_occurs (Integer) = 1
+  field_default_value (String) = (null)
+  field_fixed_value (String) = (null)
+  field_category (String) = PATH_TO_CHILD_ELEMENT_WITH_LINK
+  field_related_layer (String) = rec_A
+  field_junction_layer (String) = (null)
+  field_documentation (String) = (null)
+  layer_documentation (String) = (null)
+
+OGRFeature(_ogr_fields_metadata):97
+  layer_name (String) = rec_B
+  field_name (String) = elt_B
+  field_xpath (String) = myns:rec_B/myns:elt_B
+  field_type (String) = string
+  field_min_occurs (Integer) = 0
+  field_max_occurs (Integer) = 1
+  field_default_value (String) = (null)
+  field_fixed_value (String) = (null)
+  field_category (String) = REGULAR
+  field_related_layer (String) = (null)
+  field_junction_layer (String) = (null)
+  field_documentation (String) = (null)
+  layer_documentation (String) = (null)
+
+OGRFeature(_ogr_fields_metadata):98
+  layer_name (String) = an_abstract_element_in_other_ns_realization1
+  field_name (String) = a_int
+  field_xpath (String) = otherns:an_abstract_element_in_other_ns_realization1/otherns:a_int
+  field_type (String) = int
+  field_min_occurs (Integer) = 1
+  field_max_occurs (Integer) = 1
+  field_default_value (String) = (null)
+  field_fixed_value (String) = (null)
+  field_category (String) = REGULAR
+  field_related_layer (String) = (null)
+  field_junction_layer (String) = (null)
+  field_documentation (String) = (null)
+  layer_documentation (String) = (null)
+
+OGRFeature(_ogr_fields_metadata):99
+  layer_name (String) = main_elt_an_abstract_element_abstract_element_realization1
+  field_name (String) = occurence
+  field_xpath (String) = (null)
+  field_type (String) = (null)
+  field_min_occurs (Integer) = (null)
+  field_max_occurs (Integer) = (null)
+  field_default_value (String) = (null)
+  field_fixed_value (String) = (null)
+  field_category (String) = (null)
+  field_related_layer (String) = (null)
+  field_junction_layer (String) = (null)
+  field_documentation (String) = (null)
+  layer_documentation (String) = (null)
+
+OGRFeature(_ogr_fields_metadata):100
+  layer_name (String) = main_elt_an_abstract_element_abstract_element_realization1
+  field_name (String) = parent_pkid
+  field_xpath (String) = (null)
+  field_type (String) = (null)
+  field_min_occurs (Integer) = (null)
+  field_max_occurs (Integer) = (null)
+  field_default_value (String) = (null)
+  field_fixed_value (String) = (null)
+  field_category (String) = (null)
+  field_related_layer (String) = (null)
+  field_junction_layer (String) = (null)
+  field_documentation (String) = (null)
+  layer_documentation (String) = (null)
+
+OGRFeature(_ogr_fields_metadata):101
+  layer_name (String) = main_elt_an_abstract_element_abstract_element_realization1
+  field_name (String) = child_pkid
+  field_xpath (String) = (null)
+  field_type (String) = (null)
+  field_min_occurs (Integer) = (null)
+  field_max_occurs (Integer) = (null)
+  field_default_value (String) = (null)
+  field_fixed_value (String) = (null)
+  field_category (String) = (null)
+  field_related_layer (String) = (null)
+  field_junction_layer (String) = (null)
+  field_documentation (String) = (null)
+  layer_documentation (String) = (null)
+
+OGRFeature(_ogr_fields_metadata):102
+  layer_name (String) = main_elt_an_abstract_element_abstract_element_realization2
+  field_name (String) = occurence
+  field_xpath (String) = (null)
+  field_type (String) = (null)
+  field_min_occurs (Integer) = (null)
+  field_max_occurs (Integer) = (null)
+  field_default_value (String) = (null)
+  field_fixed_value (String) = (null)
+  field_category (String) = (null)
+  field_related_layer (String) = (null)
+  field_junction_layer (String) = (null)
+  field_documentation (String) = (null)
+  layer_documentation (String) = (null)
+
+OGRFeature(_ogr_fields_metadata):103
+  layer_name (String) = main_elt_an_abstract_element_abstract_element_realization2
+  field_name (String) = parent_pkid
+  field_xpath (String) = (null)
+  field_type (String) = (null)
+  field_min_occurs (Integer) = (null)
+  field_max_occurs (Integer) = (null)
+  field_default_value (String) = (null)
+  field_fixed_value (String) = (null)
+  field_category (String) = (null)
+  field_related_layer (String) = (null)
+  field_junction_layer (String) = (null)
+  field_documentation (String) = (null)
+  layer_documentation (String) = (null)
+
+OGRFeature(_ogr_fields_metadata):104
+  layer_name (String) = main_elt_an_abstract_element_abstract_element_realization2
+  field_name (String) = child_pkid
+  field_xpath (String) = (null)
+  field_type (String) = (null)
+  field_min_occurs (Integer) = (null)
+  field_max_occurs (Integer) = (null)
+  field_default_value (String) = (null)
+  field_fixed_value (String) = (null)
+  field_category (String) = (null)
+  field_related_layer (String) = (null)
+  field_junction_layer (String) = (null)
+  field_documentation (String) = (null)
+  layer_documentation (String) = (null)
+
+
+Layer name: _ogr_layers_metadata
+Geometry: None
+Feature Count: 22
+Layer SRS WKT:
+(unknown)
+layer_name: String (0.0)
+layer_xpath: String (0.0)
+layer_category: String (0.0)
+OGRFeature(_ogr_layers_metadata):0
+  layer_name (String) = abstract_element_realization1
+  layer_xpath (String) = myns:abstract_element_realization1
+  layer_category (String) = TOP_LEVEL_ELEMENT
+
+OGRFeature(_ogr_layers_metadata):1
+  layer_name (String) = abstract_element_realization2
+  layer_xpath (String) = myns:abstract_element_realization2
+  layer_category (String) = TOP_LEVEL_ELEMENT
+
+OGRFeature(_ogr_layers_metadata):2
+  layer_name (String) = main_elt
+  layer_xpath (String) = myns:main_elt
+  layer_category (String) = TOP_LEVEL_ELEMENT
+
+OGRFeature(_ogr_layers_metadata):3
+  layer_name (String) = main_elt_dt_array
+  layer_xpath (String) = myns:main_elt/myns:dt_array
+  layer_category (String) = NESTED_ELEMENT
+
+OGRFeature(_ogr_layers_metadata):4
+  layer_name (String) = main_elt_myint_repeated
+  layer_xpath (String) = myns:main_elt/myns:myint_repeated
+  layer_category (String) = NESTED_ELEMENT
+
+OGRFeature(_ogr_layers_metadata):5
+  layer_name (String) = main_elt_sequence_1_dt_unbounded_subelement
+  layer_xpath (String) = myns:main_elt/myns:sequence_1_dt_unbounded/myns:subelement
+  layer_category (String) = NESTED_ELEMENT
+
+OGRFeature(_ogr_layers_metadata):6
+  layer_name (String) = main_elt_sequence_unbounded_dt_1_subelement
+  layer_xpath (String) = myns:main_elt/myns:sequence_unbounded_dt_1/myns:subelement
+  layer_category (String) = NESTED_ELEMENT
+
+OGRFeature(_ogr_layers_metadata):7
+  layer_name (String) = main_elt_sequence_sequence_subsequence
+  layer_xpath (String) = myns:main_elt/myns:sequence_sequence/myns:subsequence
+  layer_category (String) = NESTED_ELEMENT
+
+OGRFeature(_ogr_layers_metadata):8
+  layer_name (String) = main_elt_sequence_sequence_subsequence_subelement
+  layer_xpath (String) = myns:main_elt/myns:sequence_sequence/myns:subsequence/myns:subelement
+  layer_category (String) = NESTED_ELEMENT
+
+OGRFeature(_ogr_layers_metadata):9
+  layer_name (String) = main_elt_sequence_1_unbounded_with_2_subelts
+  layer_xpath (String) = myns:main_elt/myns:sequence_1_unbounded_with_2_subelts
+  layer_category (String) = NESTED_ELEMENT
+
+OGRFeature(_ogr_layers_metadata):10
+  layer_name (String) = main_elt_sequence_1_unbounded_non_simplifiable
+  layer_xpath (String) = myns:main_elt/myns:sequence_1_unbounded_non_simplifiable
+  layer_category (String) = NESTED_ELEMENT
+
+OGRFeature(_ogr_layers_metadata):11
+  layer_name (String) = main_elt_sequence_1_unbounded_non_simplifiable_sequence
+  layer_xpath (String) = myns:main_elt/myns:sequence_1_unbounded_non_simplifiable;extra=sequence
+  layer_category (String) = NESTED_ELEMENT
+
+OGRFeature(_ogr_layers_metadata):12
+  layer_name (String) = main_elt_sequence_unbounded_1_with_2_subelts
+  layer_xpath (String) = myns:main_elt/myns:sequence_unbounded_1_with_2_subelts
+  layer_category (String) = NESTED_ELEMENT
+
+OGRFeature(_ogr_layers_metadata):13
+  layer_name (String) = main_elt_sequence_with_attr_unbounded
+  layer_xpath (String) = myns:main_elt/myns:sequence_with_attr_unbounded
+  layer_category (String) = NESTED_ELEMENT
+
+OGRFeature(_ogr_layers_metadata):14
+  layer_name (String) = main_elt_group1
+  layer_xpath (String) = myns:main_elt;extra=group1
+  layer_category (String) = NESTED_ELEMENT
+
+OGRFeature(_ogr_layers_metadata):15
+  layer_name (String) = main_elt_group3
+  layer_xpath (String) = myns:main_elt;extra=group3
+  layer_category (String) = NESTED_ELEMENT
+
+OGRFeature(_ogr_layers_metadata):16
+  layer_name (String) = main_elt_group3_group3_elt3_b2
+  layer_xpath (String) = myns:main_elt/myns:group3_elt3/myns:b2
+  layer_category (String) = NESTED_ELEMENT
+
+OGRFeature(_ogr_layers_metadata):17
+  layer_name (String) = rec_A
+  layer_xpath (String) = myns:rec_A
+  layer_category (String) = TOP_LEVEL_ELEMENT
+
+OGRFeature(_ogr_layers_metadata):18
+  layer_name (String) = rec_B
+  layer_xpath (String) = myns:rec_B
+  layer_category (String) = TOP_LEVEL_ELEMENT
+
+OGRFeature(_ogr_layers_metadata):19
+  layer_name (String) = an_abstract_element_in_other_ns_realization1
+  layer_xpath (String) = otherns:an_abstract_element_in_other_ns_realization1
+  layer_category (String) = TOP_LEVEL_ELEMENT
+
+OGRFeature(_ogr_layers_metadata):20
+  layer_name (String) = main_elt_an_abstract_element_abstract_element_realization1
+  layer_xpath (String) = (null)
+  layer_category (String) = JUNCTION_TABLE
+
+OGRFeature(_ogr_layers_metadata):21
+  layer_name (String) = main_elt_an_abstract_element_abstract_element_realization2
+  layer_xpath (String) = (null)
+  layer_category (String) = JUNCTION_TABLE
+
+
+Layer name: _ogr_layer_relationships
+Geometry: None
+Feature Count: 20
+Layer SRS WKT:
+(unknown)
+parent_layer: String (0.0)
+parent_pkid: String (0.0)
+parent_element_name: String (0.0)
+child_layer: String (0.0)
+child_pkid: String (0.0)
+OGRFeature(_ogr_layer_relationships):0
+  parent_layer (String) = main_elt
+  parent_pkid (String) = otherns_id
+  parent_element_name (String) = dt_array
+  child_layer (String) = main_elt_dt_array
+  child_pkid (String) = parent_otherns_id
+
+OGRFeature(_ogr_layer_relationships):1
+  parent_layer (String) = main_elt
+  parent_pkid (String) = otherns_id
+  parent_element_name (String) = myint_repeated
+  child_layer (String) = main_elt_myint_repeated
+  child_pkid (String) = parent_otherns_id
+
+OGRFeature(_ogr_layer_relationships):2
+  parent_layer (String) = main_elt
+  parent_pkid (String) = otherns_id
+  parent_element_name (String) = sequence_1_dt_unbounded_subelement
+  child_layer (String) = main_elt_sequence_1_dt_unbounded_subelement
+  child_pkid (String) = parent_otherns_id
+
+OGRFeature(_ogr_layer_relationships):3
+  parent_layer (String) = main_elt
+  parent_pkid (String) = otherns_id
+  parent_element_name (String) = sequence_unbounded_dt_1_subelement
+  child_layer (String) = main_elt_sequence_unbounded_dt_1_subelement
+  child_pkid (String) = parent_otherns_id
+
+OGRFeature(_ogr_layer_relationships):4
+  parent_layer (String) = main_elt
+  parent_pkid (String) = otherns_id
+  parent_element_name (String) = sequence_sequence_subsequence
+  child_layer (String) = main_elt_sequence_sequence_subsequence
+  child_pkid (String) = parent_otherns_id
+
+OGRFeature(_ogr_layer_relationships):5
+  parent_layer (String) = main_elt
+  parent_pkid (String) = otherns_id
+  parent_element_name (String) = sequence_1_unbounded_with_2_subelts
+  child_layer (String) = main_elt_sequence_1_unbounded_with_2_subelts
+  child_pkid (String) = parent_otherns_id
+
+OGRFeature(_ogr_layer_relationships):6
+  parent_layer (String) = main_elt
+  parent_pkid (String) = otherns_id
+  parent_element_name (String) = sequence_1_unbounded_non_simplifiable
+  child_layer (String) = main_elt_sequence_1_unbounded_non_simplifiable
+  child_pkid (String) = parent_otherns_id
+
+OGRFeature(_ogr_layer_relationships):7
+  parent_layer (String) = main_elt
+  parent_pkid (String) = otherns_id
+  parent_element_name (String) = sequence_unbounded_1_with_2_subelts
+  child_layer (String) = main_elt_sequence_unbounded_1_with_2_subelts
+  child_pkid (String) = parent_otherns_id
+
+OGRFeature(_ogr_layer_relationships):8
+  parent_layer (String) = main_elt
+  parent_pkid (String) = otherns_id
+  parent_element_name (String) = sequence_with_attr_unbounded
+  child_layer (String) = main_elt_sequence_with_attr_unbounded
+  child_pkid (String) = parent_otherns_id
+
+OGRFeature(_ogr_layer_relationships):9
+  parent_layer (String) = main_elt
+  parent_pkid (String) = otherns_id
+  parent_element_name (String) = an_abstract_element_abstract_element_realization1
+  child_layer (String) = abstract_element_realization1
+  child_pkid (String) = ogr_pkid
+
+OGRFeature(_ogr_layer_relationships):10
+  parent_layer (String) = main_elt
+  parent_pkid (String) = otherns_id
+  parent_element_name (String) = an_abstract_element_abstract_element_realization2
+  child_layer (String) = abstract_element_realization2
+  child_pkid (String) = ogr_pkid
+
+OGRFeature(_ogr_layer_relationships):11
+  parent_layer (String) = main_elt
+  parent_pkid (String) = otherns_id
+  parent_element_name (String) = an_abstract_element_in_other_ns_pkid
+  child_layer (String) = an_abstract_element_in_other_ns_realization1
+  child_pkid (String) = ogr_pkid
+
+OGRFeature(_ogr_layer_relationships):12
+  parent_layer (String) = main_elt
+  parent_pkid (String) = otherns_id
+  parent_element_name (String) = (null)
+  child_layer (String) = main_elt_group1
+  child_pkid (String) = parent_otherns_id
+
+OGRFeature(_ogr_layer_relationships):13
+  parent_layer (String) = main_elt
+  parent_pkid (String) = otherns_id
+  parent_element_name (String) = (null)
+  child_layer (String) = main_elt_group3
+  child_pkid (String) = parent_otherns_id
+
+OGRFeature(_ogr_layer_relationships):14
+  parent_layer (String) = main_elt
+  parent_pkid (String) = otherns_id
+  parent_element_name (String) = rec_A_pkid
+  child_layer (String) = rec_A
+  child_pkid (String) = ogr_pkid
+
+OGRFeature(_ogr_layer_relationships):15
+  parent_layer (String) = main_elt_sequence_sequence_subsequence
+  parent_pkid (String) = ogr_pkid
+  parent_element_name (String) = subelement
+  child_layer (String) = main_elt_sequence_sequence_subsequence_subelement
+  child_pkid (String) = parent_ogr_pkid
+
+OGRFeature(_ogr_layer_relationships):16
+  parent_layer (String) = main_elt_sequence_1_unbounded_non_simplifiable
+  parent_pkid (String) = ogr_pkid
+  parent_element_name (String) = (null)
+  child_layer (String) = main_elt_sequence_1_unbounded_non_simplifiable_sequence
+  child_pkid (String) = parent_ogr_pkid
+
+OGRFeature(_ogr_layer_relationships):17
+  parent_layer (String) = main_elt_group3
+  parent_pkid (String) = ogr_pkid
+  parent_element_name (String) = group3_elt3_b2
+  child_layer (String) = main_elt_group3_group3_elt3_b2
+  child_pkid (String) = parent_ogr_pkid
+
+OGRFeature(_ogr_layer_relationships):18
+  parent_layer (String) = rec_A
+  parent_pkid (String) = ogr_pkid
+  parent_element_name (String) = rec_B_pkid
+  child_layer (String) = rec_B
+  child_pkid (String) = ogr_pkid
+
+OGRFeature(_ogr_layer_relationships):19
+  parent_layer (String) = rec_B
+  parent_pkid (String) = ogr_pkid
+  parent_element_name (String) = rec_A_pkid
+  child_layer (String) = rec_A
+  child_pkid (String) = ogr_pkid
+
