@@ -1528,6 +1528,7 @@ void GMLASReader::ProcessAttributes(const Attributes& attrs)
         }
 
         else if( osAttrNSPrefix != "xmlns" &&
+                 osAttrLocalname != "xmlns" &&
                     !(osAttrNSPrefix == "xsi" &&
                         osAttrLocalname == "schemaLocation") &&
                     !(osAttrNSPrefix == "xsi" &&
