@@ -545,16 +545,16 @@ Geometry: None
 Feature Count: 2
 Layer SRS WKT:
 (unknown)
-occurence: Integer (0.0) NOT NULL
+occurrence: Integer (0.0) NOT NULL
 parent_pkid: String (0.0) NOT NULL
 child_pkid: String (0.0) NOT NULL
 OGRFeature(main_elt_an_abstract_element_abstract_element_realization1):1
-  occurence (Integer) = 1
+  occurrence (Integer) = 1
   parent_pkid (String) = otherns_id
   child_pkid (String) = _abstract_element_realization1_1
 
 OGRFeature(main_elt_an_abstract_element_abstract_element_realization1):2
-  occurence (Integer) = 2
+  occurrence (Integer) = 2
   parent_pkid (String) = otherns_id
   child_pkid (String) = _abstract_element_realization1_2
 
@@ -564,11 +564,11 @@ Geometry: None
 Feature Count: 1
 Layer SRS WKT:
 (unknown)
-occurence: Integer (0.0) NOT NULL
+occurrence: Integer (0.0) NOT NULL
 parent_pkid: String (0.0) NOT NULL
 child_pkid: String (0.0) NOT NULL
 OGRFeature(main_elt_an_abstract_element_abstract_element_realization2):1
-  occurence (Integer) = 1
+  occurrence (Integer) = 1
   parent_pkid (String) = otherns_id
   child_pkid (String) = _abstract_element_realization2_1
 
@@ -2078,7 +2078,7 @@ OGRFeature(_ogr_fields_metadata):98
 
 OGRFeature(_ogr_fields_metadata):99
   layer_name (String) = main_elt_an_abstract_element_abstract_element_realization1
-  field_name (String) = occurence
+  field_name (String) = occurrence
   field_xpath (String) = (null)
   field_type (String) = (null)
   field_min_occurs (Integer) = (null)
@@ -2123,7 +2123,7 @@ OGRFeature(_ogr_fields_metadata):101
 
 OGRFeature(_ogr_fields_metadata):102
   layer_name (String) = main_elt_an_abstract_element_abstract_element_realization2
-  field_name (String) = occurence
+  field_name (String) = occurrence
   field_xpath (String) = (null)
   field_type (String) = (null)
   field_min_occurs (Integer) = (null)

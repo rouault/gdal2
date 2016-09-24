@@ -131,7 +131,7 @@ void OGRGMLASLayer::PostInit( bool bIncludeGeometryXML )
     if( !m_oFC.GetParentXPath().empty() )
     {
         {
-            OGRFieldDefn oFieldDefn( "occurence", OFTInteger );
+            OGRFieldDefn oFieldDefn( "occurrence", OFTInteger );
             oFieldDefn.SetNullable( false );
             m_poFeatureDefn->AddFieldDefn( &oFieldDefn );
 

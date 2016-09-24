@@ -352,7 +352,7 @@ class GMLASField
     public:
         typedef enum 
         {
-            /** Field that is going to be instanciated as a OGR field */
+            /** Field that is going to be instantiated as a OGR field */
             REGULAR,
 
             /** Non-instanciable field. The corresponding element to the XPath
@@ -376,7 +376,7 @@ class GMLASField
         CPLString m_osName;         /**< Field name */
         GMLASFieldType m_eType;     /**< Field type */
         OGRwkbGeometryType m_eGeomType; /**< Field geometry type */
-        CPLString m_osTypeName;     /**< Orignal XSD type */
+        CPLString m_osTypeName;     /**< Original XSD type */
         int m_nWidth;               /**< Field width */
         bool m_bNotNullable;        /**< If the field is not nullable */
         bool m_bArray;              /**< If the field is an array */
@@ -397,10 +397,10 @@ class GMLASField
         CPLString m_osFixedValue;       /**< Value of fixed='' attribute */
         CPLString m_osDefaultValue;     /**< Value of default='' attribute */
 
-        /** Minimum number of occurences. Might be -1 if unset */
+        /** Minimum number of occurrences. Might be -1 if unset */
         int  m_nMinOccurs;
 
-        /** Maximum number of occurences, or MAXOCCURS_UNLIMITED. Might be
+        /** Maximum number of occurrences, or MAXOCCURS_UNLIMITED. Might be
             -1 if unset. */
         int  m_nMaxOccurs;
 
@@ -495,7 +495,7 @@ class GMLASFeatureClass
         /** Child nested classes */
         std::vector<GMLASFeatureClass> m_aoNestedClasses;
 
-        /** Whether this layer corresponds to a (multiple instanciated) xs:group
+        /** Whether this layer corresponds to a (multiple instantiated) xs:group
             or a repeated sequence */
         bool m_bIsRepeatedSequence;
 
@@ -874,7 +874,7 @@ class GMLASReader : public DefaultHandler
         /** Which layer is of interest for the reader, or NULL for all */
         OGRGMLASLayer    *m_poLayerOfInterest;
 
-        /** Stack of length of splitted XPath components */
+        /** Stack of length of split XPath components */
         std::vector<size_t> m_anStackXPathLength;
 
         /** Current absolute XPath */

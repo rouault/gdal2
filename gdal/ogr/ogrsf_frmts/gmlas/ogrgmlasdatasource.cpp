@@ -534,7 +534,7 @@ bool OGRGMLASDataSource::Open(GDALOpenInfo* poOpenInfo)
             TranslateClasses( NULL, aoClasses[i] );
     }
 
-    // And now do initialization since we need to have instanciated everything
+    // And now do initialization since we need to have instantiated everything
     // to be able to do cross-layer links
     for( size_t i = 0; i < m_apoLayers.size(); i++ )
     {

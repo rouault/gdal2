@@ -1416,7 +1416,7 @@ void GMLASReader::startElement(
                         OGRFeature* poJunctionFeature =
                                 new OGRFeature(poJunctionLayer->GetLayerDefn());
                         poJunctionFeature->SetFID(nGlobalCounter);
-                        poJunctionFeature->SetField("occurence", nCounter);
+                        poJunctionFeature->SetField("occurrence", nCounter);
                         poJunctionFeature->SetField("parent_pkid", osParentId);
                         poJunctionFeature->SetField("child_pkid", osChildId);
                         PushFeatureReady(poJunctionFeature, poJunctionLayer);

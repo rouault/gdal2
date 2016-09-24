@@ -271,14 +271,14 @@ void GMLASSchemaAnalyzer::FixDuplicatedFieldNames( GMLASFeatureClass& oClass )
         for(; oIter != oSetNames.end(); ++oIter)
         {
             // Has it duplicates ?
-            const size_t nOccurences = oIter->second.size();
-            if( nOccurences > 1 )
+            const size_t nOccurrences = oIter->second.size();
+            if( nOccurrences > 1 )
             {
                 const CPLString oClassNS =
                         GetNSOfLastXPathComponent(oClass.GetXPath());
                 bool bHasDoneRemnamingForThatCase = false;
 
-                for(size_t i=0; i<nOccurences;i++)
+                for(size_t i=0; i<nOccurrences;i++)
                 {
                     GMLASField& oField = aoFields[oIter->second[i]];
                     // CPLDebug("GMLAS", "%s", oField.GetXPath().c_str() );
@@ -311,7 +311,7 @@ void GMLASSchemaAnalyzer::FixDuplicatedFieldNames( GMLASFeatureClass& oClass )
                 // append a counter to the duplicates.
                 if( !bHasDoneRemnamingForThatCase )
                 {
-                    for(size_t i=0; i<nOccurences;i++)
+                    for(size_t i=0; i<nOccurrences;i++)
                     {
                         GMLASField& oField = aoFields[oIter->second[i]];
                         if( i > 0 )
@@ -707,7 +707,7 @@ bool GMLASSchemaAnalyzer::Analyze(GMLASResourceCache& oCache,
         }
     }
 
-    // Instanciate all needed typenames
+    // Instantiate all needed typenames
     std::vector<XSElementDeclaration*>::iterator oIter =
                                         oVectorEltsForTopClass.begin();
     for(; oIter != oVectorEltsForTopClass.end(); ++oIter )
@@ -1382,7 +1382,7 @@ bool GMLASSchemaAnalyzer::FindElementsWithMustBeToLevel(
                         continue;
                     }
 
-                    // Make sure we will instanciate the referenced element
+                    // Make sure we will instantiate the referenced element
                     if( m_oSetEltsForTopClass.find( poSubElt ) == 
                                 m_oSetEltsForTopClass.end() )
                     {
@@ -1515,7 +1515,7 @@ bool GMLASSchemaAnalyzer::FindElementsWithMustBeToLevel(
                             continue;
                         }
 
-                        // Make sure we will instanciate the referenced
+                        // Make sure we will instantiate the referenced
                         //element
                         if( m_oSetEltsForTopClass.find( poTargetElt ) == 
                                     m_oSetEltsForTopClass.end() )
@@ -1807,7 +1807,7 @@ bool GMLASSchemaAnalyzer::ExploreModelGroup(
             // Abstract element without realizations !
             else if ( poElt->getAbstract() )
             {
-                // Do nothing with it since it cannot be instanciated
+                // Do nothing with it since it cannot be instantiated
                 // in a valid way.
             }
 
@@ -2124,7 +2124,7 @@ bool GMLASSchemaAnalyzer::ExploreModelGroup(
                         }
                         else
                         {
-                            // This shouldn't happen with consistant schemas
+                            // This shouldn't happen with consistent schemas
                             // but as targetElement is in <annotation>, no
                             // general-purpose XSD validator can ensure this
                             CPLDebug("GMLAS", "%s is a targetElement of %s, "
@@ -2209,13 +2209,13 @@ bool GMLASSchemaAnalyzer::ExploreModelGroup(
                                 //   </xs:element>
                                 // So we need to create an
                                 // intermediate class to store them
-                                GMLASFeatureClass oIntermNestedClass;
-                                oIntermNestedClass.SetName(
+                                GMLASFeatureClass oIntermediateNestedClass;
+                                oIntermediateNestedClass.SetName(
                                         oClass.GetName() + "_" +
                                         osEltName );
-                                oIntermNestedClass.SetXPath( osElementXPath );
+                                oIntermediateNestedClass.SetXPath( osElementXPath );
 
-                                oIntermNestedClass.PrependFields( aoFields );
+                                oIntermediateNestedClass.PrependFields( aoFields );
 
                                 oNestedClass.SetName( oClass.GetName() + "_" +
                                         osEltName + "_sequence" );
@@ -2228,11 +2228,11 @@ bool GMLASSchemaAnalyzer::ExploreModelGroup(
                                 oField.SetCategory(
                                     GMLASField::PATH_TO_CHILD_ELEMENT_NO_LINK);
                                 oField.SetRelatedClassXPath( oNestedClass.GetXPath() );
-                                oIntermNestedClass.AddField(oField);
+                                oIntermediateNestedClass.AddField(oField);
 
-                                oIntermNestedClass.AddNestedClass( oNestedClass );
+                                oIntermediateNestedClass.AddNestedClass( oNestedClass );
 
-                                oClass.AddNestedClass( oIntermNestedClass );
+                                oClass.AddNestedClass( oIntermediateNestedClass );
                             }
                             else
                             {
