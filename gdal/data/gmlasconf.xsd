@@ -118,6 +118,19 @@
           </xs:annotation>
           <xs:complexType>
             <xs:sequence>
+
+              <xs:element name="AlwaysGenerateOGRId" minOccurs="0" type="xs:boolean">
+                <xs:annotation>
+                  <xs:documentation>
+                    Whether a 'ogr_pkid' attribute should always be generated,
+                    even if the underlying XML element has a required attribute
+                    of type ID. Turning it to true can be useful if the
+                    uniqueness of such attributes is not trused.
+                    Default is false.
+                  </xs:documentation>
+                </xs:annotation>
+              </xs:element>
+
               <xs:element name="UseArrays" minOccurs="0" type="xs:boolean">
                 <xs:annotation>
                   <xs:documentation>
@@ -128,6 +141,7 @@
                   </xs:documentation>
                 </xs:annotation>
               </xs:element>
+
               <xs:element name="GML" minOccurs="0">
                 <xs:annotation>
                   <xs:documentation>

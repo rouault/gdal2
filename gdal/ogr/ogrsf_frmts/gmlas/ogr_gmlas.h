@@ -208,7 +208,10 @@ class GMLASErrorHandler: public ErrorHandler
 class GMLASConfiguration
 {
     public:
+        // Note the default values mentionned here should be kept
+        // consistant with what is documented in gmlasconf.xsd
         static const bool ALLOW_REMOTE_SCHEMA_DOWNLOAD_DEFAULT = true;
+        static const bool ALWAYS_GENERATE_OGR_ID_DEFAULT = false;
         static const bool USE_ARRAYS_DEFAULT = true;
         static const bool INCLUDE_GEOMETRY_XML_DEFAULT = false;
         static const bool INSTANTIATE_GML_FEATURES_ONLY_DEFAULT = true;
@@ -220,6 +223,9 @@ class GMLASConfiguration
 
         /** Whether remote schemas are allowed to be download. */
         bool            m_bAllowRemoteSchemaDownload;
+
+        /** Whether a ogr_pkid attribute should always be generated. */
+        bool            m_bAlwaysGenerateOGRId;
 
         /** Whether repeated strings, integers, reals should be in corresponding
             OGR array types. */
@@ -690,6 +696,9 @@ class OGRGMLASDataSource: public GDALDataset
 
         GMLASSwapCoordinatesEnum       m_eSwapCoordinates;
 
+        /** Base unique identifier */
+        CPLString                      m_osHash;
+
         void TranslateClasses( OGRGMLASLayer* poParentLayer,
                                const GMLASFeatureClass& oFC );
 
@@ -731,7 +740,7 @@ class OGRGMLASDataSource: public GDALDataset
                                 return m_oConf.m_oMapIgnoredXPathToWarn; }
         const GMLASXPathMatcher& GetIgnoredXPathMatcher() const
                                 { return  m_oIgnoredXPathMatcher; }
-
+        const CPLString& GetHash() const { return m_osHash; }
 };
 
 /************************************************************************/
@@ -783,7 +792,7 @@ class OGRGMLASLayer: public OGRLayer
         OGRGMLASLayer(OGRGMLASDataSource* poDS,
                       const GMLASFeatureClass& oFC,
                       OGRGMLASLayer* poParentLayer,
-                      bool bHasChildClasses);
+                      bool bAlwaysGenerateOGRPKId);
         virtual ~OGRGMLASLayer();
 
         virtual const char* GetName() { return GetDescription(); }
@@ -976,6 +985,9 @@ class GMLASReader : public DefaultHandler
         /** Initial pass to guess SRS, etc... */
         bool                        m_bInitialPass;
 
+        /** Base unique identifier */
+        CPLString                      m_osHash;
+
         static void SetField( OGRFeature* poFeature,
                               OGRGMLASLayer* poLayer,
                               int nAttrIdx,
@@ -1029,6 +1041,8 @@ class GMLASReader : public DefaultHandler
                                     { return m_oMapGeomFieldDefnToSRSName; }
         void SetMapGeomFieldDefnToSRSName(const std::map<OGRGeomFieldDefn*, CPLString>& oMap )
                                     { m_oMapGeomFieldDefnToSRSName = oMap; }
+
+        void SetHash(const CPLString& osHash) { m_osHash = osHash; }
 
         OGRFeature* GetNextFeature( OGRLayer** ppoBelongingLayer = NULL );
 

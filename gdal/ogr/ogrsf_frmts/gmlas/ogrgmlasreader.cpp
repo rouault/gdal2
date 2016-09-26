@@ -678,9 +678,9 @@ void GMLASReader::CreateNewFeature(const CPLString& osLocalname)
             m_oCurCtxt.m_oMapCounter[m_oCurCtxt.m_poLayer];*/
         const int nCounter = nGlobalCounter;
 
-        // TODO: take into account case where osParentId is empty. Use UUID
-        CPLString osGeneratedID = osParentId + "_" + osLocalname +
-                                    CPLSPrintf("_%d", nCounter);
+        CPLString osGeneratedID = (osParentId.empty() ? m_osHash : osParentId) +
+                                   "_" + osLocalname +
+                                   CPLSPrintf("_%d", nCounter);
         m_oCurCtxt.m_poFeature->SetField(
                         m_oCurCtxt.m_poLayer->GetIDFieldIdx(),
                         osGeneratedID.c_str() );

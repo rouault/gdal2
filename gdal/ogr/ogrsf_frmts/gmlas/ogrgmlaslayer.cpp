@@ -39,7 +39,7 @@ CPL_CVSID("$Id$");
 OGRGMLASLayer::OGRGMLASLayer( OGRGMLASDataSource* poDS,
                               const GMLASFeatureClass& oFC,
                               OGRGMLASLayer* poParentLayer,
-                              bool /*bHasChildClasses*/ )
+                              bool bAlwaysGenerateOGRPKId )
 {
     m_poDS = poDS;
     m_oFC = oFC;
@@ -80,8 +80,18 @@ OGRGMLASLayer::OGRGMLASLayer( OGRGMLASDataSource* poDS,
     // Are we a regular table ?
     if( m_oFC.GetParentXPath().empty() )
     {
+        if( bAlwaysGenerateOGRPKId )
+        {
+            OGRFieldDefn oFieldDefn( "ogr_pkid", OFTString );
+            oFieldDefn.SetNullable( false );
+            m_nIDFieldIdx = m_poFeatureDefn->GetFieldCount();
+            m_bIDFieldIsGenerated = true;
+            m_poFeatureDefn->AddFieldDefn( &oFieldDefn );
+        }
+
         // Determine if we have an xs:ID attribute/elt, and if it is compulsory,
         // If so, place it as first field (not strictly required, but more readable)
+        // or second field (if we also add a ogr_pkid)
         // Furthermore restrict that to attributes, because otherwise it is
         // impractical in the reader when joining related features.
         const std::vector<GMLASField>& oFields = m_oFC.GetFields();
@@ -93,10 +103,12 @@ OGRGMLASLayer::OGRGMLASLayer( OGRGMLASDataSource* poDS,
             {
                 OGRFieldDefn oFieldDefn( oFields[i].GetName(), OFTString );
                 oFieldDefn.SetNullable( false );
-                m_nIDFieldIdx = m_poFeatureDefn->GetFieldCount();
+                const int nOGRIdx = m_poFeatureDefn->GetFieldCount();
+                if( m_nIDFieldIdx < 0 )
+                    m_nIDFieldIdx = nOGRIdx;
                 m_oMapFieldXPathToOGRFieldIdx[ oFields[i].GetXPath() ] =
-                                            m_nIDFieldIdx;
-                m_oMapOGRFieldIdxtoFCFieldIdx[ m_nIDFieldIdx ] = i;
+                                            nOGRIdx;
+                m_oMapOGRFieldIdxtoFCFieldIdx[ nOGRIdx ] = i;
                 m_poFeatureDefn->AddFieldDefn( &oFieldDefn );
                 break;
             }
@@ -687,6 +699,8 @@ bool OGRGMLASLayer::InitReader()
 
     m_poReader->SetMapIgnoredXPathToWarn(
                                     m_poDS->GetMapIgnoredXPathToWarn());
+
+    m_poReader->SetHash( m_poDS->GetHash() );
 
     m_poReader->SetLayerOfInterest( this );
 

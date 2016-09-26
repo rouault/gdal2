@@ -29,8 +29,8 @@
  ****************************************************************************/
 
 #include "ogr_gmlas.h"
-
 #include "ogr_mem.h"
+#include "cpl_sha256.h"
 
 CPL_CVSID("$Id$");
 
@@ -224,7 +224,7 @@ void OGRGMLASDataSource::TranslateClasses( OGRGMLASLayer* poParentLayer,
     //         oFC.GetName().c_str(), oFC.GetXPath().c_str());
 
     OGRGMLASLayer* poLayer = new OGRGMLASLayer(this, oFC, poParentLayer,
-                                               !aoClasses.empty());
+                                               m_oConf.m_bAlwaysGenerateOGRId);
     m_apoLayers.push_back(poLayer);
 
     for( size_t i=0; i<aoClasses.size(); ++i )
@@ -471,7 +471,40 @@ bool OGRGMLASDataSource::Open(GDALOpenInfo* poOpenInfo)
         m_aoXSDs = aoXSDs;
     }
     if( fpGML )
-        VSIFCloseL(fpGML);
+    {
+        VSIFSeekL(fpGML, 0, SEEK_SET);
+        std::string osBuffer;
+        osBuffer.resize(8192);
+        size_t nRead = VSIFReadL(&osBuffer[0], 1, 8192, fpGML);
+        osBuffer.resize(nRead);
+        size_t nPos = osBuffer.find("timeStamp=\"");
+        if( nPos != std::string::npos )
+        {
+            size_t nPos2 = osBuffer.find('"', nPos+strlen("timeStamp=\""));
+            if( nPos2 != std::string::npos )
+                osBuffer.replace(nPos, nPos2-nPos+1, nPos2-nPos+1, ' ');
+        }
+        CPL_SHA256Context ctxt;
+        CPL_SHA256Init(&ctxt);
+        CPL_SHA256Update(&ctxt, osBuffer.data(), osBuffer.size());
+
+        VSIStatBufL sStat;
+        if( VSIStatL(m_osGMLFilename, &sStat) == 0 )
+        {
+            CPL_SHA256Update(&ctxt, &(sStat.st_size), sizeof(sStat.st_size));
+        }
+
+        GByte abyHash[CPL_SHA256_HASH_SIZE];
+        CPL_SHA256Final(&ctxt, abyHash);
+        // Half of the hash should be enough for our purpose
+        char* pszHash = CPLBinaryToHex(CPL_SHA256_HASH_SIZE / 2, abyHash);
+        m_osHash = pszHash;
+        CPLFree(pszHash);
+
+        VSIFSeekL(fpGML, 0, SEEK_SET);
+
+        PushUnusedGMLFilePointer(fpGML);
+    }
 
     if( aoXSDs.empty() )
     {

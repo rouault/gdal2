@@ -990,6 +990,20 @@ def ogr_gmlas_conf():
         gdaltest.post_reason('fail')
         return 'fail'
 
+    # AlwaysGenerateOGRId = true
+    ds = gdal.OpenEx('GMLAS:data/gmlas_test1.xml', open_options = [
+            'CONFIG_FILE=<Configuration><LayerBuildingRules><AlwaysGenerateOGRId>true</AlwaysGenerateOGRId></LayerBuildingRules></Configuration>'])
+    if ds is None:
+        gdaltest.post_reason('fail')
+        return 'fail'
+    lyr = ds.GetLayerByName('main_elt')
+    f = lyr.GetNextFeature()
+    if f['ogr_pkid'] != '3F29ECE2E9502A67BD91FE0DEA88682A_main_elt_1' or \
+       f['otherns_id'] != 'otherns_id':
+        gdaltest.post_reason('fail')
+        f.DumpReadable()
+        return 'fail'
+
     # IncludeGeometryXML = false
     ds = gdal.OpenEx('GMLAS:data/gmlas_geometryproperty_gml32.gml', open_options = [
             'CONFIG_FILE=<Configuration><LayerBuildingRules><GML><IncludeGeometryXML>false</IncludeGeometryXML></GML></LayerBuildingRules></Configuration>'])
@@ -1565,6 +1579,59 @@ def ogr_gmlas_instantiate_only_gml_feature():
     return 'success'
 
 ###############################################################################
+# Test that WFS style timeStamp are ignored for hash generation
+
+def ogr_gmlas_timestamp_ignored_for_hash():
+
+    if ogr.GetDriverByName('GMLAS') is None:
+        return 'skip'
+
+    gdal.FileFromMemBuffer('/vsimem/ogr_gmlas_timestamp_ignored_for_hash.xml',
+"""<first xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          timeStamp="foo"
+        xsi:noNamespaceSchemaLocation="ogr_gmlas_timestamp_ignored_for_hash.xsd">
+</first>
+""")
+
+    gdal.FileFromMemBuffer('/vsimem/ogr_gmlas_timestamp_ignored_for_hash.xsd',
+"""<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           elementFormDefault="qualified" attributeFormDefault="unqualified">
+<xs:element name="first">
+  <xs:complexType>
+    <xs:sequence>
+        <xs:element name="foo" type="xs:string" minOccurs="0"/>
+    </xs:sequence>
+  </xs:complexType>
+</xs:element>
+</xs:schema>""")
+
+    ds = ogr.Open('GMLAS:/vsimem/ogr_gmlas_timestamp_ignored_for_hash.xml')
+    lyr = ds.GetLayer(0)
+    f = lyr.GetNextFeature()
+    pkid = f['ogr_pkid']
+
+    gdal.FileFromMemBuffer('/vsimem/ogr_gmlas_timestamp_ignored_for_hash.xml',
+"""<first xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          timeStamp="bar"
+        xsi:noNamespaceSchemaLocation="ogr_gmlas_timestamp_ignored_for_hash.xsd">
+</first>
+""")
+
+    ds = ogr.Open('GMLAS:/vsimem/ogr_gmlas_timestamp_ignored_for_hash.xml')
+    lyr = ds.GetLayer(0)
+    f = lyr.GetNextFeature()
+    if f['ogr_pkid'] != pkid:
+        gdaltest.post_reason('fail')
+        print(pkid)
+        f.DumpReadable()
+        return 'fail'
+
+    gdal.Unlink('/vsimem/ogr_gmlas_timestamp_ignored_for_hash.xml')
+    gdal.Unlink('/vsimem/ogr_gmlas_timestamp_ignored_for_hash.xsd')
+
+    return 'success'
+
+###############################################################################
 #  Cleanup
 
 def ogr_gmlas_cleanup():
@@ -1607,6 +1674,7 @@ gdaltest_list = [
     ogr_gmlas_link_nested_independant_child,
     ogr_gmlas_composition_compositionPart,
     ogr_gmlas_instantiate_only_gml_feature,
+    ogr_gmlas_timestamp_ignored_for_hash,
     ogr_gmlas_cleanup ]
 
 #gdaltest_list = [ ogr_gmlas_instantiate_only_gml_feature ]

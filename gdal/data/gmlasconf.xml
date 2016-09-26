@@ -12,6 +12,7 @@
     </Validation>
     <ExposeMetadataLayers>false</ExposeMetadataLayers>
     <LayerBuildingRules>
+        <AlwaysGenerateOGRId>false</AlwaysGenerateOGRId>
         <UseArrays>true</UseArrays>
         <GML>
             <IncludeGeometryXML>false</IncludeGeometryXML>
