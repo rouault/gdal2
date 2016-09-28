@@ -44,10 +44,13 @@ OGRGMLASDataSource::OGRGMLASDataSource()
     XMLPlatformUtils::Initialize();
     m_bExposeMetadataLayers = false;
     m_fpGML = NULL;
+    m_fpGMLParser = NULL;
     m_bLayerInitFinished = false;
     m_bValidate = false;
     m_bFirstPassDone = false;
     m_eSwapCoordinates = GMLAS_SWAP_AUTO;
+    m_nFileSize = 0;
+    m_poReader = NULL;
 
     m_poFieldsMetadataLayer = new OGRMemLayer
                                     ("_ogr_fields_metadata", NULL, wkbNone );
@@ -156,6 +159,9 @@ OGRGMLASDataSource::~OGRGMLASDataSource()
     delete m_poRelationshipsLayer;
     if( m_fpGML != NULL )
         VSIFCloseL(m_fpGML);
+    if( m_fpGMLParser != NULL )
+        VSIFCloseL(m_fpGMLParser);
+    delete m_poReader;
 
     // FIXME
     XMLPlatformUtils::Terminate();
@@ -491,6 +497,7 @@ bool OGRGMLASDataSource::Open(GDALOpenInfo* poOpenInfo)
         VSIStatBufL sStat;
         if( VSIStatL(m_osGMLFilename, &sStat) == 0 )
         {
+            m_nFileSize = sStat.st_size;
             CPL_SHA256Update(&ctxt, &(sStat.st_size), sizeof(sStat.st_size));
         }
 
@@ -583,7 +590,7 @@ bool OGRGMLASDataSource::Open(GDALOpenInfo* poOpenInfo)
     if( m_bValidate )
     {
         CPLErrorReset();
-        RunFirstPassIfNeeded( NULL );
+        RunFirstPassIfNeeded( NULL, NULL, NULL );
         if( CPLFetchBool( poOpenInfo->papszOpenOptions,
                           "FAIL_IF_VALIDATION_ERROR",
                           m_oConf.m_bFailIfValidationError ) &&
@@ -598,6 +605,128 @@ bool OGRGMLASDataSource::Open(GDALOpenInfo* poOpenInfo)
         CPLErrorReset();
 
     return true;
+}
+
+/************************************************************************/
+/*                           TestCapability()                           */
+/************************************************************************/
+
+int OGRGMLASDataSource::TestCapability( const char * pszCap )
+{
+    return EQUAL(pszCap, ODsCRandomLayerRead);
+}
+
+/************************************************************************/
+/*                            ResetReading()                            */
+/************************************************************************/
+
+void OGRGMLASDataSource::ResetReading()
+{
+    delete m_poReader;
+    m_poReader = NULL;
+}
+
+/************************************************************************/
+/*                           CreateReader()                             */
+/************************************************************************/
+
+GMLASReader* OGRGMLASDataSource::CreateReader( VSILFILE*& fpGML,
+                                               GDALProgressFunc pfnProgress,
+                                               void* pProgressData )
+{
+    if( fpGML == NULL )
+    {
+        // Try recycling an already opened and unused file pointer
+        fpGML = PopUnusedGMLFilePointer();
+        if( fpGML == NULL )
+            fpGML = VSIFOpenL(GetGMLFilename(), "rb");
+        if( fpGML == NULL )
+            return NULL;
+    }
+
+    GMLASReader* poReader = new GMLASReader( GetCache(),
+                                             GetIgnoredXPathMatcher() );
+    poReader->Init( GetGMLFilename(),
+                      fpGML,
+                      GetMapURIToPrefix(),
+                      GetLayers(),
+                      false );
+
+    poReader->SetSwapCoordinates( GetSwapCoordinates() );
+
+    poReader->SetFileSize( m_nFileSize );
+
+    if( !RunFirstPassIfNeeded( poReader, pfnProgress, pProgressData ) )
+    {
+        delete poReader;
+        return NULL;
+    }
+
+    poReader->SetMapIgnoredXPathToWarn( GetMapIgnoredXPathToWarn());
+
+    poReader->SetHash( GetHash() );
+
+    return poReader;
+}
+
+/************************************************************************/
+/*                           GetNextFeature()                           */
+/************************************************************************/
+
+OGRFeature* OGRGMLASDataSource::GetNextFeature( OGRLayer** ppoBelongingLayer,
+                                                double* pdfProgressPct,
+                                                GDALProgressFunc pfnProgress,
+                                                void* pProgressData )
+{
+    const double dfInitialScanRatio = 0.1;
+    if( m_poReader == NULL )
+    {
+        void* pScaledProgress = GDALCreateScaledProgress( 0.0, dfInitialScanRatio,
+                                                          pfnProgress,
+                                                          pProgressData );
+
+        m_poReader = CreateReader(m_fpGMLParser,
+                                  pScaledProgress ? GDALScaledProgress : NULL,
+                                  pScaledProgress);
+
+        GDALDestroyScaledProgress(pScaledProgress);
+
+        if( m_poReader == NULL )
+        {
+            if( pdfProgressPct != NULL )
+                *pdfProgressPct = 1.0;
+            if( ppoBelongingLayer != NULL )
+                *ppoBelongingLayer = NULL;
+            return NULL;
+        }
+    }
+
+    void* pScaledProgress = GDALCreateScaledProgress( dfInitialScanRatio, 1.0,
+                                                      pfnProgress,
+                                                      pProgressData );
+
+    while( true )
+    {
+        OGRGMLASLayer* poBelongingLayer = NULL;
+        OGRFeature* poFeature = m_poReader->GetNextFeature(
+                    &poBelongingLayer,
+                    pScaledProgress ? GDALScaledProgress : NULL,
+                    pScaledProgress);
+        if( poFeature == NULL ||
+            poBelongingLayer->EvaluateFilter(poFeature) )
+        {
+            if( ppoBelongingLayer != NULL )
+                *ppoBelongingLayer = poBelongingLayer;
+            if( pdfProgressPct != NULL )
+            {
+                *pdfProgressPct = dfInitialScanRatio +
+                    (1.0 - dfInitialScanRatio) * VSIFTellL(m_fpGMLParser) / m_nFileSize;
+            }
+            GDALDestroyScaledProgress(pScaledProgress);
+            return poFeature;
+        }
+        delete poFeature;
+    }
 }
 
 /************************************************************************/
@@ -642,10 +771,12 @@ VSILFILE* OGRGMLASDataSource::PopUnusedGMLFilePointer()
 }
 
 /************************************************************************/
-/*                           DoFirstPassIfNeeded()                      */
+/*                          RunFirstPassIfNeeded()                      */
 /************************************************************************/
 
-void OGRGMLASDataSource::RunFirstPassIfNeeded( GMLASReader* poReader )
+bool OGRGMLASDataSource::RunFirstPassIfNeeded( GMLASReader* poReader,
+                                               GDALProgressFunc pfnProgress,
+                                               void* pProgressData )
 {
     if( m_bFirstPassDone )
     {
@@ -654,7 +785,7 @@ void OGRGMLASDataSource::RunFirstPassIfNeeded( GMLASReader* poReader )
             poReader->SetMapSRSNameToInvertedAxis(m_oMapSRSNameToInvertedAxis);
             poReader->SetMapGeomFieldDefnToSRSName(m_oMapGeomFieldDefnToSRSName);
         }
-        return;
+        return true;
     }
 
     m_bFirstPassDone = true;
@@ -682,7 +813,7 @@ void OGRGMLASDataSource::RunFirstPassIfNeeded( GMLASReader* poReader )
             fp = VSIFOpenL(GetGMLFilename(), "rb");
             if( fp == NULL )
             {
-                return;
+                return false;
             }
             bJustOpenedFiled = true;
         }
@@ -696,12 +827,14 @@ void OGRGMLASDataSource::RunFirstPassIfNeeded( GMLASReader* poReader )
                                  m_bValidate,
                                  m_aoXSDs );
 
+        poReaderFirstPass->SetFileSize( m_nFileSize );
+
         poReaderFirstPass->SetMapIgnoredXPathToWarn(
                                     m_oConf.m_oMapIgnoredXPathToWarn);
         // No need to warn afterwards
         m_oConf.m_oMapIgnoredXPathToWarn.clear();
 
-        poReaderFirstPass->RunFirstPass();
+        m_bFirstPassDone = poReaderFirstPass->RunFirstPass(pfnProgress, pProgressData);
 
         // Store 2 maps to reinject them in real readers
         m_oMapSRSNameToInvertedAxis =
@@ -721,9 +854,14 @@ void OGRGMLASDataSource::RunFirstPassIfNeeded( GMLASReader* poReader )
             poReader->SetMapGeomFieldDefnToSRSName(m_oMapGeomFieldDefnToSRSName);
         }
 
-        for(size_t i=0;i<m_apoLayers.size();i++)
+        if( m_bFirstPassDone )
         {
-            m_apoLayers[i]->SetLayerDefnFinalized(true);
+            for(size_t i=0;i<m_apoLayers.size();i++)
+            {
+                m_apoLayers[i]->SetLayerDefnFinalized(true);
+            }
         }
     }
+
+    return m_bFirstPassDone;
 }

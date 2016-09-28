@@ -675,37 +675,14 @@ bool OGRGMLASLayer::InitReader()
 {
     CPLAssert( m_poReader == NULL );
 
-    if( m_fpGML == NULL )
-    {
-        // Try recycling an already opened and unused file pointer
-        m_fpGML = m_poDS->PopUnusedGMLFilePointer();
-        if( m_fpGML == NULL )
-            m_fpGML = VSIFOpenL(m_poDS->GetGMLFilename(), "rb");
-        if( m_fpGML == NULL )
-            return false;
-    }
-
-    m_poReader = new GMLASReader( m_poDS->GetCache(),
-                                  m_poDS->GetIgnoredXPathMatcher() );
-    m_poReader->Init( m_poDS->GetGMLFilename(),
-                      m_fpGML,
-                      m_poDS->GetMapURIToPrefix(),
-                      m_poDS->GetLayers(),
-                      false );
-
-    m_poReader->SetSwapCoordinates( m_poDS->GetSwapCoordinates() );
-
-    m_poDS->RunFirstPassIfNeeded( m_poReader );
-
-    m_poReader->SetMapIgnoredXPathToWarn(
-                                    m_poDS->GetMapIgnoredXPathToWarn());
-
-    m_poReader->SetHash( m_poDS->GetHash() );
-
-    m_poReader->SetLayerOfInterest( this );
-
+    m_poReader = m_poDS->CreateReader( m_fpGML );
     m_bLayerDefnFinalized = true;
-    return true;
+    if( m_poReader != NULL )
+    {
+        m_poReader->SetLayerOfInterest( this );
+        return true;
+    }
+    return false;
 }
 
 /************************************************************************/
@@ -718,6 +695,18 @@ OGRFeature* OGRGMLASLayer::GetNextRawFeature()
         return NULL;
 
     return m_poReader->GetNextFeature();
+}
+
+/************************************************************************/
+/*                            EvaluateFilter()                          */
+/************************************************************************/
+
+bool OGRGMLASLayer::EvaluateFilter( OGRFeature* poFeature )
+{
+    return (m_poFilterGeom == NULL
+             || FilterGeometry( poFeature->GetGeomFieldRef(m_iGeomFieldFilter) ) )
+            && (m_poAttrQuery == NULL
+                || m_poAttrQuery->Evaluate( poFeature ));
 }
 
 /************************************************************************/
@@ -744,10 +733,7 @@ OGRFeature* OGRGMLASLayer::GetNextFeature()
             return NULL;
         }
 
-        if( (m_poFilterGeom == NULL
-             || FilterGeometry( poFeature->GetGeomFieldRef(m_iGeomFieldFilter) ) )
-            && (m_poAttrQuery == NULL
-                || m_poAttrQuery->Evaluate( poFeature )) )
+        if( EvaluateFilter(poFeature) )
         {
             return poFeature;
         }

@@ -675,6 +675,7 @@ class OGRGMLASDataSource: public GDALDataset
         OGRLayer                      *m_poLayersMetadataLayer;
         OGRLayer                      *m_poRelationshipsLayer;
         VSILFILE                      *m_fpGML;
+        VSILFILE                      *m_fpGMLParser;
         bool                           m_bLayerInitFinished;
         bool                           m_bValidate;
         bool                           m_bFirstPassDone;
@@ -699,8 +700,16 @@ class OGRGMLASDataSource: public GDALDataset
         /** Base unique identifier */
         CPLString                      m_osHash;
 
+        vsi_l_offset                   m_nFileSize;
+
+        GMLASReader*                   m_poReader;
+
         void TranslateClasses( OGRGMLASLayer* poParentLayer,
                                const GMLASFeatureClass& oFC );
+
+        bool        RunFirstPassIfNeeded( GMLASReader* poReader,
+                                          GDALProgressFunc pfnProgress,
+                                          void* pProgressData );
 
     public:
         OGRGMLASDataSource();
@@ -709,6 +718,13 @@ class OGRGMLASDataSource: public GDALDataset
         virtual int         GetLayerCount();
         virtual OGRLayer    *GetLayer(int);
         virtual OGRLayer    *GetLayerByName(const char* pszName);
+
+        virtual void        ResetReading();
+        virtual OGRFeature* GetNextFeature( OGRLayer** ppoBelongingLayer,
+                                            double* pdfProgressPct,
+                                            GDALProgressFunc pfnProgress,
+                                            void* pProgressData );
+        virtual int TestCapability( const char* );
 
         bool Open(GDALOpenInfo* poOpenInfo);
 
@@ -726,9 +742,11 @@ class OGRGMLASDataSource: public GDALDataset
                                             { return m_poRelationshipsLayer; }
         OGRGMLASLayer*          GetLayerByXPath( const CPLString& osXPath );
 
-        GMLASResourceCache& GetCache() { return m_oCache; }
+        GMLASReader*            CreateReader( VSILFILE*& fpGML,
+                                              GDALProgressFunc pfnProgress = NULL,
+                                              void* pProgressData = NULL );
 
-        void        RunFirstPassIfNeeded( GMLASReader* poReader );
+        GMLASResourceCache& GetCache() { return m_oCache; }
 
         void        PushUnusedGMLFilePointer( VSILFILE* fpGML );
         VSILFILE   *PopUnusedGMLFilePointer();
@@ -812,6 +830,8 @@ class OGRGMLASLayer: public OGRLayer
         int GetParentIDFieldIdx() const { return m_nParentIDFieldIdx; }
         int GetFCFieldIndexFromOGRFieldIdx(int iOGRFieldIdx) const;
         int GetFCFieldIndexFromOGRGeomFieldIdx(int iOGRGeomFieldIdx) const;
+
+        bool EvaluateFilter( OGRFeature* poFeature );
 };
 
 /************************************************************************/
@@ -846,6 +866,9 @@ class GMLASReader : public DefaultHandler
 
         /** Whether we have reached end of file (or an error) */
         bool              m_bEOF;
+
+        /** Whether GetNextFeature() has been user interrupted (progress cbk) */
+        bool              m_bInterrupted;
 
         /** Error handler (for Xerces reader) */
         GMLASErrorHandler m_oErrorHandler;
@@ -988,6 +1011,8 @@ class GMLASReader : public DefaultHandler
         /** Base unique identifier */
         CPLString                      m_osHash;
 
+        vsi_l_offset                   m_nFileSize;
+
         static void SetField( OGRFeature* poFeature,
                               OGRGMLASLayer* poLayer,
                               int nAttrIdx,
@@ -1044,7 +1069,11 @@ class GMLASReader : public DefaultHandler
 
         void SetHash(const CPLString& osHash) { m_osHash = osHash; }
 
-        OGRFeature* GetNextFeature( OGRLayer** ppoBelongingLayer = NULL );
+        void SetFileSize(vsi_l_offset nFileSize) { m_nFileSize = nFileSize; }
+
+        OGRFeature* GetNextFeature( OGRGMLASLayer** ppoBelongingLayer = NULL,
+                                    GDALProgressFunc pfnProgress = NULL,
+                                    void* pProgressData = NULL );
 
         virtual void startElement(
             const   XMLCh* const    uri,
@@ -1061,7 +1090,8 @@ class GMLASReader : public DefaultHandler
         virtual  void characters( const XMLCh *const chars,
                         const XMLSize_t length );
 
-        void RunFirstPass();
+        bool RunFirstPass(GDALProgressFunc pfnProgress,
+                          void* pProgressData);
 
         static bool LoadXSDInParser( SAX2XMLReader* poParser,
                                      GMLASResourceCache& oCache,

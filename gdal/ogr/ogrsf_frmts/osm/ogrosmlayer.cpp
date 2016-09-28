@@ -126,7 +126,7 @@ void OGROSMLayer::ResetReading()
     if ( !bResetReadingAllowed || poDS->IsInterleavedReading() )
         return;
 
-    poDS->ResetReading();
+    poDS->MyResetReading();
 }
 
 /************************************************************************/
@@ -166,7 +166,7 @@ OGRErr OGROSMLayer::SetAttributeFilter( const char* pszAttrQuery )
     {
         if( !poDS->IsInterleavedReading() )
         {
-            poDS->ResetReading();
+            poDS->MyResetReading();
         }
     }
     else
@@ -198,6 +198,12 @@ GIntBig OGROSMLayer::GetFeatureCount( int bForce )
 /************************************************************************/
 
 OGRFeature *OGROSMLayer::GetNextFeature()
+{
+    return MyGetNextFeature(NULL, NULL);
+}
+
+OGRFeature *OGROSMLayer::MyGetNextFeature( GDALProgressFunc pfnProgress,
+                                           void* pProgressData )
 {
     bResetReadingAllowed = true;
 
@@ -233,7 +239,7 @@ OGRFeature *OGROSMLayer::GetNextFeature()
             }
 
             /* Read some more data and accumulate features */
-            poDS->ParseNextChunk(nIdxLayer);
+            poDS->ParseNextChunk(nIdxLayer, pfnProgress, pProgressData);
 
             if ( nFeatureArraySize == 0 )
             {
@@ -263,7 +269,7 @@ OGRFeature *OGROSMLayer::GetNextFeature()
         {
             while( true )
             {
-                int bRet = poDS->ParseNextChunk(nIdxLayer);
+                int bRet = poDS->ParseNextChunk(nIdxLayer, NULL, NULL);
                 if (nFeatureArraySize != 0)
                     break;
                 if (bRet == FALSE)

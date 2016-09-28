@@ -1632,6 +1632,63 @@ def ogr_gmlas_timestamp_ignored_for_hash():
     return 'success'
 
 ###############################################################################
+# Test dataset GetNextFeature()
+
+def ogr_gmlas_dataset_getnextfeature():
+
+    if ogr.GetDriverByName('GMLAS') is None:
+        return 'skip'
+
+    ds = gdal.OpenEx('GMLAS:data/gmlas_test1.xml')
+
+    if ds.TestCapability(ogr.ODsCRandomLayerRead) != 1:
+        gdaltest.post_reason('fail')
+        return 'fail'
+
+    count = 0
+    last_l = None
+    while True:
+        f, l = ds.GetNextFeature()
+        if f is None:
+            if l is not None:
+                gdaltest.post_reason('fail')
+                return 'fail'
+            break
+        count += 1
+        last_l = l
+
+    if count != 51:
+        gdaltest.post_reason('fail')
+        print(count)
+        return 'fail'
+
+    if last_l.GetName() != 'main_elt':
+        gdaltest.post_reason('fail')
+        print(last_l.GetName())
+        return 'fail'
+
+    f, l = ds.GetNextFeature()
+    if f is not None or l is not None:
+        gdaltest.post_reason('fail')
+        return 'fail'
+
+    ds.ResetReading()
+    last_pct =  0
+    while True:
+        f, l, pct = ds.GetNextFeature( include_pct = True )
+        last_pct = pct
+        if f is None:
+            if l is not None:
+                gdaltest.post_reason('fail')
+                return 'fail'
+            break
+    if last_pct != 1.0:
+        gdaltest.post_reason('fail')
+        return 'fail'
+
+    return 'success'
+
+###############################################################################
 #  Cleanup
 
 def ogr_gmlas_cleanup():
@@ -1675,6 +1732,7 @@ gdaltest_list = [
     ogr_gmlas_composition_compositionPart,
     ogr_gmlas_instantiate_only_gml_feature,
     ogr_gmlas_timestamp_ignored_for_hash,
+    ogr_gmlas_dataset_getnextfeature,
     ogr_gmlas_cleanup ]
 
 #gdaltest_list = [ ogr_gmlas_instantiate_only_gml_feature ]

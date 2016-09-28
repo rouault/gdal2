@@ -336,6 +336,7 @@ GMLASReader::GMLASReader(GMLASResourceCache& oCache,
     m_GMLInputSource = NULL;
     m_bFirstIteration = true;
     m_bEOF = false;
+    m_bInterrupted = false;
     m_nLevel = 0;
     m_oCurCtxt.m_nLevel = 0;
     m_oCurCtxt.m_poLayer = NULL;
@@ -358,6 +359,7 @@ GMLASReader::GMLASReader(GMLASResourceCache& oCache,
     m_nLevelSilentIgnoredXPath = -1;
     m_eSwapCoordinates = GMLAS_SWAP_AUTO;
     m_bInitialPass = false;
+    m_nFileSize = 0;
 }
 
 /************************************************************************/
@@ -2092,7 +2094,9 @@ void GMLASReader::characters( const XMLCh *const chars,
 /*                            GetNextFeature()                          */
 /************************************************************************/
 
-OGRFeature* GMLASReader::GetNextFeature( OGRLayer** ppoBelongingLayer )
+OGRFeature* GMLASReader::GetNextFeature( OGRGMLASLayer** ppoBelongingLayer,
+                                         GDALProgressFunc pfnProgress,
+                                         void* pProgressData )
 {
     // In practice we will never have more than 2 features
     while( !m_aoFeaturesReady.empty() )
@@ -2127,8 +2131,21 @@ OGRFeature* GMLASReader::GetNextFeature( OGRLayer** ppoBelongingLayer )
             }
         }
 
+        vsi_l_offset nLastOffset = VSIFTellL(m_fp);
         while( m_poSAXReader->parseNext( m_oToFill ) )
         {
+            if( pfnProgress && VSIFTellL(m_fp) - nLastOffset > 100 * 1024 )
+            {
+                nLastOffset = VSIFTellL(m_fp);
+                double dfPct = -1;
+                if( m_nFileSize )
+                    dfPct = 1.0 * nLastOffset / m_nFileSize;
+                if( !pfnProgress( dfPct, "", pProgressData ) )
+                {
+                    m_bInterrupted = true;
+                    break;
+                }
+            }
             if( m_bParsingError )
                 break;
 
@@ -2145,6 +2162,22 @@ OGRFeature* GMLASReader::GetNextFeature( OGRLayer** ppoBelongingLayer )
                 {
                     if( ppoBelongingLayer )
                         *ppoBelongingLayer = m_poFeatureReadyLayer;
+
+                    if( pfnProgress )
+                    {
+                        nLastOffset = VSIFTellL(m_fp);
+                        double dfPct = -1;
+                        if( m_nFileSize )
+                            dfPct = 1.0 * nLastOffset / m_nFileSize;
+                        if( !pfnProgress( dfPct, "", pProgressData ) )
+                        {
+                            delete m_poFeatureReady;
+                            m_bInterrupted = true;
+                            m_bEOF = true;
+                            return NULL;
+                        }
+                    }
+
                     return m_poFeatureReady;
                 }
                 delete m_poFeatureReady;
@@ -2175,7 +2208,8 @@ OGRFeature* GMLASReader::GetNextFeature( OGRLayer** ppoBelongingLayer )
 /*                              RunFirstPass()                          */
 /************************************************************************/
 
-void GMLASReader::RunFirstPass()
+bool GMLASReader::RunFirstPass(GDALProgressFunc pfnProgress,
+                               void* pProgressData)
 {
     m_bInitialPass = true;
 
@@ -2196,7 +2230,7 @@ void GMLASReader::RunFirstPass()
     // columns. If we do validation, parse the whole file
     OGRFeature* poFeature;
     while( (m_bValidate || !m_oSetGeomFieldsWithUnknownSRS.empty()) &&
-           (poFeature = GetNextFeature(NULL)) != NULL )
+           (poFeature = GetNextFeature(NULL, pfnProgress, pProgressData)) != NULL )
     {
         delete poFeature;
     }
@@ -2205,4 +2239,6 @@ void GMLASReader::RunFirstPass()
 
     // Clear the set even if we didn't manage to determine all the SRS
     m_oSetGeomFieldsWithUnknownSRS.clear();
+
+    return !m_bInterrupted;
 }
