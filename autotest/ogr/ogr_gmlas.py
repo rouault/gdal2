@@ -1736,7 +1736,6 @@ def ogr_gmlas_inline_identifier():
   </xs:complexType>
 </xs:element>
 
-
 </xs:schema>""")
 
     ds = gdal.OpenEx('GMLAS:', open_options=['XSD=/vsimem/ogr_gmlas_inline_identifier.xsd'])
@@ -1751,6 +1750,89 @@ def ogr_gmlas_inline_identifier():
 
     gdal.Unlink('/vsimem/ogr_gmlas_inline_identifier.xsd')
     gdal.Unlink('/vsimem/gmlas_fake_gml32.xsd')
+
+    return 'success'
+
+###############################################################################
+#  Test that we can handle things like gml:name and au:name
+
+def ogr_gmlas_avoid_same_name_inlined_classes():
+
+    gdal.FileFromMemBuffer('/vsimem/ogr_gmlas_avoid_same_name_inlined_classes_ns1.xsd',
+"""<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+              xmlns:ns1="http://ns1"
+              targetNamespace="http://ns1"
+              elementFormDefault="qualified" attributeFormDefault="unqualified">
+
+<xs:element name="dt">
+  <xs:complexType>
+    <xs:sequence>
+        <xs:element name="val" type="xs:dateTime" minOccurs="0"/>
+    </xs:sequence>
+  </xs:complexType>
+</xs:element>
+
+</xs:schema>""")
+
+    gdal.FileFromMemBuffer('/vsimem/ogr_gmlas_avoid_same_name_inlined_classes_ns2.xsd',
+"""<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+              xmlns:ns1="http://ns2"
+              targetNamespace="http://ns2"
+              elementFormDefault="qualified" attributeFormDefault="unqualified">
+
+<xs:element name="dt">
+  <xs:complexType>
+    <xs:sequence>
+        <xs:element name="val" type="xs:dateTime" minOccurs="0"/>
+    </xs:sequence>
+  </xs:complexType>
+</xs:element>
+
+</xs:schema>""")
+
+    gdal.FileFromMemBuffer('/vsimem/ogr_gmlas_avoid_same_name_inlined_classes.xsd',
+"""<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+              xmlns:ns1="http://ns1"
+              xmlns:ns2="http://ns2"
+              elementFormDefault="qualified" attributeFormDefault="unqualified">
+
+<xs:import namespace="http://ns1" schemaLocation="ogr_gmlas_avoid_same_name_inlined_classes_ns1.xsd"/>
+<xs:import namespace="http://ns2" schemaLocation="ogr_gmlas_avoid_same_name_inlined_classes_ns2.xsd"/>
+
+<xs:group name="mygroup">
+    <xs:sequence>
+        <xs:element ref="ns2:dt" minOccurs="0" maxOccurs="2"/>
+    </xs:sequence>
+</xs:group>
+
+<xs:element name="myFeature">
+  <xs:complexType>
+        <xs:sequence>
+            <xs:element ref="ns1:dt" minOccurs="0" maxOccurs="2"/>
+            <xs:group ref="mygroup"/>
+        </xs:sequence>
+  </xs:complexType>
+</xs:element>
+
+</xs:schema>""")
+
+    ds = gdal.OpenEx('GMLAS:', open_options=['XSD=/vsimem/ogr_gmlas_avoid_same_name_inlined_classes.xsd'])
+    if ds.GetLayerCount() != 3:
+        gdaltest.post_reason('fail')
+        print( ds.GetLayerCount() )
+        return 'fail'
+    lyr = ds.GetLayerByName('myFeature_ns1_dt')
+    if lyr is None:
+        gdaltest.post_reason('fail')
+        return 'fail'
+    lyr = ds.GetLayerByName('myFeature_ns2_dt')
+    if lyr is None:
+        gdaltest.post_reason('fail')
+        return 'fail'
+
+    gdal.Unlink('/vsimem/ogr_gmlas_avoid_same_name_inlined_classes.xsd')
+    gdal.Unlink('/vsimem/ogr_gmlas_avoid_same_name_inlined_classes_ns1.xsd')
+    gdal.Unlink('/vsimem/ogr_gmlas_avoid_same_name_inlined_classes_ns2.xsd')
 
     return 'success'
 
@@ -1800,6 +1882,7 @@ gdaltest_list = [
     ogr_gmlas_timestamp_ignored_for_hash,
     ogr_gmlas_dataset_getnextfeature,
     ogr_gmlas_inline_identifier,
+    ogr_gmlas_avoid_same_name_inlined_classes,
     ogr_gmlas_cleanup ]
 
 #gdaltest_list = [ ogr_gmlas_instantiate_only_gml_feature ]

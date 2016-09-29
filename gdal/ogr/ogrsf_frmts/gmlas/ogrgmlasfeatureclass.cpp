@@ -143,6 +143,10 @@ GMLASFeatureClass::GMLASFeatureClass()
 
 void GMLASFeatureClass::SetName(const CPLString& osName)
 {
+    if( osName == "AdministrativeUnit_name" )
+    {
+        printf("foo\n");
+    }
     m_osName = osName;
 }
 

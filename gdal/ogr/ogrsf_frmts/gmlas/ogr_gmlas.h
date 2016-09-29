@@ -616,14 +616,19 @@ class GMLASSchemaAnalyzer
                             std::vector<XSElementDeclaration*>& oVectorEltsForTopClass,
                             XSModel* poModel,
                             bool& bSimpleEnoughOut);
+        void BuildMapCountOccurencesOfSameName(
+                    XSModelGroup* poModelGroup,
+                    std::map< CPLString, int >& oMapCountOccurencesOfSameName);
         bool ExploreModelGroup( XSModelGroup* psMainModelGroup,
                                 XSAttributeUseList* poMainAttrList,
                                 GMLASFeatureClass& oClass,
                                 int nRecursionCounter,
                                 std::set<XSModelGroup*>& oSetVisitedModelGroups,
-                                XSModel* poModel );
+                                XSModel* poModel,
+                                const std::map< CPLString, int >& oMapCountOccurencesOfSameName);
         void SetFieldTypeAndWidthFromDefinition( XSSimpleTypeDefinition* poST,
                                                  GMLASField& oField );
+        CPLString GetPrefix( const CPLString& osNamespaceURI );
         CPLString MakeXPath( const CPLString& osNamespace,
                                           const CPLString& osName );
         void FixDuplicatedFieldNames( GMLASFeatureClass& oClass );

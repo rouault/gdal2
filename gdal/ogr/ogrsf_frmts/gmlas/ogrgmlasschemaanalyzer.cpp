@@ -169,18 +169,17 @@ GMLASSchemaAnalyzer::GMLASSchemaAnalyzer(
 }
 
 /************************************************************************/
-/*                               MakeXPath()                            */
+/*                               GetPrefix()                            */
 /************************************************************************/
 
-CPLString GMLASSchemaAnalyzer::MakeXPath( const CPLString& osNamespaceURI,
-                                          const CPLString& osName )
+CPLString GMLASSchemaAnalyzer::GetPrefix( const CPLString& osNamespaceURI )
 {
     if( osNamespaceURI.size() == 0 )
-        return osName;
+        return "";
     std::map<CPLString,CPLString>::const_iterator oIter =
                                         m_oMapURIToPrefix.find(osNamespaceURI);
     if( oIter != m_oMapURIToPrefix.end() )
-        return oIter->second + ":" + osName;
+        return oIter->second;
     else if( !osNamespaceURI.empty() )
     {
         // If the schema doesn't define a xmlns:MYPREFIX=myuri, then forge a
@@ -199,20 +198,31 @@ CPLString GMLASSchemaAnalyzer::MakeXPath( const CPLString& osNamespaceURI,
         }
         m_oMapURIToPrefix[osNamespaceURI] = osPrefix;
         CPLDebug("GMLAS",
-                 "Cannot find prefix for ns='%s' (name='%s'). Forging %s",
+                 "Cannot find prefix for ns='%s'. Forging %s",
                  osNamespaceURI.c_str(),
-                 osName.c_str(),
                  osPrefix.c_str());
-        return osPrefix + ":" + osName;
+        return osPrefix;
     }
     else
     {
         CPLDebug("GMLAS",
-                 "Cannot find prefix for ns='%s' (name='%s').",
-                 osNamespaceURI.c_str(),
-                 osName.c_str());
-        return osName;
+                 "Cannot find prefix for ns='%s'.",
+                 osNamespaceURI.c_str());
+        return "";
     }
+}
+
+/************************************************************************/
+/*                               MakeXPath()                            */
+/************************************************************************/
+
+CPLString GMLASSchemaAnalyzer::MakeXPath( const CPLString& osNamespaceURI,
+                                          const CPLString& osName )
+{
+    const CPLString osPrefix(GetPrefix(osNamespaceURI));
+    if( osPrefix.empty() )
+        return osName;
+    return osPrefix + ":" + osName;
 }
 
 /************************************************************************/
@@ -786,13 +796,20 @@ bool GMLASSchemaAnalyzer::InstantiateClassFromEltDeclaration(
             GetTopElementDeclarationFromXPath(osXPath, poModel) != NULL );
 
         std::set<XSModelGroup*> oSetVisitedModelGroups;
+
+        std::map< CPLString, int > oMapCountOccurencesOfSameName;
+        BuildMapCountOccurencesOfSameName(
+            poCT->getParticle()->getModelGroupTerm(),
+            oMapCountOccurencesOfSameName);
+
         if( !ExploreModelGroup(
                             poCT->getParticle()->getModelGroupTerm(),
                             poCT->getAttributeUses(),
                             oClass,
                             0,
                             oSetVisitedModelGroups,
-                            poModel) )
+                            poModel,
+                            oMapCountOccurencesOfSameName) )
         {
             bError = true;
             return false;
@@ -1634,6 +1651,34 @@ bool GMLASSchemaAnalyzer::IsGMLNamespace(const CPLString& osURI)
 }
 
 /************************************************************************/
+/*                    BuildMapCountOccurencesOfSameName()               */
+/************************************************************************/
+
+void GMLASSchemaAnalyzer::BuildMapCountOccurencesOfSameName(
+                    XSModelGroup* poModelGroup,
+                    std::map< CPLString, int >& oMapCountOccurencesOfSameName)
+{
+    XSParticleList* poParticles = poModelGroup->getParticles();
+    for(size_t i = 0; i < poParticles->size(); ++i )
+    {
+        XSParticle* poParticle = poParticles->elementAt(i);
+        if( poParticle->getTermType() == XSParticle::TERM_ELEMENT )
+        {
+            XSElementDeclaration* poElt = poParticle->getElementTerm();
+            const CPLString osEltName(transcode(poElt->getName()));
+            oMapCountOccurencesOfSameName[ osEltName ] ++;
+        }
+        else if( poParticle->getTermType() == XSParticle::TERM_MODELGROUP )
+        {
+            XSModelGroup* psSubModelGroup = poParticle->getModelGroupTerm();
+            BuildMapCountOccurencesOfSameName(psSubModelGroup,
+                                              oMapCountOccurencesOfSameName);
+        }
+    }
+
+}
+
+/************************************************************************/
 /*                         ExploreModelGroup()                          */
 /************************************************************************/
 
@@ -1643,7 +1688,8 @@ bool GMLASSchemaAnalyzer::ExploreModelGroup(
                             GMLASFeatureClass& oClass,
                             int nRecursionCounter,
                             std::set<XSModelGroup*>& oSetVisitedModelGroups,
-                            XSModel* poModel )
+                            XSModel* poModel,
+                            const std::map< CPLString, int >& oMapCountOccurencesOfSameName)
 {
     if( oSetVisitedModelGroups.find(poModelGroup) !=
                                                 oSetVisitedModelGroups.end() )
@@ -1714,6 +1760,7 @@ bool GMLASSchemaAnalyzer::ExploreModelGroup(
     const bool bIsChoice = (poModelGroup->getCompositor() ==
                                             XSModelGroup::COMPOSITOR_CHOICE);
     int nGroup = 0;
+
     for(size_t i = 0; i < poParticles->size(); ++i )
     {
         XSParticle* poParticle = poParticles->elementAt(i);
@@ -1729,6 +1776,8 @@ bool GMLASSchemaAnalyzer::ExploreModelGroup(
         {
             XSElementDeclaration* poElt = poParticle->getElementTerm();
             const CPLString osEltName(transcode(poElt->getName()));
+            const bool bEltNameWillNeedPrefix =
+                oMapCountOccurencesOfSameName.at(osEltName) > 1;
             const CPLString osEltNS(transcode(poElt->getNamespace()));
             const CPLString osOnlyElementXPath(MakeXPath(osEltNS, osEltName));
             const CPLString osElementXPath( oClass.GetXPath() + "/" +
@@ -1876,6 +1925,7 @@ bool GMLASSchemaAnalyzer::ExploreModelGroup(
                 {
                     GMLASFeatureClass oNestedClass;
                     oNestedClass.SetName( oClass.GetName() + "_" +
+                                          ((bEltNameWillNeedPrefix) ? GetPrefix(osEltNS) + "_" : "") +
                                           osEltName );
                     oNestedClass.SetXPath( osElementXPath );
                     GMLASField oUniqueField;
@@ -2088,6 +2138,7 @@ bool GMLASSchemaAnalyzer::ExploreModelGroup(
                 {
                     GMLASFeatureClass oNestedClass;
                     oNestedClass.SetName( oClass.GetName() + "_" +
+                                          ((bEltNameWillNeedPrefix) ? GetPrefix(osEltNS) + "_" : "") +
                                           osEltName );
                     oNestedClass.SetXPath( osElementXPath );
 
@@ -2101,6 +2152,12 @@ bool GMLASSchemaAnalyzer::ExploreModelGroup(
 #endif
                         std::set<XSModelGroup*>
                             oSetNewVisitedModelGroups(oSetVisitedModelGroups);
+
+                        std::map< CPLString, int > oMapCountOccurencesOfSameNameSub;
+                        BuildMapCountOccurencesOfSameName(
+                            poEltCT->getParticle()->getModelGroupTerm(),
+                            oMapCountOccurencesOfSameNameSub);
+
                         if( !ExploreModelGroup(
                                            poEltCT->getParticle()->
                                                             getModelGroupTerm(),
@@ -2108,7 +2165,8 @@ bool GMLASSchemaAnalyzer::ExploreModelGroup(
                                            oNestedClass,
                                            nRecursionCounter + 1,
                                            oSetNewVisitedModelGroups,
-                                           poModel ) )
+                                           poModel,
+                                           oMapCountOccurencesOfSameNameSub) )
                         {
                             return false;
                         }
@@ -2303,6 +2361,7 @@ bool GMLASSchemaAnalyzer::ExploreModelGroup(
                 {
                     GMLASFeatureClass oNestedClass;
                     oNestedClass.SetName( oClass.GetName() + "_" +
+                                        ((bEltNameWillNeedPrefix) ? GetPrefix(osEltNS) + "_" : "") +
                                         osEltName );
                     oNestedClass.SetXPath( osElementXPath );
                     oNestedClass.AppendFields( aoFields );
@@ -2351,7 +2410,8 @@ bool GMLASSchemaAnalyzer::ExploreModelGroup(
                                         oNestedClass,
                                         nRecursionCounter + 1,
                                         oSetNewVisitedModelGroups,
-                                        poModel ) )
+                                        poModel,
+                                        oMapCountOccurencesOfSameName) )
                 {
                     return false;
                 }
@@ -2389,7 +2449,8 @@ bool GMLASSchemaAnalyzer::ExploreModelGroup(
                                         oClass,
                                         nRecursionCounter + 1,
                                         oSetNewVisitedModelGroups,
-                                        poModel ) )
+                                        poModel,
+                                        oMapCountOccurencesOfSameName ) )
                 {
                     return false;
                 }
