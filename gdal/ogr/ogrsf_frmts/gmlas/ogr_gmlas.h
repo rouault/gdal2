@@ -592,6 +592,11 @@ class GMLASSchemaAnalyzer
         /** Set of elements that match a OGR layer */
         std::set<XSElementDeclaration*> m_oSetEltsForTopClass;
 
+        /** Set of elements that are simple enough to be inlined whenever they
+            are referenced with cardinality 1. The use case if base:identifier
+            used by Inspire schemas. */
+        std::set<XSElementDeclaration*> m_oSetSimpleEnoughElts;
+
         static bool IsSame( const XSModelGroup* poModelGroup1,
                                   const XSModelGroup* poModelGroup2 );
         CPLString GetGroupName( const XSModelGroup* poModelGroup );
@@ -609,7 +614,8 @@ class GMLASSchemaAnalyzer
                             std::set<XSElementDeclaration*>& oSetVisitedEltDecl,
                             std::set<XSModelGroup*>& oSetVisitedModelGroups,
                             std::vector<XSElementDeclaration*>& oVectorEltsForTopClass,
-                            XSModel* poModel);
+                            XSModel* poModel,
+                            bool& bSimpleEnoughOut);
         bool ExploreModelGroup( XSModelGroup* psMainModelGroup,
                                 XSAttributeUseList* poMainAttrList,
                                 GMLASFeatureClass& oClass,

@@ -679,6 +679,7 @@ bool GMLASSchemaAnalyzer::Analyze(GMLASResourceCache& oCache,
                         }
                         else
                         {
+                            bool bSimpleEnoughOut = true;
                             FindElementsWithMustBeToLevel(
                                     osXPath,
                                     poCT->getParticle()->getModelGroupTerm(),
@@ -686,7 +687,8 @@ bool GMLASSchemaAnalyzer::Analyze(GMLASResourceCache& oCache,
                                     oSetVisitedEltDecl,
                                     oSetVisitedModelGroups,
                                     oVectorEltsForTopClass,
-                                    poModel);
+                                    poModel,
+                                    bSimpleEnoughOut);
                         }
                     }
                 }
@@ -1299,7 +1301,8 @@ bool GMLASSchemaAnalyzer::FindElementsWithMustBeToLevel(
                             std::set<XSModelGroup*>& oSetVisitedModelGroups,
                             std::vector<XSElementDeclaration*>&
                                                         oVectorEltsForTopClass,
-                            XSModel* poModel)
+                            XSModel* poModel,
+                            bool& bSimpleEnoughOut)
 {
     const bool bAlreadyVisitedMG =
             ( oSetVisitedModelGroups.find(poModelGroup) !=
@@ -1316,9 +1319,19 @@ bool GMLASSchemaAnalyzer::FindElementsWithMustBeToLevel(
     }
 
     XSParticleList* poParticles = poModelGroup->getParticles();
+    int nCountSubElts = 0;
     for(size_t i = 0; i < poParticles->size(); ++i )
     {
         XSParticle* poParticle = poParticles->elementAt(i);
+
+        const bool bRepeatedParticle = poParticle->getMaxOccursUnbounded() ||
+                                        poParticle->getMaxOccurs() > 1;
+
+        // This could be refined to detect if the repeated element might not
+        // be simplifiable as an array
+        if( bRepeatedParticle )
+            bSimpleEnoughOut = false;
+
         if( poParticle->getTermType() == XSParticle::TERM_ELEMENT )
         {
             XSElementDeclaration* poElt = poParticle->getElementTerm();
@@ -1341,6 +1354,12 @@ bool GMLASSchemaAnalyzer::FindElementsWithMustBeToLevel(
 #endif
                 continue;
             }
+
+            // 10 is an arbitrary value, but we don't want to inline
+            // sub-classes with hundereds of attributes
+            nCountSubElts ++;
+            if( nCountSubElts > 10 )
+                bSimpleEnoughOut = false;
 
             std::vector<XSElementDeclaration*> apoImplEltList;
             GetConcreteImplementationTypes(poElt, apoImplEltList);
@@ -1403,6 +1422,7 @@ bool GMLASSchemaAnalyzer::FindElementsWithMustBeToLevel(
                         if( !bAlreadyVisitedMG &&
                             poSubEltCT->getParticle() != NULL )
                         {
+                            bool bSubSimpleEnoughOut = true;
                             if( !FindElementsWithMustBeToLevel(
                                             osSubEltXPath,
                                             poSubEltCT->getParticle()->
@@ -1411,7 +1431,8 @@ bool GMLASSchemaAnalyzer::FindElementsWithMustBeToLevel(
                                             oSetVisitedEltDecl,
                                             oSetVisitedModelGroups,
                                             oVectorEltsForTopClass,
-                                            poModel ) )
+                                            poModel,
+                                            bSubSimpleEnoughOut ) )
                             {
                                 return false;
                             }
@@ -1426,11 +1447,17 @@ bool GMLASSchemaAnalyzer::FindElementsWithMustBeToLevel(
                 XSComplexTypeDefinition* poEltCT = IsEltCompatibleOfFC(poElt);
                 if( poEltCT )
                 {
+                    // Might be a bit extreme, but for now we don't inline
+                    // classes that have subclasses.
+                    bSimpleEnoughOut = false;
+
                     if( oSetVisitedEltDecl.find(poElt) !=
                                     oSetVisitedEltDecl.end() )
                     {
                         if( m_oSetEltsForTopClass.find(poElt) ==
-                                                m_oSetEltsForTopClass.end() )
+                                                m_oSetEltsForTopClass.end() &&
+                            m_oSetSimpleEnoughElts.find(poElt) ==
+                                                m_oSetSimpleEnoughElts.end() )
                         {
 #ifdef DEBUG_VERBOSE
                             CPLDebug("GMLAS", "%s (%s) must be exposed as "
@@ -1450,6 +1477,7 @@ bool GMLASSchemaAnalyzer::FindElementsWithMustBeToLevel(
                         if( !bAlreadyVisitedMG &&
                             poEltCT->getParticle() != NULL )
                         {
+                            bool bSubSimpleEnoughOut = true;
                             if( !FindElementsWithMustBeToLevel(
                                             osFullXPath,
                                             poEltCT->getParticle()->
@@ -1458,9 +1486,18 @@ bool GMLASSchemaAnalyzer::FindElementsWithMustBeToLevel(
                                             oSetVisitedEltDecl,
                                             oSetVisitedModelGroups,
                                             oVectorEltsForTopClass,
-                                            poModel ) )
+                                            poModel,
+                                            bSubSimpleEnoughOut ) )
                             {
                                 return false;
+                            }
+                            if( bSubSimpleEnoughOut )
+                            {
+                                m_oSetSimpleEnoughElts.insert(poElt);
+                            }
+                            else
+                            {
+                                bSimpleEnoughOut = false;
                             }
                         }
                     }
@@ -1540,6 +1577,7 @@ bool GMLASSchemaAnalyzer::FindElementsWithMustBeToLevel(
                             poTargetEltCT &&
                             poTargetEltCT->getParticle() != NULL )
                         {
+                            bool bSubSimpleEnoughOut = true;
                             if( !FindElementsWithMustBeToLevel(
                                             osTargetEltXPath,
                                             poTargetEltCT->getParticle()->
@@ -1548,7 +1586,8 @@ bool GMLASSchemaAnalyzer::FindElementsWithMustBeToLevel(
                                             oSetVisitedEltDecl,
                                             oSetVisitedModelGroups,
                                             oVectorEltsForTopClass,
-                                            poModel ) )
+                                            poModel,
+                                            bSubSimpleEnoughOut) )
                             {
                                 return false;
                             }
@@ -1569,7 +1608,8 @@ bool GMLASSchemaAnalyzer::FindElementsWithMustBeToLevel(
                                     oSetVisitedEltDecl,
                                     oSetVisitedModelGroups,
                                     oVectorEltsForTopClass,
-                                    poModel ) )
+                                    poModel,
+                                    bSimpleEnoughOut) )
             {
                 return false;
             }

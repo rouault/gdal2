@@ -1689,6 +1689,72 @@ def ogr_gmlas_dataset_getnextfeature():
     return 'success'
 
 ###############################################################################
+#  Test that with schemas that have a structure like a base:identifier, we
+# will inline it.
+
+def ogr_gmlas_inline_identifier():
+
+    gdal.FileFromMemBuffer('/vsimem/gmlas_fake_gml32.xsd',
+                           open('data/gmlas_fake_gml32.xsd', 'rb').read())
+
+    gdal.FileFromMemBuffer('/vsimem/ogr_gmlas_inline_identifier.xsd',
+"""<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+              xmlns:gml="http://fake_gml32"
+           elementFormDefault="qualified" attributeFormDefault="unqualified">
+
+<xs:import namespace="http://fake_gml32" schemaLocation="gmlas_fake_gml32.xsd"/>
+
+<xs:element name="identifier">
+  <xs:complexType>
+    <xs:sequence>
+        <xs:element name="foo" type="xs:string" minOccurs="0"/>
+    </xs:sequence>
+  </xs:complexType>
+</xs:element>
+
+<xs:element name="first" substitutionGroup="gml:AbstractFeature">
+  <xs:complexType>
+    <xs:complexContent>
+      <xs:extension base="gml:AbstractFeatureType">
+        <xs:sequence>
+            <xs:element ref="identifier" minOccurs="0"/>
+        </xs:sequence>
+      </xs:extension> 
+    </xs:complexContent>
+  </xs:complexType>
+</xs:element>
+
+<xs:element name="second" substitutionGroup="gml:AbstractFeature">
+  <xs:complexType>
+    <xs:complexContent>
+      <xs:extension base="gml:AbstractFeatureType">
+        <xs:sequence>
+            <xs:element ref="identifier" minOccurs="0"/>
+        </xs:sequence>
+      </xs:extension> 
+    </xs:complexContent>
+  </xs:complexType>
+</xs:element>
+
+
+</xs:schema>""")
+
+    ds = gdal.OpenEx('GMLAS:', open_options=['XSD=/vsimem/ogr_gmlas_inline_identifier.xsd'])
+    if ds.GetLayerCount() != 2:
+        gdaltest.post_reason('fail')
+        print( ds.GetLayerCount() )
+        return 'fail'
+    lyr = ds.GetLayer(0)
+    if lyr.GetLayerDefn().GetFieldIndex('identifier_foo') < 0:
+        gdaltest.post_reason('fail')
+        return 'fail'
+
+    gdal.Unlink('/vsimem/ogr_gmlas_inline_identifier.xsd')
+    gdal.Unlink('/vsimem/gmlas_fake_gml32.xsd')
+
+    return 'success'
+
+###############################################################################
 #  Cleanup
 
 def ogr_gmlas_cleanup():
@@ -1733,6 +1799,7 @@ gdaltest_list = [
     ogr_gmlas_instantiate_only_gml_feature,
     ogr_gmlas_timestamp_ignored_for_hash,
     ogr_gmlas_dataset_getnextfeature,
+    ogr_gmlas_inline_identifier,
     ogr_gmlas_cleanup ]
 
 #gdaltest_list = [ ogr_gmlas_instantiate_only_gml_feature ]
