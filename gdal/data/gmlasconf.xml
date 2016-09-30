@@ -13,6 +13,8 @@
     <ExposeMetadataLayers>false</ExposeMetadataLayers>
     <LayerBuildingRules>
         <AlwaysGenerateOGRId>false</AlwaysGenerateOGRId>
+        <RemoveUnusedLayers>false</RemoveUnusedLayers>
+        <RemoveUnusedFields>false</RemoveUnusedFields>
         <UseArrays>true</UseArrays>
         <GML>
             <IncludeGeometryXML>false</IncludeGeometryXML>

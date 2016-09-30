@@ -360,6 +360,8 @@ GMLASReader::GMLASReader(GMLASResourceCache& oCache,
     m_eSwapCoordinates = GMLAS_SWAP_AUTO;
     m_bInitialPass = false;
     m_nFileSize = 0;
+    m_bWarnUnexpected =
+        CPLTestBool(CPLGetConfigOption("GMLAS_WARN_UNEXPECTED", "FALSE"));
 }
 
 /************************************************************************/
@@ -582,7 +584,8 @@ void GMLASReader::SetField( OGRFeature* poFeature,
     else if( eType == OFTDateTime )
     {
         OGRField sField;
-        if( OGRParseXMLDateTime( osAttrValue.c_str(), &sField ) )
+        if( OGRParseXMLDateTime(
+                (m_bInitialPass) ? "1970-01-01T00:00:00" : osAttrValue.c_str(), &sField ) )
         {
             poFeature->SetField( nAttrIdx, &sField );
         }
@@ -604,7 +607,11 @@ void GMLASReader::SetField( OGRFeature* poFeature,
         {
             const GMLASField& oField(
                 poLayer->GetFeatureClass().GetFields()[nFCFieldIdx]);
-            if( oField.GetType() == GMLAS_FT_BASE64BINARY )
+            if( m_bInitialPass )
+            {
+                poFeature->SetField( nAttrIdx, 1, (GByte*)("X") );
+            }
+            else if( oField.GetType() == GMLAS_FT_BASE64BINARY )
             {
                 GByte* pabyBuffer = reinterpret_cast<GByte*>(
                                                     CPLStrdup(osAttrValue));
@@ -1463,7 +1470,16 @@ void GMLASReader::startElement(
 
             m_nCurFieldIdx = -1;
             m_nCurGeomFieldIdx = -1;
-            if( idx != IDX_COMPOUND_FOLDED && m_nLevelSilentIgnoredXPath < 0 )
+            if( idx != IDX_COMPOUND_FOLDED && m_nLevelSilentIgnoredXPath < 0 &&
+
+                // Detect if we are in a situation where elements like
+                // <foo xsi:nil="true"/> have no corresponding OGR field
+                // because of the use of remove_unused_fields=true
+                !( m_oCurCtxt.m_poLayer->
+                            GetFCFieldIndexFromXPath(m_osCurSubXPath) >= 0 &&
+                    attrs.getLength() == 1 &&
+                    m_oMapURIToPrefix[ transcode( attrs.getURI(0) ) ] == "xsi" &&
+                    transcode(attrs.getLocalName(0)) == "nil" ) )
             {
                 CPLString osMatchedXPath;
                 if( m_oIgnoredXPathMatcher.MatchesRefXPath(
@@ -1487,10 +1503,20 @@ void GMLASReader::startElement(
                 }
                 else
                 {
-                    CPLDebug("GMLAS",
-                             "Unexpected element with xpath=%s (subxpath=%s) found",
-                             m_osCurXPath.c_str(),
-                             m_osCurSubXPath.c_str());
+                    if( m_bWarnUnexpected )
+                    {
+                      CPLError(CE_Warning, CPLE_AppDefined,
+                         "Unexpected element with xpath=%s (subxpath=%s) found",
+                          m_osCurXPath.c_str(),
+                          m_osCurSubXPath.c_str());
+                    }
+                    else
+                    {
+                       CPLDebug("GMLAS",
+                         "Unexpected element with xpath=%s (subxpath=%s) found",
+                          m_osCurXPath.c_str(),
+                          m_osCurSubXPath.c_str());
+                    }
                 }
             }
         }
@@ -1617,10 +1643,19 @@ void GMLASReader::ProcessAttributes(const Attributes& attrs)
             }
             else
             {
-                // Emit debug message if unexpected attribute
-                CPLDebug("GMLAS",
-                            "Unexpected attribute with xpath=%s found",
-                        osAttrXPath.c_str());
+                if( m_bWarnUnexpected )
+                {
+                    CPLError(CE_Warning, CPLE_AppDefined,
+                             "Unexpected attribute with xpath=%s found",
+                             osAttrXPath.c_str());
+                }
+                else
+                {
+                    // Emit debug message if unexpected attribute
+                    CPLDebug("GMLAS",
+                                "Unexpected attribute with xpath=%s found",
+                            osAttrXPath.c_str());
+                }
             }
         }
     }
@@ -1635,30 +1670,34 @@ void GMLASReader::ProcessAttributes(const Attributes& attrs)
         json_object_put(poWildcard);
     }
 
-    // Process fixed and default values
-    const int nFieldCount = m_oCurCtxt.m_poFeature->GetFieldCount();
-    const std::vector<GMLASField>& aoFields =
-                    m_oCurCtxt.m_poLayer->GetFeatureClass().GetFields();
-    for( int i=0; i < nFieldCount; i++ )
+    // Process fixed and default values, except when doing the initial scan
+    // so as to avoid the bRemoveUnusedFields logic to be confused
+    if( !m_bInitialPass )
     {
-        const int nFCIdx =
-                m_oCurCtxt.m_poLayer->GetFCFieldIndexFromOGRFieldIdx(i);
-        if( nFCIdx >= 0 &&
-            aoFields[nFCIdx].GetXPath().find('@') != std::string::npos )
+        const int nFieldCount = m_oCurCtxt.m_poFeature->GetFieldCount();
+        const std::vector<GMLASField>& aoFields =
+                        m_oCurCtxt.m_poLayer->GetFeatureClass().GetFields();
+        for( int i=0; i < nFieldCount; i++ )
         {
-            // We process fixed as default. In theory, to be XSD compliant,
-            // the user shouldn't have put a different value than the fixed
-            // one, but just in case he did, then honour it instead of
-            // overwriting it.
-            CPLString osFixedDefaultValue = aoFields[nFCIdx].GetFixedValue();
-            if( osFixedDefaultValue.empty() )
-                osFixedDefaultValue = aoFields[nFCIdx].GetDefaultValue();
-            if( !osFixedDefaultValue.empty() &&
-                !m_oCurCtxt.m_poFeature->IsFieldSet(i) )
+            const int nFCIdx =
+                    m_oCurCtxt.m_poLayer->GetFCFieldIndexFromOGRFieldIdx(i);
+            if( nFCIdx >= 0 &&
+                aoFields[nFCIdx].GetXPath().find('@') != std::string::npos )
             {
-                SetField( m_oCurCtxt.m_poFeature,
-                            m_oCurCtxt.m_poLayer,
-                            i, osFixedDefaultValue);
+                // We process fixed as default. In theory, to be XSD compliant,
+                // the user shouldn't have put a different value than the fixed
+                // one, but just in case he did, then honour it instead of
+                // overwriting it.
+                CPLString osFixedDefaultValue = aoFields[nFCIdx].GetFixedValue();
+                if( osFixedDefaultValue.empty() )
+                    osFixedDefaultValue = aoFields[nFCIdx].GetDefaultValue();
+                if( !osFixedDefaultValue.empty() &&
+                    !m_oCurCtxt.m_poFeature->IsFieldSet(i) )
+                {
+                    SetField( m_oCurCtxt.m_poFeature,
+                                m_oCurCtxt.m_poLayer,
+                                i, osFixedDefaultValue);
+                }
             }
         }
     }
@@ -2054,7 +2093,10 @@ void GMLASReader::characters( const XMLCh *const chars,
                               const XMLSize_t length )
 {
     if( m_bInitialPass )
+    {
+        m_osTextContent = "1"; // dummy
         return;
+    }
 
     if( m_bIsXMLBlob )
     {
@@ -2250,18 +2292,28 @@ OGRFeature* GMLASReader::GetNextFeature( OGRGMLASLayer** ppoBelongingLayer,
 /************************************************************************/
 
 bool GMLASReader::RunFirstPass(GDALProgressFunc pfnProgress,
-                               void* pProgressData)
+                               void* pProgressData,
+                               bool bRemoveUnusedLayers,
+                               bool bRemoveUnusedFields)
 {
     m_bInitialPass = true;
 
     // Store in m_oSetGeomFieldsWithUnknownSRS the geometry fields
+    std::set<OGRGMLASLayer*> oSetUnreferencedLayers;
+    std::map<OGRGMLASLayer*, std::set<int> > oMapUnusedFields;
     for(size_t i=0; i < m_papoLayers->size(); i++ )
     {
-        OGRFeatureDefn* poFDefn = (*m_papoLayers)[i]->GetLayerDefn();
+        OGRGMLASLayer* poLayer = (*m_papoLayers)[i];
+        OGRFeatureDefn* poFDefn = poLayer->GetLayerDefn();
+        oSetUnreferencedLayers.insert( poLayer );
         for(int j=0; j< poFDefn->GetGeomFieldCount(); j++ )
         {
             m_oSetGeomFieldsWithUnknownSRS.insert(
                                             poFDefn->GetGeomFieldDefn(j));
+        }
+        for(int j=0; j< poFDefn->GetFieldCount(); j++ )
+        {
+            oMapUnusedFields[poLayer].insert(j);
         }
     }
 
@@ -2269,14 +2321,71 @@ bool GMLASReader::RunFirstPass(GDALProgressFunc pfnProgress,
 
     // Loop on features until we have determined the SRS of all geometry
     // columns. If we do validation, parse the whole file
+    OGRGMLASLayer* poLayer;
     OGRFeature* poFeature;
-    while( (m_bValidate || !m_oSetGeomFieldsWithUnknownSRS.empty()) &&
-           (poFeature = GetNextFeature(NULL, pfnProgress, pProgressData)) != NULL )
+    while( (m_bValidate || !m_oSetGeomFieldsWithUnknownSRS.empty() ||
+            bRemoveUnusedLayers || bRemoveUnusedFields) &&
+           (poFeature = GetNextFeature(&poLayer, pfnProgress, pProgressData)) != NULL )
     {
+        if( bRemoveUnusedLayers )
+            oSetUnreferencedLayers.erase( poLayer );
+        if( bRemoveUnusedFields )
+        {
+            std::set<int>& oSetUnusedFields = oMapUnusedFields[poLayer];
+            OGRFeatureDefn* poFDefn = poLayer->GetLayerDefn();
+            int nFieldCount = poFDefn->GetFieldCount();
+            for(int j=0; j< nFieldCount; j++ )
+            {
+                if( poFeature->IsFieldSet(j) )
+                    oSetUnusedFields.erase(j);
+            }
+        }
         delete poFeature;
     }
 
     CPLDebug("GMLAS", "End of first pass");
+
+    if( bRemoveUnusedLayers )
+    {
+        std::vector<OGRGMLASLayer*> apoNewLayers;
+        for(size_t i=0; i < m_papoLayers->size(); i++ )
+        {
+            OGRGMLASLayer* poLayer = (*m_papoLayers)[i];
+            if( oSetUnreferencedLayers.find( poLayer ) ==
+                    oSetUnreferencedLayers.end() )
+            {
+                apoNewLayers.push_back( poLayer );
+            }
+            else
+            {
+                delete poLayer;
+            }
+        }
+        *m_papoLayers = apoNewLayers;
+    }
+    if( bRemoveUnusedFields )
+    {
+        for(size_t i=0; i < m_papoLayers->size(); i++ )
+        {
+            OGRGMLASLayer* poLayer = (*m_papoLayers)[i];
+            std::set<int>& oSetUnusedFields = oMapUnusedFields[poLayer];
+            std::set<int>::iterator oIter = oSetUnusedFields.begin();
+            int nShiftIndex = 0;
+            for( ; oIter != oSetUnusedFields.end(); ++oIter )
+            {
+                if( poLayer->RemoveUnusedField( (*oIter) - nShiftIndex ) )
+                {
+                    nShiftIndex ++;
+                }
+            }
+
+            // We need to run this again since we may have delete the
+            // element that holds attributes, like in
+            // <foo xsi:nil="true" nilReason="unknown"/> where foo will be
+            // eliminated, but foo_nilReason kept.
+            poLayer->CreateCompoundFoldedMappings();
+        }
+    }
 
     // Clear the set even if we didn't manage to determine all the SRS
     m_oSetGeomFieldsWithUnknownSRS.clear();

@@ -52,6 +52,8 @@ def ogr_gmlas_basic():
     if ogr.GetDriverByName('GMLAS') is None:
         return 'skip'
 
+    gdal.SetConfigOption('GMLAS_WARN_UNEXPECTED', 'YES')
+
     ds = ogr.Open('GMLAS:data/gmlas_test1.xml')
     if ds is None:
         gdaltest.post_reason('fail')
@@ -778,7 +780,8 @@ class MyHandler:
         self.error_list = []
 
     def error_handler(self, err_type, err_no, err_msg):
-        self.error_list.append((err_type, err_no, err_msg))
+        if err_type != 1: # 1 == Debug
+            self.error_list.append((err_type, err_no, err_msg))
 
 def ogr_gmlas_validate():
 
@@ -789,7 +792,7 @@ def ogr_gmlas_validate():
 """<myns:main_elt xmlns:myns="http://myns"
                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
                   xsi:schemaLocation="http://myns ogr_gmlas_validate.xsd">
-    <myns:bar>bar</myns:bar>
+    <myns:bar baz="bow">bar</myns:bar>
 </myns:main_elt>
 """)
 
@@ -812,10 +815,31 @@ def ogr_gmlas_validate():
     if ds is None:
         gdaltest.post_reason('fail')
         return 'fail'
+    myhandler = MyHandler()
+    gdal.PushErrorHandler(myhandler.error_handler)
+    gdal.SetConfigOption('GMLAS_WARN_UNEXPECTED', None)
     lyr = ds.GetLayer(0)
     lyr.GetFeatureCount()
-    if gdal.GetLastErrorMsg() != '':
+    gdal.SetConfigOption('GMLAS_WARN_UNEXPECTED', 'YES')
+    gdal.PopErrorHandler()
+    if len(myhandler.error_list) != 0:
         gdaltest.post_reason('fail')
+        print(myhandler.error_list)
+        return 'fail'
+
+    ds = gdal.OpenEx('GMLAS:/vsimem/ogr_gmlas_validate.xml')
+    if ds is None:
+        gdaltest.post_reason('fail')
+        return 'fail'
+    myhandler = MyHandler()
+    gdal.PushErrorHandler(myhandler.error_handler)
+    lyr = ds.GetLayer(0)
+    lyr.GetFeatureCount()
+    gdal.PopErrorHandler()
+    # Unexpected element with xpath=myns:main_elt/myns:bar (subxpath=myns:main_elt/myns:bar) found
+    if len(myhandler.error_list) != 2:
+        gdaltest.post_reason('fail')
+        print(myhandler.error_list)
         return 'fail'
 
     # Enable validation on a doc without validation errors
@@ -858,9 +882,10 @@ def ogr_gmlas_validate():
     if ds is None:
         gdaltest.post_reason('fail')
         return 'fail'
-    if len(myhandler.error_list) != 2:
+    if len(myhandler.error_list) != 5:
         gdaltest.post_reason('fail')
         print(myhandler.error_list)
+        print(len(myhandler.error_list))
         return 'fail'
 
     # Validation errors and do prevent dataset opening
@@ -871,9 +896,10 @@ def ogr_gmlas_validate():
     if ds is not None:
         gdaltest.post_reason('fail')
         return 'fail'
-    if len(myhandler.error_list) != 3:
+    if len(myhandler.error_list) != 6:
         gdaltest.post_reason('fail')
         print(myhandler.error_list)
+        print(len(myhandler.error_list))
         return 'fail'
 
     # Test that validation without doc doesn't crash
@@ -1601,6 +1627,7 @@ def ogr_gmlas_timestamp_ignored_for_hash():
     <xs:sequence>
         <xs:element name="foo" type="xs:string" minOccurs="0"/>
     </xs:sequence>
+    <xs:attribute name="timeStamp" type="xs:string"/>
   </xs:complexType>
 </xs:element>
 </xs:schema>""")
@@ -1885,6 +1912,77 @@ def ogr_gmlas_validate_ignored_fixed_attribute():
 
 
 ###############################################################################
+#  Test REMOVE_UNUSED_LAYERS and REMOVE_UNUSED_FIELDS options
+
+def ogr_gmlas_remove_unused_layers_and_fields():
+
+    gdal.FileFromMemBuffer('/vsimem/ogr_gmlas_remove_unused_layers_and_fields.xsd',
+"""<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+              elementFormDefault="qualified"
+              attributeFormDefault="unqualified">
+
+<xs:element name="main_elt">
+  <xs:complexType>
+    <xs:sequence>
+        <xs:element name="unused1" type="xs:string" minOccurs="0"/>
+        <xs:element name="used1" type="xs:string" minOccurs="0"/>
+        <xs:element name="unused2" type="xs:string" minOccurs="0"/>
+        <xs:element name="unused3" type="xs:string" minOccurs="0"/>
+        <xs:element name="used2" type="xs:string" minOccurs="0"/>
+        <xs:element name="nillable" nillable="true">
+            <xs:complexType>
+                <xs:simpleContent>
+                    <xs:extension base="xs:integer">
+                        <xs:attribute name="nilReason" type="xs:string"/>
+                    </xs:extension>
+                </xs:simpleContent>
+            </xs:complexType>
+        </xs:element>
+    </xs:sequence>
+  </xs:complexType>
+</xs:element>
+
+<xs:element name="unused_elt">
+  <xs:complexType>
+    <xs:sequence>
+        <xs:element name="unused1" type="xs:dateTime" minOccurs="0"/>
+    </xs:sequence>
+  </xs:complexType>
+</xs:element>
+</xs:schema>""")
+
+    gdal.FileFromMemBuffer('/vsimem/ogr_gmlas_remove_unused_layers_and_fields.xml',
+"""
+<main_elt xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xsi:noNamespaceSchemaLocation="ogr_gmlas_remove_unused_layers_and_fields.xsd">
+    <used1>foo</used1>
+    <used2>bar</used2>
+    <nillable xsi:nil="true" nilReason="unknown"/>
+</main_elt>""")
+
+    ds = gdal.OpenEx('GMLAS:/vsimem/ogr_gmlas_remove_unused_layers_and_fields.xml',
+                     open_options = ['REMOVE_UNUSED_LAYERS=YES',
+                                     'REMOVE_UNUSED_FIELDS=YES'])
+    if ds.GetLayerCount() != 1:
+        gdaltest.post_reason('fail')
+        return 'fail'
+    lyr = ds.GetLayer(0)
+    f = lyr.GetNextFeature()
+    if lyr.GetLayerDefn().GetFieldCount() != 4:
+        gdaltest.post_reason('fail')
+        print(lyr.GetLayerDefn().GetFieldCount())
+        f.DumpReadable()
+        return 'fail'
+    if f['used1'] != 'foo' or f['used2'] != 'bar' or f['nillable_nilReason'] != 'unknown':
+        gdaltest.post_reason('fail')
+        return 'fail'
+
+    gdal.Unlink('/vsimem/ogr_gmlas_remove_unused_layers_and_fields.xsd')
+    gdal.Unlink('/vsimem/ogr_gmlas_remove_unused_layers_and_fields.xml')
+
+    return 'success'
+
+###############################################################################
 #  Cleanup
 
 def ogr_gmlas_cleanup():
@@ -1896,8 +1994,9 @@ def ogr_gmlas_cleanup():
     if files is not None:
         print('Remaining files: ' + str(files))
 
-    return 'success'
+    gdal.SetConfigOption('GMLAS_WARN_UNEXPECTED', None)
 
+    return 'success'
 
 gdaltest_list = [
     ogr_gmlas_basic,
@@ -1932,6 +2031,7 @@ gdaltest_list = [
     ogr_gmlas_inline_identifier,
     ogr_gmlas_avoid_same_name_inlined_classes,
     ogr_gmlas_validate_ignored_fixed_attribute,
+    ogr_gmlas_remove_unused_layers_and_fields,
     ogr_gmlas_cleanup ]
 
 #gdaltest_list = [ ogr_gmlas_instantiate_only_gml_feature ]

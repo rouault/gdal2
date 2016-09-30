@@ -47,6 +47,8 @@ OGRGMLASDataSource::OGRGMLASDataSource()
     m_fpGMLParser = NULL;
     m_bLayerInitFinished = false;
     m_bValidate = false;
+    m_bRemoveUnusedLayers = false;
+    m_bRemoveUnusedFields = false;
     m_bFirstPassDone = false;
     m_eSwapCoordinates = GMLAS_SWAP_AUTO;
     m_nFileSize = 0;
@@ -587,7 +589,16 @@ bool OGRGMLASDataSource::Open(GDALOpenInfo* poOpenInfo)
     m_bValidate = CPLFetchBool(poOpenInfo->papszOpenOptions,
                               "VALIDATE",
                                m_oConf.m_bValidate);
-    if( m_bValidate )
+
+    m_bRemoveUnusedLayers = CPLFetchBool(poOpenInfo->papszOpenOptions,
+                              "REMOVE_UNUSED_LAYERS",
+                               m_oConf.m_bRemoveUnusedLayers);
+
+    m_bRemoveUnusedFields = CPLFetchBool(poOpenInfo->papszOpenOptions,
+                              "REMOVE_UNUSED_FIELDS",
+                               m_oConf.m_bRemoveUnusedFields);
+
+    if( m_bValidate || m_bRemoveUnusedLayers )
     {
         CPLErrorReset();
         RunFirstPassIfNeeded( NULL, NULL, NULL );
@@ -803,7 +814,8 @@ bool OGRGMLASDataSource::RunFirstPassIfNeeded( GMLASReader* poReader,
     }
 
     // If so, do an initial pass to determine the SRS of those geometry fields.
-    if( bHasGeomFields || m_bValidate )
+    if( bHasGeomFields || m_bValidate || m_bRemoveUnusedLayers ||
+        m_bRemoveUnusedFields )
     {
         bool bJustOpenedFiled =false;
         VSILFILE* fp = NULL;
@@ -835,7 +847,10 @@ bool OGRGMLASDataSource::RunFirstPassIfNeeded( GMLASReader* poReader,
         // No need to warn afterwards
         m_oConf.m_oMapIgnoredXPathToWarn.clear();
 
-        m_bFirstPassDone = poReaderFirstPass->RunFirstPass(pfnProgress, pProgressData);
+        m_bFirstPassDone = poReaderFirstPass->RunFirstPass(pfnProgress,
+                                                           pProgressData,
+                                                           m_bRemoveUnusedLayers,
+                                                           m_bRemoveUnusedFields);
 
         // Store 2 maps to reinject them in real readers
         m_oMapSRSNameToInvertedAxis =

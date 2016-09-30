@@ -212,6 +212,8 @@ class GMLASConfiguration
         // consistant with what is documented in gmlasconf.xsd
         static const bool ALLOW_REMOTE_SCHEMA_DOWNLOAD_DEFAULT = true;
         static const bool ALWAYS_GENERATE_OGR_ID_DEFAULT = false;
+        static const bool REMOVE_UNUSED_LAYERS_DEFAULT = false;
+        static const bool REMOVE_UNUSED_FIELDS_DEFAULT = false;
         static const bool USE_ARRAYS_DEFAULT = true;
         static const bool INCLUDE_GEOMETRY_XML_DEFAULT = false;
         static const bool INSTANTIATE_GML_FEATURES_ONLY_DEFAULT = true;
@@ -226,6 +228,12 @@ class GMLASConfiguration
 
         /** Whether a ogr_pkid attribute should always be generated. */
         bool            m_bAlwaysGenerateOGRId;
+
+        /** Whether to remove layers found to be unused in initial scan pass */
+        bool            m_bRemoveUnusedLayers;
+
+        /** Whether to remove fields found to be unused in initial scan pass */
+        bool            m_bRemoveUnusedFields;
 
         /** Whether repeated strings, integers, reals should be in corresponding
             OGR array types. */
@@ -701,6 +709,8 @@ class OGRGMLASDataSource: public GDALDataset
         VSILFILE                      *m_fpGMLParser;
         bool                           m_bLayerInitFinished;
         bool                           m_bValidate;
+        bool                           m_bRemoveUnusedLayers;
+        bool                           m_bRemoveUnusedFields;
         bool                           m_bFirstPassDone;
         /** Map from a SRS name to a boolean indicating if its coordinate
             order is inverted. */
@@ -846,6 +856,7 @@ class OGRGMLASLayer: public OGRLayer
         virtual int TestCapability( const char* ) { return FALSE; }
 
         void PostInit(bool bIncludeGeometryXML);
+        void CreateCompoundFoldedMappings();
 
         const GMLASFeatureClass& GetFeatureClass() const { return m_oFC; }
         int GetOGRFieldIndexFromXPath(const CPLString& osXPath) const;
@@ -859,6 +870,8 @@ class OGRGMLASLayer: public OGRLayer
         int GetFCFieldIndexFromXPath(const CPLString& osXPath) const;
 
         bool EvaluateFilter( OGRFeature* poFeature );
+
+        bool RemoveUnusedField( int nIdx );
 };
 
 /************************************************************************/
@@ -1040,7 +1053,9 @@ class GMLASReader : public DefaultHandler
 
         vsi_l_offset                   m_nFileSize;
 
-        static void SetField( OGRFeature* poFeature,
+        bool                           m_bWarnUnexpected;
+
+        void        SetField( OGRFeature* poFeature,
                               OGRGMLASLayer* poLayer,
                               int nAttrIdx,
                               const CPLString& osAttrValue );
@@ -1118,7 +1133,9 @@ class GMLASReader : public DefaultHandler
                         const XMLSize_t length );
 
         bool RunFirstPass(GDALProgressFunc pfnProgress,
-                          void* pProgressData);
+                          void* pProgressData,
+                          bool bRemoveUnusedLayers,
+                          bool bRemoveUnusedFields);
 
         static bool LoadXSDInParser( SAX2XMLReader* poParser,
                                      GMLASResourceCache& oCache,

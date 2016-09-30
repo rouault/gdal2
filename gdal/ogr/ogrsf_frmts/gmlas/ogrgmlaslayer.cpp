@@ -544,9 +544,18 @@ void OGRGMLASLayer::PostInit( bool bIncludeGeometryXML )
         m_oMapOGRFieldIdxtoFCFieldIdx[iOGRIdx] = i;
     }
 
-    // In the case we have nested elements but we managed to fold into top
-    // level class, then register intermediate paths so they are not reported
-    // as unexpected in debug traces
+    CreateCompoundFoldedMappings();
+}
+
+/************************************************************************/
+/*                   CreateCompoundFoldedMappings()                     */
+/************************************************************************/
+
+// In the case we have nested elements but we managed to fold into top
+// level class, then register intermediate paths so they are not reported
+// as unexpected in debug traces
+void OGRGMLASLayer::CreateCompoundFoldedMappings()
+{
     CPLString oFCXPath(m_oFC.GetXPath());
     if( m_oFC.IsRepeatedSequence() )
     {
@@ -556,6 +565,8 @@ void OGRGMLASLayer::PostInit( bool bIncludeGeometryXML )
             oFCXPath.resize(iPosExtra);
         }
     }
+
+    const std::vector<GMLASField>& oFields = m_oFC.GetFields();
     for(size_t i=0; i<oFields.size(); i++ )
     {
         std::vector<CPLString> aoXPaths = oFields[i].GetAlternateXPaths();
@@ -598,6 +609,49 @@ OGRGMLASLayer::~OGRGMLASLayer()
     delete m_poReader;
     if( m_fpGML != NULL )
         VSIFCloseL(m_fpGML);
+}
+
+/************************************************************************/
+/*                         RemoveUnusedField()                          */
+/************************************************************************/
+
+bool OGRGMLASLayer::RemoveUnusedField( int nIdx )
+{
+    if( nIdx == m_nIDFieldIdx || nIdx == m_nParentIDFieldIdx )
+        return false;
+
+    m_poFeatureDefn->DeleteFieldDefn( nIdx );
+
+    // Refresh maps
+    {
+        std::map<CPLString, int>       oMapFieldXPathToOGRFieldIdx;
+        std::map<CPLString, int>::const_iterator oIter =
+                            m_oMapFieldXPathToOGRFieldIdx.begin();
+        for( ; oIter != m_oMapFieldXPathToOGRFieldIdx.end(); ++oIter )
+        {
+            if( oIter->second < nIdx )
+                oMapFieldXPathToOGRFieldIdx[oIter->first] = oIter->second;
+            else if( oIter->second > nIdx )
+                oMapFieldXPathToOGRFieldIdx[oIter->first] = oIter->second - 1;
+        }
+        m_oMapFieldXPathToOGRFieldIdx = oMapFieldXPathToOGRFieldIdx;
+    }
+
+    {
+        std::map<int, int>             oMapOGRFieldIdxtoFCFieldIdx;
+        std::map<int, int>::const_iterator oIter =
+                            m_oMapOGRFieldIdxtoFCFieldIdx.begin();
+        for( ; oIter != m_oMapOGRFieldIdxtoFCFieldIdx.end(); ++oIter )
+        {
+            if( oIter->first < nIdx )
+                oMapOGRFieldIdxtoFCFieldIdx[oIter->first] = oIter->second;
+            else if( oIter->first > nIdx )
+                oMapOGRFieldIdxtoFCFieldIdx[oIter->first - 1] = oIter->second;
+        }
+        m_oMapOGRFieldIdxtoFCFieldIdx = oMapOGRFieldIdxtoFCFieldIdx;
+    }
+
+    return true;
 }
 
 /************************************************************************/

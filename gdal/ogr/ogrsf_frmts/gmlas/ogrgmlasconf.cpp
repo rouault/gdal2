@@ -40,6 +40,8 @@ CPL_CVSID("$Id$");
 GMLASConfiguration::GMLASConfiguration()
     : m_bAllowRemoteSchemaDownload(ALLOW_REMOTE_SCHEMA_DOWNLOAD_DEFAULT)
     , m_bAlwaysGenerateOGRId(ALWAYS_GENERATE_OGR_ID_DEFAULT)
+    , m_bRemoveUnusedLayers(REMOVE_UNUSED_LAYERS_DEFAULT)
+    , m_bRemoveUnusedFields(REMOVE_UNUSED_FIELDS_DEFAULT)
     , m_bUseArrays(USE_ARRAYS_DEFAULT)
     , m_bIncludeGeometryXML(INCLUDE_GEOMETRY_XML_DEFAULT)
     , m_bInstantiateGMLFeaturesOnly(INSTANTIATE_GML_FEATURES_ONLY_DEFAULT)
@@ -228,6 +230,15 @@ bool GMLASConfiguration::Load(const char* pszFilename)
     m_bAlwaysGenerateOGRId = CPLGetXMLBoolValue( psRoot,
                                 "=Configuration.LayerBuildingRules.AlwaysGenerateOGRId",
                                 ALWAYS_GENERATE_OGR_ID_DEFAULT );
+
+    m_bRemoveUnusedLayers = CPLGetXMLBoolValue( psRoot,
+                                "=Configuration.LayerBuildingRules.RemoveUnusedLayers",
+                                REMOVE_UNUSED_LAYERS_DEFAULT );
+
+    m_bRemoveUnusedFields = CPLGetXMLBoolValue( psRoot,
+                                "=Configuration.LayerBuildingRules.RemoveUnusedFields",
+                                REMOVE_UNUSED_FIELDS_DEFAULT );
+
     m_bUseArrays = CPLGetXMLBoolValue( psRoot,
                                 "=Configuration.LayerBuildingRules.UseArrays",
                                 USE_ARRAYS_DEFAULT );

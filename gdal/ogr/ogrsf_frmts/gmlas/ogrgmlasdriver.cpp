@@ -120,6 +120,10 @@ void RegisterOGRGMLAS()
 "    <Value>YES</Value>"
 "    <Value>NO</Value>"
 "  </Option>"
+"  <Option name='REMOVE_UNUSED_LAYERS' type='boolean' "
+    "description='Whether unused layers should be removed' " "default='NO'/>"
+"  <Option name='REMOVE_UNUSED_FIELDS' type='boolean' "
+    "description='Whether unused fields should be removed' " "default='NO'/>"
 "</OpenOptionList>" );
 
     poDriver->SetMetadataItem( GDAL_DCAP_VIRTUALIO, "YES" );
