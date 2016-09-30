@@ -998,7 +998,7 @@ def ogr_gmlas_conf():
         return 'fail'
     lyr = ds.GetLayerByName('main_elt')
     f = lyr.GetNextFeature()
-    if f['ogr_pkid'] != '3F29ECE2E9502A67BD91FE0DEA88682A_main_elt_1' or \
+    if f['ogr_pkid'].find('main_elt_1') < 0 or \
        f['otherns_id'] != 'otherns_id':
         gdaltest.post_reason('fail')
         f.DumpReadable()

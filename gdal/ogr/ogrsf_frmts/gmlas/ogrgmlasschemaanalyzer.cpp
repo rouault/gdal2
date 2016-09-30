@@ -2413,6 +2413,7 @@ bool GMLASSchemaAnalyzer::ExploreModelGroup(
                     osGroupName = CPLSPrintf("_group%d", nGroup);
                 }
                 oNestedClass.SetName( oClass.GetName() + "_" + osGroupName);
+                oNestedClass.SetIsGroup(true);
                 oNestedClass.SetIsRepeatedSequence(true);
                 // Caution: we will change it afterwards !
                 oNestedClass.SetXPath( oClass.GetXPath() );

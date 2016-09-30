@@ -144,7 +144,10 @@
     <MYNS:group2_elt>group2_elt_1</MYNS:group2_elt>
 
     <MYNS:group3_elt1>sixthelement</MYNS:group3_elt1>
+    <MYNS:group3_elt1bis>sixthelementbis</MYNS:group3_elt1bis>
     <MYNS:group3_elt2><MYNS:b>sixthelement_a_b</MYNS:b></MYNS:group3_elt2>
+    <MYNS:group3_elt2bis><MYNS:b>sixthelement_a_b2</MYNS:b></MYNS:group3_elt2bis>
+    <MYNS:group3_elt2ter/>
     <MYNS:group3_elt3><MYNS:b2>2016-01-01T12:34:56Z</MYNS:b2>
                        <MYNS:b2>2016-01-02T12:34:56Z</MYNS:b2>
     </MYNS:group3_elt3>
@@ -153,6 +156,8 @@
 
     <MYNS:group3_elt1>sixthelement3</MYNS:group3_elt1>
     <MYNS:group3_elt2><MYNS:b>sixthelement3_a_b</MYNS:b></MYNS:group3_elt2>
+    <MYNS:group3_elt2bis attr="foo"><MYNS:b>sixthelement_a_b2</MYNS:b></MYNS:group3_elt2bis>
+    <MYNS:group3_elt2ter attr="bar"/>
 
     <MYNS:group3_elt1>sixthelement4</MYNS:group3_elt1>
     <MYNS:group3_elt3><MYNS:b2>2016-01-03T12:34:56Z</MYNS:b2>

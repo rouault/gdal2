@@ -547,6 +547,15 @@ void OGRGMLASLayer::PostInit( bool bIncludeGeometryXML )
     // In the case we have nested elements but we managed to fold into top
     // level class, then register intermediate paths so they are not reported
     // as unexpected in debug traces
+    CPLString oFCXPath(m_oFC.GetXPath());
+    if( m_oFC.IsRepeatedSequence() )
+    {
+        size_t iPosExtra = oFCXPath.find(";extra=");
+        if (iPosExtra != std::string::npos)
+        {
+            oFCXPath.resize(iPosExtra);
+        }
+    }
     for(size_t i=0; i<oFields.size(); i++ )
     {
         std::vector<CPLString> aoXPaths = oFields[i].GetAlternateXPaths();
@@ -554,13 +563,13 @@ void OGRGMLASLayer::PostInit( bool bIncludeGeometryXML )
             aoXPaths.push_back(oFields[i].GetXPath());
         for( size_t j=0; j<aoXPaths.size(); j++ )
         {
-            if( aoXPaths[j].size() > m_oFC.GetXPath().size() )
+            if( aoXPaths[j].size() > oFCXPath.size() )
             {
                 // Split on both '/' and '@'
                 char** papszTokens = CSLTokenizeString2(
-                    aoXPaths[j].c_str() + m_oFC.GetXPath().size() + 1,
+                    aoXPaths[j].c_str() + oFCXPath.size() + 1,
                     "/@", 0 );
-                CPLString osSubXPath = m_oFC.GetXPath();
+                CPLString osSubXPath = oFCXPath;
                 for(int k=0; papszTokens[k] != NULL &&
                             papszTokens[k+1] != NULL; k++)
                 {

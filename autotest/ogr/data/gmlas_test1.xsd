@@ -315,11 +315,26 @@
 <xs:group name="group3">
   <xs:sequence>
       <xs:element name="group3_elt1" type="xs:string"/>
+      <xs:element name="group3_elt1bis" type="xs:string" minOccurs="0"/>
       <xs:element name="group3_elt2" minOccurs="0">
         <xs:complexType>
             <xs:sequence>
                 <xs:element name="b"  type="xs:string"/>
             </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="group3_elt2bis" minOccurs="0">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="b"  type="xs:string"/>
+            </xs:sequence>
+            <xs:attribute name="attr" type="xs:string"/>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="group3_elt2ter" minOccurs="0">
+        <xs:complexType>
+            <xs:sequence/>
+            <xs:attribute name="attr" type="xs:string"/>
         </xs:complexType>
       </xs:element>
       <xs:element name="group3_elt3" minOccurs="0">

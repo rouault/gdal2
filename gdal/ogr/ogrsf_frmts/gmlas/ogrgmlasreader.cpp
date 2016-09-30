@@ -644,6 +644,9 @@ void GMLASReader::PushFeatureReady( OGRFeature* poFeature,
 
 void GMLASReader::CreateNewFeature(const CPLString& osLocalname)
 {
+#ifdef DEBUG_VERBOSE
+    CPLDebug("GMLAS", "CreateNewFeature(%s)", osLocalname.c_str());
+#endif
     m_oCurCtxt.m_poFeature = new OGRFeature(
                 m_oCurCtxt.m_poLayer->GetLayerDefn() );
 
@@ -954,27 +957,36 @@ void GMLASReader::startElement(
             }
         }
 
-        // Are we entering a group ?
-        const bool bIsRepeatedSequenceLayer =
-            ((*m_papoLayers)[i]->GetFeatureClass().IsRepeatedSequence() &&
+        const bool bIsGroup = (*m_papoLayers)[i]->GetFeatureClass().IsGroup();
+
+        // Are we entering or staying in a group ?
+        const bool bIsMatchingGroup =
+            (bIsGroup &&
+             (*m_papoLayers)[i]->GetOGRFieldIndexFromXPath(m_osCurSubXPath) != -1 );
+
+        const bool bIsMatchingRepeatedSequence =
+             ((*m_papoLayers)[i]->GetFeatureClass().IsRepeatedSequence()  &&
              m_oCurCtxt.m_poLayer != NULL &&
              m_oCurCtxt.m_poLayer != (*m_papoLayers)[i] &&
              m_oCurCtxt.m_poLayer->GetFeatureClass().GetXPath() ==
                     osLayerXPath &&
-             (*m_papoLayers)[i]->GetOGRFieldIndexFromXPath(m_osCurSubXPath) >= 0 );
+             (*m_papoLayers)[i]->GetOGRFieldIndexFromXPath(m_osCurSubXPath) >= 0); 
 
         if( // Case where we haven't yet entered the top-level element, which may
             // be in container elements
             (m_osCurSubXPath.empty() &&
-             osLayerXPath == osXPath) ||
+             osLayerXPath == osXPath && !bIsGroup) ||
 
             // Case where we are a sub-element of a top-level feature
             (!m_osCurSubXPath.empty() &&
-             osLayerXPath == m_osCurSubXPath) ||
+             osLayerXPath == m_osCurSubXPath && !bIsGroup) ||
 
             // Case where we are a sub-element of a (repeated) group of a
-            //top-level feature
-            bIsRepeatedSequenceLayer ||
+            // top-level feature
+            bIsMatchingGroup ||
+
+            // Needed to handle sequence_1_unbounded_non_simplifiable.subelement case of data/gmlas_test1.xml
+            bIsMatchingRepeatedSequence ||
 
             // Case where we go back from a sub-element of a (repeated) group
             // of a top-level feature to a regular sub-element of that top-level
@@ -1020,7 +1032,7 @@ void GMLASReader::startElement(
             }
 
             bool bPushNewState = true;
-            if( bIsRepeatedSequenceLayer )
+            if( bIsMatchingGroup )
             {
                 int nFieldIdx =
                     (*m_papoLayers)[i]->GetOGRFieldIndexFromXPath(m_osCurSubXPath);
@@ -1029,9 +1041,16 @@ void GMLASReader::startElement(
                 {
                     m_oCurCtxt.m_poFeature = NULL;
                 }
+                else if( nFieldIdx < 0 )
+                {
+                    bPushNewState = false;
+                }
                 else if ( m_oCurCtxt.m_nGroupLayerLevel == m_nLevel &&
                           m_oCurCtxt.m_poGroupLayer != (*m_papoLayers)[i] )
                 {
+#ifdef DEBUG_VERBOSE
+                    CPLDebug("GMLAS", "new feature: group case 1");
+#endif
                     /* Case like:
                             <first_elt_of_group>...</first_elt_of_group>
                             <first_elt_of_another_group>  <!-- we are here at startElement() -->
@@ -1045,6 +1064,9 @@ void GMLASReader::startElement(
                          !IsArrayType(m_oCurCtxt.m_poFeature->
                                         GetFieldDefnRef(nFieldIdx)->GetType()))
                 {
+#ifdef DEBUG_VERBOSE
+                    CPLDebug("GMLAS", "new feature: group case 2");
+#endif
                     /* Case like:
                         <first_elt>...</first_elt>
                         <first_elt> <-- here -->
@@ -1054,6 +1076,9 @@ void GMLASReader::startElement(
                 else if ( m_oCurCtxt.m_nGroupLayerLevel == m_nLevel &&
                           nFieldIdx < m_oCurCtxt.m_nLastFieldIdxGroupLayer )
                 {
+#ifdef DEBUG_VERBOSE
+                    CPLDebug("GMLAS", "new feature: group case nFieldIdx < m_oCurCtxt.m_nLastFieldIdxGroupLayer" );
+#endif
                     /* Case like:
                             <first_elt_of_group>...</first_elt_of_group>
                             <second_elt_of_group>...</first_elt_of_group>
@@ -1066,6 +1091,9 @@ void GMLASReader::startElement(
                 else if ( m_oCurCtxt.m_nGroupLayerLevel == m_nLevel + 1 &&
                           m_oCurCtxt.m_poGroupLayer == (*m_papoLayers)[i] )
                 {
+#ifdef DEBUG_VERBOSE
+                    CPLDebug("GMLAS", "new feature: group case 3");
+#endif
                     /* Case like:
                         <first_elt>...</first_elt>
                         <second_elt><sub>...</sub></second_elt>
@@ -1087,7 +1115,8 @@ void GMLASReader::startElement(
                 m_oCurCtxt.m_poLayer = (*m_papoLayers)[i];
                 m_oCurCtxt.m_poGroupLayer = (*m_papoLayers)[i];
                 m_oCurCtxt.m_nGroupLayerLevel = m_nLevel;
-                m_oCurCtxt.m_nLastFieldIdxGroupLayer = nFieldIdx;
+                if( nFieldIdx >= 0 )
+                    m_oCurCtxt.m_nLastFieldIdxGroupLayer = nFieldIdx;
             }
             else
             {
@@ -1134,7 +1163,6 @@ void GMLASReader::startElement(
             if( m_oCurCtxt.m_poFeature == NULL )
             {
                 CPLAssert( bPushNewState );
-
                 CreateNewFeature(osLocalname);
             }
 
@@ -1190,6 +1218,9 @@ void GMLASReader::startElement(
             */
             if( idx >= 0 && idx < m_nCurFieldIdx )
             {
+#ifdef DEBUG_VERBOSE
+                CPLDebug("GMLAS", "new feature: idx < m_nCurFieldIdx" );
+#endif
                 bPushNewFeature = true;
             }
 

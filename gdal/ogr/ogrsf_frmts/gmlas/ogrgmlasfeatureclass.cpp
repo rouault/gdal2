@@ -134,6 +134,7 @@ void GMLASField::SetType(GMLASFieldType eType, const char* pszTypeName)
 
 GMLASFeatureClass::GMLASFeatureClass()
     : m_bIsRepeatedSequence(false)
+    , m_bIsGroup(false)
     , m_bIsTopLevelElt(false)
 {
 }

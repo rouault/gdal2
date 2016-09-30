@@ -511,6 +511,9 @@ class GMLASFeatureClass
             or a repeated sequence */
         bool m_bIsRepeatedSequence;
 
+        /** Whether this is a repeated group. Should be set together with m_bIsRepeatedSequence */
+        bool m_bIsGroup;
+
         /** Only used for junction tables. The XPath to the parent table */
         CPLString m_osParentXPath;
 
@@ -531,6 +534,8 @@ class GMLASFeatureClass
         void AddNestedClass( const GMLASFeatureClass& oNestedClass );
         void SetIsRepeatedSequence( bool bIsRepeatedSequence )
                             { m_bIsRepeatedSequence = bIsRepeatedSequence; }
+        void SetIsGroup( bool bIsGroup )
+                            { m_bIsGroup = bIsGroup; }
         void SetParentXPath(const CPLString& osXPath)
                                                 { m_osParentXPath = osXPath; }
         void SetChildXPath(const CPLString& osXPath)
@@ -547,6 +552,7 @@ class GMLASFeatureClass
         std::vector<GMLASFeatureClass>& GetNestedClasses()
                                             { return m_aoNestedClasses; }
         bool IsRepeatedSequence() const { return m_bIsRepeatedSequence; }
+        bool IsGroup() const { return m_bIsGroup; }
         const CPLString& GetParentXPath() const { return m_osParentXPath; }
         const CPLString& GetChildXPath() const { return m_osChildXPath; }
         bool IsTopLevelElt() const { return m_bIsTopLevelElt; }
