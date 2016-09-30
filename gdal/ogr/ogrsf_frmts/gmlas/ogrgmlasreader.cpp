@@ -2350,7 +2350,7 @@ bool GMLASReader::RunFirstPass(GDALProgressFunc pfnProgress,
         std::vector<OGRGMLASLayer*> apoNewLayers;
         for(size_t i=0; i < m_papoLayers->size(); i++ )
         {
-            OGRGMLASLayer* poLayer = (*m_papoLayers)[i];
+            poLayer = (*m_papoLayers)[i];
             if( oSetUnreferencedLayers.find( poLayer ) ==
                     oSetUnreferencedLayers.end() )
             {
@@ -2367,7 +2367,7 @@ bool GMLASReader::RunFirstPass(GDALProgressFunc pfnProgress,
     {
         for(size_t i=0; i < m_papoLayers->size(); i++ )
         {
-            OGRGMLASLayer* poLayer = (*m_papoLayers)[i];
+            poLayer = (*m_papoLayers)[i];
             std::set<int>& oSetUnusedFields = oMapUnusedFields[poLayer];
             std::set<int>::iterator oIter = oSetUnusedFields.begin();
             int nShiftIndex = 0;
