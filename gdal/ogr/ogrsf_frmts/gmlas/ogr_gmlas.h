@@ -426,6 +426,10 @@ class GMLASField
             The XPath of the child element. */
         CPLString m_osRelatedClassXPath;
 
+        /** Dirty hack to register attributes with fixed values, despite being
+            in the XPath ignored list. Needed to avoid warning when doing validation */
+        bool m_bIgnored;
+
     public:
         GMLASField();
 
@@ -453,6 +457,7 @@ class GMLASField
 
         void SetRelatedClassXPath(const CPLString& osName)
                                             { m_osRelatedClassXPath = osName; }
+        void SetIgnored() { m_bIgnored = true; }
 
         static CPLString MakePKIDFieldFromXLinkHrefXPath(
             const CPLString& osBaseXPath)
@@ -479,6 +484,7 @@ class GMLASField
                                             { return m_osAbstractElementXPath; }
         const CPLString& GetRelatedClassXPath() const
                                                 { return m_osRelatedClassXPath; }
+        bool IsIgnored() const { return m_bIgnored; }
 
         static GMLASFieldType GetTypeFromString( const CPLString& osType );
 };
@@ -798,6 +804,9 @@ class OGRGMLASLayer: public OGRLayer
         std::map<int, int>             m_oMapOGRFieldIdxtoFCFieldIdx;
         std::map<int, int>             m_oMapOGRGeomFieldIdxtoFCFieldIdx;
 
+        /** Map from XPath to corresponding field index in m_oFC.GetFields() */
+        std::map<CPLString, int>       m_oMapFieldXPathToFCFieldIdx;
+
         bool                           m_bEOF;
         GMLASReader                   *m_poReader;
         VSILFILE                      *m_fpGML;
@@ -841,6 +850,7 @@ class OGRGMLASLayer: public OGRLayer
         int GetParentIDFieldIdx() const { return m_nParentIDFieldIdx; }
         int GetFCFieldIndexFromOGRFieldIdx(int iOGRFieldIdx) const;
         int GetFCFieldIndexFromOGRGeomFieldIdx(int iOGRGeomFieldIdx) const;
+        int GetFCFieldIndexFromOGRFieldIdx(const CPLString& osXPath) const;
 
         bool EvaluateFilter( OGRFeature* poFeature );
 };

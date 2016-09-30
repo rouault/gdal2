@@ -1503,6 +1503,7 @@ void GMLASReader::ProcessAttributes(const Attributes& attrs)
             osAttrXPath += osAttrNSPrefix + ":";
         osAttrXPath += osAttrLocalname;
         int nAttrIdx = m_oCurCtxt.m_poLayer->GetOGRFieldIndexFromXPath(osAttrXPath);
+        int nFCIdx;
         if( nAttrIdx >= 0 )
         {
             SetField( m_oCurCtxt.m_poFeature,
@@ -1555,6 +1556,15 @@ void GMLASReader::ProcessAttributes(const Attributes& attrs)
                 json_object_object_add(poWildcard,
                     osKey,
                     json_object_new_string(osAttrValue));
+            }
+            else if( m_bValidate &&
+                     (nFCIdx = m_oCurCtxt.m_poLayer->
+                        GetFCFieldIndexFromOGRFieldIdx(osAttrXPath)) >= 0 &&
+                     !m_oCurCtxt.m_poLayer->GetFeatureClass().
+                        GetFields()[nFCIdx].GetFixedValue().empty() )
+            {
+                // In validation mode, fixed attributes not present in the
+                // document are still reported, which cause spurious warnings
             }
             else if( m_oIgnoredXPathMatcher.MatchesRefXPath(
                                         osAttrXPath, osMatchedXPath) )

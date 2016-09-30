@@ -46,6 +46,7 @@ GMLASField::GMLASField()
     , m_nMinOccurs(-1)
     , m_nMaxOccurs(-1)
     , m_bIncludeThisEltInBlob(false)
+    , m_bIgnored(false)
 {
 }
 

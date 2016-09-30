@@ -1723,7 +1723,14 @@ bool GMLASSchemaAnalyzer::ExploreModelGroup(
             CPLDebug("GMLAS", "%s is in ignored xpaths",
                      oField.GetXPath().c_str());
 #endif
-            continue;
+            if( !oField.GetFixedValue().empty() )
+            {
+                oField.SetIgnored();
+            }
+            else
+            {
+                continue;
+            }
         }
 
         oClass.AddField(oField);
@@ -2012,7 +2019,14 @@ bool GMLASSchemaAnalyzer::ExploreModelGroup(
                         CPLDebug("GMLAS", "%s is in ignored xpaths",
                                  oField.GetXPath().c_str());
 #endif
-                        continue;
+                        if( !oField.GetFixedValue().empty() )
+                        {
+                            oField.SetIgnored();
+                        }
+                        else
+                        {
+                            continue;
+                        }
                     }
 
                     aoFields.push_back(oField);

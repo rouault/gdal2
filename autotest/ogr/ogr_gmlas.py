@@ -1836,6 +1836,54 @@ def ogr_gmlas_avoid_same_name_inlined_classes():
 
     return 'success'
 
+
+###############################################################################
+#  Test validation with an optional fixed attribute that is ignored
+
+def ogr_gmlas_validate_ignored_fixed_attribute():
+
+    if ogr.GetDriverByName('GMLAS') is None:
+        return 'skip'
+
+    gdal.FileFromMemBuffer('/vsimem/ogr_gmlas_validate_ignored_fixed_attribute.xml',
+"""<myns:main_elt xmlns:myns="http://myns"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  xsi:schemaLocation="http://myns ogr_gmlas_validate_ignored_fixed_attribute.xsd">
+</myns:main_elt>
+""")
+
+    gdal.FileFromMemBuffer('/vsimem/ogr_gmlas_validate_ignored_fixed_attribute.xsd',
+"""<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:myns="http://myns" 
+           targetNamespace="http://myns"
+           elementFormDefault="qualified" attributeFormDefault="unqualified">
+<xs:element name="main_elt">
+  <xs:complexType>
+        <xs:sequence>
+            <xs:element name="foo" type="xs:string" minOccurs="0"/>
+        </xs:sequence>
+        <xs:attribute name="bar" type="xs:string" fixed="fixed_val"/>
+  </xs:complexType>
+</xs:element>
+</xs:schema>""")
+
+    myhandler = MyHandler()
+    gdal.PushErrorHandler(myhandler.error_handler)
+    gdal.OpenEx('GMLAS:/vsimem/ogr_gmlas_validate_ignored_fixed_attribute.xml',
+        open_options = [ 'VALIDATE=YES',
+                         'CONFIG_FILE=<Configuration><IgnoredXPaths><XPath>@bar</XPath></IgnoredXPaths></Configuration>'])
+    gdal.PopErrorHandler()
+    if len(myhandler.error_list) != 0:
+        gdaltest.post_reason('fail')
+        print(myhandler.error_list)
+        return 'fail'
+
+    gdal.Unlink('/vsimem/ogr_gmlas_validate_ignored_fixed_attribute.xml')
+    gdal.Unlink('/vsimem/ogr_gmlas_validate_ignored_fixed_attribute.xsd')
+
+    return 'success'
+
+
 ###############################################################################
 #  Cleanup
 
@@ -1883,6 +1931,7 @@ gdaltest_list = [
     ogr_gmlas_dataset_getnextfeature,
     ogr_gmlas_inline_identifier,
     ogr_gmlas_avoid_same_name_inlined_classes,
+    ogr_gmlas_validate_ignored_fixed_attribute,
     ogr_gmlas_cleanup ]
 
 #gdaltest_list = [ ogr_gmlas_instantiate_only_gml_feature ]
