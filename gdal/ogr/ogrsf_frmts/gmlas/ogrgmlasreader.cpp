@@ -1559,7 +1559,7 @@ void GMLASReader::ProcessAttributes(const Attributes& attrs)
             }
             else if( m_bValidate &&
                      (nFCIdx = m_oCurCtxt.m_poLayer->
-                        GetFCFieldIndexFromOGRFieldIdx(osAttrXPath)) >= 0 &&
+                        GetFCFieldIndexFromXPath(osAttrXPath)) >= 0 &&
                      !m_oCurCtxt.m_poLayer->GetFeatureClass().
                         GetFields()[nFCIdx].GetFixedValue().empty() )
             {

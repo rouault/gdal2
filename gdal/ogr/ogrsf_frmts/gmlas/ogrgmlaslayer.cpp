@@ -634,7 +634,7 @@ int OGRGMLASLayer::GetFCFieldIndexFromOGRFieldIdx(int iOGRFieldIdx) const
 /*                     GetFCFieldIndexFromXPath()                       */
 /************************************************************************/
 
-int OGRGMLASLayer::GetFCFieldIndexFromOGRFieldIdx(const CPLString& osXPath) const
+int OGRGMLASLayer::GetFCFieldIndexFromXPath(const CPLString& osXPath) const
 {
     std::map<CPLString, int>::const_iterator oIter =
         m_oMapFieldXPathToFCFieldIdx.find(osXPath);

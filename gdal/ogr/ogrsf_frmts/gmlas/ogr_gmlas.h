@@ -850,7 +850,7 @@ class OGRGMLASLayer: public OGRLayer
         int GetParentIDFieldIdx() const { return m_nParentIDFieldIdx; }
         int GetFCFieldIndexFromOGRFieldIdx(int iOGRFieldIdx) const;
         int GetFCFieldIndexFromOGRGeomFieldIdx(int iOGRGeomFieldIdx) const;
-        int GetFCFieldIndexFromOGRFieldIdx(const CPLString& osXPath) const;
+        int GetFCFieldIndexFromXPath(const CPLString& osXPath) const;
 
         bool EvaluateFilter( OGRFeature* poFeature );
 };
