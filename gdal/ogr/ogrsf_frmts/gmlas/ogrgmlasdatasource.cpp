@@ -794,6 +794,7 @@ bool OGRGMLASDataSource::RunFirstPassIfNeeded( GMLASReader* poReader,
     bool bHasGeomFields = false;
     for(size_t i=0;i<m_apoLayers.size();i++)
     {
+        m_apoLayers[i]->SetLayerDefnFinalized(true);
         if( m_apoLayers[i]->GetLayerDefn()->GetGeomFieldCount() > 0 )
         {
             bHasGeomFields = true;
@@ -852,14 +853,6 @@ bool OGRGMLASDataSource::RunFirstPassIfNeeded( GMLASReader* poReader,
         {
             poReader->SetMapSRSNameToInvertedAxis(m_oMapSRSNameToInvertedAxis);
             poReader->SetMapGeomFieldDefnToSRSName(m_oMapGeomFieldDefnToSRSName);
-        }
-
-        if( m_bFirstPassDone )
-        {
-            for(size_t i=0;i<m_apoLayers.size();i++)
-            {
-                m_apoLayers[i]->SetLayerDefnFinalized(true);
-            }
         }
     }
 
