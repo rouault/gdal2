@@ -73,6 +73,20 @@
             <xs:element name="myint"  type="myns:myint"/>
             <xs:element name="myint_repeated"  type="myns:myint" minOccurs="0" maxOccurs="2"/>
 
+            <xs:element name="required_elt_with_only_optional_attr">
+                <xs:complexType>
+                    <xs:sequence/>
+                    <xs:attribute name="attr" type="xs:string"/>
+                </xs:complexType>
+            </xs:element>
+
+            <xs:element name="optional_elt_with_only_req_attr" minOccurs="0">
+                <xs:complexType>
+                    <xs:sequence/>
+                    <xs:attribute name="attr" type="xs:string" use="required"/>
+                </xs:complexType>
+            </xs:element>
+
             <!-- test nillability -->
             <xs:element name="int_min_occurs_0"  type="xs:int" minOccurs="0"/>
             <xs:element name="int_nillable"  type="xs:int" nillable="true"/>

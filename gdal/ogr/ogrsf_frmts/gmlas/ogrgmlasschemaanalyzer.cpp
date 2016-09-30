@@ -2011,6 +2011,11 @@ bool GMLASSchemaAnalyzer::ExploreModelGroup(
                     SetFieldFromAttribute(oField, poAttr,
                                           osElementXPath,
                                           osNamePrefix);
+                    if( nMinOccurs == 0 )
+                    {
+                        oField.SetMinOccurs(0);
+                        oField.SetNotNullable(false);
+                    }
 
                     if( IsIgnoredXPath( oField.GetXPath() ) )
                     {

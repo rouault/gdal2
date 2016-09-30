@@ -48,6 +48,8 @@
     <MYNS:myint_repeated myAttr="12345678">1</MYNS:myint_repeated>
     <MYNS:myint_repeated>2</MYNS:myint_repeated>
 
+    <MYNS:required_elt_with_only_optional_attr attr="attr_value"/>
+
     <!-- test nillability -->
     <!-- no element_int_min_occurs_0_nillable -->
     <MYNS:int_nillable xsi:nil="true"/>
