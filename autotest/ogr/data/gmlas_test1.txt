@@ -68,9 +68,10 @@ myint_myAttr: String (8.0)
 myint: Integer (0.0)
 int_min_occurs_0: Integer (0.0)
 int_nillable: Integer (0.0)
-int_nillable_nil: Integer(Boolean) (0.0)
 int_min_occurs_0_nillable: Integer (0.0)
+int_min_occurs_0_nillable_nil: Integer(Boolean) (0.0)
 int_min_occurs_0_nillable_bis: Integer (0.0)
+int_min_occurs_0_nillable_bis_nil: Integer(Boolean) (0.0)
 anonymous_type: Integer (0.0) NOT NULL
 union: String (0.0) NOT NULL
 compound_simplifiable_subelement: String (0.0)
@@ -125,9 +126,10 @@ OGRFeature(main_elt):1
   myint (Integer) = 10
   int_min_occurs_0 (Integer) = (null)
   int_nillable (Integer) = (null)
-  int_nillable_nil (Integer(Boolean)) = 1
   int_min_occurs_0_nillable (Integer) = (null)
+  int_min_occurs_0_nillable_nil (Integer(Boolean)) = (null)
   int_min_occurs_0_nillable_bis (Integer) = (null)
+  int_min_occurs_0_nillable_bis_nil (Integer(Boolean)) = 1
   anonymous_type (Integer) = 3
   union (String) = 42
   compound_simplifiable_subelement (String) = (null)
@@ -575,7 +577,7 @@ OGRFeature(main_elt_an_abstract_element_abstract_element_realization2):1
 
 Layer name: _ogr_fields_metadata
 Geometry: None
-Feature Count: 105
+Feature Count: 106
 Layer SRS WKT:
 (unknown)
 layer_name: String (0.0)
@@ -1163,9 +1165,9 @@ OGRFeature(_ogr_fields_metadata):37
 
 OGRFeature(_ogr_fields_metadata):38
   layer_name (String) = main_elt
-  field_name (String) = int_nillable_nil
-  field_xpath (String) = myns:main_elt/myns:int_nillable/@xsi:nil
-  field_type (String) = boolean
+  field_name (String) = int_min_occurs_0_nillable
+  field_xpath (String) = myns:main_elt/myns:int_min_occurs_0_nillable
+  field_type (String) = int
   field_min_occurs (Integer) = 0
   field_max_occurs (Integer) = 1
   field_default_value (String) = (null)
@@ -1178,9 +1180,9 @@ OGRFeature(_ogr_fields_metadata):38
 
 OGRFeature(_ogr_fields_metadata):39
   layer_name (String) = main_elt
-  field_name (String) = int_min_occurs_0_nillable
-  field_xpath (String) = myns:main_elt/myns:int_min_occurs_0_nillable
-  field_type (String) = int
+  field_name (String) = int_min_occurs_0_nillable_nil
+  field_xpath (String) = myns:main_elt/myns:int_min_occurs_0_nillable/@xsi:nil
+  field_type (String) = boolean
   field_min_occurs (Integer) = 0
   field_max_occurs (Integer) = 1
   field_default_value (String) = (null)
@@ -1208,6 +1210,21 @@ OGRFeature(_ogr_fields_metadata):40
 
 OGRFeature(_ogr_fields_metadata):41
   layer_name (String) = main_elt
+  field_name (String) = int_min_occurs_0_nillable_bis_nil
+  field_xpath (String) = myns:main_elt/myns:int_min_occurs_0_nillable_bis/@xsi:nil
+  field_type (String) = boolean
+  field_min_occurs (Integer) = 0
+  field_max_occurs (Integer) = 1
+  field_default_value (String) = (null)
+  field_fixed_value (String) = (null)
+  field_category (String) = REGULAR
+  field_related_layer (String) = (null)
+  field_junction_layer (String) = (null)
+  field_documentation (String) = (null)
+  layer_documentation (String) = (null)
+
+OGRFeature(_ogr_fields_metadata):42
+  layer_name (String) = main_elt
   field_name (String) = anonymous_type
   field_xpath (String) = myns:main_elt/myns:anonymous_type
   field_type (String) = int
@@ -1221,7 +1238,7 @@ OGRFeature(_ogr_fields_metadata):41
   field_documentation (String) = (null)
   layer_documentation (String) = (null)
 
-OGRFeature(_ogr_fields_metadata):42
+OGRFeature(_ogr_fields_metadata):43
   layer_name (String) = main_elt
   field_name (String) = union
   field_xpath (String) = myns:main_elt/myns:union
@@ -1236,7 +1253,7 @@ OGRFeature(_ogr_fields_metadata):42
   field_documentation (String) = (null)
   layer_documentation (String) = (null)
 
-OGRFeature(_ogr_fields_metadata):43
+OGRFeature(_ogr_fields_metadata):44
   layer_name (String) = main_elt
   field_name (String) = compound_simplifiable_subelement
   field_xpath (String) = myns:main_elt/myns:compound_simplifiable/myns:subelement
@@ -1251,7 +1268,7 @@ OGRFeature(_ogr_fields_metadata):43
   field_documentation (String) = (null)
   layer_documentation (String) = (null)
 
-OGRFeature(_ogr_fields_metadata):44
+OGRFeature(_ogr_fields_metadata):45
   layer_name (String) = main_elt
   field_name (String) = compound_simplifiable_subelement2
   field_xpath (String) = myns:main_elt/myns:compound_simplifiable/myns:subelement2
@@ -1266,7 +1283,7 @@ OGRFeature(_ogr_fields_metadata):44
   field_documentation (String) = (null)
   layer_documentation (String) = (null)
 
-OGRFeature(_ogr_fields_metadata):45
+OGRFeature(_ogr_fields_metadata):46
   layer_name (String) = main_elt
   field_name (String) = compound_simplifiable_optional_attr
   field_xpath (String) = myns:main_elt/myns:compound_simplifiable_optional/@attr
@@ -1281,7 +1298,7 @@ OGRFeature(_ogr_fields_metadata):45
   field_documentation (String) = (null)
   layer_documentation (String) = (null)
 
-OGRFeature(_ogr_fields_metadata):46
+OGRFeature(_ogr_fields_metadata):47
   layer_name (String) = main_elt
   field_name (String) = compound_simplifiable_optional
   field_xpath (String) = myns:main_elt/myns:compound_simplifiable_optional
@@ -1296,7 +1313,7 @@ OGRFeature(_ogr_fields_metadata):46
   field_documentation (String) = (null)
   layer_documentation (String) = (null)
 
-OGRFeature(_ogr_fields_metadata):47
+OGRFeature(_ogr_fields_metadata):48
   layer_name (String) = main_elt
   field_name (String) = sequence_1_string_unbounded_subelement
   field_xpath (String) = myns:main_elt/myns:sequence_1_string_unbounded/myns:subelement
@@ -1311,7 +1328,7 @@ OGRFeature(_ogr_fields_metadata):47
   field_documentation (String) = (null)
   layer_documentation (String) = (null)
 
-OGRFeature(_ogr_fields_metadata):48
+OGRFeature(_ogr_fields_metadata):49
   layer_name (String) = main_elt
   field_name (String) = sequence_unbounded_string_1_subelement
   field_xpath (String) = myns:main_elt/myns:sequence_unbounded_string_1/myns:subelement
@@ -1326,7 +1343,7 @@ OGRFeature(_ogr_fields_metadata):48
   field_documentation (String) = (null)
   layer_documentation (String) = (null)
 
-OGRFeature(_ogr_fields_metadata):49
+OGRFeature(_ogr_fields_metadata):50
   layer_name (String) = main_elt
   field_name (String) = sequence_1_dt_unbounded_subelement
   field_xpath (String) = myns:main_elt/myns:sequence_1_dt_unbounded/myns:subelement
@@ -1341,7 +1358,7 @@ OGRFeature(_ogr_fields_metadata):49
   field_documentation (String) = (null)
   layer_documentation (String) = (null)
 
-OGRFeature(_ogr_fields_metadata):50
+OGRFeature(_ogr_fields_metadata):51
   layer_name (String) = main_elt
   field_name (String) = sequence_unbounded_dt_1_subelement
   field_xpath (String) = myns:main_elt/myns:sequence_unbounded_dt_1/myns:subelement
@@ -1356,7 +1373,7 @@ OGRFeature(_ogr_fields_metadata):50
   field_documentation (String) = (null)
   layer_documentation (String) = (null)
 
-OGRFeature(_ogr_fields_metadata):51
+OGRFeature(_ogr_fields_metadata):52
   layer_name (String) = main_elt
   field_name (String) = sequence_sequence_subsequence
   field_xpath (String) = myns:main_elt/myns:sequence_sequence/myns:subsequence
@@ -1371,7 +1388,7 @@ OGRFeature(_ogr_fields_metadata):51
   field_documentation (String) = (null)
   layer_documentation (String) = (null)
 
-OGRFeature(_ogr_fields_metadata):52
+OGRFeature(_ogr_fields_metadata):53
   layer_name (String) = main_elt
   field_name (String) = sequence_1_unbounded_with_2_subelts
   field_xpath (String) = myns:main_elt/myns:sequence_1_unbounded_with_2_subelts
@@ -1386,7 +1403,7 @@ OGRFeature(_ogr_fields_metadata):52
   field_documentation (String) = (null)
   layer_documentation (String) = (null)
 
-OGRFeature(_ogr_fields_metadata):53
+OGRFeature(_ogr_fields_metadata):54
   layer_name (String) = main_elt
   field_name (String) = sequence_1_unbounded_non_simplifiable
   field_xpath (String) = myns:main_elt/myns:sequence_1_unbounded_non_simplifiable
@@ -1401,7 +1418,7 @@ OGRFeature(_ogr_fields_metadata):53
   field_documentation (String) = (null)
   layer_documentation (String) = (null)
 
-OGRFeature(_ogr_fields_metadata):54
+OGRFeature(_ogr_fields_metadata):55
   layer_name (String) = main_elt
   field_name (String) = sequence_unbounded_1_with_2_subelts
   field_xpath (String) = myns:main_elt/myns:sequence_unbounded_1_with_2_subelts
@@ -1416,7 +1433,7 @@ OGRFeature(_ogr_fields_metadata):54
   field_documentation (String) = (null)
   layer_documentation (String) = (null)
 
-OGRFeature(_ogr_fields_metadata):55
+OGRFeature(_ogr_fields_metadata):56
   layer_name (String) = main_elt
   field_name (String) = sequence_with_attr_unbounded
   field_xpath (String) = myns:main_elt/myns:sequence_with_attr_unbounded
@@ -1431,7 +1448,7 @@ OGRFeature(_ogr_fields_metadata):55
   field_documentation (String) = (null)
   layer_documentation (String) = (null)
 
-OGRFeature(_ogr_fields_metadata):56
+OGRFeature(_ogr_fields_metadata):57
   layer_name (String) = main_elt
   field_name (String) = int_complex_simplifiable
   field_xpath (String) = myns:main_elt/myns:int_complex_simplifiable
@@ -1446,7 +1463,7 @@ OGRFeature(_ogr_fields_metadata):56
   field_documentation (String) = (null)
   layer_documentation (String) = (null)
 
-OGRFeature(_ogr_fields_metadata):57
+OGRFeature(_ogr_fields_metadata):58
   layer_name (String) = main_elt
   field_name (String) = an_abstract_element_abstract_element_realization1
   field_xpath (String) = myns:main_elt/myns:abstract_element_realization1
@@ -1461,7 +1478,7 @@ OGRFeature(_ogr_fields_metadata):57
   field_documentation (String) = (null)
   layer_documentation (String) = (null)
 
-OGRFeature(_ogr_fields_metadata):58
+OGRFeature(_ogr_fields_metadata):59
   layer_name (String) = main_elt
   field_name (String) = an_abstract_element_abstract_element_realization2
   field_xpath (String) = myns:main_elt/myns:abstract_element_realization2
@@ -1476,7 +1493,7 @@ OGRFeature(_ogr_fields_metadata):58
   field_documentation (String) = (null)
   layer_documentation (String) = (null)
 
-OGRFeature(_ogr_fields_metadata):59
+OGRFeature(_ogr_fields_metadata):60
   layer_name (String) = main_elt
   field_name (String) = an_abstract_element_in_other_ns_pkid
   field_xpath (String) = myns:main_elt/otherns:an_abstract_element_in_other_ns_realization1
@@ -1491,7 +1508,7 @@ OGRFeature(_ogr_fields_metadata):59
   field_documentation (String) = (null)
   layer_documentation (String) = (null)
 
-OGRFeature(_ogr_fields_metadata):60
+OGRFeature(_ogr_fields_metadata):61
   layer_name (String) = main_elt
   field_name (String) = any_type_anyAttributes
   field_xpath (String) = myns:main_elt/myns:any_type/@*
@@ -1506,7 +1523,7 @@ OGRFeature(_ogr_fields_metadata):60
   field_documentation (String) = (null)
   layer_documentation (String) = (null)
 
-OGRFeature(_ogr_fields_metadata):61
+OGRFeature(_ogr_fields_metadata):62
   layer_name (String) = main_elt
   field_name (String) = any_type
   field_xpath (String) = myns:main_elt/myns:any_type
@@ -1521,7 +1538,7 @@ OGRFeature(_ogr_fields_metadata):61
   field_documentation (String) = (null)
   layer_documentation (String) = (null)
 
-OGRFeature(_ogr_fields_metadata):62
+OGRFeature(_ogr_fields_metadata):63
   layer_name (String) = main_elt
   field_name (String) = any_attr_anyAttributes
   field_xpath (String) = myns:main_elt/myns:any_attr/@*
@@ -1536,7 +1553,7 @@ OGRFeature(_ogr_fields_metadata):62
   field_documentation (String) = (null)
   layer_documentation (String) = (null)
 
-OGRFeature(_ogr_fields_metadata):63
+OGRFeature(_ogr_fields_metadata):64
   layer_name (String) = main_elt
   field_name (String) = any_attr
   field_xpath (String) = myns:main_elt/myns:any_attr
@@ -1551,7 +1568,7 @@ OGRFeature(_ogr_fields_metadata):63
   field_documentation (String) = (null)
   layer_documentation (String) = (null)
 
-OGRFeature(_ogr_fields_metadata):64
+OGRFeature(_ogr_fields_metadata):65
   layer_name (String) = main_elt
   field_name (String) = any_attr_no_attr_anyAttributes
   field_xpath (String) = myns:main_elt/myns:any_attr_no_attr/@*
@@ -1566,7 +1583,7 @@ OGRFeature(_ogr_fields_metadata):64
   field_documentation (String) = (null)
   layer_documentation (String) = (null)
 
-OGRFeature(_ogr_fields_metadata):65
+OGRFeature(_ogr_fields_metadata):66
   layer_name (String) = main_elt
   field_name (String) = any_attr_no_attr
   field_xpath (String) = myns:main_elt/myns:any_attr_no_attr
@@ -1581,7 +1598,7 @@ OGRFeature(_ogr_fields_metadata):65
   field_documentation (String) = (null)
   layer_documentation (String) = (null)
 
-OGRFeature(_ogr_fields_metadata):66
+OGRFeature(_ogr_fields_metadata):67
   layer_name (String) = main_elt
   field_name (String) = (null)
   field_xpath (String) = (null)
@@ -1596,7 +1613,7 @@ OGRFeature(_ogr_fields_metadata):66
   field_documentation (String) = (null)
   layer_documentation (String) = (null)
 
-OGRFeature(_ogr_fields_metadata):67
+OGRFeature(_ogr_fields_metadata):68
   layer_name (String) = main_elt
   field_name (String) = group2_elt
   field_xpath (String) = myns:main_elt/myns:group2_elt
@@ -1611,7 +1628,7 @@ OGRFeature(_ogr_fields_metadata):67
   field_documentation (String) = (null)
   layer_documentation (String) = (null)
 
-OGRFeature(_ogr_fields_metadata):68
+OGRFeature(_ogr_fields_metadata):69
   layer_name (String) = main_elt
   field_name (String) = (null)
   field_xpath (String) = (null)
@@ -1626,7 +1643,7 @@ OGRFeature(_ogr_fields_metadata):68
   field_documentation (String) = (null)
   layer_documentation (String) = (null)
 
-OGRFeature(_ogr_fields_metadata):69
+OGRFeature(_ogr_fields_metadata):70
   layer_name (String) = main_elt
   field_name (String) = group4_elt
   field_xpath (String) = myns:main_elt/myns:group4_elt
@@ -1641,7 +1658,7 @@ OGRFeature(_ogr_fields_metadata):69
   field_documentation (String) = (null)
   layer_documentation (String) = (null)
 
-OGRFeature(_ogr_fields_metadata):70
+OGRFeature(_ogr_fields_metadata):71
   layer_name (String) = main_elt
   field_name (String) = rec_A_pkid
   field_xpath (String) = myns:main_elt/myns:rec_A
@@ -1656,7 +1673,7 @@ OGRFeature(_ogr_fields_metadata):70
   field_documentation (String) = (null)
   layer_documentation (String) = (null)
 
-OGRFeature(_ogr_fields_metadata):71
+OGRFeature(_ogr_fields_metadata):72
   layer_name (String) = main_elt_dt_array
   field_name (String) = value
   field_xpath (String) = myns:main_elt/myns:dt_array
@@ -1671,7 +1688,7 @@ OGRFeature(_ogr_fields_metadata):71
   field_documentation (String) = (null)
   layer_documentation (String) = (null)
 
-OGRFeature(_ogr_fields_metadata):72
+OGRFeature(_ogr_fields_metadata):73
   layer_name (String) = main_elt_myint_repeated
   field_name (String) = myAttr
   field_xpath (String) = myns:main_elt/myns:myint_repeated/@myAttr
@@ -1686,7 +1703,7 @@ OGRFeature(_ogr_fields_metadata):72
   field_documentation (String) = (null)
   layer_documentation (String) = (null)
 
-OGRFeature(_ogr_fields_metadata):73
+OGRFeature(_ogr_fields_metadata):74
   layer_name (String) = main_elt_myint_repeated
   field_name (String) = value
   field_xpath (String) = myns:main_elt/myns:myint_repeated
@@ -1701,7 +1718,7 @@ OGRFeature(_ogr_fields_metadata):73
   field_documentation (String) = (null)
   layer_documentation (String) = (null)
 
-OGRFeature(_ogr_fields_metadata):74
+OGRFeature(_ogr_fields_metadata):75
   layer_name (String) = main_elt_sequence_1_dt_unbounded_subelement
   field_name (String) = value
   field_xpath (String) = myns:main_elt/myns:sequence_1_dt_unbounded/myns:subelement
@@ -1716,7 +1733,7 @@ OGRFeature(_ogr_fields_metadata):74
   field_documentation (String) = (null)
   layer_documentation (String) = (null)
 
-OGRFeature(_ogr_fields_metadata):75
+OGRFeature(_ogr_fields_metadata):76
   layer_name (String) = main_elt_sequence_unbounded_dt_1_subelement
   field_name (String) = value
   field_xpath (String) = myns:main_elt/myns:sequence_unbounded_dt_1/myns:subelement
@@ -1731,7 +1748,7 @@ OGRFeature(_ogr_fields_metadata):75
   field_documentation (String) = (null)
   layer_documentation (String) = (null)
 
-OGRFeature(_ogr_fields_metadata):76
+OGRFeature(_ogr_fields_metadata):77
   layer_name (String) = main_elt_sequence_sequence_subsequence
   field_name (String) = subelement
   field_xpath (String) = myns:main_elt/myns:sequence_sequence/myns:subsequence/myns:subelement
@@ -1746,7 +1763,7 @@ OGRFeature(_ogr_fields_metadata):76
   field_documentation (String) = (null)
   layer_documentation (String) = (null)
 
-OGRFeature(_ogr_fields_metadata):77
+OGRFeature(_ogr_fields_metadata):78
   layer_name (String) = main_elt_sequence_sequence_subsequence_subelement
   field_name (String) = value
   field_xpath (String) = myns:main_elt/myns:sequence_sequence/myns:subsequence/myns:subelement
@@ -1761,7 +1778,7 @@ OGRFeature(_ogr_fields_metadata):77
   field_documentation (String) = (null)
   layer_documentation (String) = (null)
 
-OGRFeature(_ogr_fields_metadata):78
+OGRFeature(_ogr_fields_metadata):79
   layer_name (String) = main_elt_sequence_1_unbounded_with_2_subelts
   field_name (String) = subelement
   field_xpath (String) = myns:main_elt/myns:sequence_1_unbounded_with_2_subelts/myns:subelement
@@ -1776,7 +1793,7 @@ OGRFeature(_ogr_fields_metadata):78
   field_documentation (String) = (null)
   layer_documentation (String) = (null)
 
-OGRFeature(_ogr_fields_metadata):79
+OGRFeature(_ogr_fields_metadata):80
   layer_name (String) = main_elt_sequence_1_unbounded_with_2_subelts
   field_name (String) = subelement2
   field_xpath (String) = myns:main_elt/myns:sequence_1_unbounded_with_2_subelts/myns:subelement2
@@ -1791,7 +1808,7 @@ OGRFeature(_ogr_fields_metadata):79
   field_documentation (String) = (null)
   layer_documentation (String) = (null)
 
-OGRFeature(_ogr_fields_metadata):80
+OGRFeature(_ogr_fields_metadata):81
   layer_name (String) = main_elt_sequence_1_unbounded_non_simplifiable
   field_name (String) = id
   field_xpath (String) = myns:main_elt/myns:sequence_1_unbounded_non_simplifiable/@id
@@ -1806,7 +1823,7 @@ OGRFeature(_ogr_fields_metadata):80
   field_documentation (String) = (null)
   layer_documentation (String) = (null)
 
-OGRFeature(_ogr_fields_metadata):81
+OGRFeature(_ogr_fields_metadata):82
   layer_name (String) = main_elt_sequence_1_unbounded_non_simplifiable
   field_name (String) = (null)
   field_xpath (String) = myns:main_elt/myns:sequence_1_unbounded_non_simplifiable
@@ -1821,7 +1838,7 @@ OGRFeature(_ogr_fields_metadata):81
   field_documentation (String) = (null)
   layer_documentation (String) = (null)
 
-OGRFeature(_ogr_fields_metadata):82
+OGRFeature(_ogr_fields_metadata):83
   layer_name (String) = main_elt_sequence_1_unbounded_non_simplifiable_sequence
   field_name (String) = subelement
   field_xpath (String) = myns:main_elt/myns:sequence_1_unbounded_non_simplifiable/myns:subelement
@@ -1836,7 +1853,7 @@ OGRFeature(_ogr_fields_metadata):82
   field_documentation (String) = (null)
   layer_documentation (String) = (null)
 
-OGRFeature(_ogr_fields_metadata):83
+OGRFeature(_ogr_fields_metadata):84
   layer_name (String) = main_elt_sequence_unbounded_1_with_2_subelts
   field_name (String) = subelement
   field_xpath (String) = myns:main_elt/myns:sequence_unbounded_1_with_2_subelts/myns:subelement
@@ -1851,7 +1868,7 @@ OGRFeature(_ogr_fields_metadata):83
   field_documentation (String) = (null)
   layer_documentation (String) = (null)
 
-OGRFeature(_ogr_fields_metadata):84
+OGRFeature(_ogr_fields_metadata):85
   layer_name (String) = main_elt_sequence_unbounded_1_with_2_subelts
   field_name (String) = subelement2
   field_xpath (String) = myns:main_elt/myns:sequence_unbounded_1_with_2_subelts/myns:subelement2
@@ -1866,7 +1883,7 @@ OGRFeature(_ogr_fields_metadata):84
   field_documentation (String) = (null)
   layer_documentation (String) = (null)
 
-OGRFeature(_ogr_fields_metadata):85
+OGRFeature(_ogr_fields_metadata):86
   layer_name (String) = main_elt_sequence_with_attr_unbounded
   field_name (String) = id
   field_xpath (String) = myns:main_elt/myns:sequence_with_attr_unbounded/@id
@@ -1881,7 +1898,7 @@ OGRFeature(_ogr_fields_metadata):85
   field_documentation (String) = (null)
   layer_documentation (String) = (null)
 
-OGRFeature(_ogr_fields_metadata):86
+OGRFeature(_ogr_fields_metadata):87
   layer_name (String) = main_elt_sequence_with_attr_unbounded
   field_name (String) = subelement
   field_xpath (String) = myns:main_elt/myns:sequence_with_attr_unbounded/myns:subelement
@@ -1896,7 +1913,7 @@ OGRFeature(_ogr_fields_metadata):86
   field_documentation (String) = (null)
   layer_documentation (String) = (null)
 
-OGRFeature(_ogr_fields_metadata):87
+OGRFeature(_ogr_fields_metadata):88
   layer_name (String) = main_elt_sequence_with_attr_unbounded
   field_name (String) = subelement2
   field_xpath (String) = myns:main_elt/myns:sequence_with_attr_unbounded/myns:subelement2
@@ -1911,7 +1928,7 @@ OGRFeature(_ogr_fields_metadata):87
   field_documentation (String) = (null)
   layer_documentation (String) = (null)
 
-OGRFeature(_ogr_fields_metadata):88
+OGRFeature(_ogr_fields_metadata):89
   layer_name (String) = main_elt_group1
   field_name (String) = group1_elt_1
   field_xpath (String) = myns:main_elt/myns:group1_elt_1
@@ -1926,7 +1943,7 @@ OGRFeature(_ogr_fields_metadata):88
   field_documentation (String) = (null)
   layer_documentation (String) = (null)
 
-OGRFeature(_ogr_fields_metadata):89
+OGRFeature(_ogr_fields_metadata):90
   layer_name (String) = main_elt_group1
   field_name (String) = group1_elt_2
   field_xpath (String) = myns:main_elt/myns:group1_elt_2
@@ -1941,7 +1958,7 @@ OGRFeature(_ogr_fields_metadata):89
   field_documentation (String) = (null)
   layer_documentation (String) = (null)
 
-OGRFeature(_ogr_fields_metadata):90
+OGRFeature(_ogr_fields_metadata):91
   layer_name (String) = main_elt_group3
   field_name (String) = group3_elt1
   field_xpath (String) = myns:main_elt/myns:group3_elt1
@@ -1956,7 +1973,7 @@ OGRFeature(_ogr_fields_metadata):90
   field_documentation (String) = (null)
   layer_documentation (String) = (null)
 
-OGRFeature(_ogr_fields_metadata):91
+OGRFeature(_ogr_fields_metadata):92
   layer_name (String) = main_elt_group3
   field_name (String) = group3_elt2_b
   field_xpath (String) = myns:main_elt/myns:group3_elt2/myns:b
@@ -1971,7 +1988,7 @@ OGRFeature(_ogr_fields_metadata):91
   field_documentation (String) = (null)
   layer_documentation (String) = (null)
 
-OGRFeature(_ogr_fields_metadata):92
+OGRFeature(_ogr_fields_metadata):93
   layer_name (String) = main_elt_group3
   field_name (String) = group3_elt3_b2
   field_xpath (String) = myns:main_elt/myns:group3_elt3/myns:b2
@@ -1986,7 +2003,7 @@ OGRFeature(_ogr_fields_metadata):92
   field_documentation (String) = (null)
   layer_documentation (String) = (null)
 
-OGRFeature(_ogr_fields_metadata):93
+OGRFeature(_ogr_fields_metadata):94
   layer_name (String) = main_elt_group3_group3_elt3_b2
   field_name (String) = value
   field_xpath (String) = myns:main_elt/myns:group3_elt3/myns:b2
@@ -2001,7 +2018,7 @@ OGRFeature(_ogr_fields_metadata):93
   field_documentation (String) = (null)
   layer_documentation (String) = (null)
 
-OGRFeature(_ogr_fields_metadata):94
+OGRFeature(_ogr_fields_metadata):95
   layer_name (String) = rec_A
   field_name (String) = rec_B_pkid
   field_xpath (String) = myns:rec_A/myns:rec_B
@@ -2016,7 +2033,7 @@ OGRFeature(_ogr_fields_metadata):94
   field_documentation (String) = (null)
   layer_documentation (String) = (null)
 
-OGRFeature(_ogr_fields_metadata):95
+OGRFeature(_ogr_fields_metadata):96
   layer_name (String) = rec_A
   field_name (String) = elt_A
   field_xpath (String) = myns:rec_A/myns:elt_A
@@ -2031,7 +2048,7 @@ OGRFeature(_ogr_fields_metadata):95
   field_documentation (String) = (null)
   layer_documentation (String) = (null)
 
-OGRFeature(_ogr_fields_metadata):96
+OGRFeature(_ogr_fields_metadata):97
   layer_name (String) = rec_B
   field_name (String) = rec_A_pkid
   field_xpath (String) = myns:rec_B/myns:rec_A
@@ -2046,7 +2063,7 @@ OGRFeature(_ogr_fields_metadata):96
   field_documentation (String) = (null)
   layer_documentation (String) = (null)
 
-OGRFeature(_ogr_fields_metadata):97
+OGRFeature(_ogr_fields_metadata):98
   layer_name (String) = rec_B
   field_name (String) = elt_B
   field_xpath (String) = myns:rec_B/myns:elt_B
@@ -2061,7 +2078,7 @@ OGRFeature(_ogr_fields_metadata):97
   field_documentation (String) = (null)
   layer_documentation (String) = (null)
 
-OGRFeature(_ogr_fields_metadata):98
+OGRFeature(_ogr_fields_metadata):99
   layer_name (String) = an_abstract_element_in_other_ns_realization1
   field_name (String) = a_int
   field_xpath (String) = otherns:an_abstract_element_in_other_ns_realization1/otherns:a_int
@@ -2076,24 +2093,9 @@ OGRFeature(_ogr_fields_metadata):98
   field_documentation (String) = (null)
   layer_documentation (String) = (null)
 
-OGRFeature(_ogr_fields_metadata):99
-  layer_name (String) = main_elt_an_abstract_element_abstract_element_realization1
-  field_name (String) = occurrence
-  field_xpath (String) = (null)
-  field_type (String) = (null)
-  field_min_occurs (Integer) = (null)
-  field_max_occurs (Integer) = (null)
-  field_default_value (String) = (null)
-  field_fixed_value (String) = (null)
-  field_category (String) = (null)
-  field_related_layer (String) = (null)
-  field_junction_layer (String) = (null)
-  field_documentation (String) = (null)
-  layer_documentation (String) = (null)
-
 OGRFeature(_ogr_fields_metadata):100
   layer_name (String) = main_elt_an_abstract_element_abstract_element_realization1
-  field_name (String) = parent_pkid
+  field_name (String) = occurrence
   field_xpath (String) = (null)
   field_type (String) = (null)
   field_min_occurs (Integer) = (null)
@@ -2108,7 +2110,7 @@ OGRFeature(_ogr_fields_metadata):100
 
 OGRFeature(_ogr_fields_metadata):101
   layer_name (String) = main_elt_an_abstract_element_abstract_element_realization1
-  field_name (String) = child_pkid
+  field_name (String) = parent_pkid
   field_xpath (String) = (null)
   field_type (String) = (null)
   field_min_occurs (Integer) = (null)
@@ -2122,8 +2124,8 @@ OGRFeature(_ogr_fields_metadata):101
   layer_documentation (String) = (null)
 
 OGRFeature(_ogr_fields_metadata):102
-  layer_name (String) = main_elt_an_abstract_element_abstract_element_realization2
-  field_name (String) = occurrence
+  layer_name (String) = main_elt_an_abstract_element_abstract_element_realization1
+  field_name (String) = child_pkid
   field_xpath (String) = (null)
   field_type (String) = (null)
   field_min_occurs (Integer) = (null)
@@ -2138,7 +2140,7 @@ OGRFeature(_ogr_fields_metadata):102
 
 OGRFeature(_ogr_fields_metadata):103
   layer_name (String) = main_elt_an_abstract_element_abstract_element_realization2
-  field_name (String) = parent_pkid
+  field_name (String) = occurrence
   field_xpath (String) = (null)
   field_type (String) = (null)
   field_min_occurs (Integer) = (null)
@@ -2152,6 +2154,21 @@ OGRFeature(_ogr_fields_metadata):103
   layer_documentation (String) = (null)
 
 OGRFeature(_ogr_fields_metadata):104
+  layer_name (String) = main_elt_an_abstract_element_abstract_element_realization2
+  field_name (String) = parent_pkid
+  field_xpath (String) = (null)
+  field_type (String) = (null)
+  field_min_occurs (Integer) = (null)
+  field_max_occurs (Integer) = (null)
+  field_default_value (String) = (null)
+  field_fixed_value (String) = (null)
+  field_category (String) = (null)
+  field_related_layer (String) = (null)
+  field_junction_layer (String) = (null)
+  field_documentation (String) = (null)
+  layer_documentation (String) = (null)
+
+OGRFeature(_ogr_fields_metadata):105
   layer_name (String) = main_elt_an_abstract_element_abstract_element_realization2
   field_name (String) = child_pkid
   field_xpath (String) = (null)

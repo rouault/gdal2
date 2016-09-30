@@ -1967,8 +1967,7 @@ bool GMLASSchemaAnalyzer::ExploreModelGroup(
                     // need an extra field to be able to distinguish between the
                     // case of the missing element or the element with
                     // xsi:nil="true"
-                    if( nMinOccurs &&
-                        poElt->getNillable() )
+                    if( nMinOccurs == 0 && poElt->getNillable() )
                     {
                         GMLASField oFieldNil;
                         oFieldNil.SetName( osEltName +
