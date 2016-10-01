@@ -72,6 +72,7 @@ typedef std::pair<CPLString, CPLString> PairURIFilename;
 namespace OGRGMLAS
 {
     CPLString transcode( const XMLCh *panXMLString, int nLimitingChars = -1 );
+    CPLString& transcode( const XMLCh *panXMLString, CPLString& osRet, int nLimitingChars = -1 );
 }
 using OGRGMLAS::transcode;
 
@@ -1055,6 +1056,20 @@ class GMLASReader : public DefaultHandler
 
         bool                           m_bWarnUnexpected;
 
+        /** Variables that could be local but more efficient to have same
+            persistant, so as to save many memory allocations/deallocations */
+        CPLString                      m_osLocalname;
+        CPLString                      m_osNSUri;
+        CPLString                      m_osNSPrefix;
+        CPLString                      m_osXPath;
+        CPLString                      m_osLayerXPath;
+        CPLString                      m_osAttrNSUri;
+        CPLString                      m_osAttrNSPrefix;
+        CPLString                      m_osAttrLocalName;
+        CPLString                      m_osAttrXPath;
+        CPLString                      m_osAttrValue;
+        CPLString                      m_osText;
+
         void        SetField( OGRFeature* poFeature,
                               OGRGMLASLayer* poLayer,
                               int nAttrIdx,
@@ -1065,8 +1080,7 @@ class GMLASReader : public DefaultHandler
         void        PushFeatureReady( OGRFeature* poFeature,
                                       OGRGMLASLayer* poLayer );
 
-        void        BuildXMLBlobStartElement(const CPLString& osNSPrefix,
-                                             const CPLString& osLocalname,
+        void        BuildXMLBlobStartElement(const CPLString& osXPath,
                                              const  Attributes& attrs);
 
         OGRGMLASLayer* GetLayerByXPath( const CPLString& osXPath );

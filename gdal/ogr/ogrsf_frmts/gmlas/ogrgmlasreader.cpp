@@ -739,27 +739,19 @@ void GMLASReader::AttachAsLastChild(CPLXMLNode* psNode)
 /*                         BuildXMLBlobStartElement()                   */
 /************************************************************************/
 
-void GMLASReader::BuildXMLBlobStartElement(const CPLString& osNSPrefix,
-                                           const CPLString& osLocalname,
+void GMLASReader::BuildXMLBlobStartElement(const CPLString& osXPath,
                                            const  Attributes& attrs)
 {
-    CPLString osElementName;
-    if( !osNSPrefix.empty() )
-    {
-        osElementName += osNSPrefix + ":";
-    }
-    osElementName += osLocalname;
-
     if( !m_bInitialPass )
     {
         m_osTextContent += "<";
-        m_osTextContent += osElementName;
+        m_osTextContent += osXPath;
     }
 
     CPLXMLNode* psNode = NULL;
     if( m_nCurGeomFieldIdx >= 0 )
     {
-        psNode = CPLCreateXMLNode( NULL, CXT_Element, osElementName );
+        psNode = CPLCreateXMLNode( NULL, CXT_Element, osXPath );
         if( !m_apsXMLNodeStack.empty() )
         {
             AttachAsLastChild(psNode);
@@ -769,21 +761,30 @@ void GMLASReader::BuildXMLBlobStartElement(const CPLString& osNSPrefix,
     CPLXMLNode* psLastChild = NULL;
     for(unsigned int i=0; i < attrs.getLength(); i++)
     {
-        CPLString osAttrNSPrefix( m_oMapURIToPrefix[
-                                        transcode( attrs.getURI(i) ) ] );
-        CPLString osAttrLocalname( transcode(attrs.getLocalName(i)) );
-        CPLString osAttrValue( transcode(attrs.getValue(i)) );
-        CPLString osAttributeName;
+        const CPLString& osAttrNSPrefix( m_osAttrNSPrefix =
+            m_oMapURIToPrefix[ transcode( attrs.getURI(i), m_osAttrNSUri ) ] );
+        const CPLString& osAttrLocalname(
+                        transcode(attrs.getLocalName(i), m_osAttrLocalName) );
+        const CPLString& osAttrValue(
+                                transcode(attrs.getValue(i), m_osAttrValue) );
+        CPLString& osAttrXPath( m_osAttrXPath );
         if( !osAttrNSPrefix.empty() )
         {
-            osAttributeName += osAttrNSPrefix + ":";
+            osAttrXPath.reserve(
+                        osAttrNSPrefix.size() + 1 + osAttrLocalname.size() );
+            osAttrXPath = osAttrNSPrefix;
+            osAttrXPath += ":";
+            osAttrXPath += osAttrLocalname;
         }
-        osAttributeName += osAttrLocalname;
+        else
+        {
+            osAttrXPath = osAttrLocalname;
+        }
 
         if( psNode != NULL )
         {
             CPLXMLNode* psAttrNode = CPLCreateXMLNode( NULL, CXT_Attribute,
-                                                       osAttributeName );
+                                                       osAttrXPath );
             CPLCreateXMLNode(psAttrNode, CXT_Text, osAttrValue);
 
             if( psLastChild == NULL )
@@ -800,7 +801,7 @@ void GMLASReader::BuildXMLBlobStartElement(const CPLString& osNSPrefix,
         if( !m_bInitialPass )
         {
             m_osTextContent += " ";
-            m_osTextContent += osAttributeName;
+            m_osTextContent += osAttrXPath;
             m_osTextContent += "=\"";
             char* pszEscaped = CPLEscapeString( osAttrValue.c_str(),
                                         static_cast<int>(osAttrValue.size()),
@@ -916,9 +917,18 @@ void GMLASReader::startElement(
             , const   Attributes& attrs
         )
 {
-    CPLString osLocalname( transcode(localname) );
-    CPLString osNSPrefix( m_oMapURIToPrefix[ transcode(uri) ] );
-    CPLString osXPath = (osNSPrefix.empty()) ? osLocalname : osNSPrefix + ":" + osLocalname;
+    const CPLString& osLocalname( transcode(localname, m_osLocalname) );
+    const CPLString& osNSPrefix( m_osNSPrefix = m_oMapURIToPrefix[ transcode(uri, m_osNSUri) ] );
+    if( osNSPrefix.empty() )
+        m_osXPath = osLocalname;
+    else
+    {
+        m_osXPath.reserve( osNSPrefix.size() + 1 + osLocalname.size() );
+        m_osXPath = osNSPrefix;
+        m_osXPath += ":";
+        m_osXPath += osLocalname;
+    }
+    const CPLString& osXPath( m_osXPath );
 #ifdef DEBUG_VERBOSE
     CPLDebug("GMLAS", "startElement(%s / %s)", transcode(qname).c_str(), osXPath.c_str());
 #endif
@@ -927,7 +937,9 @@ void GMLASReader::startElement(
         m_osCurXPath += "/";
     m_osCurXPath += osXPath;
 
+#if 0
     CPLString osSubXPathBefore(m_osCurSubXPath);
+#endif
     if( !m_osCurSubXPath.empty() )
     {
         m_osCurSubXPath += "/";
@@ -937,7 +949,7 @@ void GMLASReader::startElement(
     // Deal with XML content
     if( m_bIsXMLBlob )
     {
-        BuildXMLBlobStartElement(osNSPrefix, osLocalname, attrs);
+        BuildXMLBlobStartElement(osXPath, attrs);
         m_nLevel ++;
         return;
     }
@@ -954,7 +966,8 @@ void GMLASReader::startElement(
     // Look which layer might match the current XPath
     for(size_t i = 0; i < m_papoLayers->size(); i++ )
     {
-        CPLString osLayerXPath((*m_papoLayers)[i]->GetFeatureClass().GetXPath());
+        CPLString& osLayerXPath(m_osLayerXPath);
+        osLayerXPath = (*m_papoLayers)[i]->GetFeatureClass().GetXPath();
         if( (*m_papoLayers)[i]->GetFeatureClass().IsRepeatedSequence() )
         {
             size_t iPosExtra = osLayerXPath.find(";extra=");
@@ -1314,7 +1327,7 @@ void GMLASReader::startElement(
                                             oField.GetIncludeThisEltInBlob();
                 if( m_bIsXMLBlobIncludeUpper )
                 {
-                    BuildXMLBlobStartElement(osNSPrefix, osLocalname, attrs);
+                    BuildXMLBlobStartElement(osXPath, attrs);
                     m_nLevel ++;
                     return;
                 }
@@ -1551,14 +1564,32 @@ void GMLASReader::ProcessAttributes(const Attributes& attrs)
 
     for(unsigned int i=0; i < attrs.getLength(); i++)
     {
-        CPLString osAttrNSPrefix( m_oMapURIToPrefix[
-                                        transcode( attrs.getURI(i) ) ] );
-        CPLString osAttrLocalname( transcode(attrs.getLocalName(i)) );
-        CPLString osAttrValue( transcode(attrs.getValue(i)) );
-        CPLString osAttrXPath = m_osCurSubXPath + "/@";
+        const CPLString& osAttrNSPrefix( m_osAttrNSPrefix =
+            m_oMapURIToPrefix[ transcode( attrs.getURI(i), m_osAttrNSUri ) ] );
+        const CPLString& osAttrLocalname(
+                        transcode(attrs.getLocalName(i), m_osAttrLocalName) );
+        const CPLString& osAttrValue(
+                                transcode(attrs.getValue(i), m_osAttrValue) );
+        CPLString& osAttrXPath( m_osAttrXPath );
         if( !osAttrNSPrefix.empty() )
-            osAttrXPath += osAttrNSPrefix + ":";
-        osAttrXPath += osAttrLocalname;
+        {
+            osAttrXPath.reserve( m_osCurSubXPath.size() + 2 +
+                        osAttrNSPrefix.size() + 1 + osAttrLocalname.size() );
+            osAttrXPath = m_osCurSubXPath;
+            osAttrXPath += "/@";
+            osAttrXPath += osAttrNSPrefix;
+            osAttrXPath += ":";
+            osAttrXPath += osAttrLocalname;
+        }
+        else
+        {
+            osAttrXPath.reserve( m_osCurSubXPath.size() + 2 +
+                                 osAttrLocalname.size() );
+            osAttrXPath = m_osCurSubXPath;
+            osAttrXPath += "/@";
+            osAttrXPath += osAttrLocalname;
+        }
+
         int nAttrIdx = m_oCurCtxt.m_poLayer->GetOGRFieldIndexFromXPath(osAttrXPath);
         int nFCIdx;
         if( nAttrIdx >= 0 )
@@ -1721,8 +1752,7 @@ void GMLASReader::endElement(
     }
 
     // Make sure to set field only if we are at the expected nesting level
-    if( (m_nCurFieldIdx >= 0 || m_nCurGeomFieldIdx >= 0) &&
-            m_nLevel == m_nCurFieldLevel - 1 )
+    if( m_nCurFieldIdx >= 0 && m_nLevel == m_nCurFieldLevel - 1 )
     {
         const OGRFieldType eType(
             m_nCurFieldIdx >= 0 ?
@@ -1763,13 +1793,16 @@ void GMLASReader::endElement(
         {
             if( m_bIsXMLBlobIncludeUpper && !m_bInitialPass )
             {
-                CPLString osLocalname( transcode(localname) );
-                CPLString osNSPrefix( m_oMapURIToPrefix[ transcode(uri) ] );
+                const CPLString& osLocalname(
+                                transcode(localname, m_osLocalname) );
+                const CPLString& osNSPrefix(
+                                m_oMapURIToPrefix[ transcode(uri, m_osNSUri) ] );
 
                 m_osTextContent += "</";
                 if( !osNSPrefix.empty() )
                 {
-                    m_osTextContent += osNSPrefix + ":";
+                    m_osTextContent += osNSPrefix;
+                    m_osTextContent += ":";
                 }
                 m_osTextContent += osLocalname;
                 m_osTextContent += ">";
@@ -1782,22 +1815,27 @@ void GMLASReader::endElement(
                           m_nCurFieldIdx, m_osTextContent );
             }
         }
+    }
 
-        if( m_nCurGeomFieldIdx >= 0 )
+    // Make sure to set field only if we are at the expected nesting level
+    if( m_nCurGeomFieldIdx >= 0 && m_nLevel == m_nCurFieldLevel - 1 )
+    {
+        if( m_bIsXMLBlobIncludeUpper )
         {
-            if( m_bIsXMLBlobIncludeUpper )
-            {
-                m_apsXMLNodeStack.pop_back();
-            }
-
-            if( !m_apsXMLNodeStack.empty() )
-            {
-                CPLAssert( m_apsXMLNodeStack.size() == 1 );
-
-                ProcessGeometry();
-            }
-            m_nCurGeomFieldIdx = -1;
+            m_apsXMLNodeStack.pop_back();
         }
+
+        if( !m_apsXMLNodeStack.empty() )
+        {
+            CPLAssert( m_apsXMLNodeStack.size() == 1 );
+
+            ProcessGeometry();
+        }
+    }
+
+    if( (m_nCurFieldIdx >= 0 || m_nCurGeomFieldIdx >= 0) &&
+        m_nLevel == m_nCurFieldLevel - 1 )
+    {
         m_bIsXMLBlob = false;
         m_bIsXMLBlobIncludeUpper = false;
     }
@@ -1812,13 +1850,16 @@ void GMLASReader::endElement(
 
         if(  !m_bInitialPass )
         {
-            CPLString osLocalname( transcode(localname) );
-            CPLString osNSPrefix( m_oMapURIToPrefix[ transcode(uri) ] );
+            const CPLString& osLocalname(
+                            transcode(localname, m_osLocalname) );
+            const CPLString& osNSPrefix(
+                            m_oMapURIToPrefix[ transcode(uri, m_osNSUri) ] );
 
             m_osTextContent += "</";
             if( !osNSPrefix.empty() )
             {
-                m_osTextContent += osNSPrefix + ":";
+                m_osTextContent += osNSPrefix;
+                m_osTextContent += ":";
             }
             m_osTextContent += osLocalname;
             m_osTextContent += ">";
@@ -2100,7 +2141,8 @@ void GMLASReader::characters( const XMLCh *const chars,
 
     if( m_bIsXMLBlob )
     {
-        const CPLString osText( transcode(chars, static_cast<int>(length) ) );
+        const CPLString& osText( transcode(chars, m_osText,
+                                           static_cast<int>(length) ) );
 
         if( m_nCurGeomFieldIdx >= 0 &&
             // Check the stack is not empty in case of space chars before the
@@ -2131,29 +2173,40 @@ void GMLASReader::characters( const XMLCh *const chars,
             // Otherwise create a new text node
             else
             {
-                AttachAsLastChild(
-                        CPLCreateXMLNode(NULL, CXT_Text, osText) );
+                CPLXMLNode* psNode = reinterpret_cast<CPLXMLNode*>
+                                            ( CPLMalloc(sizeof(CPLXMLNode)) );
+                psNode->eType = CXT_Text;
+                psNode->pszValue = reinterpret_cast<char*>
+                                            ( CPLMalloc( osText.size() + 1 ) );
+                memcpy(psNode->pszValue, osText.c_str(), osText.size() + 1);
+                psNode->psNext = NULL;
+                psNode->psChild = NULL;
+                AttachAsLastChild( psNode );
             }
         }
 
-        char* pszEscaped = CPLEscapeString( osText.c_str(),
-                                        static_cast<int>(osText.size()),
-                                        CPLES_XML );
-        try
+        if( m_nCurFieldIdx >= 0 )
         {
-            m_osTextContent += pszEscaped;
+            char* pszEscaped = CPLEscapeString( osText.c_str(),
+                                            static_cast<int>(osText.size()),
+                                            CPLES_XML );
+            try
+            {
+                m_osTextContent += pszEscaped;
+            }
+            catch( const std::bad_alloc& )
+            {
+                CPLError(CE_Failure, CPLE_OutOfMemory, "Out of memory");
+                m_bParsingError = true;
+            }
+            CPLFree(pszEscaped);
         }
-        catch( const std::bad_alloc& )
-        {
-            CPLError(CE_Failure, CPLE_OutOfMemory, "Out of memory");
-            m_bParsingError = true;
-        }
-        CPLFree(pszEscaped);
     }
     // Make sure to set content only if we are at the expected nesting level
     else if( m_nLevel == m_nCurFieldLevel )
     {
-        const CPLString osText( transcode(chars, static_cast<int>(length) ) );
+        const CPLString& osText(
+                        transcode(chars, m_osText, static_cast<int>(length) ) );
         try
         {
             m_osTextContent += osText;

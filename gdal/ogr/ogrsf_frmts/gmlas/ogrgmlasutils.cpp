@@ -41,13 +41,25 @@ namespace OGRGMLAS
 
 CPLString transcode( const XMLCh *panXMLString, int nLimitingChars )
 {
-    bool bSimpleASCII = true;
     CPLString osRet;
+    transcode( panXMLString, osRet, nLimitingChars );
+    return osRet;
+}
+
+CPLString& transcode( const XMLCh *panXMLString, CPLString& osRet, int nLimitingChars )
+{
+    bool bSimpleASCII = true;
     int nChars = 0;
 
     if( panXMLString == NULL )
-        return "(null)";
+    {
+        osRet = "(null)";
+        return osRet;
+    }
 
+    osRet.clear();
+    if( nLimitingChars > 0 )
+        osRet.reserve(nLimitingChars);
     for(int i = 0; panXMLString[i] != 0 &&
                         (nLimitingChars < 0 || i < nLimitingChars); i++ )
     {
