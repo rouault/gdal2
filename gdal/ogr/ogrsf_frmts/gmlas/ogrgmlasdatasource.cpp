@@ -73,6 +73,11 @@ OGRGMLASDataSource::OGRGMLASDataSource()
         m_poFieldsMetadataLayer->CreateField(&oFieldDefn);
     }
     {
+        OGRFieldDefn oFieldDefn("field_is_list", OFTInteger);
+        oFieldDefn.SetSubType(OFSTBoolean);
+        m_poFieldsMetadataLayer->CreateField(&oFieldDefn);
+    }
+    {
         OGRFieldDefn oFieldDefn("field_min_occurs", OFTInteger);
         m_poFieldsMetadataLayer->CreateField(&oFieldDefn);
     }
@@ -121,7 +126,7 @@ OGRGMLASDataSource::OGRGMLASDataSource()
     }
     {
         OGRFieldDefn oFieldDefn("layer_documentation", OFTString);
-        m_poFieldsMetadataLayer->CreateField(&oFieldDefn);
+        m_poLayersMetadataLayer->CreateField(&oFieldDefn);
     }
 
     m_poRelationshipsLayer = new OGRMemLayer("_ogr_layer_relationships",

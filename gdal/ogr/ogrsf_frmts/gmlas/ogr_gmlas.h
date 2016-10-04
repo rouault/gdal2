@@ -394,7 +394,8 @@ class GMLASField
         CPLString m_osTypeName;     /**< Original XSD type */
         int m_nWidth;               /**< Field width */
         bool m_bNotNullable;        /**< If the field is not nullable */
-        bool m_bArray;              /**< If the field is an array */
+        bool m_bArray;              /**< If the field is an array (from OGR types point of view) */
+        bool m_bList;               /**< If the field is a list (a xs:list) */
 
         /** Category of the field. */
         Category m_eCategory;
@@ -450,6 +451,7 @@ class GMLASField
         void SetNotNullable(bool bNotNullable)
                                     { m_bNotNullable = bNotNullable; }
         void SetArray(bool bArray) { m_bArray = bArray; }
+        void SetList(bool bList) { m_bList = bList; }
         void SetXPath(const CPLString& osXPath) { m_osXPath = osXPath; }
         void AddAlternateXPath(const CPLString& osXPath)
                                             { m_aosXPath.push_back(osXPath); }
@@ -483,6 +485,7 @@ class GMLASField
         int GetWidth() const { return m_nWidth; }
         bool IsNotNullable() const { return m_bNotNullable; }
         bool IsArray() const { return m_bArray; }
+        bool IsList() const { return m_bList; }
         const CPLString& GetFixedValue() const { return m_osFixedValue; }
         const CPLString& GetDefaultValue() const { return m_osDefaultValue; }
         Category GetCategory() const { return m_eCategory; }

@@ -564,6 +564,18 @@ bool GMLASReader::Init(const char* pszFilename,
 }
 
 /************************************************************************/
+/*                             IsArrayType()                            */
+/************************************************************************/
+
+static bool IsArrayType( OGRFieldType eType )
+{
+    return eType == OFTIntegerList ||
+           eType == OFTInteger64List ||
+           eType == OFTRealList ||
+           eType == OFTStringList;
+}
+
+/************************************************************************/
 /*                                SetField()                            */
 /************************************************************************/
 
@@ -626,6 +638,22 @@ void GMLASReader::SetField( OGRFeature* poFeature,
                 poFeature->SetField( nAttrIdx, nBytes, pabyBuffer );
                 CPLFree(pabyBuffer);
             }
+        }
+    }
+    else if( IsArrayType(eType) )
+    {
+        const int nFCFieldIdx =
+            poLayer->GetFCFieldIndexFromOGRFieldIdx(nAttrIdx);
+        if( nFCFieldIdx >= 0 &&
+            poLayer->GetFeatureClass().GetFields()[nFCFieldIdx].IsList() )
+        {
+            char** papszTokens = CSLTokenizeString2( osAttrValue.c_str(), " ", 0 );
+            poFeature->SetField( nAttrIdx, papszTokens );
+            CSLDestroy(papszTokens);
+        }
+        else
+        {
+            poFeature->SetField( nAttrIdx, osAttrValue.c_str() );
         }
     }
     else
@@ -699,18 +727,6 @@ void GMLASReader::CreateNewFeature(const CPLString& osLocalname)
     }
 
     m_nCurFieldIdx = -1;
-}
-
-/************************************************************************/
-/*                             IsArrayType()                            */
-/************************************************************************/
-
-static bool IsArrayType( OGRFieldType eType )
-{
-    return eType == OFTIntegerList ||
-           eType == OFTInteger64List ||
-           eType == OFTRealList ||
-           eType == OFTStringList;
 }
 
 /************************************************************************/
@@ -1773,7 +1789,16 @@ void GMLASReader::endElement(
         // Assign XML content to field value
         if( IsArrayType(eType) )
         {
-            if( m_nTextContentListEstimatedSize > m_nMaxContentSize )
+            const int nFCFieldIdx =
+                m_oCurCtxt.m_poLayer->GetFCFieldIndexFromOGRFieldIdx(m_nCurFieldIdx);
+            if( nFCFieldIdx >= 0 &&
+                m_oCurCtxt.m_poLayer->GetFeatureClass().GetFields()[nFCFieldIdx].IsList() )
+            {
+                char** papszTokens = CSLTokenizeString2( m_osTextContent.c_str(), " ", 0 );
+                m_oCurCtxt.m_poFeature->SetField( m_nCurFieldIdx, papszTokens );
+                CSLDestroy(papszTokens);
+            }
+            else if( m_nTextContentListEstimatedSize > m_nMaxContentSize )
             {
                 CPLError(CE_Failure, CPLE_OutOfMemory,
                          "Too much repeated data in a single element");
@@ -1808,12 +1833,9 @@ void GMLASReader::endElement(
                 m_osTextContent += ">";
             }
 
-            if( m_nCurFieldIdx >= 0 )
-            {
-                SetField( m_oCurCtxt.m_poFeature,
-                          m_oCurCtxt.m_poLayer,
-                          m_nCurFieldIdx, m_osTextContent );
-            }
+            SetField( m_oCurCtxt.m_poFeature,
+                        m_oCurCtxt.m_poLayer,
+                        m_nCurFieldIdx, m_osTextContent );
         }
     }
 

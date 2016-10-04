@@ -831,7 +831,7 @@ void GMLASSchemaAnalyzer::SetFieldTypeAndWidthFromDefinition(
                                                  XSSimpleTypeDefinition* poST,
                                                  GMLASField& oField )
 {
-    int nMaxLength = INT_MAX;
+    int nMaxLength = 0;
     while( poST->getBaseType() != poST &&
             poST->getBaseType()->getTypeCategory() ==
                                         XSTypeDefinition::SIMPLE_TYPE &&
@@ -846,7 +846,7 @@ void GMLASSchemaAnalyzer::SetFieldTypeAndWidthFromDefinition(
                                 XSSimpleTypeDefinition::FACET_MAXLENGTH );
         }
         if( maxLength != NULL )
-            nMaxLength = MIN(nMaxLength, atoi( transcode(maxLength) ) );
+            nMaxLength = MAX(nMaxLength, atoi( transcode(maxLength) ) );
         poST = reinterpret_cast<XSSimpleTypeDefinition*>(poST->getBaseType());
     }
 
@@ -860,8 +860,7 @@ void GMLASSchemaAnalyzer::SetFieldTypeAndWidthFromDefinition(
         CPLError(CE_Warning, CPLE_AppDefined, "Base type is not a xs: one ???");
     }
 
-    if( nMaxLength < INT_MAX )
-        oField.SetWidth( nMaxLength );
+    oField.SetWidth( nMaxLength );
 }
 
 /************************************************************************/
@@ -1032,6 +1031,25 @@ void GMLASSchemaAnalyzer::SetFieldFromAttribute(
         oField.SetDefaultValue(
                     transcode(poAttr->getConstraintValue()) );
     }
+
+    const bool bIsList =
+        ( poAttrType->getVariety() == XSSimpleTypeDefinition::VARIETY_LIST );
+    if( bIsList )
+    {
+        SetFieldTypeAndWidthFromDefinition(poAttrType->getItemType(), oField);
+        if( m_bUseArrays && IsCompatibleOfArray(oField.GetType()) )
+        {
+            oField.SetList( true );
+            oField.SetArray( true );
+        }
+        else
+        {
+            // We should probably create an auxiliary table here, but this
+            // is too corner case for now...
+            oField.SetType( GMLAS_FT_STRING, "string" );
+        }
+    }
+
 }
 
 /************************************************************************/
@@ -1919,6 +1937,25 @@ bool GMLASSchemaAnalyzer::ExploreModelGroup(
                 oField.SetMaxOccurs( nMaxOccurs );
 
                 bool bNeedAuxTable = false;
+                const bool bIsList =
+                    ( poST->getVariety() == XSSimpleTypeDefinition::VARIETY_LIST );
+                if( bIsList )
+                {
+                    SetFieldTypeAndWidthFromDefinition(poST->getItemType(),
+                                                       oField);
+                    if( bRepeatedParticle || !m_bUseArrays ||
+                        !IsCompatibleOfArray(oField.GetType()) )
+                    {
+                        // Really particular case. This is a workaround
+                        oField.SetType( GMLAS_FT_STRING, "string" );
+                    }
+                    else
+                    {
+                        oField.SetList( true );
+                        oField.SetArray( true );
+                    }
+                }
+
                 if( m_bUseArrays && bRepeatedParticle &&
                     IsCompatibleOfArray(oField.GetType()) )
                 {

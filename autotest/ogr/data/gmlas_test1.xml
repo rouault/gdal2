@@ -59,6 +59,13 @@
     <MYNS:anonymous_type>3</MYNS:anonymous_type>
     <MYNS:union>42</MYNS:union>
 
+    <MYNS:list_of_string>a b c</MYNS:list_of_string>
+    <MYNS:list_of_integer>1 2 3</MYNS:list_of_integer>
+    <MYNS:list_of_integer64>123456789012 2 3</MYNS:list_of_integer64>
+    <MYNS:list_of_real>1.25 2.5 5.0</MYNS:list_of_real>
+    <MYNS:list_of_datetime>2012-01-01T12:34:56Z 2012-01-02T12:34:56Z</MYNS:list_of_datetime>
+    <MYNS:elt_with_list_of_integer_attr attr="1 2 3"/>
+
     <!-- can be inlined into main table -->
     <MYNS:compound_simplifiable>
         <MYNS:subelement2>element_compound_simplifiable_subelement2</MYNS:subelement2>

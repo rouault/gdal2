@@ -301,6 +301,7 @@ void OGRGMLASLayer::PostInit( bool bIncludeGeometryXML )
             poFieldDescFeature->SetField( "field_type",
                                         oField.GetTypeName().c_str() );
         }
+        poFieldDescFeature->SetField( "field_is_list", oField.IsList() );
         if( oField.GetMinOccurs() != -1 )
         {
             poFieldDescFeature->SetField( "field_min_occurs",

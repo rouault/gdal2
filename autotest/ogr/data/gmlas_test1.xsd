@@ -105,6 +105,52 @@
                 </xs:simpleType>
             </xs:element>
 
+            <xs:element name="list_of_string">
+                <xs:simpleType>
+                    <xs:restriction>
+                        <xs:simpleType>
+                            <xs:list itemType="xs:string" />
+                        </xs:simpleType>
+                        <xs:maxLength value="20"/>
+                    </xs:restriction>
+                </xs:simpleType>
+            </xs:element>
+
+            <xs:element name="list_of_integer">
+                <xs:simpleType>
+                    <xs:list itemType="xs:integer" />
+                </xs:simpleType>
+            </xs:element>
+
+            <xs:element name="list_of_integer64">
+                <xs:simpleType>
+                    <xs:list itemType="xs:long" />
+                </xs:simpleType>
+            </xs:element>
+
+            <xs:element name="list_of_real">
+                <xs:simpleType>
+                    <xs:list itemType="xs:double" />
+                </xs:simpleType>
+            </xs:element>
+
+            <xs:element name="list_of_datetime">
+                <xs:simpleType>
+                    <xs:list itemType="xs:dateTime" />
+                </xs:simpleType>
+            </xs:element>
+
+            <xs:element name="elt_with_list_of_integer_attr">
+                <xs:complexType>
+                    <xs:sequence/>
+                    <xs:attribute name="attr">
+                        <xs:simpleType>
+                            <xs:list itemType="xs:integer" />
+                        </xs:simpleType>
+                    </xs:attribute>
+                </xs:complexType>
+            </xs:element>
+
             <!-- can be inlined into main table -->
             <xs:element name="compound_simplifiable">
                 <xs:complexType>
