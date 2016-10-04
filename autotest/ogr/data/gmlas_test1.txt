@@ -1383,7 +1383,7 @@ OGRFeature(_ogr_fields_metadata):50
   layer_name (String) = main_elt
   field_name (String) = list_of_datetime
   field_xpath (String) = myns:main_elt/myns:list_of_datetime
-  field_type (String) = list
+  field_type (String) = string
   field_is_list (Integer(Boolean)) = 0
   field_min_occurs (Integer) = 1
   field_max_occurs (Integer) = 1
