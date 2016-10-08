@@ -476,7 +476,7 @@ or repeated sequences of repeated elements of the parent.</td></tr>
 gmlasconf.xml</a> file is provided in the data directory of the GDAL installation.
 Its structure and content is documented in <a href="http://svn.osgeo.org/gdal/trunk/gdal/data/gmlasconf.xsd">
 gmlasconf.xsd</a> schema.</p>
-<p>This configuration files enables to modify the following settings:
+<p>This configuration file enables the user to modify the following settings:
 <ul>
 <li>whether remote schemas should be downloaded. Enabled by default.</li>
 <li>whether the local cache of schemas is enabled. Enabled by default.</li>
@@ -486,12 +486,19 @@ Disabled by default.</li>
 <li>whether validation error should cause dataset opening to fail.
 Disabled by default.</li>
 <li>whether the 3 metadata layers should be exposed by default. Disabled by default.</li>
+<li>whether a 'ogr_pkid' field should always be generated. Disable by default.
+Turning that on can be useful on layers that have a ID attribute whose uniqueness
+is not guaranteed for example between documents, which could cause issues when appending several
+documents into a target database table.</li>
+<li>whether layers and fields that are not used in the XML document should be
+removed. Disable by default.</li>
 <li>whether OGR array data types can be used. Enabled by default.</li>
 <li>whether the XML definition of the GML geometry should be reported as a
 OGR string field. Disabled by default.</li>
 <li>whether only XML elements that derive from gml:_Feature or gml:AbstractFeature
 should be considered in the initial pass of the schema building, when at least
 one element in the schemas derive from them. Enabled by default.</li>
+<li>several rules to configure if and how xlink:href should be resolved.</li>
 <li>a definition of XPaths of elements and attributes that must be ignored, so
 as to lighten the number of OGR layers and fields.</li>
 </ul>
@@ -544,9 +551,10 @@ be reported by default. Default is NO.</li>
 the schemas. Validation is done at dataset opening. Default is NO.</li>
 <li> <b>FAIL_IF_VALIDATION_ERROR</b>=YES/NO: Whether a validation error should
 cause dataset opening to fail. (only used if VALIDATE=YES) Default is NO.</li>
-<li> <b>REFRESH_CACHE</b>=YES/NO: Whether remote schemas should be downloaded
+<li> <b>REFRESH_CACHE</b>=YES/NO: Whether remote schemas and documents pointed
+by xlink:href links should be downloaded
 from the server even if already present in the local cache. If the cache is
-enabled, it will be refreshed with the newly downloaded schemas. Default is NO.</li>
+enabled, it will be refreshed with the newly downloaded resources. Default is NO.</li>
 <li> <b>SWAP_COORDINATES</b>=AUTO/YES/NO: Whether the order of the x/y or long/lat
 coordinates should be swapped. In AUTO mode, the driver will determine if swapping
 must be done from the srsName. If the srsName is urn:ogc:def:crs:EPSG::XXXX and

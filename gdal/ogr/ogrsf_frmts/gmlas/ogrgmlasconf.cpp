@@ -61,54 +61,63 @@ GMLASConfiguration::~GMLASConfiguration()
 }
 
 /************************************************************************/
+/*                        GetBaseCacheDirectory()                       */
+/************************************************************************/
+
+CPLString GMLASConfiguration::GetBaseCacheDirectory()
+{
+#ifdef WIN32
+    const char* pszHome = CPLGetConfigOption("USERPROFILE", NULL);
+#else
+    const char* pszHome = CPLGetConfigOption("HOME", NULL);
+#endif
+    if( pszHome != NULL )
+    {
+        return CPLFormFilename( pszHome, ".gdal", NULL) ;
+    }
+    else
+    {
+        const char *pszDir = CPLGetConfigOption( "CPL_TMPDIR", NULL );
+
+        if( pszDir == NULL )
+            pszDir = CPLGetConfigOption( "TMPDIR", NULL );
+
+        if( pszDir == NULL )
+            pszDir = CPLGetConfigOption( "TEMP", NULL );
+
+        const char* pszUsername = CPLGetConfigOption("USERNAME", NULL);
+        if( pszUsername == NULL )
+            pszUsername = CPLGetConfigOption("USER", NULL);
+
+        if( pszDir != NULL && pszUsername != NULL )
+        {
+            return CPLFormFilename( pszDir,
+                    CPLSPrintf(".gdal_%s", pszUsername), NULL) ;
+        }
+    }
+    return CPLString();
+}
+
+/************************************************************************/
 /*                              Finalize()                              */
 /************************************************************************/
 
 void GMLASConfiguration::Finalize()
 {
-    if( m_bAllowXSDCache && m_osCacheDirectory.empty() )
+    if( m_bAllowXSDCache && m_osXSDCacheDirectory.empty() )
     {
-#ifdef WIN32
-        const char* pszHome = CPLGetConfigOption("USERPROFILE", NULL);
-#else
-        const char* pszHome = CPLGetConfigOption("HOME", NULL);
-#endif
-        if( pszHome != NULL )
+        m_osXSDCacheDirectory = GetBaseCacheDirectory();
+        if( m_osXSDCacheDirectory.empty() )
         {
-            m_osCacheDirectory = CPLFormFilename( pszHome, ".gdal", NULL) ;
-            m_osCacheDirectory = CPLFormFilename( m_osCacheDirectory,
-                                                  "gmlas_xsd_cache", NULL) ;
-            CPLDebug("GMLAS", "XSD cache directory: %s",
-                     m_osCacheDirectory.c_str());
+            CPLError(CE_Warning, CPLE_AppDefined,
+                    "Could not determine a directory for GMLAS XSD cache");
         }
         else
         {
-            const char *pszDir = CPLGetConfigOption( "CPL_TMPDIR", NULL );
-
-            if( pszDir == NULL )
-                pszDir = CPLGetConfigOption( "TMPDIR", NULL );
-
-            if( pszDir == NULL )
-                pszDir = CPLGetConfigOption( "TEMP", NULL );
-
-            const char* pszUsername = CPLGetConfigOption("USERNAME", NULL);
-            if( pszUsername == NULL )
-                pszUsername = CPLGetConfigOption("USER", NULL);
-
-            if( pszDir != NULL && pszUsername != NULL )
-            {
-                m_osCacheDirectory = CPLFormFilename( pszDir,
-                        CPLSPrintf(".gdal_%s", pszUsername), NULL) ;
-                m_osCacheDirectory = CPLFormFilename( m_osCacheDirectory,
-                                                    "gmlas_xsd_cache", NULL) ;
-                CPLDebug("GMLAS", "XSD cache directory: %s",
-                          m_osCacheDirectory.c_str());
-            }
-            else
-            {
-                CPLError(CE_Warning, CPLE_AppDefined,
-                         "Could not determine a directory for GMLAS XSD cache");
-            }
+            m_osXSDCacheDirectory = CPLFormFilename( m_osXSDCacheDirectory,
+                                                  "gmlas_xsd_cache", NULL) ;
+            CPLDebug("GMLAS", "XSD cache directory: %s",
+                     m_osXSDCacheDirectory.c_str());
         }
     }
 }
@@ -181,6 +190,20 @@ static bool IsValidXPath(const CPLString& osXPath )
     return bOK;
 }
 
+
+/************************************************************************/
+/*                    GMLASConfigurationErrorHandler()                  */
+/************************************************************************/
+
+static void CPL_STDCALL GMLASConfigurationErrorHandler(CPLErr /*eErr*/,
+                                                       CPLErrorNum /*nType*/,
+                                                       const char* pszMsg)
+{
+    std::vector<CPLString>* paosErrors =
+            (std::vector<CPLString>* )CPLGetErrorHandlerUserData();
+    paosErrors->push_back(pszMsg);
+}
+
 /************************************************************************/
 /*                                 Load()                               */
 /************************************************************************/
@@ -198,6 +221,35 @@ bool GMLASConfiguration::Load(const char* pszFilename)
     }
     CPLXMLTreeCloser oCloser(psRoot);
 
+    // Validate the configuration file
+    if( CPLTestBool(CPLGetConfigOption("GDAL_XML_VALIDATION", "YES")) )
+    {
+        const char* pszXSD = CPLFindFile( "gdal", "gmlasconf.xsd" );
+        if( pszXSD != NULL )
+        {
+            std::vector<CPLString> aosErrors;
+            const CPLErr eErrClass = CPLGetLastErrorType();
+            const CPLErrorNum nErrNum = CPLGetLastErrorNo();
+            const CPLString osErrMsg = CPLGetLastErrorMsg();
+            CPLPushErrorHandlerEx(GMLASConfigurationErrorHandler, &aosErrors);
+            int bRet = CPLValidateXML(pszFilename, pszXSD, NULL);
+            CPLPopErrorHandler();
+            if( !bRet && aosErrors.size() > 0 &&
+                strstr(aosErrors[0].c_str(), "missing libxml2 support") == NULL )
+            {
+                for(size_t i = 0; i < aosErrors.size(); i++)
+                {
+                    CPLError(CE_Warning, CPLE_AppDefined,
+                             "%s", aosErrors[i].c_str());
+                }
+            }
+            else
+            {
+                CPLErrorSetState(eErrClass, nErrNum, osErrMsg);
+            }
+        }
+    }
+
     m_bAllowRemoteSchemaDownload = CPLGetXMLBoolValue(psRoot,
                                 "=Configuration.AllowRemoteSchemaDownload",
                                 ALLOW_REMOTE_SCHEMA_DOWNLOAD_DEFAULT );
@@ -207,7 +259,7 @@ bool GMLASConfiguration::Load(const char* pszFilename)
                                            ALLOW_XSD_CACHE_DEFAULT );
     if( m_bAllowXSDCache )
     {
-        m_osCacheDirectory =
+        m_osXSDCacheDirectory =
             CPLGetXMLValue(psRoot, "=Configuration.SchemaCache.Directory",
                            "");
     }
@@ -321,7 +373,143 @@ bool GMLASConfiguration::Load(const char* pszFilename)
         }
     }
 
+    CPLXMLNode* psXLinkResolutionNode = CPLGetXMLNode( psRoot,
+                                            "=Configuration.XLinkResolution");
+    if( psXLinkResolutionNode != NULL )
+        m_oXLinkResolution.LoadFromXML( psXLinkResolutionNode );
+
     Finalize();
 
     return true;
+}
+
+/************************************************************************/
+/*                         GMLASXLinkResolutionConf()                   */
+/************************************************************************/
+
+GMLASXLinkResolutionConf::GMLASXLinkResolutionConf() :
+    m_nTimeOut(0),
+    m_nMaxFileSize(MAX_FILE_SIZE_DEFAULT),
+    m_nMaxGlobalResolutionTime(0),
+    m_bDefaultResolutionEnabled(DEFAULT_RESOLUTION_ENABLED_DEFAULT),
+    m_bDefaultAllowRemoteDownload(ALLOW_REMOTE_DOWNLOAD_DEFAULT),
+    m_eDefaultResolutionMode(RawContent),
+    m_nDefaultResolutionDepth(1),
+    m_bDefaultCacheResults(CACHE_RESULTS_DEFAULT)
+{
+}
+
+/************************************************************************/
+/*                               LoadFromXML()                          */
+/************************************************************************/
+
+bool GMLASXLinkResolutionConf::LoadFromXML(CPLXMLNode* psRoot)
+{
+    m_nTimeOut = atoi( CPLGetXMLValue( psRoot, "Timeout", "0" ) );
+
+    m_nMaxFileSize = atoi( CPLGetXMLValue( psRoot, "MaxFileSize", 
+                                CPLSPrintf("%d", MAX_FILE_SIZE_DEFAULT)) );
+
+    m_nMaxGlobalResolutionTime = atoi(
+                CPLGetXMLValue( psRoot, "MaxGlobalResolutionTime", "0" ) );
+
+    m_osProxyServerPort = CPLGetXMLValue( psRoot, "ProxyServerPort", "" );
+    m_osProxyUserPassword = CPLGetXMLValue( psRoot, "ProxyUserPassword", "" );
+    m_osProxyAuth = CPLGetXMLValue( psRoot, "ProxyAuth", "" );
+
+    m_osCacheDirectory = CPLGetXMLValue( psRoot, "CacheDirectory", "" );
+    if( m_osCacheDirectory.empty() )
+    {
+        m_osCacheDirectory = GMLASConfiguration::GetBaseCacheDirectory();
+        if( !m_osCacheDirectory.empty() )
+        {
+            m_osCacheDirectory = CPLFormFilename( m_osCacheDirectory,
+                                                  "xlink_resolved_cache",
+                                                  NULL );
+        }
+    }
+
+    m_bDefaultResolutionEnabled = CPLGetXMLBoolValue( psRoot,
+                                        "DefaultResolution.enabled",
+                                        DEFAULT_RESOLUTION_ENABLED_DEFAULT);
+
+    m_bDefaultAllowRemoteDownload = CPLGetXMLBoolValue( psRoot,
+                                "DefaultResolution.AllowRemoteDownload",
+                                ALLOW_REMOTE_DOWNLOAD_DEFAULT);
+
+    // TODO when we support other modes
+    // m_eDefaultResolutionMode =
+
+    m_nDefaultResolutionDepth = atoi( CPLGetXMLValue( psRoot,
+                                "DefaultResolution.ResolutionDepth", "1") );
+
+    m_bDefaultCacheResults = CPLGetXMLBoolValue( psRoot,
+                                    "DefaultResolution.CacheResults",
+                                    CACHE_RESULTS_DEFAULT);
+
+    CPLXMLNode* psIterURL = psRoot->psChild;
+    for( ; psIterURL != NULL; psIterURL = psIterURL->psNext )
+    {
+        if( psIterURL->eType == CXT_Element &&
+            strcmp(psIterURL->pszValue, "URLSpecificResolution") == 0 )
+        {
+            GMLASXLinkResolutionConf::URLSpecificResolution oItem;
+            oItem.m_osURLPrefix = CPLGetXMLValue(psIterURL, "URLPrefix", "");
+
+            oItem.m_bAllowRemoteDownload = CPLGetXMLBoolValue( psIterURL,
+                                                "AllowRemoteDownload",
+                                                ALLOW_REMOTE_DOWNLOAD_DEFAULT);
+
+            const char* pszResolutionModel = CPLGetXMLValue(psIterURL,
+                                                "ResolutionMode", "RawContent");
+            if( EQUAL(pszResolutionModel, "RawContent") )
+                oItem.m_eResolutionMode = RawContent;
+            else
+                oItem.m_eResolutionMode = FieldsFromXPath;
+
+            oItem.m_nResolutionDepth = atoi( CPLGetXMLValue( psIterURL,
+                                        "ResolutionDepth", "1") );
+
+            oItem.m_bCacheResults = CPLGetXMLBoolValue( psIterURL,
+                                                        "CacheResults",
+                                                        CACHE_RESULTS_DEFAULT);
+
+            CPLXMLNode* psIter = psIterURL->psChild;
+            for( ; psIter != NULL; psIter = psIter->psNext )
+            {
+                if( psIter->eType == CXT_Element &&
+                    strcmp(psIter->pszValue, "HTTPHeader") == 0 )
+                {
+                    CPLString osName( CPLGetXMLValue(psIter, "Name", "") );
+                    CPLString osValue( CPLGetXMLValue(psIter, "Value", "") );
+                    oItem.m_aosNameValueHTTPHeaders.push_back(
+                            std::pair<CPLString, CPLString>(osName, osValue));
+                }
+                else if( psIter->eType == CXT_Element &&
+                         strcmp(psIter->pszValue, "Field") == 0 )
+                {
+                    URLSpecificResolution::XPathDerivedField oField;
+                    oField.m_osName = CPLGetXMLValue(psIter, "Name", "");
+                    oField.m_osType = CPLGetXMLValue(psIter, "Type", "");
+                    oField.m_osXPath = CPLGetXMLValue(psIter, "XPath", "");
+                    oItem.m_aoFields.push_back( oField );
+                }
+            }
+
+            m_aoURLSpecificRules.push_back( oItem );
+        }
+    }
+
+    return true;
+}
+
+/************************************************************************/
+/*                          URLSpecificResolution()                     */
+/************************************************************************/
+
+GMLASXLinkResolutionConf::URLSpecificResolution::URLSpecificResolution() :
+    m_eResolutionMode(RawContent),
+    m_nResolutionDepth(1),
+    m_bCacheResults(false)
+{
 }

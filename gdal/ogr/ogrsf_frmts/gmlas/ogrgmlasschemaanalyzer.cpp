@@ -131,7 +131,7 @@ class GMLASAnalyzerEntityResolver: public GMLASBaseEntityResolver
   public:
         GMLASAnalyzerEntityResolver(const CPLString& osBasePath,
                             std::map<CPLString, CPLString>& oMapURIToPrefix,
-                            GMLASResourceCache& oCache)
+                            GMLASXSDCache& oCache)
             : GMLASBaseEntityResolver(osBasePath, oCache)
             , m_oMapURIToPrefix(oMapURIToPrefix)
         {
@@ -472,7 +472,7 @@ bool GMLASSchemaAnalyzer::DerivesFromGMLFeature(XSElementDeclaration* poEltDecl)
 /*                               Analyze()                              */
 /************************************************************************/
 
-bool GMLASSchemaAnalyzer::Analyze(GMLASResourceCache& oCache,
+bool GMLASSchemaAnalyzer::Analyze(GMLASXSDCache& oCache,
                                   const CPLString& osBaseDirname,
                                   const std::vector<PairURIFilename>& aoXSDs)
 {
@@ -2244,7 +2244,7 @@ bool GMLASSchemaAnalyzer::ExploreModelGroup(
                             GMLASField oField;
                             // Fake xpath
                             oField.SetXPath(
-                                GMLASField::MakePKIDFieldFromXLinkHrefXPath(
+                                GMLASField::MakePKIDFieldXPathFromXLinkHrefXPath(
                                             osElementXPath + "/@xlink:href"));
                             oField.SetName( osEltName +
                                                                     "_pkid" );

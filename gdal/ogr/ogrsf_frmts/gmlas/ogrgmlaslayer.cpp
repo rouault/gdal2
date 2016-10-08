@@ -543,6 +543,25 @@ void OGRGMLASLayer::PostInit( bool bIncludeGeometryXML )
         }
 
         m_oMapOGRFieldIdxtoFCFieldIdx[iOGRIdx] = i;
+
+        // Create field to receive resolved xlink:href content, if needed
+        if( oField.GetXPath().find("@xlink:href") != std::string::npos &&
+            m_poDS->GetConf().m_oXLinkResolution.m_bDefaultResolutionEnabled &&
+            m_poDS->GetConf().m_oXLinkResolution.m_eDefaultResolutionMode
+                                        == GMLASXLinkResolutionConf::RawContent )
+        {
+            CPLString osRawContentFieldname(osOGRFieldName);
+            size_t nPos = osRawContentFieldname.find("_href");
+            if( nPos != std::string::npos )
+                osRawContentFieldname.resize(nPos);
+            osRawContentFieldname += "_rawcontent";
+            OGRFieldDefn oFieldDefnRaw( osRawContentFieldname, OFTString );
+            m_poFeatureDefn->AddFieldDefn( &oFieldDefnRaw );
+
+            m_oMapFieldXPathToOGRFieldIdx[
+                GMLASField::MakeXLinkRawContentFieldXPathFromXLinkHrefXPath(
+                    oField.GetXPath()) ] = m_poFeatureDefn->GetFieldCount() - 1;
+        }
     }
 
     CreateCompoundFoldedMappings();
@@ -613,10 +632,10 @@ OGRGMLASLayer::~OGRGMLASLayer()
 }
 
 /************************************************************************/
-/*                         RemoveUnusedField()                          */
+/*                            RemoveField()                             */
 /************************************************************************/
 
-bool OGRGMLASLayer::RemoveUnusedField( int nIdx )
+bool OGRGMLASLayer::RemoveField( int nIdx )
 {
     if( nIdx == m_nIDFieldIdx || nIdx == m_nParentIDFieldIdx )
         return false;
@@ -653,6 +672,60 @@ bool OGRGMLASLayer::RemoveUnusedField( int nIdx )
     }
 
     return true;
+}
+
+/************************************************************************/
+/*                            InsertNewField()                          */
+/************************************************************************/
+
+void OGRGMLASLayer::InsertNewField( int nInsertPos,
+                                    OGRFieldDefn& oFieldDefn,
+                                    const CPLString& osXPath )
+{
+    CPLAssert( nInsertPos >= 0 && nInsertPos <= m_poFeatureDefn->GetFieldCount() );
+    m_poFeatureDefn->AddFieldDefn( &oFieldDefn );
+    int* panMap = new int[ m_poFeatureDefn->GetFieldCount() ];
+    for( int i = 0; i < nInsertPos; ++i )
+    {
+        panMap[i] = i;
+    }
+    panMap[nInsertPos] = m_poFeatureDefn->GetFieldCount() - 1;
+    for( int i = nInsertPos + 1; i <  m_poFeatureDefn->GetFieldCount(); ++i )
+    {
+        panMap[i] = i - 1;
+    }
+    m_poFeatureDefn->ReorderFieldDefns( panMap );
+    delete[] panMap;
+
+    // Refresh maps
+    {
+        std::map<CPLString, int>       oMapFieldXPathToOGRFieldIdx;
+        std::map<CPLString, int>::const_iterator oIter =
+                            m_oMapFieldXPathToOGRFieldIdx.begin();
+        for( ; oIter != m_oMapFieldXPathToOGRFieldIdx.end(); ++oIter )
+        {
+            if( oIter->second < nInsertPos )
+                oMapFieldXPathToOGRFieldIdx[oIter->first] = oIter->second;
+            else
+                oMapFieldXPathToOGRFieldIdx[oIter->first] = oIter->second + 1;
+        }
+        m_oMapFieldXPathToOGRFieldIdx = oMapFieldXPathToOGRFieldIdx;
+        m_oMapFieldXPathToOGRFieldIdx[ osXPath ] = nInsertPos;
+    }
+
+    {
+        std::map<int, int>             oMapOGRFieldIdxtoFCFieldIdx;
+        std::map<int, int>::const_iterator oIter =
+                            m_oMapOGRFieldIdxtoFCFieldIdx.begin();
+        for( ; oIter != m_oMapOGRFieldIdxtoFCFieldIdx.end(); ++oIter )
+        {
+            if( oIter->first < nInsertPos )
+                oMapOGRFieldIdxtoFCFieldIdx[oIter->first] = oIter->second;
+            else
+                oMapOGRFieldIdxtoFCFieldIdx[oIter->first + 1] = oIter->second;
+        }
+        m_oMapOGRFieldIdxtoFCFieldIdx = oMapOGRFieldIdxtoFCFieldIdx;
+    }
 }
 
 /************************************************************************/
@@ -730,7 +803,8 @@ OGRFeatureDefn* OGRGMLASLayer::GetLayerDefn()
     {
         // If we haven't yet determined the SRS of geometry columns, do it now
         m_bLayerDefnFinalized = true;
-        if( m_poFeatureDefn->GetGeomFieldCount() > 0 )
+        if( m_poFeatureDefn->GetGeomFieldCount() > 0 ||
+            !m_poDS->GetConf().m_oXLinkResolution.m_aoURLSpecificRules.empty() )
         {
             if( m_poReader == NULL )
                 InitReader();

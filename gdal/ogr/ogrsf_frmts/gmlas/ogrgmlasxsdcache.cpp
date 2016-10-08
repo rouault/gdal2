@@ -40,7 +40,7 @@ CPL_CVSID("$Id$");
 GMLASResourceCache::GMLASResourceCache()
     : m_bHasCheckedCacheDirectory(false)
     , m_bRefresh(false)
-    , m_bAllowRemoteSchemaDownload(true)
+    , m_bAllowDownload(true)
 {
 }
 
@@ -101,12 +101,63 @@ bool GMLASResourceCache::RecursivelyCreateDirectoryIfNeeded()
 }
 
 /************************************************************************/
+/*                        GetCachedFilename()                           */
+/************************************************************************/
+
+CPLString GMLASResourceCache::GetCachedFilename(const CPLString& osResource)
+{
+    CPLString osLaunderedName(osResource);
+    if( osLaunderedName.find("/vsicurl_streaming/") == 0 )
+        osLaunderedName = osLaunderedName.substr(
+                                strlen("/vsicurl_streaming/") );
+    if( osLaunderedName.find("http://") == 0 )
+        osLaunderedName = osLaunderedName.substr( strlen("http://") );
+    else if( osLaunderedName.find("https://") == 0 )
+        osLaunderedName = osLaunderedName.substr( strlen("https://") );
+    for(size_t i=0; i<osLaunderedName.size(); i++)
+    {
+        if( !isalnum(osLaunderedName[i]) && osLaunderedName[i] != '.' )
+            osLaunderedName[i] = '_';
+    }
+
+    // If filename is too long, then truncate it and put a hash at the end
+    if( osLaunderedName.size() >= 255 - strlen(".tmp") )
+    {
+        GByte abyHash[CPL_SHA256_HASH_SIZE];
+        CPL_SHA256(osResource, osResource.size(), abyHash);
+        char* pszHash = CPLBinaryToHex(CPL_SHA256_HASH_SIZE, abyHash);
+        osLaunderedName.resize(255 - strlen(".tmp") -  2 * CPL_SHA256_HASH_SIZE);
+        osLaunderedName += pszHash;
+        CPLFree(pszHash);
+        CPLDebug("GMLAS", "Cached filename truncated to %s",
+                    osLaunderedName.c_str());
+    }
+
+    return CPLFormFilename( m_osCacheDirectory, osLaunderedName, NULL );
+}
+
+/************************************************************************/
+/*                          GMLASXSDCache()                             */
+/************************************************************************/
+
+GMLASXSDCache::GMLASXSDCache()
+{
+}
+
+/************************************************************************/
+/*                         ~GMLASXSDCache()                             */
+/************************************************************************/
+
+GMLASXSDCache::~GMLASXSDCache()
+{
+}
+/************************************************************************/
 /*                               Open()                                 */
 /************************************************************************/
 
-VSILFILE* GMLASResourceCache::Open( const CPLString& osResource,
-                                    const CPLString& osBasePath,
-                                    CPLString& osOutFilename )
+VSILFILE* GMLASXSDCache::Open( const CPLString& osResource,
+                               const CPLString& osBasePath,
+                               CPLString& osOutFilename )
 {
     osOutFilename = osResource;
     if( osResource.find("http://") == 0 ||
@@ -141,34 +192,7 @@ VSILFILE* GMLASResourceCache::Open( const CPLString& osResource,
         osOutFilename.find("/vsicurl_streaming/") == 0 &&
         RecursivelyCreateDirectoryIfNeeded() )
     {
-        CPLString osLaunderedName(osOutFilename);
-        if( osOutFilename.find("/vsicurl_streaming/http://") == 0 )
-            osLaunderedName = osLaunderedName.substr(
-                                    strlen("/vsicurl_streaming/http://") );
-        else if( osOutFilename.find("/vsicurl_streaming/https://") == 0 )
-            osLaunderedName = osLaunderedName.substr(
-                                    strlen("/vsicurl_streaming/https://") );
-        for(size_t i=0; i<osLaunderedName.size(); i++)
-        {
-            if( !isalnum(osLaunderedName[i]) && osLaunderedName[i] != '.' )
-                osLaunderedName[i] = '_';
-        }
-
-        // If filename is too long, then truncate it and put a hash at the end
-        if( osLaunderedName.size() >= 255 - strlen(".tmp") )
-        {
-            GByte abyHash[CPL_SHA256_HASH_SIZE];
-            CPL_SHA256(osOutFilename, osOutFilename.size(), abyHash);
-            char* pszHash = CPLBinaryToHex(CPL_SHA256_HASH_SIZE, abyHash);
-            osLaunderedName.resize(255 - strlen(".tmp") -  2 * CPL_SHA256_HASH_SIZE);
-            osLaunderedName += pszHash;
-            CPLFree(pszHash);
-            CPLDebug("GMLAS", "Cached filename truncated to %s",
-                     osLaunderedName.c_str());
-        }
-
-        CPLString osCachedFileName(CPLFormFilename(
-                                m_osCacheDirectory, osLaunderedName, NULL));
+        CPLString osCachedFileName(GetCachedFilename(osOutFilename));
         if( !m_bRefresh ||
             m_aoSetRefreshedFiles.find(osCachedFileName) !=
                                             m_aoSetRefreshedFiles.end() )
@@ -179,7 +203,7 @@ VSILFILE* GMLASResourceCache::Open( const CPLString& osResource,
         {
             CPLDebug("GMLAS", "Use cached %s", osCachedFileName.c_str());
         }
-        else if( m_bAllowRemoteSchemaDownload )
+        else if( m_bAllowDownload )
         {
             if( m_bRefresh )
                 m_aoSetRefreshedFiles.insert(osCachedFileName);
@@ -208,7 +232,7 @@ VSILFILE* GMLASResourceCache::Open( const CPLString& osResource,
     }
     else
     {
-        if( m_bAllowRemoteSchemaDownload ||
+        if( m_bAllowDownload ||
             osOutFilename.find("/vsicurl_streaming/") != 0 )
         {
             fp = VSIFOpenL(osOutFilename, "rb");

@@ -54,6 +54,11 @@ def ogr_gmlas_basic():
 
     gdal.SetConfigOption('GMLAS_WARN_UNEXPECTED', 'YES')
 
+    # FileGDB embedded libxml2 cause random crashes with CPLValidateXML() use of external libxml2
+    ogrtest.old_val_GDAL_XML_VALIDATION = gdal.GetConfigOption('GDAL_XML_VALIDATION')
+    if ogr.GetDriverByName('FileGDB') is not None and ogrtest.old_val_GDAL_XML_VALIDATION is None:
+        gdal.SetConfigOption('GDAL_XML_VALIDATION', 'NO')
+
     ds = ogr.Open('GMLAS:data/gmlas_test1.xml')
     if ds is None:
         gdaltest.post_reason('fail')
@@ -1005,6 +1010,12 @@ def ogr_gmlas_conf():
         gdaltest.post_reason('fail')
         return 'fail'
 
+    # Valid XML, but not validating
+    gdal.FileFromMemBuffer('/vsimem/my_conf.xml', "<not_validating/>")
+    with gdaltest.error_handler():
+        gdal.OpenEx('GMLAS:data/gmlas_test1.xml', open_options = ['CONFIG_FILE=/vsimem/my_conf.xml'])
+    gdal.Unlink('/vsimem/my_conf.xml')
+
     # Inlined conf file + UseArrays = false
     ds = gdal.OpenEx('GMLAS:data/gmlas_test1.xml', open_options = [
             'CONFIG_FILE=<Configuration><LayerBuildingRules><UseArrays>false</UseArrays></LayerBuildingRules></Configuration>'])
@@ -1257,9 +1268,6 @@ def ogr_gmlas_cache():
 
     if ogr.GetDriverByName('GMLAS') is None:
         return 'skip'
-
-    webserver_process = None
-    webserver_port = 0
 
     try:
         drv = gdal.GetDriverByName( 'HTTP' )
@@ -1983,6 +1991,460 @@ def ogr_gmlas_remove_unused_layers_and_fields():
     return 'success'
 
 ###############################################################################
+#  Test xlink resolution
+
+def ogr_gmlas_xlink_resolver():
+
+    try:
+        drv = gdal.GetDriverByName( 'HTTP' )
+    except:
+        drv = None
+
+    if drv is None:
+        return 'skip'
+
+    (webserver_process, webserver_port) = webserver.launch(fork_process = False)
+    if webserver_port == 0:
+        return 'skip'
+
+    gdal.FileFromMemBuffer('/vsimem/ogr_gmlas_xlink_resolver.xsd',
+"""<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+              xmlns:xlink="http://fake_xlink"
+              elementFormDefault="qualified"
+              attributeFormDefault="unqualified">
+
+<xs:import namespace="http://fake_xlink" schemaLocation="ogr_gmlas_xlink_resolver_fake_xlink.xsd"/>
+
+<xs:element name="FeatureCollection">
+  <xs:complexType>
+    <xs:sequence>
+        <xs:element ref="main_elt" minOccurs="0" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+</xs:element>
+
+<xs:element name="main_elt">
+  <xs:complexType>
+    <xs:sequence>
+        <xs:element name="my_link">
+            <xs:complexType>
+                <xs:sequence/>
+                <xs:attribute name="attr_before" type="xs:string"/>
+                <xs:attribute ref="xlink:href"/>
+                <xs:attribute name="attr_after" type="xs:string"/>
+            </xs:complexType>
+        </xs:element>
+        <xs:element name="my_link2" minOccurs="0">
+            <xs:complexType>
+                <xs:sequence/>
+                <xs:attribute name="attr_before" type="xs:string"/>
+                <xs:attribute ref="xlink:href"/>
+                <xs:attribute name="attr_after" type="xs:string"/>
+            </xs:complexType>
+        </xs:element>
+    </xs:sequence>
+  </xs:complexType>
+</xs:element>
+
+</xs:schema>""")
+
+    gdal.FileFromMemBuffer('/vsimem/ogr_gmlas_xlink_resolver_fake_xlink.xsd',
+"""<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+              targetNamespace="http://fake_xlink"
+              elementFormDefault="qualified"
+              attributeFormDefault="unqualified">
+<xs:attribute name="href" type="xs:anyURI"/>
+</xs:schema>""")
+
+    gdal.FileFromMemBuffer('/vsimem/ogr_gmlas_xlink_resolver.xml',
+"""
+<FeatureCollection xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xmlns:xlink="http://fake_xlink"
+          xsi:noNamespaceSchemaLocation="ogr_gmlas_xlink_resolver.xsd">
+  <main_elt>
+    <my_link attr_before="a" xlink:href="http://localhost:%d/vsimem/resource.xml" attr_after="b"/>
+  </main_elt>
+  <main_elt>
+    <my_link xlink:href="http://localhost:%d/vsimem/resource2.xml"/>
+  </main_elt>
+</FeatureCollection>""" % (webserver_port, webserver_port))
+
+    # By default, no resolution
+    ds = gdal.OpenEx('GMLAS:/vsimem/ogr_gmlas_xlink_resolver.xml')
+    lyr = ds.GetLayer(0)
+    if lyr.GetLayerDefn().GetFieldIndex('my_link_rawcontent') >= 0:
+        gdaltest.post_reason('fail')
+        webserver.server_stop(webserver_process, webserver_port)
+        return 'fail'
+    ds = None
+
+    # Enable resolution, but only from local cache
+    ds = gdal.OpenEx('GMLAS:/vsimem/ogr_gmlas_xlink_resolver.xml',
+        open_options = ["""CONFIG_FILE=<Configuration>
+        <XLinkResolution>
+            <CacheDirectory>/vsimem/gmlas_xlink_cache</CacheDirectory>
+            <DefaultResolution enabled="true">
+                <AllowRemoteDownload>false</AllowRemoteDownload>
+            </DefaultResolution>
+        </XLinkResolution></Configuration>"""] )
+    lyr = ds.GetLayer(0)
+    if lyr.GetLayerDefn().GetFieldIndex('my_link_rawcontent') < 0:
+        gdaltest.post_reason('fail')
+        webserver.server_stop(webserver_process, webserver_port)
+        return 'fail'
+    f = lyr.GetNextFeature()
+    if f.IsFieldSet('my_link_rawcontent'):
+        gdaltest.post_reason('fail')
+        webserver.server_stop(webserver_process, webserver_port)
+        return 'fail'
+
+    # Try again but this time with the cached file
+    cached_file = '/vsimem/gmlas_xlink_cache/localhost_%d_vsimem_resource.xml' % webserver_port
+    gdal.FileFromMemBuffer(cached_file, 'foo')
+    lyr.ResetReading()
+    f = lyr.GetNextFeature()
+    if f['my_link_rawcontent' ] != 'foo':
+        gdaltest.post_reason('fail')
+        webserver.server_stop(webserver_process, webserver_port)
+        return 'fail'
+    ds = None
+    gdal.Unlink(cached_file)
+
+    # Enable remote resolution (but local caching disabled)
+    gdal.FileFromMemBuffer('/vsimem/resource.xml', 'bar')
+    gdal.FileFromMemBuffer('/vsimem/resource2.xml', 'baz')
+    gdal.SetConfigOption('GMLAS_XLINK_RAM_CACHE_SIZE', '5')
+    ds = gdal.OpenEx('GMLAS:/vsimem/ogr_gmlas_xlink_resolver.xml',
+        open_options = ["""CONFIG_FILE=<Configuration>
+        <XLinkResolution>
+            <CacheDirectory>/vsimem/gmlas_xlink_cache</CacheDirectory>
+            <DefaultResolution enabled="true">
+                <AllowRemoteDownload>true</AllowRemoteDownload>
+            </DefaultResolution>
+        </XLinkResolution></Configuration>"""] )
+    gdal.SetConfigOption('GMLAS_XLINK_RAM_CACHE_SIZE', None)
+    lyr = ds.GetLayer(0)
+    f = lyr.GetNextFeature()
+    if f['my_link_rawcontent' ] != 'bar':
+        gdaltest.post_reason('fail')
+        webserver.server_stop(webserver_process, webserver_port)
+        return 'fail'
+    # Check that the content is not cached
+    if gdal.VSIStatL(cached_file) is not None:
+        gdaltest.post_reason('fail')
+        webserver.server_stop(webserver_process, webserver_port)
+        return 'fail'
+
+    # Delete the remote file and check that we can retrieve it from RAM cache
+    gdal.Unlink('/vsimem/resource.xml')
+    lyr.ResetReading()
+    f = lyr.GetNextFeature()
+    if f['my_link_rawcontent' ] != 'bar':
+        gdaltest.post_reason('fail')
+        webserver.server_stop(webserver_process, webserver_port)
+        return 'fail'
+
+    f = lyr.GetNextFeature()
+    if f['my_link_rawcontent' ] != 'baz':
+        gdaltest.post_reason('fail')
+        webserver.server_stop(webserver_process, webserver_port)
+        return 'fail'
+
+    gdal.Unlink('/vsimem/resource2.xml')
+    lyr.ResetReading()
+    # /vsimem/resource.xml has been evicted from the cache
+    with gdaltest.error_handler():
+        f = lyr.GetNextFeature()
+    if f['my_link_rawcontent' ] is not None:
+        gdaltest.post_reason('fail')
+        webserver.server_stop(webserver_process, webserver_port)
+        return 'fail'
+
+    f = lyr.GetNextFeature()
+    if f['my_link_rawcontent' ] != 'baz':
+        gdaltest.post_reason('fail')
+        webserver.server_stop(webserver_process, webserver_port)
+        return 'fail'
+
+    ds = None
+
+    # Enable remote resolution and caching
+    gdal.FileFromMemBuffer('/vsimem/resource.xml', 'bar')
+    ds = gdal.OpenEx('GMLAS:/vsimem/ogr_gmlas_xlink_resolver.xml',
+        open_options = ["""CONFIG_FILE=<Configuration>
+        <XLinkResolution>
+            <CacheDirectory>/vsimem/gmlas_xlink_cache</CacheDirectory>
+            <DefaultResolution enabled="true">
+                <AllowRemoteDownload>true</AllowRemoteDownload>
+                <CacheResults>true</CacheResults>
+            </DefaultResolution>
+        </XLinkResolution></Configuration>"""] )
+    lyr = ds.GetLayer(0)
+    f = lyr.GetNextFeature()
+    if f['my_link_rawcontent' ] != 'bar':
+        gdaltest.post_reason('fail')
+        webserver.server_stop(webserver_process, webserver_port)
+        return 'fail'
+    # Check that the content is cached
+    if gdal.VSIStatL(cached_file) is None:
+        gdaltest.post_reason('fail')
+        webserver.server_stop(webserver_process, webserver_port)
+        return 'fail'
+    ds = None
+
+    # Test absent remote resource
+    gdal.FileFromMemBuffer('/vsimem/ogr_gmlas_xlink_resolver_absent_resource.xml',
+"""
+<main_elt xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xmlns:xlink="http://fake_xlink"
+          xsi:noNamespaceSchemaLocation="ogr_gmlas_xlink_resolver.xsd">
+    <my_link xlink:href="http://localhost:%d/vsimem/resource_not_existing.xml"/>
+</main_elt>""" % webserver_port)
+    ds = gdal.OpenEx('GMLAS:/vsimem/ogr_gmlas_xlink_resolver_absent_resource.xml',
+        open_options = ["""CONFIG_FILE=<Configuration>
+        <XLinkResolution>
+            <CacheDirectory>/vsimem/gmlas_xlink_cache</CacheDirectory>
+            <DefaultResolution enabled="true">
+                <AllowRemoteDownload>true</AllowRemoteDownload>
+            </DefaultResolution>
+        </XLinkResolution></Configuration>"""] )
+    lyr = ds.GetLayer(0)
+    with gdaltest.error_handler():
+        f = lyr.GetNextFeature()
+    if f.IsFieldSet('my_link_rawcontent'):
+        gdaltest.post_reason('fail')
+        f.DumpReadable()
+        webserver.server_stop(webserver_process, webserver_port)
+        return 'fail'
+    ds = None
+
+    # Test file size limit
+    gdal.Unlink(cached_file)
+    ds = gdal.OpenEx('GMLAS:/vsimem/ogr_gmlas_xlink_resolver.xml',
+        open_options = ["""CONFIG_FILE=<Configuration>
+        <XLinkResolution>
+            <MaxFileSize>1</MaxFileSize>
+            <CacheDirectory>/vsimem/gmlas_xlink_cache</CacheDirectory>
+            <DefaultResolution enabled="true">
+                <AllowRemoteDownload>true</AllowRemoteDownload>
+                <CacheResults>true</CacheResults>
+            </DefaultResolution>
+        </XLinkResolution></Configuration>"""] )
+    lyr = ds.GetLayer(0)
+    with gdaltest.error_handler():
+        f = lyr.GetNextFeature()
+    if gdal.GetLastErrorMsg() == '':
+        gdaltest.post_reason('fail')
+        webserver.server_stop(webserver_process, webserver_port)
+        return 'fail'
+    # Check that the content is not cached
+    if gdal.VSIStatL(cached_file) is not None:
+        gdaltest.post_reason('fail')
+        webserver.server_stop(webserver_process, webserver_port)
+        return 'fail'
+    ds = None
+
+    # Test with URL specific rule with RawContent resolution
+    gdal.FileFromMemBuffer('/vsimem/resource.xml', 'bar')
+    ds = gdal.OpenEx('GMLAS:/vsimem/ogr_gmlas_xlink_resolver.xml',
+        open_options = ["""CONFIG_FILE=<Configuration>
+        <XLinkResolution>
+            <CacheDirectory>/vsimem/gmlas_xlink_cache</CacheDirectory>
+            <URLSpecificResolution>
+                <URLPrefix>http://localhost:%d/vsimem/</URLPrefix>
+                <AllowRemoteDownload>true</AllowRemoteDownload>
+                <ResolutionMode>RawContent</ResolutionMode>
+                <CacheResults>true</CacheResults>
+            </URLSpecificResolution>
+        </XLinkResolution></Configuration>""" % webserver_port] )
+    lyr = ds.GetLayer(0)
+    f = lyr.GetNextFeature()
+    if f['my_link_attr_before'] != 'a' or \
+       f['my_link_href'] != 'http://localhost:%d/vsimem/resource.xml' % webserver_port or \
+       f['my_link_rawcontent'] != 'bar' or \
+       f['my_link_attr_after'] != 'b':
+        gdaltest.post_reason('fail')
+        f.DumpReadable()
+        webserver.server_stop(webserver_process, webserver_port)
+        return 'fail'
+    # Check that the content is cached
+    if gdal.VSIStatL(cached_file) is None:
+        gdaltest.post_reason('fail')
+        webserver.server_stop(webserver_process, webserver_port)
+        return 'fail'
+    ds = None
+
+    # Test with URL specific rule with FieldsFromXPath resolution
+    gdal.FileFromMemBuffer('/vsimem/subdir1/resource.xml', """
+<?xml version='1.0' encoding='UTF-8'?>
+<myns:top>
+    <myns:foo>fooVal</myns:foo>
+    <myns:bar>123</myns:bar>
+</myns:top>""")
+    gdal.FileFromMemBuffer('/vsimem/subdir2/resource2.xml', """
+<?xml version='1.0' encoding='UTF-8'?>
+<myns:top>
+    <myns:foo>fooVal2</myns:foo>
+    <myns:foo>fooVal3</myns:foo>
+    <myns:baz val="345"/>
+    <myns:xml_blob>foo<blob/>bar</myns:xml_blob>
+    <long>1234567890123</long>
+    <datetime>2016-10-07T12:34:56Z</datetime>
+</myns:top>""")
+    gdal.FileFromMemBuffer('/vsimem/non_matching_resource.xml', 'foo')
+
+    gdal.FileFromMemBuffer('/vsimem/ogr_gmlas_xlink_resolver.xml',
+"""
+<FeatureCollection xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xmlns:xlink="http://fake_xlink"
+          xsi:noNamespaceSchemaLocation="ogr_gmlas_xlink_resolver.xsd">
+  <main_elt>
+    <my_link attr_before="a" xlink:href="http://localhost:%d/vsimem/subdir1/resource.xml" attr_after="b"/>
+    <my_link2 attr_before="a2" xlink:href="http://localhost:%d/vsimem/subdir2/resource2.xml" attr_after="b2"/>
+  </main_elt>
+  <main_elt>
+    <my_link attr_before="a" xlink:href="http://localhost:%d/vsimem/non_matching_resource.xml" attr_after="b"/>
+    <my_link2 attr_before="a2" xlink:href="http://localhost:%d/vsimem/subdir1/resource.xml" attr_after="b2"/>
+  </main_elt>
+</FeatureCollection>""" % (webserver_port, webserver_port,webserver_port, webserver_port))
+
+    config_file = """<Configuration>
+        <XLinkResolution>
+            <CacheDirectory>/vsimem/gmlas_xlink_cache</CacheDirectory>
+            <URLSpecificResolution>
+                <URLPrefix>http://localhost:%d/vsimem/subdir1</URLPrefix>
+                <HTTPHeader>
+                    <Name>Accept</Name>
+                    <Value>application/x-iso19135+xml</Value>
+                </HTTPHeader>
+                <HTTPHeader>
+                    <Name>Accept-Language</Name>
+                    <Value>en</Value>
+                </HTTPHeader>
+                <AllowRemoteDownload>true</AllowRemoteDownload>
+                <ResolutionMode>FieldsFromXPath</ResolutionMode>
+                <CacheResults>true</CacheResults>
+                <Field>
+                    <Name>foo</Name>
+                    <Type>string</Type>
+                    <XPath>myns:top/myns:foo</XPath>
+                </Field>
+                <Field>
+                    <Name>bar</Name>
+                    <Type>integer</Type>
+                    <XPath>myns:top/myns:bar</XPath>
+                </Field>
+            </URLSpecificResolution>
+            <URLSpecificResolution>
+                <URLPrefix>http://localhost:%d/vsimem/subdir2</URLPrefix>
+                <AllowRemoteDownload>true</AllowRemoteDownload>
+                <ResolutionMode>FieldsFromXPath</ResolutionMode>
+                <CacheResults>true</CacheResults>
+                <Field>
+                    <Name>foo</Name>
+                    <Type>string</Type>
+                    <XPath>myns:top/myns:foo</XPath>
+                </Field>
+                <Field>
+                    <Name>baz</Name>
+                    <Type>integer</Type>
+                    <XPath>myns:top/myns:baz/@val</XPath>
+                </Field>
+                <Field>
+                    <Name>xml_blob</Name>
+                    <Type>string</Type>
+                    <XPath>//myns:xml_blob</XPath>
+                </Field>
+                <Field>
+                    <Name>long</Name>
+                    <Type>long</Type>
+                    <XPath>//long</XPath>
+                </Field>
+                <Field>
+                    <Name>datetime</Name>
+                    <Type>dateTime</Type>
+                    <XPath>//datetime</XPath>
+                </Field>
+            </URLSpecificResolution>
+        </XLinkResolution></Configuration>""" % (webserver_port,webserver_port)
+
+    ds = gdal.OpenEx('GMLAS:/vsimem/ogr_gmlas_xlink_resolver.xml',
+        open_options = ['CONFIG_FILE=' + config_file] )
+    lyr = ds.GetLayer(0)
+    f = lyr.GetNextFeature()
+    if f['my_link_attr_before'] != 'a' or \
+       f['my_link_href'] != 'http://localhost:%d/vsimem/subdir1/resource.xml' % webserver_port or \
+       f['my_link_foo'] != 'fooVal' or \
+       f['my_link_bar'] != 123 or \
+       f['my_link_attr_after'] != 'b' or \
+       f['my_link2_attr_before'] != 'a2' or \
+       f['my_link2_href'] != 'http://localhost:%d/vsimem/subdir2/resource2.xml' % webserver_port or \
+       f['my_link2_foo'] != 'fooVal2 fooVal3' or \
+       f['my_link2_baz'] != 345 or \
+       f['my_link2_xml_blob'] != """foo<blob />
+bar""" or \
+       f['my_link2_long'] != 1234567890123 or \
+       f['my_link2_datetime'] != '2016/10/07 12:34:56+00' or \
+       f['my_link2_bar'] is not None or \
+       f['my_link2_attr_after'] != 'b2':
+        gdaltest.post_reason('fail')
+        f.DumpReadable()
+        webserver.server_stop(webserver_process, webserver_port)
+        return 'fail'
+
+    f = lyr.GetNextFeature()
+    if f['my_link2_bar'] != 123:
+        gdaltest.post_reason('fail')
+        f.DumpReadable()
+        webserver.server_stop(webserver_process, webserver_port)
+        return 'fail'
+
+    gdal.Unlink('/vsimem/subdir1/resource.xml')
+    gdal.Unlink('/vsimem/subdir2/resource2.xml')
+
+    # Test caching
+    ds = gdal.OpenEx('GMLAS:/vsimem/ogr_gmlas_xlink_resolver.xml',
+        open_options = ['CONFIG_FILE=' + config_file] )
+    lyr = ds.GetLayer(0)
+    f = lyr.GetNextFeature()
+    if f['my_link_attr_before'] != 'a' or \
+       f['my_link_href'] != 'http://localhost:%d/vsimem/subdir1/resource.xml' % webserver_port or \
+       f['my_link_foo'] != 'fooVal' or \
+       f['my_link_bar'] != 123 or \
+       f['my_link_attr_after'] != 'b' or \
+       f['my_link2_attr_before'] != 'a2' or \
+       f['my_link2_href'] != 'http://localhost:%d/vsimem/subdir2/resource2.xml' % webserver_port or \
+       f['my_link2_foo'] != 'fooVal2 fooVal3' or \
+       f['my_link2_baz'] != 345 or \
+       f['my_link2_bar'] is not None or \
+       f['my_link2_attr_after'] != 'b2':
+        gdaltest.post_reason('fail')
+        f.DumpReadable()
+        webserver.server_stop(webserver_process, webserver_port)
+        return 'fail'
+
+    ds = None
+
+    webserver.server_stop(webserver_process, webserver_port)
+
+    gdal.Unlink('/vsimem/ogr_gmlas_xlink_resolver.xsd')
+    gdal.Unlink('/vsimem/ogr_gmlas_xlink_resolver_fake_xlink.xsd')
+    gdal.Unlink('/vsimem/ogr_gmlas_xlink_resolver.xml')
+    gdal.Unlink('/vsimem/ogr_gmlas_xlink_resolver_absent_resource.xml')
+    fl = gdal.ReadDir('/vsimem/gmlas_xlink_cache')
+    if fl is not None:
+        for filename in fl:
+            gdal.Unlink('/vsimem/gmlas_xlink_cache/' + filename)
+    gdal.Unlink('/vsimem/gmlas_xlink_cache')
+    gdal.Unlink('/vsimem/resource.xml')
+    gdal.Unlink('/vsimem/resource2.xml')
+    gdal.Unlink('/vsimem/subdir1/resource.xml')
+    gdal.Unlink('/vsimem/subdir2/resource2.xml')
+    gdal.Unlink('/vsimem/non_matching_resource.xml')
+
+    return 'success'
+
+###############################################################################
 #  Cleanup
 
 def ogr_gmlas_cleanup():
@@ -1995,6 +2457,7 @@ def ogr_gmlas_cleanup():
         print('Remaining files: ' + str(files))
 
     gdal.SetConfigOption('GMLAS_WARN_UNEXPECTED', None)
+    gdal.SetConfigOption('GDAL_XML_VALIDATION', ogrtest.old_val_GDAL_XML_VALIDATION)
 
     return 'success'
 
@@ -2032,6 +2495,7 @@ gdaltest_list = [
     ogr_gmlas_avoid_same_name_inlined_classes,
     ogr_gmlas_validate_ignored_fixed_attribute,
     ogr_gmlas_remove_unused_layers_and_fields,
+    ogr_gmlas_xlink_resolver,
     ogr_gmlas_cleanup ]
 
 #gdaltest_list = [ ogr_gmlas_instantiate_only_gml_feature ]

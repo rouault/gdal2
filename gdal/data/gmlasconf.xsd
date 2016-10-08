@@ -206,6 +206,353 @@
             </xs:sequence>
           </xs:complexType>
         </xs:element>
+
+        <xs:element name="XLinkResolution" minOccurs="0">
+          <xs:annotation>
+            <xs:documentation>
+                Rules regarding resolution of xlink:href attributes
+            </xs:documentation>
+          </xs:annotation>
+          <xs:complexType>
+            <xs:sequence>
+
+              <xs:element name="Timeout" minOccurs="0" type="xs:positiveInteger">
+                <xs:annotation>
+                  <xs:documentation>
+                    Timeout in seconds for resolving a HTTP resource.
+                    Default: no timeout or value of GDAL_HTTP_TIMEOUT
+                    configuration option.
+                  </xs:documentation>
+                </xs:annotation>
+              </xs:element>
+
+              <xs:element name="MaxGlobalResolutionTime" minOccurs="0"
+                          type="xs:positiveInteger">
+                <xs:annotation>
+                  <xs:documentation>
+                    Maximum allowed time for resolving all XLinks in a single
+                    document.
+                    Default: none
+                  </xs:documentation>
+                </xs:annotation>
+              </xs:element>
+
+              <xs:element name="MaxFileSize" minOccurs="0">
+                <xs:annotation>
+                  <xs:documentation>
+                    Maximum file size allowed. 
+                    Default: 1 MB.
+                  </xs:documentation>
+                </xs:annotation>
+                <xs:simpleType>
+                    <xs:union memberTypes="xs:positiveInteger unlimitedEnumType"/>
+                </xs:simpleType>
+              </xs:element>
+
+              <xs:element name="ProxyServerPort" minOccurs="0" type="xs:string">
+                <xs:annotation>
+                  <xs:documentation>
+                    Name and port of proxy server (server:port syntax)
+                    Default: none or value of GDAL_HTTP_PROXY
+                    configuration option.
+                  </xs:documentation>
+                </xs:annotation>
+              </xs:element>
+
+              <xs:element name="ProxyUserPassword" minOccurs="0" type="xs:string">
+                <xs:annotation>
+                  <xs:documentation>
+                    User name and password to use for proxy server
+                    (username:password syntax)
+                    Default: none or value of GDAL_HTTP_PROXYUSERPW
+                    configuration option.
+                  </xs:documentation>
+                </xs:annotation>
+              </xs:element>
+
+              <xs:element name="ProxyAuth" minOccurs="0" type="xs:string">
+                <xs:annotation>
+                  <xs:documentation>
+                    Proxy authentification method: one of Basic, NTLM, Digest
+                    or Any.
+                    Default: none or value of GDAL_PROXY_AUTH
+                    configuration option.
+                  </xs:documentation>
+                </xs:annotation>
+              </xs:element>
+
+              <xs:element name="CacheDirectory" minOccurs="0" type="xs:string">
+                <xs:annotation>
+                  <xs:documentation>
+                    Name of the cache directory for resolved documents.
+                    If not specified, this defaults to $HOME/.gdal/gmlas_xlink_resolution_cache.
+                    The cache is only used if enabled in DefaultResolution or
+                    particular URLSpecificResolution rules.
+                  </xs:documentation>
+                </xs:annotation>
+              </xs:element>
+
+              <xs:element name="DefaultResolution" minOccurs="0">
+                <xs:annotation>
+                   <xs:documentation>
+                    Default rules that apply for all URLs that are not referenced
+                    by a dedicated URLSpecificResolution rule.
+                   </xs:documentation>
+                </xs:annotation>
+                <xs:complexType>
+                  <xs:sequence>
+
+                    <xs:element name="AllowRemoteDownload" minOccurs="0"
+                                type="xs:boolean">
+                    <xs:annotation>
+                        <xs:documentation>
+                            Whether downloading remote resources is allowed.
+                            If false, only locally cached resources will be used.
+                            Default is true.
+                        </xs:documentation>
+                    </xs:annotation>
+                    </xs:element>
+
+                    <xs:element name="ResolutionMode" minOccurs="0">
+                      <xs:annotation>
+                        <xs:documentation>
+                            Resolution mode. Must be XMLRawContent currently
+                        </xs:documentation>
+                      </xs:annotation>
+                      <xs:simpleType>
+                        <xs:restriction base="xs:string">
+                            <xs:enumeration value="RawContent">
+                                <xs:annotation>
+                                    <xs:documentation>
+                                        The content, provided it is of text
+                                        nature, is set in a field suffixed with
+                                        _raw
+                                    </xs:documentation>
+                                </xs:annotation>
+                            </xs:enumeration>
+                        </xs:restriction>
+                      </xs:simpleType>
+                   </xs:element>
+
+                    <xs:element name="ResolutionDepth" minOccurs="0">
+                      <xs:annotation>
+                        <xs:documentation>
+                            Resolution depth. Must be 1 currently.
+                        </xs:documentation>
+                      </xs:annotation>
+                      <xs:simpleType>
+                        <xs:restriction base="xs:nonNegativeInteger">
+                            <xs:minInclusive value="1"/>
+                            <xs:maxInclusive value="1"/>
+                        </xs:restriction>
+                      </xs:simpleType>
+                   </xs:element>
+
+                    <xs:element name="CacheResults" minOccurs="0" type="xs:boolean">
+                      <xs:annotation>
+                        <xs:documentation>
+                            Whether resolved documents should be cached.
+                            Default is false.
+                        </xs:documentation>
+                      </xs:annotation>
+                   </xs:element>
+
+                  </xs:sequence>
+
+                  <xs:attribute name="enabled" type="xs:boolean">
+                    <xs:annotation>
+                      <xs:documentation>
+                        Whether default XLink resolution is enabled.
+                        Default is false.
+                      </xs:documentation>
+                    </xs:annotation>
+                  </xs:attribute>
+
+                </xs:complexType>
+              </xs:element>
+
+              <xs:element name="URLSpecificResolution" minOccurs="0" maxOccurs="unbounded">
+                <xs:annotation>
+                   <xs:documentation>
+                    Particular rule that apply for all URLs starting with
+                    a precise prefix. Setting at least one URLSpecificResolution will cause
+                    a compulsory initial scan of the whole file to be done so
+                    as to identify which xlink:href fields use which URL, so as
+                    to create the relevant OGR fields.
+                   </xs:documentation>
+                </xs:annotation>
+                <xs:complexType>
+                  <xs:sequence>
+
+                    <xs:element name="URLPrefix" minOccurs="0" type="xs:anyURI">
+                      <xs:annotation>
+                        <xs:documentation>
+                            URL prefix. All URLs starting with this string will
+                            match this rule.
+                        </xs:documentation>
+                      </xs:annotation>
+                   </xs:element>
+
+                    <xs:element name="HTTPHeader" minOccurs="0" maxOccurs="unbounded">
+                      <xs:annotation>
+                        <xs:documentation>
+                            Custom HTTP header to send in the GET request.
+                        </xs:documentation>
+                      </xs:annotation>
+                      <xs:complexType>
+                        <xs:sequence>
+                          <xs:element name="Name" type="xs:string">
+                            <xs:annotation>
+                              <xs:documentation>
+                                 HTTP header name
+                              </xs:documentation>
+                            </xs:annotation>
+                          </xs:element>
+                          <xs:element name="Value" type="xs:string">
+                            <xs:annotation>
+                              <xs:documentation>
+                                 HTTP header value
+                              </xs:documentation>
+                            </xs:annotation>
+                          </xs:element>
+                        </xs:sequence>
+                      </xs:complexType>
+                   </xs:element>
+
+                    <xs:element name="AllowRemoteDownload" minOccurs="0"
+                                type="xs:boolean">
+                    <xs:annotation>
+                        <xs:documentation>
+                            Whether downloading remote resources is allowed.
+                            If false, only locally cached resources will be used.
+                            Default is true.
+                        </xs:documentation>
+                    </xs:annotation>
+                    </xs:element>
+
+                    <xs:element name="ResolutionMode" minOccurs="0">
+                      <xs:annotation>
+                        <xs:documentation>
+                            Resolution mode.
+                            Default is RawContent.
+                        </xs:documentation>
+                      </xs:annotation>
+                      <xs:simpleType>
+                        <xs:restriction base="xs:string">
+                            <xs:enumeration value="RawContent">
+                                <xs:annotation>
+                                    <xs:documentation>
+                                        The content, provided it is of text
+                                        nature, is set in a field suffixed with
+                                        _rawcontent
+                                    </xs:documentation>
+                                </xs:annotation>
+                            </xs:enumeration>
+                            <xs:enumeration value="FieldsFromXPath">
+                                <xs:annotation>
+                                    <xs:documentation>
+                                        The content, assumed to be XML, will be
+                                        parsed and fields specified with Field
+                                        created.
+                                    </xs:documentation>
+                                </xs:annotation>
+                            </xs:enumeration>
+                        </xs:restriction>
+                      </xs:simpleType>
+                   </xs:element>
+
+                    <xs:element name="ResolutionDepth" minOccurs="0">
+                      <xs:annotation>
+                        <xs:documentation>
+                            Resolution depth. Must be 1 currently.
+                        </xs:documentation>
+                      </xs:annotation>
+                      <xs:simpleType>
+                        <xs:restriction base="xs:nonNegativeInteger">
+                            <xs:minInclusive value="1"/>
+                            <xs:maxInclusive value="1"/>
+                        </xs:restriction>
+                      </xs:simpleType>
+                   </xs:element>
+
+                    <xs:element name="CacheResults" minOccurs="0" type="xs:boolean">
+                      <xs:annotation>
+                        <xs:documentation>
+                            Whether resolved documents should be cached.
+                            Default is false.
+                        </xs:documentation>
+                      </xs:annotation>
+                   </xs:element>
+
+                    <xs:element name="Field" minOccurs="0" maxOccurs="unbounded">
+                      <xs:annotation>
+                        <xs:documentation>
+                            Field to create from parsed XML content. Only used
+                            if ResolutionMode = FieldsFromXPath
+                        </xs:documentation>
+                      </xs:annotation>
+                      <xs:complexType>
+                        <xs:sequence>
+                          <xs:element name="Name" type="xs:string">
+                            <xs:annotation>
+                              <xs:documentation>
+                                 Field name
+                              </xs:documentation>
+                            </xs:annotation>
+                          </xs:element>
+                          <xs:element name="Type">
+                            <xs:annotation>
+                              <xs:documentation>
+                                 Field type
+                              </xs:documentation>
+                            </xs:annotation>
+                            <xs:simpleType>
+                                <xs:restriction base="xs:string">
+                                    <xs:enumeration value="string"/>
+                                    <xs:enumeration value="integer"/>
+                                    <xs:enumeration value="long"/>
+                                    <xs:enumeration value="double"/>
+                                    <xs:enumeration value="dateTime"/>
+                                </xs:restriction>
+                            </xs:simpleType>
+                          </xs:element>
+                          <xs:element name="XPath" type="xs:string">
+                            <xs:annotation>
+                              <xs:documentation>
+                                 XPath from the root of the resolved document
+                                 from which to extract the value of the field.
+                                Only a restricted subset of the full XPath 1.0
+                                syntax is supported, namely the abbreviated syntax
+                                with the '//' and '@' axis specifiers.
+                                Valid XPath are for example:
+                                - [ns1:]foo/[ns2:]bar: matches a bar element as a
+                                    direct child of a foo element, foo being at any
+                                    nesting level in the compared XPath.
+                                - [ns1:foo]/@[ns2:]baz: matches a baz attribute of a
+                                    foo element, foo being at any nesting level in
+                                    the compared XPath
+                                - [ns1:]foo//[ns2:]bar: matches a bar element as a
+                                    direct or indirect child of a foo element,
+                                    foo being at any nesting level in the compared
+                                    XPath.
+                                - /[ns1:]foo/[ns2:]bar: matches a bar element as a
+                                    direct child of a foo element, foo being at the
+                                    root level.
+                              </xs:documentation>
+                            </xs:annotation>
+                          </xs:element>
+                        </xs:sequence>
+                      </xs:complexType>
+                   </xs:element>
+
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+
         <xs:element name="IgnoredXPaths" minOccurs="0">
           <xs:annotation>
             <xs:documentation>
@@ -326,4 +673,11 @@
       </xs:sequence>
     </xs:complexType>
   </xs:element>
+
+  <xs:simpleType name="unlimitedEnumType">
+    <xs:restriction base="xs:string">
+        <xs:enumeration value="unlimited"/>
+    </xs:restriction>
+  </xs:simpleType>
+
 </xs:schema>

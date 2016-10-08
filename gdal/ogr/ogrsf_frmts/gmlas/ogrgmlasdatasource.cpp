@@ -415,12 +415,12 @@ bool OGRGMLASDataSource::Open(GDALOpenInfo* poOpenInfo)
         }
     }
 
-    m_oCache.SetCacheDirectory( m_oConf.m_osCacheDirectory );
-    m_oCache.SetRefreshMode( CPLTestBool(
-        CSLFetchNameValueDef(poOpenInfo->papszOpenOptions,
-                             "REFRESH_CACHE", "NO") ) );
-    m_oCache.SetAllowRemoteSchemaDownload(
-                                    m_oConf.m_bAllowRemoteSchemaDownload );
+    m_oCache.SetCacheDirectory( m_oConf.m_osXSDCacheDirectory );
+    const bool bRefreshCache(CPLTestBool(
+                            CSLFetchNameValueDef(poOpenInfo->papszOpenOptions,
+                                                "REFRESH_CACHE", "NO") ));
+    m_oCache.SetRefreshMode( bRefreshCache );
+    m_oCache.SetAllowDownload( m_oConf.m_bAllowRemoteSchemaDownload );
 
     m_oIgnoredXPathMatcher.SetRefXPaths(
                                     m_oConf.m_oMapPrefixToURIIgnoredXPaths,
@@ -603,6 +603,9 @@ bool OGRGMLASDataSource::Open(GDALOpenInfo* poOpenInfo)
                               "REMOVE_UNUSED_FIELDS",
                                m_oConf.m_bRemoveUnusedFields);
 
+    m_oXLinkResolver.SetConf( m_oConf.m_oXLinkResolution );
+    m_oXLinkResolver.SetRefreshMode( bRefreshCache );
+
     if( m_bValidate || m_bRemoveUnusedLayers )
     {
         CPLErrorReset();
@@ -661,7 +664,8 @@ GMLASReader* OGRGMLASDataSource::CreateReader( VSILFILE*& fpGML,
     }
 
     GMLASReader* poReader = new GMLASReader( GetCache(),
-                                             GetIgnoredXPathMatcher() );
+                                             GetIgnoredXPathMatcher(),
+                                             m_oXLinkResolver );
     poReader->Init( GetGMLFilename(),
                       fpGML,
                       GetMapURIToPrefix(),
@@ -819,8 +823,10 @@ bool OGRGMLASDataSource::RunFirstPassIfNeeded( GMLASReader* poReader,
     }
 
     // If so, do an initial pass to determine the SRS of those geometry fields.
+    const bool bHasURLSpecificRules =
+                !m_oXLinkResolver.GetConf().m_aoURLSpecificRules.empty();
     if( bHasGeomFields || m_bValidate || m_bRemoveUnusedLayers ||
-        m_bRemoveUnusedFields )
+        m_bRemoveUnusedFields || bHasURLSpecificRules )
     {
         bool bJustOpenedFiled =false;
         VSILFILE* fp = NULL;
@@ -837,7 +843,8 @@ bool OGRGMLASDataSource::RunFirstPassIfNeeded( GMLASReader* poReader,
         }
 
         GMLASReader* poReaderFirstPass = new GMLASReader(m_oCache,
-                                                         m_oIgnoredXPathMatcher );
+                                                         m_oIgnoredXPathMatcher,
+                                                         m_oXLinkResolver);
         poReaderFirstPass->Init( GetGMLFilename(),
                                  fp,
                                  GetMapURIToPrefix(),

@@ -217,7 +217,7 @@ void GMLASErrorHandler::handle (const SAXParseException& e, CPLErr eErr)
 /************************************************************************/
 
 GMLASBaseEntityResolver::GMLASBaseEntityResolver(const CPLString& osBasePath,
-                                                 GMLASResourceCache& oCache) 
+                                                 GMLASXSDCache& oCache) 
     : m_oCache(oCache)
 {
     m_aosPathStack.push_back(osBasePath);
@@ -325,10 +325,12 @@ void GMLASReader::Context::Dump()
 /*                             GMLASReader()                            */
 /************************************************************************/
 
-GMLASReader::GMLASReader(GMLASResourceCache& oCache,
-                         const GMLASXPathMatcher& oIgnoredXPathMatcher)
+GMLASReader::GMLASReader(GMLASXSDCache& oCache,
+                         const GMLASXPathMatcher& oIgnoredXPathMatcher,
+                         GMLASXLinkResolver& oXLinkResolver)
     : m_oCache(oCache)
     , m_oIgnoredXPathMatcher(oIgnoredXPathMatcher)
+    , m_oXLinkResolver(oXLinkResolver)
 {
     m_bParsingError = false;
     m_poSAXReader = NULL;
@@ -406,7 +408,7 @@ void GMLASReader::SetLayerOfInterest( OGRGMLASLayer* poLayer )
 /************************************************************************/
 
 bool GMLASReader::LoadXSDInParser( SAX2XMLReader* poParser,
-                                   GMLASResourceCache& oCache,
+                                   GMLASXSDCache& oCache,
                                    GMLASBaseEntityResolver& oXSDEntityResolver,
                                    const CPLString& osBaseDirname,
                                    const CPLString& osXSDFilename,
@@ -597,7 +599,8 @@ void GMLASReader::SetField( OGRFeature* poFeature,
     {
         OGRField sField;
         if( OGRParseXMLDateTime(
-                (m_bInitialPass) ? "1970-01-01T00:00:00" : osAttrValue.c_str(), &sField ) )
+                (m_bInitialPass) ? "1970-01-01T00:00:00" : osAttrValue.c_str(),
+                &sField ) )
         {
             poFeature->SetField( nAttrIdx, &sField );
         }
@@ -934,7 +937,8 @@ void GMLASReader::startElement(
         )
 {
     const CPLString& osLocalname( transcode(localname, m_osLocalname) );
-    const CPLString& osNSPrefix( m_osNSPrefix = m_oMapURIToPrefix[ transcode(uri, m_osNSUri) ] );
+    const CPLString& osNSPrefix( m_osNSPrefix =
+                            m_oMapURIToPrefix[ transcode(uri, m_osNSUri) ] );
     if( osNSPrefix.empty() )
         m_osXPath = osLocalname;
     else
@@ -946,7 +950,8 @@ void GMLASReader::startElement(
     }
     const CPLString& osXPath( m_osXPath );
 #ifdef DEBUG_VERBOSE
-    CPLDebug("GMLAS", "startElement(%s / %s)", transcode(qname).c_str(), osXPath.c_str());
+    CPLDebug("GMLAS", "startElement(%s / %s)",
+             transcode(qname).c_str(), osXPath.c_str());
 #endif
     m_anStackXPathLength.push_back(osXPath.size());
     if( !m_osCurXPath.empty() )
@@ -1614,23 +1619,11 @@ void GMLASReader::ProcessAttributes(const Attributes& attrs)
                         m_oCurCtxt.m_poLayer,
                         nAttrIdx, osAttrValue );
 
-            // If we are a xlink:href attribute, and that the link value is
-            // a internal link, then find if we have
-            // a field that does a relation to a targetElement
             if( osAttrNSPrefix == "xlink" &&
                 osAttrLocalname == "href" &&
-                !osAttrValue.empty() && osAttrValue[0] == '#' )
+                !osAttrValue.empty() )
             {
-                int nAttrIdx2 =
-                    m_oCurCtxt.m_poLayer->GetOGRFieldIndexFromXPath(
-                        GMLASField::MakePKIDFieldFromXLinkHrefXPath(
-                                                            osAttrXPath));
-                if( nAttrIdx2 >= 0 )
-                {
-                    SetField( m_oCurCtxt.m_poFeature,
-                                m_oCurCtxt.m_poLayer,
-                                nAttrIdx2, osAttrValue.substr(1) );
-                }
+                ProcessXLinkHref( osAttrXPath, osAttrValue );
             }
         }
 
@@ -1746,6 +1739,201 @@ void GMLASReader::ProcessAttributes(const Attributes& attrs)
                                 i, osFixedDefaultValue);
                 }
             }
+        }
+    }
+}
+
+/************************************************************************/
+/*                           ProcessXLinkHref()                         */
+/************************************************************************/
+
+void GMLASReader::ProcessXLinkHref( const CPLString& osAttrXPath,
+                                    const CPLString& osAttrValue )
+{
+    // If we are a xlink:href attribute, and that the link value is
+    // a internal link, then find if we have
+    // a field that does a relation to a targetElement
+    if( osAttrValue[0] == '#' )
+    {
+        const int nAttrIdx2 =
+            m_oCurCtxt.m_poLayer->GetOGRFieldIndexFromXPath(
+                GMLASField::MakePKIDFieldXPathFromXLinkHrefXPath(
+                                                    osAttrXPath));
+        if( nAttrIdx2 >= 0 )
+        {
+            SetField( m_oCurCtxt.m_poFeature,
+                        m_oCurCtxt.m_poLayer,
+                        nAttrIdx2, osAttrValue.substr(1) );
+        }
+    }
+    else
+    {
+        const int nRuleIdx =
+                        m_oXLinkResolver.GetMachingResolutionRule(osAttrValue);
+        if( nRuleIdx >= 0 )
+        {
+            const GMLASXLinkResolutionConf::URLSpecificResolution& oRule(
+                    m_oXLinkResolver.GetConf().m_aoURLSpecificRules[nRuleIdx] );
+            if( m_bInitialPass )
+            {
+                m_oMapXLinkFields[m_oCurCtxt.m_poLayer][osAttrXPath].insert(
+                                                            nRuleIdx );
+            }
+            else if( oRule.m_eResolutionMode ==
+                        GMLASXLinkResolutionConf::RawContent )
+            {
+                const int nAttrIdx2 =
+                  m_oCurCtxt.m_poLayer->GetOGRFieldIndexFromXPath(
+                    GMLASField::MakeXLinkRawContentFieldXPathFromXLinkHrefXPath(
+                                                                    osAttrXPath));
+                CPLAssert( nAttrIdx2 >= 0 );
+
+                const CPLString osRawContent(
+                    m_oXLinkResolver.GetRawContentForRule(osAttrValue, nRuleIdx));
+                if( !osRawContent.empty() )
+                {
+                    SetField( m_oCurCtxt.m_poFeature,
+                              m_oCurCtxt.m_poLayer,
+                              nAttrIdx2,
+                              osRawContent );
+                }
+            }
+            else if( oRule.m_eResolutionMode ==
+                        GMLASXLinkResolutionConf::FieldsFromXPath )
+            {
+                const CPLString osRawContent(
+                    m_oXLinkResolver.GetRawContentForRule(osAttrValue, nRuleIdx));
+                if( !osRawContent.empty() )
+                {
+                    CPLXMLNode* psNode = CPLParseXMLString( osRawContent );
+                    if( psNode != NULL )
+                    {
+                        std::vector<CPLString> aoXPaths;
+                        std::map<CPLString, size_t> oMapFieldXPathToIdx;
+                        for(size_t i=0; i < oRule.m_aoFields.size(); ++i )
+                        {
+                            const CPLString& osXPathRule(
+                                            oRule.m_aoFields[i].m_osXPath);
+                            aoXPaths.push_back(osXPathRule);
+                            oMapFieldXPathToIdx[osXPathRule] = i;
+                        }
+                        GMLASXPathMatcher oMatcher;
+                        oMatcher.SetRefXPaths(std::map<CPLString, CPLString>(),
+                                              aoXPaths);
+                        oMatcher.SetDocumentMapURIToPrefix(std::map<CPLString, CPLString>());
+
+                        CPLXMLNode* psIter = psNode;
+                        for( ; psIter != NULL; psIter = psIter->psNext )
+                        {
+                            if( psIter->eType == CXT_Element &&
+                                psIter->pszValue[0] != '?' )
+                            {
+                                ExploreXMLDoc( osAttrXPath,
+                                               oRule,
+                                               psIter,
+                                               CPLString(),
+                                               oMatcher,
+                                               oMapFieldXPathToIdx );
+                            }
+                        }
+                    }
+                    CPLDestroyXMLNode(psNode);
+                }
+            }
+        }
+        else if( m_oXLinkResolver.IsRawContentResolutionEnabled() )
+        {
+            const int nAttrIdx2 =
+              m_oCurCtxt.m_poLayer->GetOGRFieldIndexFromXPath(
+                GMLASField::MakeXLinkRawContentFieldXPathFromXLinkHrefXPath(
+                                                                osAttrXPath));
+            CPLAssert( nAttrIdx2 >= 0 );
+
+            const CPLString osRawContent(
+                m_oXLinkResolver.GetRawContent(osAttrValue));
+            if( !osRawContent.empty() )
+            {
+                SetField( m_oCurCtxt.m_poFeature,
+                        m_oCurCtxt.m_poLayer,
+                        nAttrIdx2,
+                        osRawContent );
+            }
+        }
+
+    }
+}
+
+/************************************************************************/
+/*                            ExploreXMLDoc()                           */
+/************************************************************************/
+
+void GMLASReader::ExploreXMLDoc( const CPLString& osAttrXPath,
+                                 const GMLASXLinkResolutionConf::URLSpecificResolution& oRule,
+                                 CPLXMLNode* psNode,
+                                 const CPLString& osParentXPath,
+                                 const GMLASXPathMatcher& oMatcher,
+                                 const std::map<CPLString, size_t>&
+                                                        oMapFieldXPathToIdx )
+{
+    CPLString osXPath;
+    if( osParentXPath.empty() )
+        osXPath = psNode->pszValue;
+    else if( psNode->eType == CXT_Element )
+        osXPath = osParentXPath + "/" + psNode->pszValue;
+    else
+    {
+        CPLAssert( psNode->eType == CXT_Attribute );
+        osXPath = osParentXPath + "/@" + psNode->pszValue;
+    }
+
+    CPLString osMatchedXPathRule;
+    if( oMatcher.MatchesRefXPath(osXPath, osMatchedXPathRule) )
+    {
+        std::map<CPLString, size_t>::const_iterator oIter = 
+                        oMapFieldXPathToIdx.find(osMatchedXPathRule);
+        CPLAssert( oIter != oMapFieldXPathToIdx.end() );
+        const size_t nFieldRuleIdx = oIter->second;
+        const CPLString osDerivedFieldXPath(
+            GMLASField::MakeXLinkDerivedFieldXPathFromXLinkHrefXPath(
+                osAttrXPath, oRule.m_aoFields[nFieldRuleIdx].m_osName) );
+        const int nAttrIdx =
+              m_oCurCtxt.m_poLayer->GetOGRFieldIndexFromXPath(osDerivedFieldXPath);
+        CPLAssert( nAttrIdx >= 0 );
+        CPLString osVal;
+        if( psNode->eType == CXT_Element &&
+            psNode->psChild != NULL &&
+            psNode->psChild->eType == CXT_Text &&
+            psNode->psChild->psNext == NULL )
+        {
+            osVal = psNode->psChild->pszValue;
+        }
+        else if( psNode->eType == CXT_Attribute )
+        {
+            osVal = psNode->psChild->pszValue;
+        }
+        else
+        {
+            char* pszContent = CPLSerializeXMLTree( psNode->psChild );
+            osVal = pszContent;
+            CPLFree(pszContent);
+        }
+        if( m_oCurCtxt.m_poFeature->IsFieldSet(nAttrIdx) &&
+            m_oCurCtxt.m_poFeature->GetFieldDefnRef(nAttrIdx)->GetType() == OFTString )
+        {
+            osVal = m_oCurCtxt.m_poFeature->GetFieldAsString(nAttrIdx) + 
+                    CPLString(" ") + osVal;
+        }
+        SetField( m_oCurCtxt.m_poFeature, m_oCurCtxt.m_poLayer,
+                    nAttrIdx, osVal );
+    }
+
+    CPLXMLNode* psIter = psNode->psChild;
+    for( ; psIter != NULL; psIter = psIter->psNext )
+    {
+        if( psIter->eType == CXT_Element || psIter->eType == CXT_Attribute )
+        {
+            ExploreXMLDoc( osAttrXPath, oRule, psIter, osXPath, oMatcher,
+                        oMapFieldXPathToIdx );
         }
     }
 }
@@ -2394,12 +2582,20 @@ bool GMLASReader::RunFirstPass(GDALProgressFunc pfnProgress,
 
     CPLDebug("GMLAS", "Start of first pass");
 
+    // Do we need to do a full scan of the file ?
+    const bool bHasURLSpecificRules =
+                !m_oXLinkResolver.GetConf().m_aoURLSpecificRules.empty();
+    const bool bDoFullPass =
+        (m_bValidate ||
+         bRemoveUnusedLayers ||
+         bRemoveUnusedFields ||
+         bHasURLSpecificRules);
+
     // Loop on features until we have determined the SRS of all geometry
-    // columns. If we do validation, parse the whole file
+    // columns, or potentially on the whole file for the above reasons
     OGRGMLASLayer* poLayer;
     OGRFeature* poFeature;
-    while( (m_bValidate || !m_oSetGeomFieldsWithUnknownSRS.empty() ||
-            bRemoveUnusedLayers || bRemoveUnusedFields) &&
+    while( (bDoFullPass || !m_oSetGeomFieldsWithUnknownSRS.empty() ) &&
            (poFeature = GetNextFeature(&poLayer, pfnProgress, pProgressData)) != NULL )
     {
         if( bRemoveUnusedLayers )
@@ -2448,7 +2644,7 @@ bool GMLASReader::RunFirstPass(GDALProgressFunc pfnProgress,
             int nShiftIndex = 0;
             for( ; oIter != oSetUnusedFields.end(); ++oIter )
             {
-                if( poLayer->RemoveUnusedField( (*oIter) - nShiftIndex ) )
+                if( poLayer->RemoveField( (*oIter) - nShiftIndex ) )
                 {
                     nShiftIndex ++;
                 }
@@ -2462,8 +2658,128 @@ bool GMLASReader::RunFirstPass(GDALProgressFunc pfnProgress,
         }
     }
 
+    // Add fields coming from matching URL specific rules
+    if( bHasURLSpecificRules )
+    {
+        CreateFieldsForURLSpecificRules();
+    }
+
     // Clear the set even if we didn't manage to determine all the SRS
     m_oSetGeomFieldsWithUnknownSRS.clear();
 
     return !m_bInterrupted;
+}
+
+/************************************************************************/
+/*                    CreateFieldsForURLSpecificRules()                 */
+/************************************************************************/
+
+void GMLASReader::CreateFieldsForURLSpecificRules()
+{
+    std::map<OGRGMLASLayer*, std::map<CPLString, std::set<int> > >::const_iterator
+        oIter = m_oMapXLinkFields.begin();
+    for( ; oIter != m_oMapXLinkFields.end(); ++oIter )
+    {
+        OGRGMLASLayer* poLayer = oIter->first;
+        const std::map<CPLString, std::set<int> >& oMap2 = oIter->second;
+        std::map<CPLString, std::set<int> >::const_iterator oIter2 =
+                                                            oMap2.begin();
+        for( ; oIter2 != oMap2.end(); ++oIter2 )
+        {
+            const CPLString& osFieldXPath(oIter2->first);
+            // Note that CreateFieldsForURLSpecificRule() running on a previous
+            // iteration will have inserted new OGR fields, so we really need
+            // to compute that index now.
+            const int nFieldIdx = poLayer->GetOGRFieldIndexFromXPath(osFieldXPath);
+            CPLAssert(nFieldIdx >= 0);
+            int nInsertFieldIdx = nFieldIdx + 1;
+            const std::set<int>& oSetRuleIndex = oIter2->second;
+            std::set<int>::const_iterator oIter3 = oSetRuleIndex.begin();
+            for( ; oIter3 != oSetRuleIndex.end(); ++ oIter3 )
+            {
+                const GMLASXLinkResolutionConf::URLSpecificResolution& oRule =
+                    m_oXLinkResolver.GetConf().m_aoURLSpecificRules[*oIter3];
+                CreateFieldsForURLSpecificRule( poLayer, nFieldIdx,
+                                                osFieldXPath,
+                                                nInsertFieldIdx,
+                                                oRule );
+            }
+        }
+    }
+}
+
+/************************************************************************/
+/*                    CreateFieldsForURLSpecificRule()                  */
+/************************************************************************/
+
+void GMLASReader::CreateFieldsForURLSpecificRule(
+                OGRGMLASLayer* poLayer,
+                int nFieldIdx,
+                const CPLString& osFieldXPath,
+                int& nInsertFieldIdx,
+                const GMLASXLinkResolutionConf::URLSpecificResolution& oRule )
+{
+    if( oRule.m_eResolutionMode ==
+                        GMLASXLinkResolutionConf::RawContent )
+    {
+        const CPLString osRawContentXPath(
+            GMLASField::MakeXLinkRawContentFieldXPathFromXLinkHrefXPath(
+                                                                osFieldXPath) );
+        if( poLayer->GetOGRFieldIndexFromXPath( osRawContentXPath ) < 0 )
+        {
+            const CPLString osOGRFieldName(
+                poLayer->GetLayerDefn()->
+                        GetFieldDefn(nFieldIdx)->GetNameRef() );
+            CPLString osRawContentFieldname(osOGRFieldName);
+            size_t nPos = osRawContentFieldname.find("_href");
+            if( nPos != std::string::npos )
+                osRawContentFieldname.resize(nPos);
+            osRawContentFieldname += "_rawcontent";
+            OGRFieldDefn oFieldDefnRaw( osRawContentFieldname,
+                                        OFTString );
+            poLayer->InsertNewField( nInsertFieldIdx,
+                                        oFieldDefnRaw,
+                                        osRawContentXPath );
+            nInsertFieldIdx ++;
+        }
+    }
+    else if ( oRule.m_eResolutionMode ==
+                    GMLASXLinkResolutionConf::FieldsFromXPath )
+    {
+        for( size_t i=0; i < oRule.m_aoFields.size(); ++i )
+        {
+            const CPLString osDerivedFieldXPath(
+                GMLASField::MakeXLinkDerivedFieldXPathFromXLinkHrefXPath(
+                    osFieldXPath, oRule.m_aoFields[i].m_osName) );
+            if( poLayer->GetOGRFieldIndexFromXPath( osDerivedFieldXPath ) < 0 )
+            {
+                const CPLString osOGRFieldName(
+                    poLayer->GetLayerDefn()->
+                            GetFieldDefn(nFieldIdx)->GetNameRef() );
+                CPLString osNewFieldname(osOGRFieldName);
+                size_t nPos = osNewFieldname.find("_href");
+                if( nPos != std::string::npos )
+                    osNewFieldname.resize(nPos);
+                osNewFieldname += "_" + oRule.m_aoFields[i].m_osName;
+
+                OGRFieldType eType = OFTString;
+                const CPLString& osType(oRule.m_aoFields[i].m_osType);
+                if( osType == "integer" )
+                    eType = OFTInteger;
+                else if( osType == "long" )
+                    eType = OFTInteger64;
+                else if( osType == "double" )
+                    eType = OFTReal;
+                else if( osType == "dateTime" )
+                    eType = OFTDateTime;
+
+                OGRFieldDefn oFieldDefnRaw( osNewFieldname,
+                                            eType );
+                poLayer->InsertNewField( nInsertFieldIdx,
+                                            oFieldDefnRaw,
+                                            osDerivedFieldXPath );
+                nInsertFieldIdx ++;
+            }
+        }
+    }
 }

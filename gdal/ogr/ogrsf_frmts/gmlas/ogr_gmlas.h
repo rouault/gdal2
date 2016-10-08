@@ -101,15 +101,18 @@ class IGMLASInputSourceClosing
 
 class GMLASResourceCache
 {
+    protected:
                 bool            m_bHasCheckedCacheDirectory;
                 CPLString       m_osCacheDirectory;
                 bool            m_bRefresh;
-                bool            m_bAllowRemoteSchemaDownload;
+                bool            m_bAllowDownload;
                 std::set<CPLString> m_aoSetRefreshedFiles;
 
                 static bool RecursivelyCreateDirectoryIfNeeded(
                                                 const CPLString& osDirname);
                 bool RecursivelyCreateDirectoryIfNeeded();
+
+                CPLString GetCachedFilename(const CPLString& osResource);
 
     public:
                              GMLASResourceCache();
@@ -118,8 +121,19 @@ class GMLASResourceCache
                     void    SetCacheDirectory(const CPLString& osCacheDirectory);
                     void    SetRefreshMode(bool bRefresh)
                                             { m_bRefresh = bRefresh; }
-                    void    SetAllowRemoteSchemaDownload(bool bVal)
-                                    { m_bAllowRemoteSchemaDownload = bVal; }
+                    void    SetAllowDownload(bool bVal)
+                                    { m_bAllowDownload = bVal; }
+};
+
+/************************************************************************/
+/*                          GMLASXSDCache                               */
+/************************************************************************/
+
+class GMLASXSDCache: public GMLASResourceCache
+{
+    public:
+                             GMLASXSDCache();
+                    virtual ~GMLASXSDCache();
 
                     VSILFILE* Open( const CPLString& osResource,
                                     const CPLString& osBasePath,
@@ -135,11 +149,11 @@ class GMLASBaseEntityResolver: public EntityResolver,
                            public IGMLASInputSourceClosing
 {
         std::vector<CPLString> m_aosPathStack;
-        GMLASResourceCache& m_oCache;
+        GMLASXSDCache& m_oCache;
 
   public:
         GMLASBaseEntityResolver(const CPLString& osBasePath,
-                                GMLASResourceCache& oCache);
+                                GMLASXSDCache& oCache);
         virtual ~GMLASBaseEntityResolver();
 
         void SetBasePath(const CPLString& osBasePath);
@@ -202,6 +216,92 @@ class GMLASErrorHandler: public ErrorHandler
         void handle (const SAXParseException& e, CPLErr eErr);
 };
 
+
+/************************************************************************/
+/*                        GMLASXLinkResolutionConf                      */
+/************************************************************************/
+
+class GMLASXLinkResolutionConf
+{
+    public:
+        /* See data/gmlasconf.xsd for docomentation of the fields */
+
+        // Note the default values mentionned here should be kept
+        // consistant with what is documented in gmlasconf.xsd
+        static const bool DEFAULT_RESOLUTION_ENABLED_DEFAULT = false;
+        static const bool ALLOW_REMOTE_DOWNLOAD_DEFAULT = true;
+        static const bool CACHE_RESULTS_DEFAULT = false;
+        static const int MAX_FILE_SIZE_DEFAULT = 1024 * 1024;
+
+        typedef enum
+        {
+            RawContent,
+            FieldsFromXPath
+        } ResolutionMode;
+
+        int m_nTimeOut;
+
+        int m_nMaxFileSize;
+
+        int m_nMaxGlobalResolutionTime;
+
+        CPLString m_osProxyServerPort;
+
+        CPLString m_osProxyUserPassword;
+
+        CPLString m_osProxyAuth;
+
+        CPLString m_osCacheDirectory;
+
+        bool m_bDefaultResolutionEnabled;
+
+        bool m_bDefaultAllowRemoteDownload;
+
+        ResolutionMode m_eDefaultResolutionMode;
+
+        int m_nDefaultResolutionDepth;
+
+        bool m_bDefaultCacheResults;
+
+        class URLSpecificResolution
+        {
+            public:
+
+                CPLString m_osURLPrefix;
+
+                std::vector< std::pair<CPLString, CPLString> > m_aosNameValueHTTPHeaders;
+
+                bool m_bAllowRemoteDownload;
+
+                ResolutionMode m_eResolutionMode;
+
+                int m_nResolutionDepth;
+
+                bool m_bCacheResults;
+
+                class XPathDerivedField
+                {
+                    public:
+
+                        CPLString m_osName;
+
+                        CPLString m_osType;
+
+                        CPLString m_osXPath;
+                };
+
+                std::vector<XPathDerivedField> m_aoFields;
+
+                URLSpecificResolution();
+        };
+
+        std::vector<URLSpecificResolution> m_aoURLSpecificRules;
+
+        GMLASXLinkResolutionConf();
+
+        bool LoadFromXML(CPLXMLNode* psRoot);
+};
+
 /************************************************************************/
 /*                          GMLASConfiguration                          */
 /************************************************************************/
@@ -256,7 +356,7 @@ class GMLASConfiguration
         bool            m_bAllowXSDCache;
 
         /** Cache directory for cached XSD schemas. */
-        CPLString       m_osCacheDirectory;
+        CPLString       m_osXSDCacheDirectory;
 
         /** Whether validation of document against schema should be done.  */
         bool            m_bValidate;
@@ -278,11 +378,49 @@ class GMLASConfiguration
             XPath defined.  */
         std::map<CPLString, bool> m_oMapIgnoredXPathToWarn;
 
+        GMLASXLinkResolutionConf  m_oXLinkResolution;
+
                                     GMLASConfiguration();
                     virtual        ~GMLASConfiguration();
 
                             bool    Load(const char* pszFilename);
                             void    Finalize();
+
+        static CPLString GetBaseCacheDirectory();
+};
+
+/************************************************************************/
+/*                          GMLASXLinkResolver                          */
+/************************************************************************/
+
+class GMLASXLinkResolver: public GMLASResourceCache
+{
+        GMLASXLinkResolutionConf    m_oConf;
+        int                         m_nGlobalResolutionTime;
+
+        std::map<CPLString, CPLString> m_oMapURLToContent;
+        std::map<size_t, std::vector<CPLString> > m_oMapFileSizeToURLs;
+        size_t m_nMaxRAMCacheSize;
+        size_t m_nCurrentRAMCacheSize;
+
+        CPLString FetchRawContent(const CPLString& osURL,
+                                  const char* pszHeaders);
+
+        CPLString GetRawContent(const CPLString& osURL,
+                                const char* pszHeaders,
+                                bool bAllowRemoteDownload,
+                                bool bCacheResults);
+    public:
+
+                GMLASXLinkResolver();
+
+        void  SetConf( const GMLASXLinkResolutionConf& oConf );
+        const GMLASXLinkResolutionConf& GetConf() const { return m_oConf; }
+
+        bool      IsRawContentResolutionEnabled() const;
+        int       GetMachingResolutionRule(const CPLString& osURL) const;
+        CPLString GetRawContent(const CPLString& osURL);
+        CPLString GetRawContentForRule(const CPLString& osURL, int nIdxRule);
 };
 
 /************************************************************************/
@@ -470,9 +608,17 @@ class GMLASField
                                             { m_osRelatedClassXPath = osName; }
         void SetIgnored() { m_bIgnored = true; }
 
-        static CPLString MakePKIDFieldFromXLinkHrefXPath(
+        static CPLString MakePKIDFieldXPathFromXLinkHrefXPath(
             const CPLString& osBaseXPath)
                             { return "{" + osBaseXPath + "}_pkid"; }
+
+        static CPLString MakeXLinkRawContentFieldXPathFromXLinkHrefXPath(
+            const CPLString& osBaseXPath)
+                            { return "{" + osBaseXPath + "}_rawcontent"; }
+
+        static CPLString MakeXLinkDerivedFieldXPathFromXLinkHrefXPath(
+            const CPLString& osBaseXPath, const CPLString& osName)
+                            { return "{" + osBaseXPath + "}_derived_" + osName; }
 
 
         const CPLString& GetName() const { return m_osName; }
@@ -683,7 +829,7 @@ class GMLASSchemaAnalyzer
         void SetInstantiateGMLFeaturesOnly(bool b)
                                     { m_bInstantiateGMLFeaturesOnly = b; }
 
-        bool Analyze(GMLASResourceCache& oCache,
+        bool Analyze(GMLASXSDCache& oCache,
                      const CPLString& osBaseDirname,
                      const std::vector<PairURIFilename>& aoXSDs);
         const std::vector<GMLASFeatureClass>& GetClasses() const
@@ -728,7 +874,7 @@ class OGRGMLASDataSource: public GDALDataset
         GMLASConfiguration             m_oConf;
 
         /** Schema cache */
-        GMLASResourceCache             m_oCache;
+        GMLASXSDCache                  m_oCache;
 
         GMLASXPathMatcher              m_oIgnoredXPathMatcher;
 
@@ -740,6 +886,8 @@ class OGRGMLASDataSource: public GDALDataset
         vsi_l_offset                   m_nFileSize;
 
         GMLASReader*                   m_poReader;
+
+        GMLASXLinkResolver             m_oXLinkResolver;
 
         void TranslateClasses( OGRGMLASLayer* poParentLayer,
                                const GMLASFeatureClass& oFC );
@@ -783,7 +931,7 @@ class OGRGMLASDataSource: public GDALDataset
                                               GDALProgressFunc pfnProgress = NULL,
                                               void* pProgressData = NULL );
 
-        GMLASResourceCache& GetCache() { return m_oCache; }
+        GMLASXSDCache& GetCache() { return m_oCache; }
 
         void        PushUnusedGMLFilePointer( VSILFILE* fpGML );
         VSILFILE   *PopUnusedGMLFilePointer();
@@ -796,6 +944,8 @@ class OGRGMLASDataSource: public GDALDataset
         const GMLASXPathMatcher& GetIgnoredXPathMatcher() const
                                 { return  m_oIgnoredXPathMatcher; }
         const CPLString& GetHash() const { return m_osHash; }
+
+        const GMLASConfiguration& GetConf() const { return m_oConf; }
 };
 
 /************************************************************************/
@@ -875,7 +1025,10 @@ class OGRGMLASLayer: public OGRLayer
 
         bool EvaluateFilter( OGRFeature* poFeature );
 
-        bool RemoveUnusedField( int nIdx );
+        bool RemoveField( int nIdx );
+        void InsertNewField( int nInsertPos,
+                             OGRFieldDefn& oFieldDefn,
+                             const CPLString& osXPath );
 };
 
 /************************************************************************/
@@ -885,10 +1038,13 @@ class OGRGMLASLayer: public OGRLayer
 class GMLASReader : public DefaultHandler
 {
         /** Schema cache */
-        GMLASResourceCache&        m_oCache;
+        GMLASXSDCache&           m_oCache;
 
         /** Object to tell if a XPath must be ignored */
         const GMLASXPathMatcher& m_oIgnoredXPathMatcher;
+
+        /** XLink resolver */
+        GMLASXLinkResolver&         m_oXLinkResolver;
 
         /** Whether we should stop parsing */
         bool              m_bParsingError;
@@ -1059,6 +1215,10 @@ class GMLASReader : public DefaultHandler
 
         bool                           m_bWarnUnexpected;
 
+        /** Map from layer to a map of field XPath to a set of matching
+            URL specific resolution rule index */
+        std::map<OGRGMLASLayer*, std::map<CPLString, std::set<int> > > m_oMapXLinkFields;
+
         /** Variables that could be local but more efficient to have same
             persistant, so as to save many memory allocations/deallocations */
         CPLString                      m_osLocalname;
@@ -1093,10 +1253,27 @@ class GMLASReader : public DefaultHandler
         void        ProcessGeometry();
 
         void        ProcessAttributes(const Attributes& attrs);
+        void        ProcessXLinkHref( const CPLString& osAttrXPath,
+                                      const CPLString& osAttrValue );
+        void        ExploreXMLDoc( const CPLString& osAttrXPath,
+                                   const GMLASXLinkResolutionConf::URLSpecificResolution& oRule,
+                                   CPLXMLNode* psNode,
+                                   const CPLString& osParentXPath,
+                                   const GMLASXPathMatcher& oMatcher,
+                                   const std::map<CPLString, size_t>& oMapFieldXPathToIdx );
+
+        void        CreateFieldsForURLSpecificRules();
+        void        CreateFieldsForURLSpecificRule(
+                        OGRGMLASLayer* poLayer,
+                        int nFieldIdx,
+                        const CPLString& osFieldXPath,
+                        int& nInsertFieldIdx,
+                        const GMLASXLinkResolutionConf::URLSpecificResolution& oRule );
 
     public:
-                        GMLASReader(GMLASResourceCache& oCache,
-                                    const GMLASXPathMatcher& oIgnoredXPathMatcher);
+                        GMLASReader(GMLASXSDCache& oCache,
+                                    const GMLASXPathMatcher& oIgnoredXPathMatcher,
+                                    GMLASXLinkResolver& oXLinkResolver);
                         ~GMLASReader();
 
         bool Init(const char* pszFilename,
@@ -1155,7 +1332,7 @@ class GMLASReader : public DefaultHandler
                           bool bRemoveUnusedFields);
 
         static bool LoadXSDInParser( SAX2XMLReader* poParser,
-                                     GMLASResourceCache& oCache,
+                                     GMLASXSDCache& oCache,
                                      GMLASBaseEntityResolver& oXSDEntityResolver,
                                      const CPLString& osBaseDirname,
                                      const CPLString& osXSDFilename,

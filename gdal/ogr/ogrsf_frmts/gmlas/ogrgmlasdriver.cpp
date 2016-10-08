@@ -111,7 +111,7 @@ void RegisterOGRGMLAS()
     "description='Whether a validation error should cause dataset opening to fail' "
     "default='NO'/>"
 "  <Option name='REFRESH_CACHE' type='boolean' "
-    "description='Whether remote schemas should be downloaded from the server' "
+    "description='Whether remote schemas and resolved xlink resources should be downloaded from the server' "
     "default='NO'/>"
 "  <Option name='SWAP_COORDINATES' type='string-select' "
     "description='Whether the order of geometry coordinates should be inverted.' "
