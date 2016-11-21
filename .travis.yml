@@ -4,6 +4,16 @@
 matrix:
   fast_finish: true
   include:
+    - osx_image: xcode8.2
+      language: objective-c
+      compiler: clang
+      cache:
+        apt: true
+        directories:
+          - $HOME/.ccache
+      env:
+        - BUILD_NAME=osx
+        - DETAILS="debug build, libtool"
     - os: linux
       compiler: clang
       language: cpp
