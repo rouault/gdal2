@@ -576,16 +576,25 @@ VSILFILE *VSIFOpenL( const char * pszFilename, const char * pszAccess )
     return VSIFOpenExL(pszFilename, pszAccess, false);
 }
 
+#ifndef DOXYGEN_SKIP
+
 /************************************************************************/
 /*                               Open()                                 */
 /************************************************************************/
-
-#ifndef DOXYGEN_SKIP
 
 VSIVirtualHandle *VSIFilesystemHandler::Open( const char *pszFilename,
                                           const char *pszAccess )
 {
     return Open(pszFilename, pszAccess, false);
+}
+
+/************************************************************************/
+/*                          GetDiskFreeSpace()                           */
+/************************************************************************/
+
+GIntBig VSIFilesystemHandler::GetDiskFreeSpace( const char* /* pszDirname */ )
+{
+    return -1;
 }
 
 #endif
