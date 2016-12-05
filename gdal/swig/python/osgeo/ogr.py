@@ -88,6 +88,7 @@ wkbCurve = _ogr.wkbCurve
 wkbSurface = _ogr.wkbSurface
 wkbPolyhedralSurface = _ogr.wkbPolyhedralSurface
 wkbTIN = _ogr.wkbTIN
+wkbTriangle = _ogr.wkbTriangle
 wkbNone = _ogr.wkbNone
 wkbLinearRing = _ogr.wkbLinearRing
 wkbCircularStringZ = _ogr.wkbCircularStringZ
@@ -99,6 +100,7 @@ wkbCurveZ = _ogr.wkbCurveZ
 wkbSurfaceZ = _ogr.wkbSurfaceZ
 wkbPolyhedralSurfaceZ = _ogr.wkbPolyhedralSurfaceZ
 wkbTINZ = _ogr.wkbTINZ
+wkbTriangleZ = _ogr.wkbTriangleZ
 wkbPointM = _ogr.wkbPointM
 wkbLineStringM = _ogr.wkbLineStringM
 wkbPolygonM = _ogr.wkbPolygonM
@@ -115,6 +117,7 @@ wkbCurveM = _ogr.wkbCurveM
 wkbSurfaceM = _ogr.wkbSurfaceM
 wkbPolyhedralSurfaceM = _ogr.wkbPolyhedralSurfaceM
 wkbTINM = _ogr.wkbTINM
+wkbTriangleM = _ogr.wkbTriangleM
 wkbPointZM = _ogr.wkbPointZM
 wkbLineStringZM = _ogr.wkbLineStringZM
 wkbPolygonZM = _ogr.wkbPolygonZM
@@ -131,6 +134,7 @@ wkbCurveZM = _ogr.wkbCurveZM
 wkbSurfaceZM = _ogr.wkbSurfaceZM
 wkbPolyhedralSurfaceZM = _ogr.wkbPolyhedralSurfaceZM
 wkbTINZM = _ogr.wkbTINZM
+wkbTriangleZM = _ogr.wkbTriangleZM
 wkbPoint25D = _ogr.wkbPoint25D
 wkbLineString25D = _ogr.wkbLineString25D
 wkbPolygon25D = _ogr.wkbPolygon25D
@@ -6233,6 +6237,10 @@ class Geometry(_object):
         the distance between the geometries or -1 if an error occurs. 
         """
         return _ogr.Geometry_Distance(self, *args)
+
+    def Distance3D(self, *args):
+        """Distance3D(Geometry self, Geometry other) -> double"""
+        return _ogr.Geometry_Distance3D(self, *args)
 
     def Empty(self, *args):
         """

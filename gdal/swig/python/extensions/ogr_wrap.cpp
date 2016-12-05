@@ -4389,6 +4389,9 @@ SWIGINTERN void OGRFeatureShadow_SetFieldString(OGRFeatureShadow *self,int id,ch
             case wkbMultiSurface:
             case wkbCurve:
             case wkbSurface:
+            case wkbTriangle:
+            case wkbTIN:
+            case wkbPolyhedralSurface:
             case wkbNone:
             /*case wkbLinearRing:*/
             case wkbCircularStringZ:
@@ -4398,6 +4401,9 @@ SWIGINTERN void OGRFeatureShadow_SetFieldString(OGRFeatureShadow *self,int id,ch
             case wkbMultiSurfaceZ:
             case wkbCurveZ:
             case wkbSurfaceZ:
+            case wkbTriangleZ:
+            case wkbTINZ:
+            case wkbPolyhedralSurfaceZ:
             case wkbPoint25D:
             case wkbLineString25D:
             case wkbPolygon25D:
@@ -4419,6 +4425,9 @@ SWIGINTERN void OGRFeatureShadow_SetFieldString(OGRFeatureShadow *self,int id,ch
             case wkbMultiSurfaceM:
             case wkbCurveM:
             case wkbSurfaceM:
+            case wkbTriangleM:
+            case wkbTINM:
+            case wkbPolyhedralSurfaceM:
             case wkbPointZM:
             case wkbLineStringZM:
             case wkbPolygonZM:
@@ -4433,6 +4442,9 @@ SWIGINTERN void OGRFeatureShadow_SetFieldString(OGRFeatureShadow *self,int id,ch
             case wkbMultiSurfaceZM:
             case wkbCurveZM:
             case wkbSurfaceZM:
+            case wkbTriangleZM:
+            case wkbTINZM:
+            case wkbPolyhedralSurfaceZM:
                 return TRUE;
             default:
                 CPLError(CE_Failure, CPLE_IllegalArg, "Illegal geometry type value");
@@ -4997,6 +5009,9 @@ SWIGINTERN OGRGeometryShadow *OGRGeometryShadow_SymmetricDifference(OGRGeometryS
   }
 SWIGINTERN double OGRGeometryShadow_Distance(OGRGeometryShadow *self,OGRGeometryShadow *other){
     return OGR_G_Distance(self, other);
+  }
+SWIGINTERN double OGRGeometryShadow_Distance3D(OGRGeometryShadow *self,OGRGeometryShadow *other){
+    return OGR_G_Distance3D(self, other);
   }
 SWIGINTERN void OGRGeometryShadow_Empty(OGRGeometryShadow *self){
     OGR_G_Empty(self);
@@ -24387,6 +24402,60 @@ fail:
 }
 
 
+SWIGINTERN PyObject *_wrap_Geometry_Distance3D(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0; int bLocalUseExceptionsCode = bUseExceptions;
+  OGRGeometryShadow *arg1 = (OGRGeometryShadow *) 0 ;
+  OGRGeometryShadow *arg2 = (OGRGeometryShadow *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  void *argp2 = 0 ;
+  int res2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  double result;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:Geometry_Distance3D",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_OGRGeometryShadow, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Geometry_Distance3D" "', argument " "1"" of type '" "OGRGeometryShadow *""'"); 
+  }
+  arg1 = reinterpret_cast< OGRGeometryShadow * >(argp1);
+  res2 = SWIG_ConvertPtr(obj1, &argp2,SWIGTYPE_p_OGRGeometryShadow, 0 |  0 );
+  if (!SWIG_IsOK(res2)) {
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "Geometry_Distance3D" "', argument " "2"" of type '" "OGRGeometryShadow *""'"); 
+  }
+  arg2 = reinterpret_cast< OGRGeometryShadow * >(argp2);
+  {
+    if (!arg2) {
+      SWIG_exception(SWIG_ValueError,"Received a NULL pointer.");
+    }
+  }
+  {
+    if ( bUseExceptions ) {
+      CPLErrorReset();
+    }
+    {
+      SWIG_PYTHON_THREAD_BEGIN_ALLOW;
+      result = (double)OGRGeometryShadow_Distance3D(arg1,arg2);
+      SWIG_PYTHON_THREAD_END_ALLOW;
+    }
+#ifndef SED_HACKS
+    if ( bUseExceptions ) {
+      CPLErr eclass = CPLGetLastErrorType();
+      if ( eclass == CE_Failure || eclass == CE_Fatal ) {
+        SWIG_exception( SWIG_RuntimeError, CPLGetLastErrorMsg() );
+      }
+    }
+#endif
+  }
+  resultobj = SWIG_From_double(static_cast< double >(result));
+  if ( ReturnSame(bLocalUseExceptionsCode) ) { CPLErr eclass = CPLGetLastErrorType(); if ( eclass == CE_Failure || eclass == CE_Fatal ) { Py_XDECREF(resultobj); SWIG_Error( SWIG_RuntimeError, CPLGetLastErrorMsg() ); return NULL; } }
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
 SWIGINTERN PyObject *_wrap_Geometry_Empty(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0; int bLocalUseExceptionsCode = bUseExceptions;
   OGRGeometryShadow *arg1 = (OGRGeometryShadow *) 0 ;
@@ -32420,6 +32489,7 @@ static PyMethodDef SwigMethods[] = {
 		"\n"
 		"the distance between the geometries or -1 if an error occurs. \n"
 		""},
+	 { (char *)"Geometry_Distance3D", _wrap_Geometry_Distance3D, METH_VARARGS, (char *)"Geometry_Distance3D(Geometry self, Geometry other) -> double"},
 	 { (char *)"Geometry_Empty", _wrap_Geometry_Empty, METH_VARARGS, (char *)"\n"
 		"Geometry_Empty(Geometry self)\n"
 		"\n"
@@ -34043,6 +34113,7 @@ SWIG_init(void) {
   SWIG_Python_SetConstant(d, "wkbSurface",SWIG_From_int(static_cast< int >(14)));
   SWIG_Python_SetConstant(d, "wkbPolyhedralSurface",SWIG_From_int(static_cast< int >(15)));
   SWIG_Python_SetConstant(d, "wkbTIN",SWIG_From_int(static_cast< int >(16)));
+  SWIG_Python_SetConstant(d, "wkbTriangle",SWIG_From_int(static_cast< int >(17)));
   SWIG_Python_SetConstant(d, "wkbNone",SWIG_From_int(static_cast< int >(100)));
   SWIG_Python_SetConstant(d, "wkbLinearRing",SWIG_From_int(static_cast< int >(101)));
   SWIG_Python_SetConstant(d, "wkbCircularStringZ",SWIG_From_int(static_cast< int >(1008)));
@@ -34054,6 +34125,7 @@ SWIG_init(void) {
   SWIG_Python_SetConstant(d, "wkbSurfaceZ",SWIG_From_int(static_cast< int >(1014)));
   SWIG_Python_SetConstant(d, "wkbPolyhedralSurfaceZ",SWIG_From_int(static_cast< int >(1015)));
   SWIG_Python_SetConstant(d, "wkbTINZ",SWIG_From_int(static_cast< int >(1016)));
+  SWIG_Python_SetConstant(d, "wkbTriangleZ",SWIG_From_int(static_cast< int >(1017)));
   SWIG_Python_SetConstant(d, "wkbPointM",SWIG_From_int(static_cast< int >(2001)));
   SWIG_Python_SetConstant(d, "wkbLineStringM",SWIG_From_int(static_cast< int >(2002)));
   SWIG_Python_SetConstant(d, "wkbPolygonM",SWIG_From_int(static_cast< int >(2003)));
@@ -34070,6 +34142,7 @@ SWIG_init(void) {
   SWIG_Python_SetConstant(d, "wkbSurfaceM",SWIG_From_int(static_cast< int >(2014)));
   SWIG_Python_SetConstant(d, "wkbPolyhedralSurfaceM",SWIG_From_int(static_cast< int >(2015)));
   SWIG_Python_SetConstant(d, "wkbTINM",SWIG_From_int(static_cast< int >(2016)));
+  SWIG_Python_SetConstant(d, "wkbTriangleM",SWIG_From_int(static_cast< int >(2017)));
   SWIG_Python_SetConstant(d, "wkbPointZM",SWIG_From_int(static_cast< int >(3001)));
   SWIG_Python_SetConstant(d, "wkbLineStringZM",SWIG_From_int(static_cast< int >(3002)));
   SWIG_Python_SetConstant(d, "wkbPolygonZM",SWIG_From_int(static_cast< int >(3003)));
@@ -34086,6 +34159,7 @@ SWIG_init(void) {
   SWIG_Python_SetConstant(d, "wkbSurfaceZM",SWIG_From_int(static_cast< int >(3014)));
   SWIG_Python_SetConstant(d, "wkbPolyhedralSurfaceZM",SWIG_From_int(static_cast< int >(3015)));
   SWIG_Python_SetConstant(d, "wkbTINZM",SWIG_From_int(static_cast< int >(3016)));
+  SWIG_Python_SetConstant(d, "wkbTriangleZM",SWIG_From_int(static_cast< int >(3017)));
   SWIG_Python_SetConstant(d, "wkbPoint25D",SWIG_From_int(static_cast< int >(0x80000001)));
   SWIG_Python_SetConstant(d, "wkbLineString25D",SWIG_From_int(static_cast< int >(0x80000002)));
   SWIG_Python_SetConstant(d, "wkbPolygon25D",SWIG_From_int(static_cast< int >(0x80000003)));
