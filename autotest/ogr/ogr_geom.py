@@ -4113,6 +4113,36 @@ def ogr_geom_triangle_ps_tin_conversion():
         print(g.ExportToWkt())
         return 'fail'
 
+    g = ogr.ForceTo( ogr.CreateGeometryFromWkt('GEOMETRYCOLLECTION (TRIANGLE ((0 0,0 1,1 1,0 0)))'), ogr.wkbMultiPolygon )
+    if g.ExportToWkt() != 'MULTIPOLYGON (((0 0,0 1,1 1,0 0)))':
+        gdaltest.post_reason('fail')
+        print(g.ExportToWkt())
+        return 'fail'
+
+    g = ogr.ForceTo( ogr.CreateGeometryFromWkt('MULTIPOLYGON (((0 0,0 1,1 1,0 0)))'), ogr.wkbGeometryCollection )
+    if g.ExportToWkt() != 'GEOMETRYCOLLECTION (POLYGON ((0 0,0 1,1 1,0 0)))':
+        gdaltest.post_reason('fail')
+        print(g.ExportToWkt())
+        return 'fail'
+
+    g = ogr.ForceTo( ogr.CreateGeometryFromWkt('TRIANGLE ((0 0,0 1,1 1,0 0))'), ogr.wkbGeometryCollection )
+    if g.ExportToWkt() != 'GEOMETRYCOLLECTION (TRIANGLE ((0 0,0 1,1 1,0 0)))':
+        gdaltest.post_reason('fail')
+        print(g.ExportToWkt())
+        return 'fail'
+
+    g = ogr.ForceTo( ogr.CreateGeometryFromWkt('TIN (((0 0,0 1,1 1,0 0)))'), ogr.wkbGeometryCollection )
+    if g.ExportToWkt() != 'GEOMETRYCOLLECTION (POLYGON ((0 0,0 1,1 1,0 0)))':
+        gdaltest.post_reason('fail')
+        print(g.ExportToWkt())
+        return 'fail'
+
+    g = ogr.ForceTo( ogr.CreateGeometryFromWkt('POLYHEDRALSURFACE (((0 0,0 1,1 1,0 0)))'), ogr.wkbGeometryCollection )
+    if g.ExportToWkt() != 'GEOMETRYCOLLECTION (POLYGON ((0 0,0 1,1 1,0 0)))':
+        gdaltest.post_reason('fail')
+        print(g.ExportToWkt())
+        return 'fail'
+
     return 'success'
 
 ###############################################################################

@@ -4104,10 +4104,21 @@ OGRGeometry * OGRGeometryFactory::forceTo( OGRGeometry* poGeom,
     }
 
     if( OGR_GT_IsSubClassOf(eType, wkbPolyhedralSurface) &&
-        eTargetType == wkbMultiSurface )
+        (eTargetType == wkbMultiSurface ||
+         eTargetType == wkbGeometryCollection) )
     {
         return forceTo( forceTo( poGeom, wkbMultiPolygon, papszOptions),
                         eTargetType, papszOptions );
+    }
+
+    if( OGR_GT_IsSubClassOf(eType, wkbGeometryCollection) &&
+        eTargetType == wkbGeometryCollection )
+    {
+        OGRGeometryCollection* poGC =
+                        dynamic_cast<OGRGeometryCollection*>(poGeom);
+        if( poGC == NULL )
+            return poGeom;
+        return OGRGeometryCollection::CastToGeometryCollection(poGC);
     }
 
     if( eType == wkbTriangle && eTargetType == wkbPolyhedralSurface )
@@ -4250,6 +4261,14 @@ OGRGeometry * OGRGeometryFactory::forceTo( OGRGeometry* poGeom,
         if( poPoly == poGeom )
             return poGeom;
         return forceTo( poPoly, eTargetType, papszOptions );
+    }
+
+    if( eType == wkbTriangle && eTargetType == wkbGeometryCollection )
+    {
+        OGRGeometryCollection* poGC = new OGRGeometryCollection();
+        poGC->assignSpatialReference(poGeom->getSpatialReference());
+        poGC->addGeometryDirectly(poGeom);
+        return poGC;
     }
 
     // Promote single to multi.

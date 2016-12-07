@@ -1254,6 +1254,9 @@ class CPL_DLL OGRGeometryCollection : public OGRGeometry
     void closeRings() CPL_OVERRIDE;
 
     virtual void        swapXY() CPL_OVERRIDE;
+
+    static OGRGeometryCollection* CastToGeometryCollection(
+                                                OGRGeometryCollection* poSrc );
 };
 
 /************************************************************************/
