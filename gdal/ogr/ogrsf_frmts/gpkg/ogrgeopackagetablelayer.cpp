@@ -931,7 +931,7 @@ OGRGeoPackageTableLayer::OGRGeoPackageTableLayer(
     m_bDeferredCreation(false),
     m_iFIDAsRegularColumnIndex(-1),
     m_bHasReadMetadataFromStorage(false),
-    m_bRegisterAsAspatial(false)
+    m_eASPatialVariant(GPKG_ATTRIBUTES)
 {
     m_poQueryStatement = NULL;
     memset(m_abHasGeometryExtension, 0, sizeof(m_abHasGeometryExtension));
@@ -2787,13 +2787,15 @@ OGRErr OGRGeoPackageTableLayer::RunDeferredCreationIfNecessary()
     const bool bIsSpatial = (eGType != wkbNone);
     if ( bIsSpatial )
         err = RegisterGeometryColumn();
-    else if( m_bRegisterAsAspatial )
+    else if( m_eASPatialVariant == OGR_ASPATIAL )
         err = m_poDS->CreateGDALAspatialExtension();
 
     if ( err != OGRERR_NONE )
         return OGRERR_FAILURE;
 
-    if( bIsSpatial || m_bRegisterAsAspatial )
+    if( bIsSpatial ||
+        m_eASPatialVariant == OGR_ASPATIAL ||
+        m_eASPatialVariant == GPKG_ATTRIBUTES )
     {
         const char* pszIdentifier = GetMetadataItem("IDENTIFIER");
         if( pszIdentifier == NULL )
@@ -2810,7 +2812,9 @@ OGRErr OGRGeoPackageTableLayer::RunDeferredCreationIfNecessary()
 
         pszSQL = sqlite3_mprintf(
             osInsertGpkgContentsFormatting.c_str(),
-            pszLayerName, (bIsSpatial ? "features": "aspatial"),
+            pszLayerName, (bIsSpatial ? "features":
+                          (m_eASPatialVariant == GPKG_ATTRIBUTES) ? "attributes" :
+                          "aspatial"),
             pszIdentifier, pszDescription,
             pszCurrentDate ? pszCurrentDate : "strftime('%Y-%m-%dT%H:%M:%fZ','now')",
             m_iSrs);

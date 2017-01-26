@@ -614,7 +614,7 @@ def ogr_gpkg_13():
     if gdaltest.gpkg_dr is None:
         return 'skip'
 
-    lyr = gdaltest.gpkg_ds.CreateLayer('non_spatial', geom_type = ogr.wkbNone )
+    lyr = gdaltest.gpkg_ds.CreateLayer('non_spatial', geom_type = ogr.wkbNone, options = [ 'ASPATIAL_VARIANT=OGR_ASPATIAL' ] )
     feat = ogr.Feature(lyr.GetLayerDefn())
     lyr.CreateFeature(feat)
     feat = None
@@ -636,7 +636,7 @@ def ogr_gpkg_13():
         return 'fail'
 
     # Test second aspatial layer
-    lyr = gdaltest.gpkg_ds.CreateLayer('non_spatial2', geom_type = ogr.wkbNone )
+    lyr = gdaltest.gpkg_ds.CreateLayer('non_spatial2', geom_type = ogr.wkbNone, options = [ 'ASPATIAL_VARIANT=OGR_ASPATIAL' ] )
 
     gdaltest.gpkg_ds = None
     gdaltest.gpkg_ds = ogr.Open('tmp/gpkg_test.gpkg', update = 1)
@@ -1092,6 +1092,9 @@ def ogr_gpkg_19():
     lyr.SetMetadataItem('DESCRIPTION', 'another_desc')
     ds = None
 
+    # FIXME? Is it expected to have a .aux.xml here ?
+    gdal.Unlink('/vsimem/ogr_gpkg_19.gpkg.aux.xml')
+
     ds = ogr.Open('/vsimem/ogr_gpkg_19.gpkg', update = 1)
     lyr = ds.GetLayer('test_with_md')
     if lyr.GetMetadata() != {'IDENTIFIER': 'another_ident', 'DESCRIPTION': 'another_desc'}:
@@ -1137,6 +1140,7 @@ def ogr_gpkg_19():
     ds = None
 
     gdal.Unlink('/vsimem/ogr_gpkg_19.gpkg')
+    gdal.Unlink('/vsimem/ogr_gpkg_19.gpkg.aux.xml')
 
     return 'success'
 
@@ -1388,7 +1392,7 @@ def ogr_gpkg_23():
     f = None
 
     # Not-nullable fields and geometry fields created after table creation
-    lyr = ds.CreateLayer('test3', geom_type = ogr.wkbNone)
+    lyr = ds.CreateLayer('test3', geom_type = ogr.wkbNone, options = [ 'ASPATIAL_VARIANT=OGR_ASPATIAL' ])
 
     f = ogr.Feature(lyr.GetLayerDefn())
     lyr.CreateFeature(f)
@@ -1723,7 +1727,7 @@ def ogr_gpkg_25():
 
     ds = None
 
-    gdaltest.gpkg_dr.DeleteDataSource('/vsimem/ogr_gpkg_25.sqlite')
+    gdaltest.gpkg_dr.DeleteDataSource('/vsimem/ogr_gpkg_25.gpkg')
 
     return 'success'
 
@@ -2107,7 +2111,7 @@ def ogr_gpkg_32():
         return 'skip'
 
     ds = gdaltest.gpkg_dr.CreateDataSource('/vsimem/ogr_gpkg_32.gpkg')
-    ds.CreateLayer('aspatial', geom_type = ogr.wkbNone, options = ['REGISTER_AS_ASPATIAL=NO'] )
+    ds.CreateLayer('aspatial', geom_type = ogr.wkbNone, options = ['ASPATIAL_VARIANT=NOT_REGISTERED'] )
     ds = None
 
     ds = ogr.Open('/vsimem/ogr_gpkg_32.gpkg')
@@ -2157,7 +2161,7 @@ def ogr_gpkg_33():
     ds.ReleaseResultSet(sql_lyr)
     ds = None
 
-    gdaltest.gpkg_dr.DeleteDataSource('/vsimem/ogr_gpkg_32.gpkg')
+    gdaltest.gpkg_dr.DeleteDataSource('/vsimem/ogr_gpkg_33.gpkg')
 
     return 'success'
 
@@ -2842,6 +2846,44 @@ def ogr_gpkg_39():
     return 'success'
 
 ###############################################################################
+# Run creating a non-spatial layer that is registered as 'attributes' and
+# read it back
+
+def ogr_gpkg_40():
+
+    if gdaltest.gpkg_dr is None:
+        return 'skip'
+
+    ds = gdaltest.gpkg_dr.CreateDataSource('/vsimem/ogr_gpkg_40.gpkg')
+    ds.CreateLayer('aspatial', geom_type = ogr.wkbNone, options = ['ASPATIAL_VARIANT=GPKG_ATTRIBUTES'] )
+    ds = None
+
+    ds = ogr.Open('/vsimem/ogr_gpkg_40.gpkg')
+    if ds.GetLayerCount() != 1:
+        gdaltest.post_reason('fail')
+        return 'fail'
+    sql_lyr = ds.ExecuteSQL('SELECT * FROM gpkg_contents')
+    if sql_lyr.GetFeatureCount() != 1:
+        gdaltest.post_reason('fail')
+        return 'fail'
+    ds.ReleaseResultSet(sql_lyr)
+    sql_lyr = ds.ExecuteSQL('SELECT * FROM gpkg_geometry_columns')
+    if sql_lyr.GetFeatureCount() != 0:
+        gdaltest.post_reason('fail')
+        return 'fail'
+    ds.ReleaseResultSet(sql_lyr)
+    sql_lyr = ds.ExecuteSQL("SELECT * FROM sqlite_master WHERE name = 'gpkg_extensions'")
+    if sql_lyr.GetFeatureCount() != 0:
+        gdaltest.post_reason('fail')
+        return 'fail'
+    ds.ReleaseResultSet(sql_lyr)
+    ds = None
+
+    gdaltest.gpkg_dr.DeleteDataSource('/vsimem/ogr_gpkg_40.gpkg')
+
+    return 'success'
+
+###############################################################################
 # Remove the test db from the tmp directory
 
 def ogr_gpkg_cleanup():
@@ -2850,6 +2892,11 @@ def ogr_gpkg_cleanup():
         return 'skip'
 
     gdaltest.gpkg_ds = None
+
+    if gdal.ReadDir('/vsimem') is not None:
+        print(gdal.ReadDir('/vsimem'))
+        for f in gdal.ReadDir('/vsimem'):
+            gdal.Unlink('/vsimem/' + f)
 
     try:
         os.remove( 'tmp/gpkg_test.gpkg' )
@@ -2900,6 +2947,7 @@ gdaltest_list = [
     ogr_gpkg_37,
     ogr_gpkg_38,
     ogr_gpkg_39,
+    ogr_gpkg_40,
     ogr_gpkg_test_ogrsf,
     ogr_gpkg_cleanup,
 ]
