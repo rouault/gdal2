@@ -1062,7 +1062,7 @@ OGRFeature* OGRPLScenesDataV1Layer::GetNextRawFeature()
         if( oIter != m_oMapPrefixedJSonFieldNameToFieldIdx.end() )
         {
             const int iField = oIter->second;
-            if( poFeature->IsFieldSet( iField ) )
+            if( poFeature->IsFieldSetAndNotNull( iField ) )
             {
                 const char* pszAssetURL = poFeature->GetFieldAsString( iField );
                 poAssets = m_poDS->RunRequest(pszAssetURL);

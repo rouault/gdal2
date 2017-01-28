@@ -671,7 +671,7 @@ int TABFeature::WriteRecordToDATFile(TABDATFile *poDATFile,
             break;
           case TABFDate:
 #ifdef MITAB_USE_OFTDATETIME
-             if (IsFieldSet(iField))
+             if (IsFieldSetAndNotNull(iField))
              {
                 GetFieldAsDateTime(iField, &nYear, &nMon, &nDay,
                                    &nHour, &nMin, &fSec, &nTZFlag);
@@ -692,7 +692,7 @@ int TABFeature::WriteRecordToDATFile(TABDATFile *poDATFile,
             break;
           case TABFTime:
 #ifdef MITAB_USE_OFTDATETIME
-             if (IsFieldSet(iField))
+             if (IsFieldSetAndNotNull(iField))
              {
                 GetFieldAsDateTime(iField, &nYear, &nMon, &nDay,
                                    &nHour, &nMin, &fSec, &nTZFlag);
@@ -714,7 +714,7 @@ int TABFeature::WriteRecordToDATFile(TABDATFile *poDATFile,
             break;
           case TABFDateTime:
 #ifdef MITAB_USE_OFTDATETIME
-             if (IsFieldSet(iField))
+             if (IsFieldSetAndNotNull(iField))
              {
                 GetFieldAsDateTime(iField, &nYear, &nMon, &nDay,
                                    &nHour, &nMin, &fSec, &nTZFlag);
