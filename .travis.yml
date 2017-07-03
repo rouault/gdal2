@@ -5,6 +5,18 @@ matrix:
   fast_finish: true
   include:
     - os: linux
+      sudo: required
+      services: docker
+      env:
+       - BUILD_NAME=centos6
+
+    - os: linux
+      sudo: required
+      services: docker
+      env:
+       - BUILD_NAME=centos7
+
+    - os: linux
       compiler: clang
       language: cpp
       sudo: required
