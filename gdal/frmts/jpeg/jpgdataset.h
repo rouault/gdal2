@@ -118,7 +118,7 @@ typedef void (*my_jpeg_write_m_byte)(void *cinfo, int val);
 
 CPLErr JPGAppendMask( const char *pszJPGFilename, GDALRasterBand *poMask,
                       GDALProgressFunc pfnProgress, void *pProgressData );
-void   JPGAddEXIFOverview( GDALDataType eWorkDT,
+void   JPGAddEXIF        ( GDALDataType eWorkDT,
                            GDALDataset *poSrcDS, char** papszOptions,
                            void *cinfo,
                            my_jpeg_write_m_header p_jpeg_write_m_header,
@@ -276,9 +276,11 @@ class JPGDataset : public JPGDatasetCommon
     bool ErrorOutOnNonFatalError();
 
     static void EmitMessage(j_common_ptr cinfo, int msg_level);
+    static void ProgressMonitor (j_common_ptr cinfo );
 
     struct jpeg_decompress_struct sDInfo;
     struct jpeg_error_mgr sJErr;
+    struct jpeg_progress_mgr sJProgress;
 
     virtual CPLErr LoadScanline(int) override;
     virtual CPLErr Restart() override;
