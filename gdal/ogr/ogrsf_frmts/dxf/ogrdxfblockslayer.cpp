@@ -125,7 +125,7 @@ OGRDXFFeature *OGRDXFBlocksLayer::GetNextUnfilteredFeature()
             false, poDS->ShouldMergeBlockGeometries() );
 
         osBlockName = oIt->first;
-        oIt++;
+        ++oIt;
 
         if( !poFeature ) 
         {
