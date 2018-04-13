@@ -6978,25 +6978,23 @@ struct GDALDataset::Layers::Iterator::Private
 };
 
 GDALDataset::Layers::Iterator::Iterator():
-    m_poPrivate(new GDALDataset::Layers::Iterator::Private())
+    m_poPrivate(new Private())
 {}
 
-GDALDataset::Layers::Iterator::Iterator(
-    const GDALDataset::Layers::Iterator& oOther):
-    m_poPrivate(new GDALDataset::Layers::Iterator::Private())
+// False positive of cppcheck 1.72
+// cppcheck-suppress uninitMemberVar
+GDALDataset::Layers::Iterator::Iterator(const Iterator& oOther):
+    m_poPrivate(new Private(*(oOther.m_poPrivate)))
 {
-    *m_poPrivate = *oOther.m_poPrivate;
 }
 
-GDALDataset::Layers::Iterator::Iterator(
-    GDALDataset::Layers::Iterator&& oOther):
-    m_poPrivate(new GDALDataset::Layers::Iterator::Private())
+GDALDataset::Layers::Iterator::Iterator(Iterator&& oOther):
+    m_poPrivate(std::move(oOther.m_poPrivate))
 {
-    *m_poPrivate = *oOther.m_poPrivate;
 }
 
 GDALDataset::Layers::Iterator::Iterator(GDALDataset* poDS, bool bStart):
-    m_poPrivate(new GDALDataset::Layers::Iterator::Private())
+    m_poPrivate(new Private())
 {
     m_poPrivate->m_poDS = poDS;
     m_poPrivate->m_nLayerCount = poDS->GetLayerCount();
@@ -7015,17 +7013,19 @@ GDALDataset::Layers::Iterator::~Iterator()
 {
 }
 
+// False positive of cppcheck 1.72
+// cppcheck-suppress operatorEqVarError
 GDALDataset::Layers::Iterator& GDALDataset::Layers::Iterator::operator=(
-	const GDALDataset::Layers::Iterator& oOther)
+                                const Iterator& oOther)
 {
     *m_poPrivate = *oOther.m_poPrivate;
     return *this;
 }
 
 GDALDataset::Layers::Iterator& GDALDataset::Layers::Iterator::operator=(
-	GDALDataset::Layers::Iterator&& oOther)
+                                GDALDataset::Layers::Iterator&& oOther)
 {
-    *m_poPrivate = *oOther.m_poPrivate;
+    m_poPrivate = std::move(oOther.m_poPrivate);
     return *this;
 }
 
