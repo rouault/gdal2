@@ -1613,7 +1613,7 @@ def unzip(target_dir, zipfilename, verbose=False):
 
 
 def isnan(val):
-    return val != val:
+    return val != val
 
 
 ###############################################################################
