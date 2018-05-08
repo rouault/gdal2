@@ -69,7 +69,7 @@ public:
     int             bTriedToOpen = FALSE;
 
     VRTOverviewInfo() = default;
-    VRTOverviewInfo(VRTOverviewInfo&& oOther) noexcept:
+    VRTOverviewInfo(VRTOverviewInfo&& oOther):
         osFilename(std::move(oOther.osFilename)),
         nBand(oOther.nBand),
         poBand(oOther.poBand),
