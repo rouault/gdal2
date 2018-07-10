@@ -36,7 +36,7 @@
 
 #include "keaband.h"
 
-class KEARasterAttributeTable : public GDALRasterAttributeTable
+class KEARasterAttributeTable : public GDALDefaultRasterAttributeTable
 {
 private:
     kealib::KEAAttributeTable *m_poKEATable;

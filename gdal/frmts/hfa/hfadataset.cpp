@@ -507,6 +507,8 @@ GDALDefaultRasterAttributeTable *HFARasterAttributeTable::Clone() const
     if( bLinearBinning )
         poRAT->SetLinearBinning(dfRow0Min, dfBinSize);
 
+    poRAT->SetTableType(this->GetTableType());
+
     return poRAT;
 }
 
@@ -2144,6 +2146,17 @@ void HFARasterBand::ReadAuxMetadata()
             CPLAssert(false);
         }
     }
+
+    /* if we have a default RAT we can now set its thematic/athematic state 
+       from the metadata we just read in */
+    if ( GetDefaultRAT() )
+    {
+        const char * psLayerType = GetMetadataItem( "LAYER_TYPE","" );
+        if (psLayerType)
+        {
+            GetDefaultRAT()->SetTableType(EQUALN(psLayerType,"athematic",9)?GRTT_ATHEMATIC:GRTT_THEMATIC);
+        }
+    }
 }
 
 /************************************************************************/
@@ -2675,6 +2688,31 @@ CPLErr HFARasterBand::SetColorTable( GDALColorTable *poCTable )
     // Write out the colortable, and update the configuration.
     const int nColors = poCTable->GetColorEntryCount();
 
+    /* -------------------------------------------------------------------- */
+    /*      If we already have a non-empty RAT set and it's smaller than    */
+    /*      the colour table, and all the trailing CT entries are the same, */
+    /*      truncate the colour table. Helps when RATs travel via GTiff.    */
+    /* -------------------------------------------------------------------- */
+    const GDALRasterAttributeTable *poRAT = GetDefaultRAT();
+    if (poRAT != nullptr && poRAT->GetRowCount() > 0 && poRAT->GetRowCount() < nColors)
+    {
+        bool match = true;
+        const GDALColorEntry *color1 = poCTable->GetColorEntry(poRAT->GetRowCount());
+        for (int i=poRAT->GetRowCount()+1; match && i<nColors; i++)
+        {
+            const GDALColorEntry *color2 = poCTable->GetColorEntry(i);
+            match = (color1->c1 == color2->c1
+                        && color1->c2 == color2->c2
+                        && color1->c3 == color2->c3
+                        && color1->c4 == color2->c4 );
+        }
+        if (match)
+        {
+            CPLDebug( "HFA", "SetColorTable: Truncating PCT size (%d) to RAT size (%d)", nColors, poRAT->GetRowCount() );
+            nColors = poRAT->GetRowCount();
+        }
+    }
+
     double *padfRed =
         static_cast<double *>(CPLMalloc(sizeof(double) * nColors));
     double *padfGreen =
@@ -2962,6 +3000,7 @@ CPLErr HFARasterBand::SetDefaultRAT( const GDALRasterAttributeTable * poRAT )
     if( poRAT == nullptr )
         return CE_Failure;
 
+    poDefaultRAT = poRAT->Clone();
     return WriteNamedRAT("Descriptor_Table", poRAT);
 }
 
@@ -5818,15 +5857,19 @@ HFADataset::CreateCopy( const char *pszFilename, GDALDataset *poSrcDS,
     if( poDS == nullptr )
         return nullptr;
 
-    // Does the source have a PCT for any of the bands?  If so, copy it over.
+    // Does the source have a PCT or RAT for any of the bands?  If so, copy it over.
     for( int iBand = 0; iBand < nBandCount; iBand++ )
     {
         GDALRasterBand *poBand = poSrcDS->GetRasterBand(iBand + 1);
+
         GDALColorTable *poCT = poBand->GetColorTable();
         if( poCT != nullptr )
         {
             poDS->GetRasterBand(iBand + 1)->SetColorTable(poCT);
         }
+
+        if( poBand->GetDefaultRAT() != nullptr )
+            poDS->GetRasterBand(iBand+1)->SetDefaultRAT( poBand->GetDefaultRAT() );
     }
 
     // Do we have metadata for any of the bands or the dataset as a whole?
