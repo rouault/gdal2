@@ -238,7 +238,23 @@ public:
      */
     virtual int           ChangesAreWrittenToFile() = 0;
 
+    /**
+     * \brief Set the RAT table type.
+     *
+     * Set whether the RAT is thematic or athematic (continuous).
+     *
+     * @since GDAL 2.4
+     */
     virtual CPLErr        SetTableType(const GDALRATTableType eInTableType) = 0;
+
+    /**
+     * \brief Get the RAT table type.
+     *
+     * Indicates whether the RAT is thematic or athematic (continuous).
+     *
+     * @since GDAL 2.4
+     * @return table type
+     */
     virtual GDALRATTableType GetTableType() const = 0;
 
     virtual CPLErr        ValuesIO( GDALRWFlag eRWFlag, int iField,
@@ -289,6 +305,11 @@ public:
     static inline GDALRasterAttributeTable* FromHandle(GDALRasterAttributeTableH hRAT)
         { return static_cast<GDALRasterAttributeTable*>(hRAT); }
 
+    /**
+     * \brief Remove statistics from the RAT.
+     *
+     * @since GDAL 2.4
+     */
     virtual void          RemoveStatistics() = 0;
 };
 
