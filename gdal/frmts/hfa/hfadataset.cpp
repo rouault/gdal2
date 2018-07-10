@@ -1566,72 +1566,6 @@ void HFARasterAttributeTable::SetRowCount( int iCount )
 }
 
 /************************************************************************/
-/*                          GetRowOfValue()                             */
-/************************************************************************/
-
-int HFARasterAttributeTable::GetRowOfValue( double dfValue ) const
-{
-    // Handle case of regular binning.
-    if( bLinearBinning )
-    {
-        const int iBin =
-            static_cast<int>(floor((dfValue - dfRow0Min) / dfBinSize));
-        if( iBin < 0 || iBin >= nRows )
-            return -1;
-
-        return iBin;
-    }
-
-    // Do we have any information?
-    int nMinCol = GetColOfUsage(GFU_Min);
-    if( nMinCol == -1 )
-        nMinCol = GetColOfUsage(GFU_MinMax);
-
-    int nMaxCol = GetColOfUsage(GFU_Max);
-    if( nMaxCol == -1 )
-        nMaxCol = GetColOfUsage(GFU_MinMax);
-
-    if( nMinCol == -1 && nMaxCol == -1 )
-        return -1;
-
-    // Search through rows for match.
-    for( int iRow = 0; iRow < nRows; iRow++ )
-    {
-        if( nMinCol != -1 )
-        {
-            while( iRow < nRows &&
-                   dfValue < GetValueAsDouble(iRow, nMinCol) )
-                iRow++;
-
-            if( iRow == nRows )
-                break;
-        }
-
-        if( nMaxCol != -1 )
-        {
-            if( dfValue > GetValueAsDouble(iRow, nMaxCol) )
-                continue;
-        }
-
-        return iRow;
-    }
-
-    return -1;
-}
-
-/************************************************************************/
-/*                          GetRowOfValue()                             */
-/*                                                                      */
-/*      Int arg for now just converted to double.  Perhaps we will      */
-/*      handle this in a special way some day?                          */
-/************************************************************************/
-
-int HFARasterAttributeTable::GetRowOfValue( int nValue ) const
-{
-    return GetRowOfValue(static_cast<double>(nValue));
-}
-
-/************************************************************************/
 /*                          CreateColumn()                              */
 /************************************************************************/
 
@@ -2686,7 +2620,7 @@ CPLErr HFARasterBand::SetColorTable( GDALColorTable *poCTable )
     }
 
     // Write out the colortable, and update the configuration.
-    const int nColors = poCTable->GetColorEntryCount();
+    int nColors = poCTable->GetColorEntryCount();
 
     /* -------------------------------------------------------------------- */
     /*      If we already have a non-empty RAT set and it's smaller than    */

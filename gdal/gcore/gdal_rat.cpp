@@ -563,7 +563,7 @@ GDALRATGetLinearBinning( GDALRasterAttributeTableH hRAT,
 /**
  * \brief Get Rat Table Type
  *
- * @since GDAL 2.0
+ * @since GDAL 2.4
  *
  * This function is the same as the C++ method GDALRasterAttributeTable::GetTableType()
  */
@@ -583,7 +583,7 @@ GDALRATGetTableType( GDALRasterAttributeTableH hRAT)
 /**
  * \brief Set RAT Table Type
  *
- * @since GDAL 2.0
+ * @since GDAL 2.4
  *
  * This function is the same as the C++ method GDALRasterAttributeTable::SetTableType()
  */
@@ -637,7 +637,15 @@ CPLXMLNode *GDALRasterAttributeTable::Serialize() const
 /* -------------------------------------------------------------------- */
 /*      Store table type                                                */
 /* -------------------------------------------------------------------- */
-    CPLsnprintf( szValue, sizeof(szValue), "%d", GetTableType() );
+    const GDALRATTableType tableType = GetTableType();
+    if (tableType == GRTT_ATHEMATIC)
+    {
+        CPLsnprintf( szValue, sizeof(szValue), "athematic" );
+    }
+    else
+    {
+        CPLsnprintf( szValue, sizeof(szValue), "thematic" );
+    }
     CPLCreateXMLNode( 
         CPLCreateXMLNode( psTree, CXT_Attribute, "TableType" ), 
         CXT_Text, szValue );
@@ -732,6 +740,7 @@ void *GDALRasterAttributeTable::SerializeJSON() const
     double dfBinSize = 0.0;
     json_object *poRow0Min = nullptr;
     json_object *poBinSize = nullptr;
+    json_object *poTableType = nullptr;
 
     if( GetLinearBinning(&dfRow0Min, &dfBinSize) )
     {
@@ -741,6 +750,20 @@ void *GDALRasterAttributeTable::SerializeJSON() const
         poBinSize = json_object_new_double_with_precision( dfBinSize, 16 );
         json_object_object_add( poRAT, "binSize", poBinSize );
     }
+
+/* -------------------------------------------------------------------- */
+/*      Table Type                                                      */
+/* -------------------------------------------------------------------- */
+    const GDALRATTableType tableType = GetTableType();
+    if (tableType == GRTT_ATHEMATIC)
+    {
+        poTableType = json_object_new_string( "athematic" );
+    }
+    else
+    {
+        poTableType = json_object_new_string( "thematic" );
+    }
+    json_object_object_add( poRAT, "TableType", poTableType);
 
 /* -------------------------------------------------------------------- */
 /*      Define each column.                                             */
@@ -837,9 +860,15 @@ CPLErr GDALRasterAttributeTable::XMLInit( CPLXMLNode *psTree,
 /* -------------------------------------------------------------------- */
     if( CPLGetXMLValue( psTree, "TableType", nullptr ) )
     {
-        int iTableType = atoi(CPLGetXMLValue( psTree, "TableType","" ));
-        if (iTableType >= GRTT_THEMATIC && iTableType <= GRTT_ATHEMATIC)
-            SetTableType( (GDALRATTableType) iTableType );
+        const char* pszValue = CPLGetXMLValue(psTree, "TableType", "thematic");
+        if (EQUAL(pszValue, "athematic"))
+        {
+            SetTableType(GRTT_ATHEMATIC);
+        }
+        else
+        {
+            SetTableType(GRTT_THEMATIC);
+        }
     }
 
 
@@ -1152,8 +1181,8 @@ GDALDefaultRasterAttributeTable::GDALDefaultRasterAttributeTable() :
     bLinearBinning(false),
     dfRow0Min(-0.5),
     dfBinSize(1.0),
-    bColumnsAnalysed(false),
     eTableType(GRTT_THEMATIC),
+    bColumnsAnalysed(false),
     nMinCol(-1),
     nMaxCol(-1),
     nRowCount(0)
@@ -2037,7 +2066,7 @@ int GDALDefaultRasterAttributeTable::GetLinearBinning(
  *
  * This method is the same as the C function GDALRATGetTableType().
  *
- * @since GDAL 2.0
+ * @since GDAL 2.4
  *
  * @return GRTT_THEMATIC or GRTT_ATHEMATIC
  */
@@ -2060,15 +2089,13 @@ GDALRATTableType GDALDefaultRasterAttributeTable::GetTableType() const
  *
  * @param eInTableType the new RAT table type (GRTT_THEMATIC or GRTT_ATHEMATIC)
  *
- * @since GDAL 2.0
+ * @since GDAL 2.4
  *
  * @return CE_None on success or CE_Failure on failure.
  */
 
 CPLErr GDALDefaultRasterAttributeTable::SetTableType(const GDALRATTableType eInTableType)
 {
-    if (eInTableType < GRTT_THEMATIC || eInTableType > GRTT_ATHEMATIC)
-        return CE_Failure;
     eTableType = eInTableType;
     return CE_None;
 }
@@ -2168,7 +2195,7 @@ GDALRATSerializeJSON( GDALRasterAttributeTableH hRAT )
  *
  * This method is the same as the C function GDALRATRemoveStatistics().
  *
- * @since GDAL 2.0
+ * @since GDAL 2.4
  */
 
 void GDALDefaultRasterAttributeTable::RemoveStatistics()
@@ -2178,10 +2205,9 @@ void GDALDefaultRasterAttributeTable::RemoveStatistics()
     // be faster to create a new vector and replace the old one
     // rather than actually erasing columns.
     std::vector<GDALRasterAttributeField> aoNewFields;
-    for (std::vector<GDALRasterAttributeField>::const_iterator itr = aoFields.begin(); 
-            itr != aoFields.end(); ++itr)
+    for ( const auto& field : aoFields )
     {
-        switch (itr->eUsage) 
+        switch (field.eUsage)
         {
             case GFU_PixelCount:
             case GFU_Min:
@@ -2199,8 +2225,10 @@ void GDALDefaultRasterAttributeTable::RemoveStatistics()
             }
 
             default:
-                if (itr->sName != "Histogram")
-                    aoNewFields.push_back(*itr);
+                if (field.sName != "Histogram")
+                {
+                    aoNewFields.push_back(field);
+                }
         }
     }
     aoFields = aoNewFields;
@@ -2215,7 +2243,7 @@ void GDALDefaultRasterAttributeTable::RemoveStatistics()
  *
  * This function is the same as the C++ method GDALRasterAttributeTable::RemoveStatistics()
  *
- * @since GDAL 2.0
+ * @since GDAL 2.4
  */
 void CPL_STDCALL 
 GDALRATRemoveStatistics( GDALRasterAttributeTableH hRAT )

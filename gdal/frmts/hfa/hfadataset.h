@@ -291,9 +291,6 @@ class HFARasterAttributeTable final : public GDALDefaultRasterAttributeTable
     virtual int           ChangesAreWrittenToFile() override;
     virtual void          SetRowCount( int iCount ) override;
 
-    virtual int           GetRowOfValue( double dfValue ) const override;
-    virtual int           GetRowOfValue( int nValue ) const override;
-
     virtual CPLErr        CreateColumn( const char *pszFieldName,
                                         GDALRATFieldType eFieldType,
                                         GDALRATFieldUsage eFieldUsage ) override;

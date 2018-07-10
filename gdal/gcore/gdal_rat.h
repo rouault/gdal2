@@ -340,6 +340,7 @@ class CPL_DLL GDALDefaultRasterAttributeTable : public GDALRasterAttributeTable
     CPLString osWorkingResult{};
 
  public:
+    GDALDefaultRasterAttributeTable();
     ~GDALDefaultRasterAttributeTable() override;
 
     GDALDefaultRasterAttributeTable *Clone() const override;

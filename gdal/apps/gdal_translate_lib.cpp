@@ -59,7 +59,7 @@ CPL_CVSID("$Id$")
 static int ArgIsNumeric( const char * );
 static void AttachMetadata( GDALDatasetH, char ** );
 static void CopyBandInfo( GDALRasterBand * poSrcBand, GDALRasterBand * poDstBand,
-                            int bCanCopyStatsMetadata, int bCopyScale, int bCopyNoData, int bCopyRAT );
+                            int bCanCopyStatsMetadata, int bCopyScale, int bCopyNoData, bool bCopyRAT );
 
 typedef enum
 {
@@ -1954,7 +1954,7 @@ static void AttachMetadata( GDALDatasetH hDS, char **papszMetadataOptions )
 /* more and more custom behaviour in the context of gdal_translate ... */
 
 static void CopyBandInfo( GDALRasterBand * poSrcBand, GDALRasterBand * poDstBand,
-                          int bCanCopyStatsMetadata, int bCopyScale, int bCopyNoData, int bCopyRAT )
+                          int bCanCopyStatsMetadata, int bCopyScale, int bCopyNoData, bool bCopyRAT )
 
 {
 

@@ -1103,7 +1103,7 @@ typedef enum {
 } GDALRATFieldUsage;
 
 /** RAT table type (thematic or athematic)
-  * @since GDAL 2.0
+  * @since GDAL 2.4
   */
 typedef enum {
     /*! Thematic table type */            GRTT_THEMATIC,
