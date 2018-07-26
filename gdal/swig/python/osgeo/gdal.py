@@ -2899,6 +2899,14 @@ class RasterAttributeTable(_object):
 
         return gdalnumeric.RATReadArray(self, field, start, length)
 
+    def GetTableType(self, *args):
+        """ GetTableType() -> GDALRATTableType"""
+        return _gdal.RasterAttributeTable_GetTableType(self, *args)
+
+    def SetTableType(self, *args):
+        """SetTableType(const GDALRATTableType eInTableType) -> int"""
+        return _gdal.RasterAttributeTable_SetTableType(self, *args)
+
 RasterAttributeTable_swigregister = _gdal.RasterAttributeTable_swigregister
 RasterAttributeTable_swigregister(RasterAttributeTable)
 

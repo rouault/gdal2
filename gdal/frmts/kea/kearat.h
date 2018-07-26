@@ -84,6 +84,9 @@ public:
                                             double *pdfBinSize ) const override;
 
     virtual CPLXMLNode   *Serialize() const override;
+
+    virtual GDALRATTableType GetTableType() const override;
+    virtual CPLErr        SetTableType(const GDALRATTableType eInTableType) override;
 };
 
 #endif //KEARAT_H

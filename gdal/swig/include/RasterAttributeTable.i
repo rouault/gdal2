@@ -72,7 +72,7 @@ typedef enum {
 typedef enum {
     /*! Thematic table type */            GRTT_THEMATIC,
     /*! Athematic table type */           GRTT_ATHEMATIC
-} GDALRATFieldType;
+} GDALRATTableType;
 #endif /* CSHARP */
 
 %rename (RasterAttributeTable) GDALRasterAttributeTableShadow;
