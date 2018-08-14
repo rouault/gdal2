@@ -415,7 +415,7 @@ HFARasterAttributeTable::~HFARasterAttributeTable() {}
 /*                              Clone()                                 */
 /************************************************************************/
 
-GDALDefaultRasterAttributeTable *HFARasterAttributeTable::Clone() const
+GDALRasterAttributeTable *HFARasterAttributeTable::Clone() const
 {
     if( (GetRowCount() * GetColumnCount()) > RAT_MAX_ELEM_FOR_CLONE )
         return nullptr;
@@ -1566,6 +1566,60 @@ void HFARasterAttributeTable::SetRowCount( int iCount )
 }
 
 /************************************************************************/
+/*                          GetRowOfValue()                             */
+/************************************************************************/
+ int HFARasterAttributeTable::GetRowOfValue( double dfValue ) const
+{
+    // Handle case of regular binning.
+    if( bLinearBinning )
+    {
+        const int iBin =
+            static_cast<int>(floor((dfValue - dfRow0Min) / dfBinSize));
+        if( iBin < 0 || iBin >= nRows )
+            return -1;
+         return iBin;
+    }
+     // Do we have any information?
+    int nMinCol = GetColOfUsage(GFU_Min);
+    if( nMinCol == -1 )
+        nMinCol = GetColOfUsage(GFU_MinMax);
+     int nMaxCol = GetColOfUsage(GFU_Max);
+    if( nMaxCol == -1 )
+        nMaxCol = GetColOfUsage(GFU_MinMax);
+     if( nMinCol == -1 && nMaxCol == -1 )
+        return -1;
+     // Search through rows for match.
+    for( int iRow = 0; iRow < nRows; iRow++ )
+    {
+        if( nMinCol != -1 )
+        {
+            while( iRow < nRows &&
+                   dfValue < GetValueAsDouble(iRow, nMinCol) )
+                iRow++;
+             if( iRow == nRows )
+                break;
+        }
+         if( nMaxCol != -1 )
+        {
+            if( dfValue > GetValueAsDouble(iRow, nMaxCol) )
+                continue;
+        }
+         return iRow;
+    }
+     return -1;
+}
+ /************************************************************************/
+/*                          GetRowOfValue()                             */
+/*                                                                      */
+/*      Int arg for now just converted to double.  Perhaps we will      */
+/*      handle this in a special way some day?                          */
+/************************************************************************/
+ int HFARasterAttributeTable::GetRowOfValue( int nValue ) const
+{
+    return GetRowOfValue(static_cast<double>(nValue));
+}
+
+/************************************************************************/
 /*                          CreateColumn()                              */
 /************************************************************************/
 
@@ -1750,6 +1804,25 @@ CPLXMLNode *HFARasterAttributeTable::Serialize() const
         return nullptr;
 
     return GDALRasterAttributeTable::Serialize();
+}
+
+/************************************************************************/
+/*                              SetTableType()                             */
+/************************************************************************/
+
+CPLErr HFARasterAttributeTable::SetTableType(const GDALRATTableType eInTableType)
+{
+    eTableType = eInTableType;
+    return CE_None;
+}
+
+/************************************************************************/
+/*                              GetTableType()                             */
+/************************************************************************/
+
+GDALRATTableType HFARasterAttributeTable::GetTableType() const
+{
+    return eTableType;
 }
 
 /************************************************************************/
@@ -2081,7 +2154,7 @@ void HFARasterBand::ReadAuxMetadata()
         }
     }
 
-    /* if we have a default RAT we can now set its thematic/athematic state 
+    /* if we have a default RAT we can now set its thematic/athematic state
        from the metadata we just read in */
     if ( GetDefaultRAT() )
     {

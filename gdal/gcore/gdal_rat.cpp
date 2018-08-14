@@ -567,7 +567,7 @@ GDALRATGetLinearBinning( GDALRasterAttributeTableH hRAT,
  *
  * This function is the same as the C++ method GDALRasterAttributeTable::GetTableType()
  */
-GDALRATTableType CPL_STDCALL 
+GDALRATTableType CPL_STDCALL
 GDALRATGetTableType( GDALRasterAttributeTableH hRAT)
 {
     VALIDATE_POINTER1( hRAT, "GDALRATGetTableType", GRTT_THEMATIC );
@@ -587,8 +587,8 @@ GDALRATGetTableType( GDALRasterAttributeTableH hRAT)
  *
  * This function is the same as the C++ method GDALRasterAttributeTable::SetTableType()
  */
-CPLErr CPL_STDCALL 
-GDALRATSetTableType( GDALRasterAttributeTableH hRAT, 
+CPLErr CPL_STDCALL
+GDALRATSetTableType( GDALRasterAttributeTableH hRAT,
                          const GDALRATTableType eInTableType )
 
 {
@@ -646,8 +646,8 @@ CPLXMLNode *GDALRasterAttributeTable::Serialize() const
     {
         CPLsnprintf( szValue, sizeof(szValue), "thematic" );
     }
-    CPLCreateXMLNode( 
-        CPLCreateXMLNode( psTree, CXT_Attribute, "TableType" ), 
+    CPLCreateXMLNode(
+        CPLCreateXMLNode( psTree, CXT_Attribute, "tableType" ),
         CXT_Text, szValue );
 
 /* -------------------------------------------------------------------- */
@@ -763,7 +763,7 @@ void *GDALRasterAttributeTable::SerializeJSON() const
     {
         poTableType = json_object_new_string( "thematic" );
     }
-    json_object_object_add( poRAT, "TableType", poTableType);
+    json_object_object_add( poRAT, "tableType", poTableType);
 
 /* -------------------------------------------------------------------- */
 /*      Define each column.                                             */
@@ -858,9 +858,9 @@ CPLErr GDALRasterAttributeTable::XMLInit( CPLXMLNode *psTree,
 /* -------------------------------------------------------------------- */
 /*      Table Type                                                      */
 /* -------------------------------------------------------------------- */
-    if( CPLGetXMLValue( psTree, "TableType", nullptr ) )
+    if( CPLGetXMLValue( psTree, "tableType", nullptr ) )
     {
-        const char* pszValue = CPLGetXMLValue(psTree, "TableType", "thematic");
+        const char* pszValue = CPLGetXMLValue(psTree, "tableType", "thematic");
         if (EQUAL(pszValue, "athematic"))
         {
             SetTableType(GRTT_ATHEMATIC);
@@ -2155,7 +2155,7 @@ GDALDefaultRasterAttributeTable *GDALDefaultRasterAttributeTable::Clone() const
  *
  * This function is the same as the C++ method GDALRasterAttributeTable::Clone()
  */
-GDALRasterAttributeTableH CPL_STDCALL 
+GDALRasterAttributeTableH CPL_STDCALL
 GDALRATClone( const GDALRasterAttributeTableH hRAT )
 
 {
@@ -2245,7 +2245,7 @@ void GDALDefaultRasterAttributeTable::RemoveStatistics()
  *
  * @since GDAL 2.4
  */
-void CPL_STDCALL 
+void CPL_STDCALL
 GDALRATRemoveStatistics( GDALRasterAttributeTableH hRAT )
 
 {

@@ -209,7 +209,7 @@ class HFAAttributeField
     bool              bConvertColors;  // Map 0-1 floats to 0-255 ints.
 };
 
-class HFARasterAttributeTable final : public GDALDefaultRasterAttributeTable
+class HFARasterAttributeTable final : public GDALRasterAttributeTable
 {
   private:
     HFAHandle   hHFA;
@@ -224,6 +224,7 @@ class HFARasterAttributeTable final : public GDALDefaultRasterAttributeTable
     bool bLinearBinning;
     double dfRow0Min;
     double dfBinSize;
+    GDALRATTableType eTableType;
 
     CPLString osWorkingResult;
 
@@ -258,7 +259,7 @@ class HFARasterAttributeTable final : public GDALDefaultRasterAttributeTable
     HFARasterAttributeTable( HFARasterBand *poBand, const char *pszName );
     virtual ~HFARasterAttributeTable();
 
-    GDALDefaultRasterAttributeTable *Clone() const override;
+    GDALRasterAttributeTable *Clone() const override;
 
     virtual int           GetColumnCount() const override;
 
@@ -291,6 +292,9 @@ class HFARasterAttributeTable final : public GDALDefaultRasterAttributeTable
     virtual int           ChangesAreWrittenToFile() override;
     virtual void          SetRowCount( int iCount ) override;
 
+    virtual int           GetRowOfValue( double dfValue ) const override;
+    virtual int           GetRowOfValue( int nValue ) const override;
+
     virtual CPLErr        CreateColumn( const char *pszFieldName,
                                         GDALRATFieldType eFieldType,
                                         GDALRATFieldUsage eFieldUsage ) override;
@@ -300,6 +304,10 @@ class HFARasterAttributeTable final : public GDALDefaultRasterAttributeTable
                                             double *pdfBinSize ) const override;
 
     virtual CPLXMLNode   *Serialize() const override;
+
+    virtual CPLErr        SetTableType(const GDALRATTableType eInTableType) override;
+    virtual GDALRATTableType GetTableType() const override;
+    virtual void          RemoveStatistics() override {};
 
 protected:
     CPLErr                ColorsIO( GDALRWFlag eRWFlag, int iField,

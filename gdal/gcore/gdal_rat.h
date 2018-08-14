@@ -60,7 +60,7 @@ public:
      *
      * @return new copy of the RAT as an in-memory implementation.
      */
-    virtual GDALDefaultRasterAttributeTable *Clone() const = 0;
+    virtual GDALRasterAttributeTable *Clone() const = 0;
 
     /**
      * \brief Fetch table column count.
