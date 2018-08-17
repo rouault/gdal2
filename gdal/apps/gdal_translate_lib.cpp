@@ -1831,18 +1831,6 @@ GDALDatasetH GDALTranslate( const char *pszDest, GDALDatasetH hSrcDataset,
                                         adfDstWin[2], adfDstWin[3] );
             }
         }
-
-        // Only copy RAT if it is of reasonable size to fit in memory
-        if( !psOptions->bNoRAT )
-        {
-            GDALRasterAttributeTable* poRAT = poSrcBand->GetDefaultRAT();
-            if( poRAT != nullptr &&
-                static_cast<GIntBig>(poRAT->GetColumnCount()) *
-                    poRAT->GetRowCount() < 1024 * 1024 )
-            {
-                poVRTBand->SetDefaultRAT(poRAT);
-            }
-        }
     }
 
     if (psOptions->eMaskMode == MASK_USER)
@@ -1983,7 +1971,10 @@ static void CopyBandInfo( GDALRasterBand * poSrcBand, GDALRasterBand * poDstBand
         {
             GDALRasterAttributeTable *poNewRAT = poSrcBand->GetDefaultRAT()->Clone();
             poNewRAT->RemoveStatistics();
-            poDstBand->SetDefaultRAT( poNewRAT );
+            if( poNewRAT->GetColumnCount() )
+            {
+                poDstBand->SetDefaultRAT( poNewRAT );
+            }
             // since SetDefaultRAT copies the RAT data we need to delete our original
             delete poNewRAT;
         }
