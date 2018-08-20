@@ -284,7 +284,8 @@ HFARasterAttributeTable::HFARasterAttributeTable(
     nRows(0),
     bLinearBinning(false),
     dfRow0Min(0.0),
-    dfBinSize(0.0)
+    dfBinSize(0.0),
+    eTableType(GRTT_THEMATIC)
 {
     if( poDT != nullptr )
     {
