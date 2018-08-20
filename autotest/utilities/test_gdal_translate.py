@@ -1231,7 +1231,15 @@ def test_gdal_translate_cleanup():
     except:
         pass
     try:
+        os.remove('tmp/test_gdal_translate_36.tif.aux.xml')
+    except:
+        pass
+    try:
         os.remove('tmp/test_gdal_translate_37.tif')
+    except:
+        pass
+    try:
+        os.remove('tmp/test_gdal_translate_37.tif.aux.xml')
     except:
         pass
     try:

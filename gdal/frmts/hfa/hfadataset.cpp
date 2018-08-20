@@ -1825,6 +1825,42 @@ GDALRATTableType HFARasterAttributeTable::GetTableType() const
     return eTableType;
 }
 
+void HFARasterAttributeTable::RemoveStatistics()
+{
+    CPLDebug("HFARasterAttributeTable::RemoveStatistics", "thingz");
+    // since we are storing the fields in a vector it will generally
+    // be faster to create a new vector and replace the old one
+    // rather than actually erasing columns.
+    std::vector<HFAAttributeField> aoNewFields;
+    for ( const auto& field : aoFields )
+    {
+        switch (field.eUsage)
+        {
+            case GFU_PixelCount:
+            case GFU_Min:
+            case GFU_Max:
+            case GFU_RedMin:
+            case GFU_GreenMin:
+            case GFU_BlueMin:
+            case GFU_AlphaMin:
+            case GFU_RedMax:
+            case GFU_GreenMax:
+            case GFU_BlueMax:
+            case GFU_AlphaMax:
+            {
+                break;
+            }
+
+            default:
+                if (field.sName != "Histogram")
+                {
+                    aoNewFields.push_back(field);
+                }
+        }
+    }
+    aoFields = aoNewFields;
+}
+
 /************************************************************************/
 /*                           HFARasterBand()                            */
 /************************************************************************/
@@ -3007,8 +3043,13 @@ CPLErr HFARasterBand::SetDefaultRAT( const GDALRasterAttributeTable * poRAT )
     if( poRAT == nullptr )
         return CE_Failure;
 
-    poDefaultRAT = poRAT->Clone();
-    return WriteNamedRAT("Descriptor_Table", poRAT);
+    poDefaultRAT = nullptr;
+
+    CPLErr r = WriteNamedRAT("Descriptor_Table", poRAT);
+    if (!r)
+        GetDefaultRAT();
+
+    return r;
 }
 
 /************************************************************************/

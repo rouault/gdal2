@@ -2137,53 +2137,6 @@ CPLErr GDALDefaultRasterAttributeTable::CreateColumn(
 }
 
 /************************************************************************/
-/*                               Clone()                                */
-/************************************************************************/
-
-GDALDefaultRasterAttributeTable *GDALDefaultRasterAttributeTable::Clone() const
-
-{
-    return new GDALDefaultRasterAttributeTable( *this );
-}
-
-/************************************************************************/
-/*                            GDALRATClone()                            */
-/************************************************************************/
-
-/**
- * \brief Copy Raster Attribute Table
- *
- * This function is the same as the C++ method GDALRasterAttributeTable::Clone()
- */
-GDALRasterAttributeTableH CPL_STDCALL
-GDALRATClone( const GDALRasterAttributeTableH hRAT )
-
-{
-    VALIDATE_POINTER1( hRAT, "GDALRATClone", nullptr );
-
-    return GDALRasterAttributeTable::FromHandle(hRAT)->Clone();
-}
-
-/************************************************************************/
-/*                            GDALRATSerializeJSON()                    */
-/************************************************************************/
-
-/**
- * \brief Serialize Raster Attribute Table in Json format
- *
- * This function is the same as the C++ method
- * GDALRasterAttributeTable::SerializeJSON()
- */
-void* CPL_STDCALL
-GDALRATSerializeJSON( GDALRasterAttributeTableH hRAT )
-
-{
-    VALIDATE_POINTER1( hRAT, "GDALRATSerializeJSON", nullptr );
-
-    return GDALRasterAttributeTable::FromHandle(hRAT)->SerializeJSON();
-}
-
-/************************************************************************/
 /*                            RemoveStatistics()                        */
 /************************************************************************/
 
@@ -2235,7 +2188,55 @@ void GDALDefaultRasterAttributeTable::RemoveStatistics()
 }
 
 /************************************************************************/
-/*                        GDALRATDumpReadable()                         */
+/*                               Clone()                                */
+/************************************************************************/
+
+GDALDefaultRasterAttributeTable *GDALDefaultRasterAttributeTable::Clone() const
+
+{
+    return new GDALDefaultRasterAttributeTable( *this );
+}
+
+/************************************************************************/
+/*                            GDALRATClone()                            */
+/************************************************************************/
+
+/**
+ * \brief Copy Raster Attribute Table
+ *
+ * This function is the same as the C++ method GDALRasterAttributeTable::Clone()
+ */
+GDALRasterAttributeTableH CPL_STDCALL
+GDALRATClone( const GDALRasterAttributeTableH hRAT )
+
+{
+    VALIDATE_POINTER1( hRAT, "GDALRATClone", nullptr );
+
+    return GDALRasterAttributeTable::FromHandle(hRAT)->Clone();
+}
+
+/************************************************************************/
+/*                            GDALRATSerializeJSON()                    */
+/************************************************************************/
+
+/**
+ * \brief Serialize Raster Attribute Table in Json format
+ *
+ * This function is the same as the C++ method
+ * GDALRasterAttributeTable::SerializeJSON()
+ */
+void* CPL_STDCALL
+GDALRATSerializeJSON( GDALRasterAttributeTableH hRAT )
+
+{
+    VALIDATE_POINTER1( hRAT, "GDALRATSerializeJSON", nullptr );
+
+    return GDALRasterAttributeTable::FromHandle(hRAT)->SerializeJSON();
+}
+
+
+/************************************************************************/
+/*                        GDALRATRemoveStatistics()                     */
 /************************************************************************/
 
 /**

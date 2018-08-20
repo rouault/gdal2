@@ -307,7 +307,7 @@ class HFARasterAttributeTable final : public GDALRasterAttributeTable
 
     virtual CPLErr        SetTableType(const GDALRATTableType eInTableType) override;
     virtual GDALRATTableType GetTableType() const override;
-    virtual void          RemoveStatistics() override {};
+    virtual void          RemoveStatistics() override;
 
 protected:
     CPLErr                ColorsIO( GDALRWFlag eRWFlag, int iField,
