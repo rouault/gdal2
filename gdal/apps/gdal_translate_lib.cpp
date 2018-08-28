@@ -1976,9 +1976,6 @@ static void CopyBandInfo( GDALRasterBand * poSrcBand, GDALRasterBand * poDstBand
             if( poNewRAT->GetColumnCount() )
             {
                 poDstBand->SetDefaultRAT( poNewRAT );
-
-                // strip histogram data (as definied by the destination RAT)
-                poDstBand->GetDefaultRAT()->RemoveStatistics();
             }
             // since SetDefaultRAT copies the RAT data we need to delete our original
             delete poNewRAT;

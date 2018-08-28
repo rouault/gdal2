@@ -1828,7 +1828,6 @@ GDALRATTableType HFARasterAttributeTable::GetTableType() const
 
 void HFARasterAttributeTable::RemoveStatistics()
 {
-    CPLDebug("HFARasterAttributeTable::RemoveStatistics", "thingz");
     // since we are storing the fields in a vector it will generally
     // be faster to create a new vector and replace the old one
     // rather than actually erasing columns.
