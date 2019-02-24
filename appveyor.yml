@@ -15,12 +15,14 @@ cache:
   - '%LOCALAPPDATA%\pip\Cache'
   - C:\ProgramData\chocolatey\bin -> appveyor.yml
   - C:\ProgramData\chocolatey\lib -> appveyor.yml
+  - '%HOME%\clcache'
 
 init:
   - ps: |
       if($env:platform -eq "x86")
       {
-        $env:PATH="c:\Python27;c:\Python27\Scripts;$env:PATH"
+        $env:PYTHONSCRIPTS="c:\Python35\Scripts"
+        $env:PATH="c:\Python35;$env:PATH"
         $env:VS_VER=2017
         $env:SDK="release-1911"
         $env:MSVC_VER=1911
@@ -30,7 +32,8 @@ init:
       }
       else
       {
-        $env:PATH="c:\Python27-x64;c:\Python27-x64\Scripts;$env:PATH"
+        $env:PYTHONSCRIPTS="c:\Python35-x64\Scripts"
+        $env:PATH="c:\Python35-x64;$env:PATH"
         $env:VS_VER=2015
         $env:SDK="release-1900-x64"
         $env:MSVC_VER=1900
@@ -66,10 +69,12 @@ install:
       Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
       Install-Module Pscx -AllowClobber
       Install-Module VSSetup -Scope CurrentUser
-      # Install SWIG and VC for Python2.7 by Choco
-      cinst -y --no-progress swig vcpython27
+      # Install SWIG by Choco
+      cinst -y --no-progress swig
       Import-VisualStudioVars -VisualStudioVersion $env:VS_VER -Architecture $env:ARCHITECTURE
-      exec { pip install numpy }
+      $env:PATH="$env:PYTHONSCRIPTS;$env:PATH"
+      exec { pip install numpy clcache }
+      copy $env:PYTHONSCRIPTS\clcache.exe $env:PYTHONSCRIPTS\cl.exe
       $env:SDK_ZIP="$env:SDK"+"-dev.zip"
       $env:SDK_URL="http://download.gisinternals.com/sdk/downloads/$env:SDK_ZIP"
       if(-Not (Test-Path -Path downloads)) { mkdir downloads }
@@ -143,8 +148,9 @@ install:
       $env:PATH="$env:APPVEYOR_BUILD_FOLDER;$env:PATH"
       $env:PROJ_INSTALL_DIR="$env:APPVEYOR_BUILD_FOLDER"+"\install-proj"
       $env:CMAKE_INSTALL_PREFIX="-DCMAKE_INSTALL_PREFIX=" + $env:PROJ_INSTALL_DIR
-      exec { cmake -G $env:VS_FULL .. $env:CMAKE_INSTALL_PREFIX -DPROJ_TESTS=OFF -DCMAKE_BUILD_TYPE=Release -DBUILD_LIBPROJ_SHARED=ON -DCMAKE_TOOLCHAIN_FILE=c:/tools/vcpkg/scripts/buildsystems/vcpkg.cmake }
+      exec { cmake -G $env:VS_FULL .. $env:CMAKE_INSTALL_PREFIX -DPROJ_TESTS=OFF -DCMAKE_BUILD_TYPE=Release -DBUILD_LIBPROJ_SHARED=ON -DCMAKE_C_COMPILER=$env:PYTHONSCRIPTS\cl.exe -DCMAKE_CXX_COMPILER=$env:PYTHONSCRIPTS\cl.exe -DSQLITE3_INCLUDE_DIR=C:\Tools\vcpkg\installed\$env:VCPKG_PLATFORM\include -DSQLITE3_LIBRARY=C:/Tools/vcpkg/installed/$env:VCPKG_PLATFORM/lib/sqlite3.lib }
       exec { cmake --build . --config Release --target install }
+      exec { clcache -s }
       cd $env:APPVEYOR_BUILD_FOLDER\install-proj\share\proj
       appveyor DownloadFile https://download.osgeo.org/proj/proj-datumgrid-1.8.zip
       exec { 7z x proj-datumgrid-1.8.zip -aoa }
@@ -164,6 +170,7 @@ install:
       exec { nmake /f makefile.vc all $env:WIN64_ARG}
       cd $env:APPVEYOR_BUILD_FOLDER\autotest\cpp
       exec { nmake /f makefile.vc MSVC_VER=$env:MSVC_VER $env:WIN64_ARG }
+      exec { clcache -s }
 
 build: off
 
