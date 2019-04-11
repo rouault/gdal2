@@ -444,7 +444,7 @@ TileDBDataset::~TileDBDataset()
     }
     catch(const tiledb::TileDBError& e)
     {
-        CPLError( CE_Failure, CPLE_AppDefined, "TileDB: %s", e.what() );
+        CPLError( CE_Failure, CPLE_AppDefined, "%s", e.what() );
     }
     CPLDestroyXMLNode( psSubDatasetsTree );
     CSLDestroy( papszSubDatasets );
@@ -607,7 +607,7 @@ CPLErr TileDBDataset::TrySaveXML()
     }
     catch(const tiledb::TileDBError& e)
     {
-        CPLError( CE_Failure, CPLE_AppDefined, "TileDB: %s", e.what() );
+        CPLError( CE_Failure, CPLE_AppDefined, "%s", e.what() );
         if ( psTree )
             CPLDestroyXMLNode( psTree );
         return CE_Failure;
@@ -723,7 +723,7 @@ CPLErr TileDBDataset::TryLoadXML( char ** /*papszSiblingFiles*/ )
     }
     catch(const tiledb::TileDBError& e)
     {
-        CPLError( CE_Failure, CPLE_AppDefined, "TileDB: %s", e.what() );
+        CPLError( CE_Failure, CPLE_AppDefined, "%s", e.what() );
         if ( psTree )
             CPLDestroyXMLNode( psTree );
         return CE_Failure;
@@ -812,7 +812,7 @@ CPLErr TileDBDataset::AddFilter( const char* pszFilterName, const int level )
     }
     catch(const tiledb::TileDBError& e)
     {
-        CPLError( CE_Failure, CPLE_AppDefined, "TileDB: %s", e.what() );
+        CPLError( CE_Failure, CPLE_AppDefined, "%s", e.what() );
         return CE_Failure;
     }
 }
@@ -838,7 +838,7 @@ CPLErr TileDBDataset::Delete( const char * pszFilename )
     }
     catch(const tiledb::TileDBError& e)
     {
-        CPLError( CE_Failure, CPLE_AppDefined, "TileDB: %s", e.what() );
+        CPLError( CE_Failure, CPLE_AppDefined, "%s", e.what() );
         return CE_Failure;
     }
 }
@@ -1105,7 +1105,7 @@ GDALDataset *TileDBDataset::Open( GDALOpenInfo * poOpenInfo )
     }
     catch(const tiledb::TileDBError& e)
     {
-        CPLError( CE_Failure, CPLE_AppDefined, "TileDB: %s", e.what() );
+        CPLError( CE_Failure, CPLE_AppDefined, "%s", e.what() );
         return nullptr;
     }
 }
@@ -1297,7 +1297,7 @@ CPLErr TileDBDataset::CreateAttribute( GDALDataType eType,
     }
     catch(const tiledb::TileDBError& e)
     {
-        CPLError( CE_Failure, CPLE_AppDefined, "TileDB: %s", e.what() );
+        CPLError( CE_Failure, CPLE_AppDefined, "%s", e.what() );
         return CE_Failure;
     }
 }
@@ -1434,7 +1434,7 @@ TileDBDataset* TileDBDataset::CreateLL( const char *pszFilename,
     }
     catch(const tiledb::TileDBError& e)
     {
-        CPLError( CE_Failure, CPLE_AppDefined, "TileDB: %s", e.what() );
+        CPLError( CE_Failure, CPLE_AppDefined, "%s", e.what() );
         return nullptr;
     }
 }
@@ -1633,7 +1633,7 @@ CPLErr TileDBDataset::CopySubDatasets( GDALDataset* poSrcDS,
     }
     catch(const tiledb::TileDBError& e)
     {
-        CPLError( CE_Failure, CPLE_AppDefined, "TileDB: %s", e.what() );
+        CPLError( CE_Failure, CPLE_AppDefined, "%s", e.what() );
         return CE_Failure;
     }
 }
@@ -1681,7 +1681,7 @@ TileDBDataset::Create( const char * pszFilename, int nXSize, int nYSize, int nBa
     }
     catch(const tiledb::TileDBError& e)
     {
-        CPLError( CE_Failure, CPLE_AppDefined, "TileDB: %s", e.what() );
+        CPLError( CE_Failure, CPLE_AppDefined, "%s", e.what() );
         return nullptr;
     }
 }
@@ -1835,7 +1835,7 @@ TileDBDataset::CreateCopy( const char * pszFilename, GDALDataset *poSrcDS,
     }
     catch(const tiledb::TileDBError& e)
     {
-        CPLError( CE_Failure, CPLE_AppDefined, "TileDB: %s", e.what() );
+        CPLError( CE_Failure, CPLE_AppDefined, "%s", e.what() );
         CSLDestroy( papszCopyOptions );
         return nullptr;
     }
