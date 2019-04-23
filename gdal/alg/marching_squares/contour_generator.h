@@ -41,13 +41,12 @@
 namespace marching_squares
 {
 
-template <typename ContourWriter, typename LevelGenerator>
 class ContourGenerator
 {
 public:
     ContourGenerator( size_t width, size_t height,
                       bool hasNoData, double noDataValue,
-                      ContourWriter& writer, LevelGenerator& levelGenerator )
+                      ContourWriter& writer, ILevelRangeGenerator& levelGenerator )
         : width_( width )
         , height_( height )
         , hasNoData_( hasNoData )
@@ -82,7 +81,7 @@ private:
     std::vector<double> previousLine_;
 
     ContourWriter& writer_;
-    LevelGenerator& levelGenerator_;
+    ILevelRangeGenerator& levelGenerator_;
 
     class ExtendedLine
     {
@@ -134,23 +133,13 @@ private:
     }
 };
 
-template <typename ContourWriter, typename LevelGenerator>
-inline
-ContourGenerator<ContourWriter, LevelGenerator>* newContourGenerator( size_t width, size_t height,
-                                                                      bool hasNoData, double noDataValue,
-                                                                      ContourWriter& writer, LevelGenerator& levelGenerator )
-{
-    return new ContourGenerator<ContourWriter, LevelGenerator>( width, height, hasNoData, noDataValue, writer, levelGenerator );
-}
-
-template <typename ContourWriter, typename LevelGenerator>
-class ContourGeneratorFromRaster : public ContourGenerator<ContourWriter, LevelGenerator>
+class ContourGeneratorFromRaster : public ContourGenerator
 {
 public:
     ContourGeneratorFromRaster( const GDALRasterBandH band,
                                 bool hasNoData, double noDataValue,
-                                ContourWriter& writer, LevelGenerator& levelGenerator )
-        : ContourGenerator<ContourWriter, LevelGenerator>( GDALGetRasterBandXSize( band ),
+                                ContourWriter& writer, ILevelRangeGenerator& levelGenerator )
+        : ContourGenerator( GDALGetRasterBandXSize( band ),
                                                            GDALGetRasterBandYSize( band ),
                                                            hasNoData, noDataValue,
                                                            writer, levelGenerator )

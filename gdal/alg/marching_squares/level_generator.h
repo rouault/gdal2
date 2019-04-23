@@ -34,67 +34,77 @@
 #include <cstdlib>
 #include "utility.h"
 
+#include "cpl_port.h"
+
 namespace marching_squares {
 
-template <class Iterator>
-class Range
+struct ILevelGenerator
 {
-public:
-    Range( Iterator b, Iterator e ) : begin_( b ), end_( e ) {}
-    Iterator begin() const { return begin_; }
-    Iterator end() const { return end_; }
-private:
-    Iterator begin_;
-    Iterator end_;
+    virtual ~ILevelGenerator() {}
+    virtual double level( int idx ) const = 0;
 };
 
-template <typename LevelIterator>
-class RangeIterator
+class LevelIterator
 {
 public:
-    RangeIterator( const LevelIterator& parent, int idx ) : parent_( parent ), idx_( idx ) {}
+    LevelIterator( const ILevelGenerator& parent, int idx ) : parent_( parent ), idx_( idx ) {}
     // Warning: this is a "pseudo" iterator, since operator* returns a value, not
     // a reference. This means we cannot have operator->
     std::pair<int, double> operator*() const
     {
         return std::make_pair( idx_, parent_.level( idx_ ) );
     }
-    bool operator!=( const RangeIterator& other ) const
+    bool operator!=( const LevelIterator& other ) const
     {
         return idx_ != other.idx_;
     }
-    const RangeIterator& operator++()
+    const LevelIterator& operator++()
     {
         idx_++;
         return *this;
     }
 private:
-    const LevelIterator& parent_;
+    const ILevelGenerator& parent_;
     int idx_;
 };
 
-class FixedLevelRangeIterator
+class Range
 {
 public:
-    typedef RangeIterator<FixedLevelRangeIterator> Iterator;
+    Range( LevelIterator b, LevelIterator e ) : begin_( b ), end_( e ) {}
+    LevelIterator begin() const { return begin_; }
+    LevelIterator end() const { return end_; }
+private:
+    LevelIterator begin_;
+    LevelIterator end_;
+};
+
+struct ILevelRangeGenerator: public ILevelGenerator
+{
+    virtual Range range( double min, double max ) const = 0;
+};
+
+struct FixedLevelRangeIterator: public ILevelRangeGenerator
+{
+public:
     FixedLevelRangeIterator( const double* levels, size_t count, double maxLevel = Inf ) : levels_( levels ), count_( count ), maxLevel_( maxLevel )
     {
     }
 
-    Range<Iterator> range( double min, double max ) const
+    Range range( double min, double max ) const override
     {
         if ( min > max )
             std::swap( min, max );
         size_t b = 0;
         for (; b != count_ && levels_[b] < fudge(levels_[b], min); b++);
         if ( min == max )
-            return Range<Iterator>( Iterator( *this, int(b) ), Iterator( *this, int(b) ) );
+            return Range( LevelIterator( *this, int(b) ), LevelIterator( *this, int(b) ) );
         size_t e = b;
         for (; e != count_ && levels_[e] <= fudge(levels_[e], max); e++);
-        return Range<Iterator>( Iterator( *this, int(b) ), Iterator( *this, int(e) ) );
+        return Range( LevelIterator( *this, int(b) ), LevelIterator( *this, int(e) ) );
     }
 
-    double level( int idx ) const
+    double level( int idx ) const override
     {
         if ( idx >= int(count_) )
             return maxLevel_;
@@ -105,16 +115,15 @@ private:
     const double* levels_;
     size_t count_;
     double maxLevel_;
+    CPL_DISALLOW_COPY_ASSIGN(FixedLevelRangeIterator)
 };
 
-struct IntervalLevelRangeIterator
+struct IntervalLevelRangeIterator: public ILevelRangeGenerator
 {
-    typedef RangeIterator<IntervalLevelRangeIterator> Iterator;
-
     // Construction by a offset and an interval
     IntervalLevelRangeIterator( double offset, double interval ): offset_( offset ), interval_( interval ) {}
 
-    Range<Iterator> range( double min, double max ) const
+    Range range( double min, double max ) const override
     {
         if ( min > max )
             std::swap(min, max);
@@ -124,22 +133,22 @@ struct IntervalLevelRangeIterator
         double l1 = fudge( level( i1 ), min );
         if ( l1 > min )
             i1 = static_cast<int>(ceil((l1 - offset_) / interval_));
-        Iterator b( *this, i1 );
+        LevelIterator b( *this, i1 );
 
         if ( min == max )
-            return Range<Iterator>( b, b );
+            return Range( b, b );
 
         // compute the max index, adjusted to the fudged value if needed
         int i2 = static_cast<int>(floor((max - offset_) / interval_)+1);
         double l2 = fudge( level( i2 ), max );
         if ( l2 > max )
             i2 = static_cast<int>(floor((l2 - offset_) / interval_)+1);
-        Iterator e( *this, i2 );
+        LevelIterator e( *this, i2 );
         
-        return Range<Iterator>( b, e );
+        return Range( b, e );
     }
 
-    double level( int idx ) const
+    double level( int idx ) const override
     {
         return idx * interval_ + offset_;
     }
@@ -149,20 +158,19 @@ private:
     const double interval_;
 };
 
-class ExponentialLevelRangeIterator
+class ExponentialLevelRangeIterator: public ILevelRangeGenerator
 {
 public:
-    typedef RangeIterator<ExponentialLevelRangeIterator> Iterator;
     ExponentialLevelRangeIterator( double base ) : base_( base ), base_ln_( std::log( base_ ) ) {}
 
-    double level( int idx ) const
+    double level( int idx ) const override
     {
         if ( idx <= 0 )
             return 0.0;
         return std::pow( base_, idx - 1);
     }
 
-    Range<Iterator> range( double min, double max ) const
+    Range range( double min, double max ) const override
     {
         if ( min > max )
             std::swap(min, max);
@@ -171,18 +179,18 @@ public:
         double l1 = fudge( level( i1 ), min );
         if ( l1 > min )
             i1 = index1(l1 );
-        Iterator b( *this, i1 );
+        LevelIterator b( *this, i1 );
 
         if ( min == max )
-            return Range<Iterator>( b, b );
+            return Range( b, b );
 
         int i2 = index2( max );
         double l2 = fudge( level( i2 ), max );
         if ( l2 > max )
             i2 = index2( l2 );
-        Iterator e( *this, i2 );
+        LevelIterator e( *this, i2 );
 
-        return Range<Iterator>( b, e );
+        return Range( b, e );
     }
 
 private:

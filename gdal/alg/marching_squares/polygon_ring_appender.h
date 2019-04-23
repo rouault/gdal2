@@ -34,6 +34,8 @@
 #include <cassert>
 
 #include "point.h"
+#include "ring_appender_interface.h"
+
 #include "ogr_geometry.h"
 
 namespace marching_squares {
@@ -41,7 +43,7 @@ namespace marching_squares {
 // Receive rings of different levels and organize them
 // into multi-polygons with possible interior rings when requested.
 template <typename PolygonWriter>
-class PolygonRingAppender
+class PolygonRingAppender: public IRingAppender
 {
 private:
     struct Ring
@@ -127,7 +129,7 @@ public:
         , writer_( writer )
     {}
 
-    void addLine( double level, LineString& ls, bool )
+    void addLine( double level, LineString& ls, bool ) override
     {
         Ring r;
         r.points.swap( ls );

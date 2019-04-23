@@ -33,28 +33,32 @@
 
 #include "marching_squares/square.h"
 #include "marching_squares/level_generator.h"
+#include "marching_squares/contour_writer_interface.h"
 #include <vector>
 #include <map>
 #include <fstream>
 
 namespace marching_squares {
-struct Writer
+struct Writer: public ContourWriter
 {
     typedef std::pair< Point, Point > Segment;
 
-    void addSegment(int levelIdx, const Point &first, const Point &second)
+    void addSegment(int levelIdx, const Point &first, const Point &second) override
     {
         contours[levelIdx].push_back(Segment(first, second));
     }
 
-    void addBorderSegment(int levelIdx, const Point &first, const Point &second)
+    void addBorderSegment(int levelIdx, const Point &first, const Point &second) override
     {
         borders[levelIdx].push_back(Segment(first, second));
     }
 
+    void beginningOfLine() override {}
+    void endOfLine() override {}
+    bool polygonize() const override { return true; }
+
     std::map< int, std::vector< Segment >  > contours;
     std::map< int, std::vector< Segment > > borders;
-    const bool polygonize = true;
 };
 
 }

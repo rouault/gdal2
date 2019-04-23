@@ -34,9 +34,10 @@
 #include "marching_squares/level_generator.h"
 #include "marching_squares/segment_merger.h"
 #include "marching_squares/contour_generator.h"
+#include "marching_squares/ring_appender_interface.h"
 
 namespace marching_squares {
-class TestRingAppender
+class TestRingAppender: public IRingAppender
 {
 public:
     struct Point
@@ -58,7 +59,7 @@ public:
         }
     };
 
-    void addLine( double level, LineString& ls, bool /* closed */ )
+    void addLine( double level, LineString& ls, bool /* closed */ ) override
     {
         auto& v = points_[level];
         std::vector<Point> ring;
@@ -164,8 +165,8 @@ namespace tut
         TestRingAppender w;
         {
             IntervalLevelRangeIterator levels( 0.0, 10.0 );
-            SegmentMerger<TestRingAppender, IntervalLevelRangeIterator> writer( w, levels, /* polygonize */ true );
-            ContourGenerator<decltype(writer), IntervalLevelRangeIterator> cg( 1, 1, /* hasNoData */ false, NaN, writer, levels );
+            SegmentMerger writer( w, levels, /* polygonize */ true );
+            ContourGenerator cg( 1, 1, /* hasNoData */ false, NaN, writer, levels );
             cg.feedLine( &data[0] );
 
             ensure( "Polygon ring", w.hasRing( 10.0, {{0.0, 0.0}, {0.5, 0.0}, {1.0, 0.0}, {1.0, 0.5}, {1.0, 1.0}, {0.5, 1.0}, {0.0, 1.0}, {0.0, 0.5}} ) );
@@ -183,8 +184,8 @@ namespace tut
 
         {
             IntervalLevelRangeIterator levels( 8.0, 10.0 );
-            SegmentMerger<TestRingAppender, IntervalLevelRangeIterator> writer( w, levels, /* polygonize */ true );
-            ContourGenerator<decltype(writer), IntervalLevelRangeIterator> cg( 2, 1, /* hasNoData */ false, NaN, writer, levels );
+            SegmentMerger writer( w, levels, /* polygonize */ true );
+            ContourGenerator cg( 2, 1, /* hasNoData */ false, NaN, writer, levels );
             cg.feedLine( &data[0] );
 
             ensure( "Polygon #0", w.hasRing( 8.0, {{1.166, 0.0}, {1.5, 0.0}, {2.0, 0.0}, {2.0, 0.5}, {2.0, 1.0}, {1.5, 1.0}, {1.166, 1.0}, {1.166, 0.5}} ) );
@@ -280,8 +281,8 @@ namespace tut
 
         {
             IntervalLevelRangeIterator levels( 8.0, 10.0 );
-            SegmentMerger<TestRingAppender, IntervalLevelRangeIterator> writer( w, levels, /* polygonize */ true );
-            ContourGenerator<decltype(writer), IntervalLevelRangeIterator> cg( 2, 2, /* hasNoData */ false, NaN, writer, levels );
+            SegmentMerger writer( w, levels, /* polygonize */ true );
+            ContourGenerator cg( 2, 2, /* hasNoData */ false, NaN, writer, levels );
             cg.feedLine( &data[0] );
             cg.feedLine( &data[2] );
 
@@ -380,8 +381,8 @@ namespace tut
 
         {
             IntervalLevelRangeIterator levels( 8.0, 10.0 );
-            SegmentMerger<TestRingAppender, IntervalLevelRangeIterator> writer( w, levels, /* polygonize */ true );
-            ContourGenerator<decltype(writer), IntervalLevelRangeIterator> cg( 2, 2, /* hasNoData */ false, NaN, writer, levels );
+            SegmentMerger writer( w, levels, /* polygonize */ true );
+            ContourGenerator cg( 2, 2, /* hasNoData */ false, NaN, writer, levels );
             cg.feedLine( &data[0] );
             cg.feedLine( &data[2] );
 

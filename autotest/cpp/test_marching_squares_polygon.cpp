@@ -160,8 +160,8 @@ namespace tut
         {
             PolygonRingAppender<TestPolygonWriter> appender( w );
             IntervalLevelRangeIterator levels( 0.0, 10.0 );
-            SegmentMerger<PolygonRingAppender<TestPolygonWriter>, IntervalLevelRangeIterator> writer( appender, levels, /* polygonize */ true );
-            ContourGenerator<decltype(writer), IntervalLevelRangeIterator> cg( 1, 1, false, NaN, writer, levels);
+            SegmentMerger writer( appender, levels, /* polygonize */ true );
+            ContourGenerator cg( 1, 1, false, NaN, writer, levels);
             cg.feedLine( &data[0] );
         }
 
@@ -220,8 +220,8 @@ namespace tut
         {
             PolygonRingAppender<TestPolygonWriter> appender( w );
             IntervalLevelRangeIterator levels( 0.0, 10.0 );
-            SegmentMerger<PolygonRingAppender<TestPolygonWriter>, IntervalLevelRangeIterator> writer( appender, levels, /* polygonize */ true );
-            ContourGenerator<decltype(writer), IntervalLevelRangeIterator> cg( 2, 2, false, NaN, writer, levels);
+            SegmentMerger writer( appender, levels, /* polygonize */ true );
+            ContourGenerator cg( 2, 2, false, NaN, writer, levels);
             cg.feedLine( &data[0] );
             cg.feedLine( &data[2] );
         }
@@ -281,8 +281,8 @@ namespace tut
             PolygonRingAppender<TestPolygonWriter> appender( w );
             const double levels[] = { 155.0 };
             FixedLevelRangeIterator levelGenerator( levels, 1 );
-            SegmentMerger<PolygonRingAppender<TestPolygonWriter>, FixedLevelRangeIterator> writer( appender, levelGenerator, /* polygonize */ true );
-            ContourGenerator<decltype(writer), FixedLevelRangeIterator> cg( 2, 2, false, NaN, writer, levelGenerator);
+            SegmentMerger writer( appender, levelGenerator, /* polygonize */ true );
+            ContourGenerator cg( 2, 2, false, NaN, writer, levelGenerator);
             cg.feedLine( &data[0] );
             cg.feedLine( &data[2] );
         }
@@ -368,8 +368,8 @@ namespace tut
         {
             PolygonRingAppender<TestPolygonWriter> appender( w );
             IntervalLevelRangeIterator levels( 1.0, 10.0 );
-            SegmentMerger<PolygonRingAppender<TestPolygonWriter>, IntervalLevelRangeIterator> writer( appender, levels, /* polygonize */ true );
-            ContourGenerator<decltype(writer), IntervalLevelRangeIterator> cg( 3, 3, false, NaN, writer, levels);
+            SegmentMerger writer( appender, levels, /* polygonize */ true );
+            ContourGenerator cg( 3, 3, false, NaN, writer, levels);
             cg.feedLine( &data[0] );
             cg.feedLine( &data[3] );
             cg.feedLine( &data[6] );
@@ -406,8 +406,8 @@ namespace tut
         {
             PolygonRingAppender<TestPolygonWriter> appender( w );
             IntervalLevelRangeIterator levels( 1.0, 2.0 );
-            SegmentMerger<PolygonRingAppender<TestPolygonWriter>, IntervalLevelRangeIterator> writer( appender, levels, /* polygonize */ true );
-            ContourGenerator<decltype(writer), IntervalLevelRangeIterator> cg( 5, 5, false, NaN, writer, levels);
+            SegmentMerger writer( appender, levels, /* polygonize */ true );
+            ContourGenerator cg( 5, 5, false, NaN, writer, levels);
             for ( int i = 0; i < 5; i++ ) {
                 cg.feedLine( &data[5*i] );
             }

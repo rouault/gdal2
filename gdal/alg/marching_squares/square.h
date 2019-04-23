@@ -31,8 +31,12 @@
 #include <cassert>
 #include <cstdint>
 #include <math.h>
+#include <array>
+
 #include "utility.h"
 #include "point.h"
+#include "level_generator.h"
+#include "contour_writer_interface.h"
 
 namespace marching_squares {
 
@@ -59,25 +63,12 @@ struct Square
     typedef std::pair< ValuedPoint, ValuedPoint > ValuedSegment;
 
     //
-    // An array of segments, at most 3 segments
+    // An array of segments, at most 2 segments
     struct Segments
     {
-        Segments(): sz_(0) {}
-        Segments(const Segment &first): sz_(1), segs_()
-        {
-            segs_[0] = first;
-        }
-        Segments(const Segment &first, const Segment &second): sz_(2), segs_()
-        {
-            segs_[0] = first;
-            segs_[1] = second;
-        }
-        Segments(const Segment &first, const Segment &second, const Segment &third): sz_(3), segs_()
-        {
-            segs_[0] = first;
-            segs_[1] = second;
-            segs_[2] = third;
-        }
+        Segments(): sz_(0), segs_() {}
+        Segments(const Segment &first): sz_(1), segs_({first, Segment()}) {}
+        Segments(const Segment &first, const Segment &second): sz_(2), segs_({first, second}) {}
 
         std::size_t size() const {return sz_;}
 
@@ -88,7 +79,7 @@ struct Square
         }
     private:
         const std::size_t sz_;
-        /* const */ Segment segs_[3];
+        const std::array<Segment,2> segs_;
     };
 
 
@@ -250,8 +241,7 @@ struct Square
         return Segments();
     }
 
-    template <typename Writer, typename LevelGenerator>
-    void process(const LevelGenerator &levelGenerator, Writer & writer) const
+    void process(const ILevelRangeGenerator &levelGenerator, ContourWriter & writer) const
     {
         if (nanCount == 4) // nothing to do
             return;
@@ -270,7 +260,8 @@ struct Square
             return;
         }
 
-        if ( writer.polygonize && borders )
+        const bool polygonize = writer.polygonize();
+        if ( polygonize && borders )
         {
             for ( uint8_t border : {UPPER_BORDER, LEFT_BORDER, RIGHT_BORDER, LOWER_BORDER} )
             {
@@ -322,14 +313,14 @@ struct Square
             const int levelIdx = (*it).first;
             const double level = (*it).second;
 
-            const Segments segments_ = segments( level );
-
-            for (std::size_t i=0; i<segments_.size(); i++)
+            const Segments l_segments = segments( level );
+            const auto segmentsSize = l_segments.size();
+            for (std::size_t i=0; i<segmentsSize; i++)
             {
-                const Segment &s = segments_[i];
+                const Segment &s = l_segments[i];
                 writer.addSegment( levelIdx, s.first, s.second );
 
-                if ( writer.polygonize ) {
+                if ( polygonize ) {
                     // the contour is used in the polygon of higher level as well
                     //
                     // TODO: copying the segment to the higher level is easy,
@@ -341,10 +332,10 @@ struct Square
         }
     }
 
-    const ValuedPoint upperLeft;
-    const ValuedPoint lowerLeft;
-    const ValuedPoint lowerRight;
-    const ValuedPoint upperRight;
+    const ValuedPoint& upperLeft;
+    const ValuedPoint& lowerLeft;
+    const ValuedPoint& lowerRight;
+    const ValuedPoint& upperRight;
     const int nanCount;
     const uint8_t borders;
     const bool split;

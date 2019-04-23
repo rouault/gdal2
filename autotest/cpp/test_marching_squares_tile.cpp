@@ -33,12 +33,13 @@
 
 #include "marching_squares/point.h"
 #include "marching_squares/level_generator.h"
+#include "marching_squares/contour_writer_interface.h"
 #include "marching_squares/contour_generator.h"
 #include <map>
 #include <fstream>
 
 namespace marching_squares {
-struct Writer
+struct Writer: public ContourWriter
 {
     typedef std::pair< Point, Point > Segment;
     static bool coordEquals( double a, double b )
@@ -46,12 +47,12 @@ struct Writer
         return (a-b)*(a-b) < 0.001;
     }
 
-    void addSegment(int levelIdx, const Point &first, const Point &second)
+    void addSegment(int levelIdx, const Point &first, const Point &second) override
     {
         contours[levelIdx].push_back(Segment(first, second));
     }
 
-    void addBorderSegment(int levelIdx, const Point &first, const Point &second)
+    void addBorderSegment(int levelIdx, const Point &first, const Point &second) override
     {
         borders[levelIdx].push_back(Segment(first, second));
     }
@@ -85,12 +86,12 @@ struct Writer
         return false;
     }
 
-    void beginningOfLine() {}
-    void endOfLine() {}
+    void beginningOfLine() override {}
+    void endOfLine() override {}
+    bool polygonize() const override { return true; }
 
     std::map< int, std::vector< Segment >  > contours;
     std::map< int, std::vector< Segment > > borders;
-    const bool polygonize = true;
 };
 }
 
@@ -120,7 +121,7 @@ namespace tut
         IntervalLevelRangeIterator levels( 0.0, 10.0 );
         Writer writer;
 
-        ContourGenerator<Writer, IntervalLevelRangeIterator> cg( 1, 1, /* hasNoData */ false, NaN, writer, levels );
+        ContourGenerator cg( 1, 1, /* hasNoData */ false, NaN, writer, levels );
         cg.feedLine( &data[0] );
 
         ensure_equals( "There is 1 border", writer.borders.size(), size_t(1) );
@@ -147,7 +148,7 @@ namespace tut
         FixedLevelRangeIterator levelGenerator( levels, 1 );
         Writer writer;
 
-        ContourGenerator<Writer, FixedLevelRangeIterator> cg( 1, 1, /* hasNoData */ false, NaN, writer, levelGenerator );
+        ContourGenerator cg( 1, 1, /* hasNoData */ false, NaN, writer, levelGenerator );
         cg.feedLine( &data[0] );
 
         ensure_equals( "There is 1 border", writer.borders.size(), size_t(1) );
@@ -174,7 +175,7 @@ namespace tut
         IntervalLevelRangeIterator levels( 2.0, 10.0 );
         Writer writer;
 
-        ContourGenerator<Writer, IntervalLevelRangeIterator> cg( 1, 1, /* hasNoData */ false, NaN, writer, levels );
+        ContourGenerator cg( 1, 1, /* hasNoData */ false, NaN, writer, levels );
         cg.feedLine( &data[0] );
 
         ensure_equals( "1 border", writer.borders.size(), size_t(1));
@@ -258,7 +259,7 @@ namespace tut
         {
             IntervalLevelRangeIterator levels( 8.0, 10.0 );
             Writer writer;
-            ContourGenerator<Writer, IntervalLevelRangeIterator> cg( 2, 1, /* hasNoData */ false, NaN, writer, levels );
+            ContourGenerator cg( 2, 1, /* hasNoData */ false, NaN, writer, levels );
             cg.feedLine( &data[0] );
 
             // check borders
@@ -367,7 +368,7 @@ namespace tut
         {
             IntervalLevelRangeIterator levels( 8.0, 10.0 );
             Writer writer;
-            ContourGenerator<Writer, IntervalLevelRangeIterator> cg( 2, 2, /* hasNoData */ false, NaN, writer, levels );
+            ContourGenerator cg( 2, 2, /* hasNoData */ false, NaN, writer, levels );
             cg.feedLine( &data[0] );
             cg.feedLine( &data[2] );
 
@@ -434,7 +435,7 @@ namespace tut
             const double levels[] = { 155.0 };
             FixedLevelRangeIterator levelGenerator( levels, 1 );
             Writer writer;
-            ContourGenerator<Writer, FixedLevelRangeIterator> cg( 2, 2, /* hasNoData */ false, NaN, writer, levelGenerator );
+            ContourGenerator cg( 2, 2, /* hasNoData */ false, NaN, writer, levelGenerator );
             cg.feedLine( &data[0] );
             cg.feedLine( &data[2] );
 

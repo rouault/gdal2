@@ -34,6 +34,7 @@
 #include "utility.h"
 #include "contour_generator.h"
 #include "segment_merger.h"
+#include "ring_appender_interface.h"
 
 #include "gdal.h"
 #include "gdal_alg.h"
@@ -42,6 +43,7 @@
 #include "ogr_api.h"
 #include "ogr_srs_api.h"
 #include "ogr_geometry.h"
+#include "ogrsf_frmts.h"
 
 static CPLErr OGRPolygonContourWriter( double dfLevelMin, double dfLevelMax,
                                 const OGRMultiPolygon& multipoly,
@@ -50,28 +52,28 @@ static CPLErr OGRPolygonContourWriter( double dfLevelMin, double dfLevelMax,
 {
     OGRContourWriterInfo *poInfo = static_cast<OGRContourWriterInfo *>(pInfo);
 
-    OGRFeatureDefnH hFDefn =
-        OGR_L_GetLayerDefn( static_cast<OGRLayerH>(poInfo->hLayer) );
+    auto poLayer = OGRLayer::FromHandle(static_cast<OGRLayerH>(poInfo->hLayer));
+    auto poFDefn = poLayer->GetLayerDefn();
 
-    OGRFeatureH hFeat = OGR_F_Create( hFDefn );
+    auto poFeat = new OGRFeature( poFDefn );
 
     if( poInfo->nIDField != -1 )
-        OGR_F_SetFieldInteger( hFeat, poInfo->nIDField, poInfo->nNextID++ );
+        poFeat->SetField( poInfo->nIDField, poInfo->nNextID++ );
 
     if( poInfo->nElevFieldMin != -1 )
-        OGR_F_SetFieldDouble( hFeat, poInfo->nElevFieldMin, dfLevelMin );
+        poFeat->SetField( poInfo->nElevFieldMin, dfLevelMin );
 
     if( poInfo->nElevFieldMax != -1 )
-        OGR_F_SetFieldDouble( hFeat, poInfo->nElevFieldMax, dfLevelMax );
+        poFeat->SetField( poInfo->nElevFieldMax, dfLevelMax );
 
-    const bool bHasZ = wkbHasZ(OGR_FD_GetGeomType(hFDefn));
-    OGRGeometryH hGeom = OGR_G_CreateGeometry(
-        bHasZ ? wkbMultiPolygon25D : wkbMultiPolygon );
+    const bool bHasZ = wkbHasZ(poFDefn->GetGeomType());
+    auto poGeom = OGRGeometryFactory::createGeometry(
+        bHasZ ? wkbMultiPolygon25D : wkbMultiPolygon )->toMultiPolygon();
 
     for ( int iPart = 0; iPart < multipoly.getNumGeometries(); iPart++ )
     {
         OGRPolygon* poNewPoly = new OGRPolygon();
-        const OGRPolygon* poPolygon = static_cast<const OGRPolygon*>(multipoly.getGeometryRef(iPart));
+        const OGRPolygon* poPolygon = multipoly.getGeometryRef(iPart)->toPolygon();
 
         for ( int iRing = 0; iRing < poPolygon->getNumInteriorRings() + 1; iRing++ )
         {
@@ -89,20 +91,19 @@ static CPLErr OGRPolygonContourWriter( double dfLevelMin, double dfLevelMax,
                     + poInfo->adfGeoTransform[4] * poRing->getX(iPoint)
                     + poInfo->adfGeoTransform[5] * poRing->getY(iPoint);
                 if( bHasZ )
-                    OGR_G_SetPoint( OGRGeometry::ToHandle( poNewRing ), iPoint, dfX, dfY, dfLevelMax );
+                    poNewRing->setPoint( iPoint, dfX, dfY, dfLevelMax );
                 else
-                    OGR_G_SetPoint_2D( OGRGeometry::ToHandle( poNewRing ), iPoint, dfX, dfY );
+                    poNewRing->setPoint( iPoint, dfX, dfY );
             }
             poNewPoly->addRingDirectly( poNewRing );
         }
-        OGR_G_AddGeometryDirectly( hGeom, OGRGeometry::ToHandle( poNewPoly ) );
+        poGeom->addGeometryDirectly(poNewPoly);
     }
 
-    OGR_F_SetGeometryDirectly( hFeat, hGeom );
+    poFeat->SetGeometryDirectly(poGeom);
 
-    const OGRErr eErr =
-        OGR_L_CreateFeature(static_cast<OGRLayerH>(poInfo->hLayer), hFeat);
-    OGR_F_Destroy( hFeat );
+    const OGRErr eErr = poLayer->CreateFeature(poFeat);
+    delete poFeat;
 
     return eErr == OGRERR_NONE ? CE_None : CE_Failure;
 }
@@ -167,16 +168,16 @@ struct PolygonContourWriter
     double previousLevel_; 
 };
 
-struct GDALRingAppender
+struct GDALLineRingAppender: public marching_squares::IRingAppender
 {
-    CPL_DISALLOW_COPY_ASSIGN(GDALRingAppender)
+    CPL_DISALLOW_COPY_ASSIGN(GDALLineRingAppender)
     
-    GDALRingAppender(GDALContourWriter write, void *data)
+    GDALLineRingAppender(GDALContourWriter write, void *data)
     : write_( write )
     , data_( data )
     {}
 
-    void addLine( double level, marching_squares::LineString& ls, bool /*closed*/ )
+    void addLine( double level, marching_squares::LineString& ls, bool /*closed*/ ) override
     {
         const size_t sz = ls.size();
         std::vector<double> xs( sz ), ys ( sz );
@@ -213,20 +214,20 @@ CPLErr OGRContourWriter( double dfLevel,
 {
     OGRContourWriterInfo *poInfo = static_cast<OGRContourWriterInfo *>(pInfo);
 
-    OGRFeatureDefnH hFDefn =
-        OGR_L_GetLayerDefn( static_cast<OGRLayerH>(poInfo->hLayer) );
+    auto poLayer = OGRLayer::FromHandle(static_cast<OGRLayerH>(poInfo->hLayer));
+    auto poFDefn = poLayer->GetLayerDefn();
 
-    OGRFeatureH hFeat = OGR_F_Create( hFDefn );
+    auto poFeat = new OGRFeature( poFDefn );
 
     if( poInfo->nIDField != -1 )
-        OGR_F_SetFieldInteger( hFeat, poInfo->nIDField, poInfo->nNextID++ );
+        poFeat->SetField( poInfo->nIDField, poInfo->nNextID++ );
 
     if( poInfo->nElevField != -1 )
-        OGR_F_SetFieldDouble( hFeat, poInfo->nElevField, dfLevel );
+        poFeat->SetField( poInfo->nElevField, dfLevel );
 
-    const bool bHasZ = wkbHasZ(OGR_FD_GetGeomType(hFDefn));
-    OGRGeometryH hGeom = OGR_G_CreateGeometry(
-        bHasZ ? wkbLineString25D : wkbLineString );
+    const bool bHasZ = wkbHasZ(poFDefn->GetGeomType());
+    auto poGeom = OGRGeometryFactory::createGeometry(
+        bHasZ ? wkbLineString25D : wkbLineString )->toLineString();
 
     for( int iPoint = nPoints - 1; iPoint >= 0; iPoint-- )
     {
@@ -237,16 +238,15 @@ CPLErr OGRContourWriter( double dfLevel,
                         + poInfo->adfGeoTransform[4] * padfX[iPoint]
                         + poInfo->adfGeoTransform[5] * padfY[iPoint];
         if( bHasZ )
-            OGR_G_SetPoint( hGeom, iPoint, dfX, dfY, dfLevel );
+            poGeom->setPoint( iPoint, dfX, dfY, dfLevel );
         else
-            OGR_G_SetPoint_2D( hGeom, iPoint, dfX, dfY );
+            poGeom->setPoint( iPoint, dfX, dfY );
     }
 
-    OGR_F_SetGeometryDirectly( hFeat, hGeom );
+    poFeat->SetGeometryDirectly(poGeom);
 
-    const OGRErr eErr =
-        OGR_L_CreateFeature(static_cast<OGRLayerH>(poInfo->hLayer), hFeat);
-    OGR_F_Destroy( hFeat );
+    const OGRErr eErr = poLayer->CreateFeature(poFeat);
+    delete poFeat;
 
     return eErr == OGRERR_NONE ? CE_None : CE_Failure;
 }
@@ -613,53 +613,43 @@ CPLErr GDALContourGenerateEx( GDALRasterBandH hBand, void *hLayer,
 
     try
     {
+        // polygonContourWriter must be declared before appender, as appender
+        // depends on it.
+        std::unique_ptr<PolygonContourWriter> polygonContourWriter;
+        std::unique_ptr<IRingAppender> appender;
         if ( polygonize )
         {
             int bSuccess; 
-            PolygonContourWriter w( &oCWI, GDALGetRasterMinimum( hBand, &bSuccess ) );
-            typedef PolygonRingAppender<PolygonContourWriter> RingAppender;
-            RingAppender appender( w );
-            if ( ! fixedLevels.empty() ) {
-                FixedLevelRangeIterator levels( &fixedLevels[0], fixedLevels.size(), GDALGetRasterMaximum( hBand, &bSuccess ) );
-                SegmentMerger<RingAppender, FixedLevelRangeIterator> writer(appender, levels, /* polygonize */ true);
-                ContourGeneratorFromRaster<decltype(writer), FixedLevelRangeIterator> cg( hBand, useNoData, noDataValue, writer, levels );
-                cg.process( pfnProgress, pProgressArg );
-            }
-            else if ( expBase > 0.0 ) {
-                ExponentialLevelRangeIterator levels( expBase );
-                SegmentMerger<RingAppender, ExponentialLevelRangeIterator> writer(appender, levels, /* polygonize */ true);
-                ContourGeneratorFromRaster<decltype(writer), ExponentialLevelRangeIterator> cg( hBand, useNoData, noDataValue, writer, levels );
-                cg.process( pfnProgress, pProgressArg );
-            }
-            else {
-                IntervalLevelRangeIterator levels( contourBase, contourInterval );
-                SegmentMerger<RingAppender, IntervalLevelRangeIterator> writer(appender, levels, /* polygonize */ true);
-                ContourGeneratorFromRaster<decltype(writer), IntervalLevelRangeIterator> cg( hBand, useNoData, noDataValue, writer, levels );
-                cg.process( pfnProgress, pProgressArg );
-            }
+            polygonContourWriter.reset(new PolygonContourWriter (
+                &oCWI, GDALGetRasterMinimum( hBand, &bSuccess ) ));
+            appender.reset( new PolygonRingAppender<PolygonContourWriter>(
+                *(polygonContourWriter.get())) );
         }
         else
         {
-            GDALRingAppender appender(OGRContourWriter, &oCWI);
-            if ( ! fixedLevels.empty() ) {
-                FixedLevelRangeIterator levels( &fixedLevels[0], fixedLevels.size() );
-                SegmentMerger<GDALRingAppender, FixedLevelRangeIterator> writer(appender, levels, /* polygonize */ false);
-                ContourGeneratorFromRaster<decltype(writer), FixedLevelRangeIterator> cg( hBand, useNoData, noDataValue, writer, levels );
-                cg.process( pfnProgress, pProgressArg );
-            }
-            else if ( expBase > 0.0 ) {
-                ExponentialLevelRangeIterator levels( expBase );
-                SegmentMerger<GDALRingAppender, ExponentialLevelRangeIterator> writer(appender, levels, /* polygonize */ false);
-                ContourGeneratorFromRaster<decltype(writer), ExponentialLevelRangeIterator> cg( hBand, useNoData, noDataValue, writer, levels );
-                cg.process( pfnProgress, pProgressArg );
-            }
-            else {
-                IntervalLevelRangeIterator levels( contourBase, contourInterval );
-                SegmentMerger<GDALRingAppender, IntervalLevelRangeIterator> writer(appender, levels, /* polygonize */ false);
-                ContourGeneratorFromRaster<decltype(writer), IntervalLevelRangeIterator> cg( hBand, useNoData, noDataValue, writer, levels );
-                cg.process( pfnProgress, pProgressArg );
-            }
+            appender.reset(new GDALLineRingAppender(OGRContourWriter, &oCWI));
         }
+        std::unique_ptr<ILevelRangeGenerator> levels;
+        if ( ! fixedLevels.empty() ) {
+            if ( polygonize )
+            {
+                int bSuccess;
+                levels.reset(new FixedLevelRangeIterator(
+                    &fixedLevels[0], fixedLevels.size(), GDALGetRasterMaximum( hBand, &bSuccess ) ));
+            }
+            else
+                levels.reset(new FixedLevelRangeIterator(
+                    &fixedLevels[0], fixedLevels.size() ));
+        }
+        else if ( expBase > 0.0 ) {
+            levels.reset(new ExponentialLevelRangeIterator( expBase ));
+        }
+        else {
+            levels.reset(new IntervalLevelRangeIterator( contourBase, contourInterval ));
+        }
+        SegmentMerger writer(*(appender.get()), *(levels.get()), polygonize);
+        ContourGeneratorFromRaster cg( hBand, useNoData, noDataValue, writer, *(levels.get()) );
+        cg.process( pfnProgress, pProgressArg );
     }
     catch (const std::exception & e)
     {
@@ -678,9 +668,6 @@ namespace marching_squares {
 // Opaque type used by the C API
 struct ContourGeneratorOpaque
 {
-    typedef SegmentMerger<GDALRingAppender, IntervalLevelRangeIterator> SegmentMergerT;
-    typedef ContourGenerator<SegmentMergerT, IntervalLevelRangeIterator> ContourGeneratorT;
-
     ContourGeneratorOpaque( int nWidth, int nHeight, int bNoDataSet, double dfNoDataValue,
                             double dfContourInterval, double dfContourBase,
                             GDALContourWriter pfnWriter, void *pCBData )
@@ -691,9 +678,9 @@ struct ContourGeneratorOpaque
     {}
 
     IntervalLevelRangeIterator levels;
-    GDALRingAppender writer;
-    SegmentMergerT merger;
-    ContourGeneratorT contourGenerator;
+    GDALLineRingAppender writer;
+    SegmentMerger merger;
+    ContourGenerator contourGenerator;
 };
 
 }
