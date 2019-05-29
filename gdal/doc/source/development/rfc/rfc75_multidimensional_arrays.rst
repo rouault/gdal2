@@ -24,7 +24,7 @@ Multidimensional arrays (also known as hypercubes) are a way of medelling
 spatio-temporal (time series of
 2D raster) or spatio-vertical-temporal (2D + Z dimension + time dimension) data which
 are becoming increasingly more available. GDAL current raster model is however strongly
-2D oriented. A number of drivers, such as netCDF, HDF4, HDF5, work around that
+2D oriented. A number of drivers, such as netCDF, HDF4, HDF5 and TileDB work around that
 limitation by using raster bands or subdatasets to expose muliple 2D slices of what
 is intrinsically a N>2 Multidimensional dataset. It is desirable to have a
 proper API, and driver support, to be able to expose those multidimensional
@@ -43,7 +43,7 @@ to add a new dedicated API to support multidimensional arrays. We also want
 to support hierarchical structure of data as found in the
 `HDF5 format and data model <https://portal.opengeospatial.org/files/81716>`_.
 This model can encompass the needs of other formats/drivers that have multidimensional
-capabilities such as HDF4, netCDF, GRIB, WCS.
+capabilities such as HDF4, netCDF, GRIB, TileDB and WCS.
 Therefore the proposed API will be strongly inspired by the API of the HDF5 library itself.
 
 Data model
@@ -76,6 +76,10 @@ a GDALAttribute or GDALMDArray. Its class can be NUMERIC,
 STRING or COMPOUND. For NUMERIC, the existing :cpp:enum:`GDALDataType` enumerated
 values are supported. For COMPOUND, the data type is a list of members, each
 member being described by a name and a GDALExtendedDataType.
+
+Metadata will include a defined GDALAttribute to describe the value that is assigned to NULL. NULL values are commonly used multidimensional datasets so that data can be stored as a sparse array but materialized as a dense array with null values.
+
+On creation of a multidimensional dataset the input order of the GDALDimensions will indicate to the driver the order for dimension indexing (if supported).
 
 .. note::
 
