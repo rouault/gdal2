@@ -3539,14 +3539,6 @@ OGRGeometry *OGRGeometry::MakeValid() const
     CPLError( CE_Failure, CPLE_NotSupported,
               "GEOS support not enabled." );
     return nullptr;
-#elif GEOS_VERSION_MAJOR < 3 || \
-    (GEOS_VERSION_MAJOR == 3 && GEOS_VERSION_MINOR < 8)
-    if( IsValid() )
-        return clone();
-
-    CPLError( CE_Failure, CPLE_NotSupported,
-              "GEOS 3.8 or later needed for MakeValid." );
-    return nullptr;
 #else
     if( IsSFCGALCompatible() )
     {
