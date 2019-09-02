@@ -290,27 +290,39 @@ GDALDataset *ISIS2Dataset::Open( GDALOpenInfo * poOpenInfo )
 
     /***********   Grab layout type (BSQ, BIP, BIL) ************/
     //  AXIS_NAME = (SAMPLE,LINE,BAND)
+    // and sample, line, bands
     /***********************************************************/
 
     char szLayout[10] = "BSQ"; //default to band seq.
     const char *value = poDS->GetKeyword( "QUBE.AXIS_NAME", "" );
+    int nCols, nRows, nBands;
     if (EQUAL(value,"(SAMPLE,LINE,BAND)") )
+    {
         strcpy(szLayout,"BSQ");
-    else if (EQUAL(value,"(BAND,LINE,SAMPLE)") )
+        nCols = atoi(poDS->GetKeywordSub("QUBE.CORE_ITEMS",1));
+        nRows = atoi(poDS->GetKeywordSub("QUBE.CORE_ITEMS",2));
+        nBands = atoi(poDS->GetKeywordSub("QUBE.CORE_ITEMS",3));
+    }
+    else if (EQUAL(value,"(BAND,SAMPLE,LINE)") )
+    {
         strcpy(szLayout,"BIP");
+        nBands = atoi(poDS->GetKeywordSub("QUBE.CORE_ITEMS",1));
+        nCols = atoi(poDS->GetKeywordSub("QUBE.CORE_ITEMS",2));
+        nRows = atoi(poDS->GetKeywordSub("QUBE.CORE_ITEMS",3));
+    }
     else if (EQUAL(value,"(SAMPLE,BAND,LINE)") || EQUAL(value,"") )
+    {
         strcpy(szLayout,"BSQ");
+        nCols = atoi(poDS->GetKeywordSub("QUBE.CORE_ITEMS",1));
+        nBands = atoi(poDS->GetKeywordSub("QUBE.CORE_ITEMS",2));
+        nRows = atoi(poDS->GetKeywordSub("QUBE.CORE_ITEMS",3));
+    }
     else {
         CPLError( CE_Failure, CPLE_OpenFailed,
                   "%s layout not supported. Abort\n\n", value);
         delete poDS;
         return nullptr;
     }
-
-    /***********   Grab samples lines band ************/
-    const int nCols = atoi(poDS->GetKeywordSub("QUBE.CORE_ITEMS",1));
-    const int nRows = atoi(poDS->GetKeywordSub("QUBE.CORE_ITEMS",2));
-    const int nBands = atoi(poDS->GetKeywordSub("QUBE.CORE_ITEMS",3));
 
     /***********   Grab Qube record bytes  **********/
     const int record_bytes = atoi(poDS->GetKeyword("RECORD_BYTES"));

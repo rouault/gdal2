@@ -766,11 +766,11 @@ int PDSDataset::ParseImage( CPLString osPrefix, CPLString osFilenamePrefix )
         nRows = atoi(GetKeywordSub(osPrefix+osImageKeyword+".CORE_ITEMS",2));
         l_nBands = atoi(GetKeywordSub(osPrefix+osImageKeyword+".CORE_ITEMS",3));
     }
-    else if (EQUAL(value,"(BAND,LINE,SAMPLE)") ) {
+    else if (EQUAL(value,"(BAND,SAMPLE,LINE)") ) {
         eLayout = PDS_BIP;
         l_nBands = atoi(GetKeywordSub(osPrefix+osImageKeyword+".CORE_ITEMS",1));
-        nRows = atoi(GetKeywordSub(osPrefix+osImageKeyword+".CORE_ITEMS",2));
-        nCols = atoi(GetKeywordSub(osPrefix+osImageKeyword+".CORE_ITEMS",3));
+        nCols = atoi(GetKeywordSub(osPrefix+osImageKeyword+".CORE_ITEMS",2));
+        nRows = atoi(GetKeywordSub(osPrefix+osImageKeyword+".CORE_ITEMS",3));
     }
     else if (EQUAL(value,"(SAMPLE,BAND,LINE)") ) {
         eLayout = PDS_BIL;
