@@ -3339,6 +3339,8 @@ void PDFDataset::ExploreLayersPoppler(GDALPDFArray* poArray,
     for(int i=0;i<nLength;i++)
     {
         GDALPDFObject* poObj = poArray->Get(i);
+        if( poObj == nullptr )
+            continue;
         if (i == 0 && poObj->GetType() == PDFObjectType_String)
         {
             CPLString osName = PDFSanitizeLayerName(poObj->GetString().c_str());
@@ -4067,11 +4069,12 @@ GDALDataset *PDFDataset::Open( GDALOpenInfo * poOpenInfo )
             poUserPwd = new GooString(pszUserPwd);
 
 #if POPPLER_MAJOR_VERSION >= 1 || POPPLER_MINOR_VERSION >= 58
-        poDocPoppler = new PDFDoc(new VSIPDFFileStream(fp, pszFilename, std::move(oObj)), nullptr, poUserPwd);
+        auto poStream = new VSIPDFFileStream(fp, pszFilename, std::move(oObj));
 #else
         oObj.getObj()->initNull();
-        poDocPoppler = new PDFDoc(new VSIPDFFileStream(fp, pszFilename, oObj.getObj()), nullptr, poUserPwd);
+        auto poStream = new VSIPDFFileStream(fp, pszFilename, oObj.getObj());
 #endif
+        poDocPoppler = new PDFDoc(poStream, nullptr, poUserPwd);
         delete poUserPwd;
 
         if ( !poDocPoppler->isOk() || poDocPoppler->getNumPages() == 0 )
@@ -4109,8 +4112,25 @@ GDALDataset *PDFDataset::Open( GDALOpenInfo * poOpenInfo )
 
             return nullptr;
         }
+        else if( poDocPoppler->isLinearized() &&
+                 !poStream->FoundLinearizedHint() )
+        {
+            // This is a likely defect of poppler Linearization.cc file that
+            // recognizes a file as linearized if the /Linearized hint is missing,
+            // but the content of this dictionary are present.
+            // But given the hacks of PDFFreeDoc() and VSIPDFFileStream::FillBuffer()
+            // opening such a file will result in a null-ptr deref at closing if
+            // we try to access a page and build the page cache, so just exit now
+            CPLError(CE_Failure, CPLE_AppDefined, "Invalid PDF");
+
+            PDFFreeDoc(poDocPoppler);
+
+            return nullptr;
+        }
         else
+        {
             break;
+        }
     }
 
     poCatalogPoppler = poDocPoppler->getCatalog();
@@ -5000,6 +5020,8 @@ static double Get(GDALPDFObject* poObj, int nIndice)
     {
         const char* pszStr = poObj->GetString().c_str();
         size_t nLen = strlen(pszStr);
+        if( nLen == 0 )
+            return 0;
         /* cf Military_Installations_2008.pdf that has values like "96 0 0.0W" */
         char chLast = pszStr[nLen-1];
         if (chLast == 'W' || chLast == 'E' || chLast == 'N' || chLast == 'S')

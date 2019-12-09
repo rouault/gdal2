@@ -1184,14 +1184,14 @@ CPLString VSICurlHandle::GetRedirectURLIfValid(bool& bHasExpired)
 /*                          DownloadRegion()                            */
 /************************************************************************/
 
-bool VSICurlHandle::DownloadRegion( const vsi_l_offset startOffset,
-                                    const int nBlocks )
+std::string VSICurlHandle::DownloadRegion( const vsi_l_offset startOffset,
+                                           const int nBlocks )
 {
     if( bInterrupted && bStopOnInterruptUntilUninstall )
-        return false;
+        return std::string();
 
     if( oFileProp.eExists == EXIST_NO )
-        return false;
+        return std::string();
 
     CURLM* hCurlMultiHandle = poFS->GetCurlMultiHandleFor(m_pszURL);
 
@@ -1276,7 +1276,7 @@ retry:
         CPLFree(sWriteFuncHeaderData.pBuffer);
         curl_easy_cleanup(hCurlHandle);
 
-        return false;
+        return std::string();
     }
 
     long response_code = 0;
@@ -1411,7 +1411,7 @@ retry:
         CPLFree(sWriteFuncData.pBuffer);
         CPLFree(sWriteFuncHeaderData.pBuffer);
         curl_easy_cleanup(hCurlHandle);
-        return false;
+        return std::string();
     }
 
     if( !oFileProp.bHasComputedFileSize && sWriteFuncHeaderData.pBuffer )
@@ -1482,11 +1482,14 @@ retry:
                               sWriteFuncData.pBuffer,
                               sWriteFuncData.nSize);
 
+    std::string osRet;
+    osRet.assign(sWriteFuncData.pBuffer, sWriteFuncData.nSize);
+
     CPLFree(sWriteFuncData.pBuffer);
     CPLFree(sWriteFuncHeaderData.pBuffer);
     curl_easy_cleanup(hCurlHandle);
 
-    return true;
+    return osRet;
 }
 
 /************************************************************************/
@@ -1567,8 +1570,13 @@ size_t VSICurlHandle::Read( void * const pBufferIn, size_t const nSize,
 
         const vsi_l_offset nOffsetToDownload =
                 (iterOffset / DOWNLOAD_CHUNK_SIZE) * DOWNLOAD_CHUNK_SIZE;
+        std::string osRegion;
         std::shared_ptr<std::string> psRegion = poFS->GetRegion(m_pszURL, nOffsetToDownload);
-        if( psRegion == nullptr )
+        if( psRegion != nullptr )
+        {
+            osRegion = *psRegion;
+        }
+        else
         {
             if( nOffsetToDownload == lastDownloadedOffset )
             {
@@ -1599,6 +1607,8 @@ size_t VSICurlHandle::Read( void * const pBufferIn, size_t const nSize,
                 nBlocksToDownload = nMinBlocksToDownload;
 
             // Avoid reading already cached data.
+            // Note: this might get evicted if concurrent reads are done, but
+            // this should not cause bugs. Just missed optimization.
             for( int i = 1; i < nBlocksToDownload; i++ )
             {
                 if( poFS->GetRegion(
@@ -1613,30 +1623,25 @@ size_t VSICurlHandle::Read( void * const pBufferIn, size_t const nSize,
             if( nBlocksToDownload > N_MAX_REGIONS )
                 nBlocksToDownload = N_MAX_REGIONS;
 
-            if( DownloadRegion(nOffsetToDownload, nBlocksToDownload) == false )
+            osRegion = DownloadRegion(nOffsetToDownload, nBlocksToDownload);
+            if( osRegion.empty() )
             {
                 if( !bInterrupted )
                     bEOF = true;
                 return 0;
             }
-            psRegion = poFS->GetRegion(m_pszURL, iterOffset);
-        }
-        if( psRegion == nullptr )
-        {
-            bEOF = true;
-            return 0;
         }
         const int nToCopy = static_cast<int>(
             std::min(static_cast<vsi_l_offset>(nBufferRequestSize),
-                     psRegion->size() -
+                     osRegion.size() -
                      (iterOffset - nOffsetToDownload)));
         memcpy(pBuffer,
-               psRegion->data() + iterOffset - nOffsetToDownload,
+               osRegion.data() + iterOffset - nOffsetToDownload,
                nToCopy);
         pBuffer = static_cast<char *>(pBuffer) + nToCopy;
         iterOffset += nToCopy;
         nBufferRequestSize -= nToCopy;
-        if( psRegion->size() != static_cast<size_t>(DOWNLOAD_CHUNK_SIZE) &&
+        if( osRegion.size() < static_cast<size_t>(DOWNLOAD_CHUNK_SIZE) &&
             nBufferRequestSize != 0 )
         {
             break;
@@ -2336,6 +2341,7 @@ VSICurlFilesystemHandler::VSICurlFilesystemHandler():
 /*                           CachedConnection                           */
 /************************************************************************/
 
+namespace {
 struct CachedConnection
 {
     CURLM          *hCurlMultiHandle = nullptr;
@@ -2343,9 +2349,47 @@ struct CachedConnection
 
     ~CachedConnection() { clear(); }
 };
+} // namespace
+
+#ifdef WIN32
+// Currently thread_local and C++ objects don't work well with DLL on Windows
+static void FreeCachedConnection( void* pData )
+{
+    delete static_cast<std::map<VSICurlFilesystemHandler*, CachedConnection>*>(pData);
+}
 
 // Per-thread and per-filesystem Curl connection cache.
-static thread_local std::map<VSICurlFilesystemHandler*, CachedConnection> cachedConnection;
+static std::map<VSICurlFilesystemHandler*, CachedConnection>& GetConnectionCache()
+{
+    static std::map<VSICurlFilesystemHandler*, CachedConnection> dummyCache;
+    int bMemoryErrorOccured = false;
+    void* pData = CPLGetTLSEx(CTLS_VSICURL_CACHEDCONNECTION, &bMemoryErrorOccured);
+    if( bMemoryErrorOccured )
+    {
+        return dummyCache;
+    }
+    if( pData == nullptr)
+    {
+        auto cachedConnection = new std::map<VSICurlFilesystemHandler*, CachedConnection>();
+        CPLSetTLSWithFreeFuncEx( CTLS_VSICURL_CACHEDCONNECTION,
+                                 cachedConnection,
+                                 FreeCachedConnection, &bMemoryErrorOccured );
+        if( bMemoryErrorOccured )
+        {
+            delete cachedConnection;
+            return dummyCache;
+        }
+        return *cachedConnection;
+    }
+    return *static_cast<std::map<VSICurlFilesystemHandler*, CachedConnection>*>(pData);
+}
+#else
+static thread_local std::map<VSICurlFilesystemHandler*, CachedConnection> g_tls_connectionCache;
+static std::map<VSICurlFilesystemHandler*, CachedConnection>& GetConnectionCache()
+{
+    return g_tls_connectionCache;
+}
+#endif
 
 /************************************************************************/
 /*                              clear()                                 */
@@ -2371,7 +2415,7 @@ VSICurlFilesystemHandler::~VSICurlFilesystemHandler()
     VSICurlFilesystemHandler::ClearCache();
     if( !GDALIsInGlobalDestructor() )
     {
-        cachedConnection.erase(this);
+        GetConnectionCache().erase(this);
     }
 
     if( hMutex != nullptr )
@@ -2406,7 +2450,7 @@ bool VSICurlFilesystemHandler::AllowCachedDataFor(const char* pszFilename)
 
 CURLM* VSICurlFilesystemHandler::GetCurlMultiHandleFor(const CPLString& /*osURL*/)
 {
-    auto& conn = cachedConnection[this];
+    auto& conn = GetConnectionCache()[this];
     if( conn.hCurlMultiHandle == nullptr )
     {
         conn.hCurlMultiHandle = curl_multi_init();
@@ -2590,7 +2634,7 @@ void VSICurlFilesystemHandler::ClearCache()
 
     if( !GDALIsInGlobalDestructor() )
     {
-        cachedConnection[this].clear();
+        GetConnectionCache()[this].clear();
     }
 }
 
