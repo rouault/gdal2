@@ -1440,7 +1440,7 @@ def test_jp2openjpeg_37():
         assert validate('/vsimem/jp2openjpeg_37.jp2', expected_gmljp2=False) != 'fail'
         gdal.Unlink('/vsimem/jp2openjpeg_37.jp2')
 
-    
+
 ###############################################################################
 # Test non-EPSG SRS (so written with a GML dictionary)
 
@@ -1477,7 +1477,7 @@ def test_jp2openjpeg_38():
     if do_validate:
         assert xmlvalidate.validate(crsdictionary, ogc_schemas_location='tmp/cache/SCHEMAS_OPENGIS_NET')
 
-    
+
 ###############################################################################
 # Test GMLJP2OVERRIDE configuration option and DGIWG GMLJP2
 
@@ -2984,7 +2984,7 @@ def test_jp2openjpeg_49():
         gdal.OpenEx('data/inconsitant_geojp2_gmljp2.jp2', open_options=['GEOREF_SOURCES=unhandled'])
         assert gdal.GetLastErrorMsg() != '', 'expected warning'
 
-    
+
 ###############################################################################
 # Test opening an image of small dimension with very small tiles (#7012)
 
@@ -3120,6 +3120,36 @@ def test_jp2openjpeg_odd_dimensions_overviews():
     assert ds.ReadRaster(0,0,ds.RasterXSize,ds.RasterYSize,2049,1025)
     assert gdal.GetLastErrorMsg() == ''
     ds = None
+
+###############################################################################
+# Test generation of PLT marker segments
+
+
+def test_jp2openjpeg_generate_PLT():
+
+    if gdaltest.jp2openjpeg_drv is None:
+        pytest.skip()
+
+    # Only try the rest with openjpeg > 2.3.1 that supports it
+    if gdaltest.jp2openjpeg_drv.GetMetadataItem('DMD_CREATIONOPTIONLIST').find('PLT') < 0:
+        pytest.skip()
+
+    filename = '/vsimem/temp.jp2'
+    gdaltest.jp2openjpeg_drv.CreateCopy(filename, gdal.Open('data/byte.tif'),
+                                        options=['PLT=YES',
+                                                 'REVERSIBLE=YES',
+                                                 'QUALITY=100'])
+
+    ds = gdal.Open(filename)
+    assert ds.GetRasterBand(1).Checksum() == 4672
+    ds = None
+
+    # Check presence of a PLT marker
+    ret = gdal.GetJPEG2000StructureAsString(filename, ['ALL=YES'])
+    assert '<Marker name="PLT"' in ret
+
+    gdaltest.jp2openjpeg_drv.Delete(filename)
+
 
 ###############################################################################
 
