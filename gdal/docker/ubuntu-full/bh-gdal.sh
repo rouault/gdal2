@@ -2,8 +2,7 @@
 set -eu
 
 if [ "${GDAL_VERSION}" = "master" ]; then
-    GDAL_VERSION=$(curl -Ls https://api.github.com/repos/OSGeo/gdal/commits/HEAD -H "Accept: application/vnd.github.VERSION.sha")
-    export GDAL_VERSION
+    export GDAL_VERSION=$(curl -Ls https://api.github.com/repos/OSGeo/gdal/commits/HEAD -H "Accept: application/vnd.github.VERSION.sha")
     GDAL_RELEASE_DATE=$(date "+%Y%m%d")
     export GDAL_RELEASE_DATE
 fi
