@@ -12,10 +12,11 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Cache build
-        uses: actions/cache@v2
+        uses: rouault/cache@master
         with:
           path: ~/.ccache
           key: ${{ runner.os }}-cache-macos
+          update: true
 
       - name: Install Requirements
         run: ./gdal/ci/travis/osx/before_install.sh

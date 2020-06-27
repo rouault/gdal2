@@ -17,10 +17,11 @@ jobs:
           sudo apt install -y cppcheck libsqlite3-dev ccache
 
       - name: Cache PROJ build
-        uses: actions/cache@v2
+        uses: rouault/cache@master
         with:
           path: ~/.ccache
           key: ${{ runner.os }}-cache-cppcheck-1604
+          update: true
 
       - name: Build PROJ
         run: |
@@ -51,10 +52,11 @@ jobs:
           sudo apt install -y cppcheck libsqlite3-dev ccache
 
       - name: Cache PROJ build
-        uses: actions/cache@v2
+        uses: rouault/cache@master
         with:
           path: ~/.ccache
           key: ${{ runner.os }}-cache-cppcheck-1804
+          update: true
 
       - name: Build PROJ
         run: |
