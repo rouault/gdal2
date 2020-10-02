@@ -12,10 +12,6 @@ OBJ	=	gdalmediancut.o gdaldither.o gdal_crs.o gdaltransformer.o \
 		gdal_octave.o gdal_simplesurf.o gdalmatching.o delaunay.o \
 		gdalpansharpen.o gdalapplyverticalshiftgrid.o viewshed.o
 
-ifeq ($(HAVE_GEOS),yes)
-CPPFLAGS 	:=	-DHAVE_GEOS=1 $(GEOS_CFLAGS) $(CPPFLAGS)
-endif
-
 ifeq ($(HAVE_SFCGAL),yes)
 CPPFLAGS 	:=	-DHAVE_SFCGAL=1 $(SFCGAL_CFLAGS) $(CPPFLAGS)
 endif

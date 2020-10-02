@@ -34,10 +34,6 @@ BIN_LIST += 	gnmmanage$(EXE) gnmanalyse$(EXE)
 CPPFLAGS +=	-I$(GDAL_ROOT)/gnm
 endif
 
-ifeq ($(HAVE_GEOS),yes)
-CPPFLAGS 	:=	$(CPPFLAGS) -DHAVE_GEOS=1 $(GEOS_CFLAGS)
-endif
-
 NON_DEFAULT_LIST = 	multireadtest$(EXE) dumpoverviews$(EXE) \
 	gdalwarpsimple$(EXE) gdalflattenmask$(EXE) \
 	gdaltorture$(EXE) gdal2ogr$(EXE) test_ogrsf$(EXE) \

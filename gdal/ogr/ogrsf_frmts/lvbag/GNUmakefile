@@ -8,10 +8,6 @@ ifeq ($(HAVE_EXPAT),yes)
 CPPFLAGS += -DHAVE_EXPAT
 endif
 
-ifeq ($(HAVE_GEOS),yes)
-CPPFLAGS += -DHAVE_GEOS $(GEOS_CFLAGS)
-endif
-
 CPPFLAGS	:=	-I.. -I../.. -I../generic $(EXPAT_INCLUDE) $(CPPFLAGS)
 
 default:	$(O_OBJ:.o=.$(OBJ_EXT))

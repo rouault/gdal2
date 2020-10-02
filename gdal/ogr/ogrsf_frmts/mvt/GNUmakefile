@@ -10,10 +10,6 @@ ifeq ($(HAVE_SQLITE),yes)
 CPPFLAGS :=	$(CPPFLAGS) -DHAVE_SQLITE $(SQLITE_INC)
 endif
 
-ifeq ($(HAVE_GEOS),yes)
-CPPFLAGS 	:=	-DHAVE_GEOS=1 $(CPPFLAGS)
-endif
-
 default:	$(O_OBJ:.o=.$(OBJ_EXT))
 
 clean:

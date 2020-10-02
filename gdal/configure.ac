@@ -4504,21 +4504,6 @@ if test "$WEBP_SETTING" != "no" ; then
 fi
 
 dnl ---------------------------------------------------------------------------
-dnl Check if geos library is available.
-dnl ---------------------------------------------------------------------------
-
-GEOS_INIT(3.1.0)
-HAVE_GEOS_RESULT="no"
-if test "${HAVE_GEOS}" = "yes" ; then
-
-  AC_MSG_NOTICE([Using C API from GEOS $GEOS_VERSION])
-  STRIP_SYSTEM_LIBRARY_PATHS("${GEOS_LIBS}")
-  GEOS_LIBS="$STRIPPED_LIBRARY_NAME"
-  LIBS="${GEOS_LIBS} ${LIBS}"
-  HAVE_GEOS_RESULT="yes"
-fi
-
-dnl ---------------------------------------------------------------------------
 dnl Check if SFCGAL library is available.
 dnl ---------------------------------------------------------------------------
 
