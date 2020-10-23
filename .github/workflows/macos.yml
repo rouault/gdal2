@@ -11,11 +11,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
 
-      - name: Cache build
-        uses: actions/cache@v2
-        with:
-          path: ~/.ccache
-          key: ${{ runner.os }}-cache-macos
+      #- name: Cache build
+      #  uses: actions/cache@v2
+      #  with:
+      #    path: ~/.ccache
+      #    key: ${{ runner.os }}-cache-macos
 
       - name: Install Requirements
         run: ./gdal/ci/travis/osx/before_install.sh
