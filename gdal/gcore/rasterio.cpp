@@ -3771,11 +3771,17 @@ GDALDataset::BlockBasedRasterIO( GDALRWFlag eRWFlag,
     int nLBlockY = -1;
     int iBufYOff;
     int iBufXOff;
-    int iSrcY;
     int nBlockXSize = 1;
     int nBlockYSize = 1;
     CPLErr eErr = CE_None;
     GDALDataType eDataType = GDT_Byte;
+
+    const bool bUseIntegerRequestCoords =
+           (!psExtraArg->bFloatingPointWindowValidity ||
+            (nXOff == psExtraArg->dfXOff &&
+             nYOff == psExtraArg->dfYOff &&
+             nXSize == psExtraArg->dfXSize &&
+             nYSize == psExtraArg->dfYSize));
 
 /* -------------------------------------------------------------------- */
 /*      Ensure that all bands share a common block size and data type.  */
@@ -3833,7 +3839,7 @@ GDALDataset::BlockBasedRasterIO( GDALRWFlag eRWFlag,
 /*      called before proceeding to the next.                           */
 /* ==================================================================== */
 
-    if( nXSize == nBufXSize && nYSize == nBufYSize )
+    if( nXSize == nBufXSize && nYSize == nBufYSize && bUseIntegerRequestCoords )
     {
         GDALRasterIOExtraArg sDummyExtraArg;
         INIT_RASTERIO_EXTRA_ARG(sDummyExtraArg);
@@ -3941,14 +3947,25 @@ GDALDataset::BlockBasedRasterIO( GDALRWFlag eRWFlag,
                                 GetBlockSize( &nBlockXSize, &nBlockYSize );
     }
 
+    double dfXOff = nXOff;
+    double dfYOff = nYOff;
+    double dfXSize = nXSize;
+    double dfYSize = nYSize;
+    if( psExtraArg->bFloatingPointWindowValidity )
+    {
+        dfXOff = psExtraArg->dfXOff;
+        dfYOff = psExtraArg->dfYOff;
+        dfXSize = psExtraArg->dfXSize;
+        dfYSize = psExtraArg->dfYSize;
+    }
+
 /* -------------------------------------------------------------------- */
 /*      Compute stepping increment.                                     */
 /* -------------------------------------------------------------------- */
-    const double dfSrcXInc = nXSize / static_cast<double>( nBufXSize );
-    const double dfSrcYInc = nYSize / static_cast<double>( nBufYSize );
+    const double dfSrcXInc = dfXSize / static_cast<double>( nBufXSize );
+    const double dfSrcYInc = dfYSize / static_cast<double>( nBufYSize );
 
-    double dfSrcX = 0.0;
-    double dfSrcY = 0.0;
+    constexpr double EPS = 1e-10;
 /* -------------------------------------------------------------------- */
 /*      Loop over buffer computing source locations.                    */
 /* -------------------------------------------------------------------- */
@@ -3956,16 +3973,18 @@ GDALDataset::BlockBasedRasterIO( GDALRWFlag eRWFlag,
     {
         GPtrDiff_t  iSrcOffset;
 
-        dfSrcY = (iBufYOff + 0.5) * dfSrcYInc + nYOff;
-        iSrcY = static_cast<int>( dfSrcY );
+        // Add small epsilon to avoid some numeric precision issues.
+        const double dfSrcY = (iBufYOff + 0.5) * dfSrcYInc + dfYOff + EPS;
+        const int iSrcY = static_cast<int>(std::min(std::max(0.0, dfSrcY),
+                                    static_cast<double>(nRasterYSize - 1)));
 
         GPtrDiff_t iBufOffset = static_cast<GPtrDiff_t>(iBufYOff) * static_cast<GPtrDiff_t>(nLineSpace);
 
         for( iBufXOff = 0; iBufXOff < nBufXSize; iBufXOff++ )
         {
-            dfSrcX = (iBufXOff + 0.5) * dfSrcXInc + nXOff;
-
-            int iSrcX = static_cast<int>( dfSrcX );
+            const double dfSrcX = (iBufXOff + 0.5) * dfSrcXInc + dfXOff + EPS;
+            const int iSrcX = static_cast<int>(std::min(std::max(0.0, dfSrcX),
+                                        static_cast<double>(nRasterXSize - 1)));
 
             // FIXME: this code likely doesn't work if the dirty block gets flushed
             // to disk before being completely written.
