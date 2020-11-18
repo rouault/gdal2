@@ -5340,6 +5340,9 @@ def test_tiff_write_136():
 
 def test_tiff_write_137():
 
+    if gdaltest.is_travis_branch('mingw'):
+        pytest.skip()
+
     src_ds = gdaltest.tiff_drv.Create('/vsimem/tiff_write_137_src.tif', 4000, 4000)
     src_ds.GetRasterBand(1).Fill(1)
     data = src_ds.GetRasterBand(1).ReadRaster()

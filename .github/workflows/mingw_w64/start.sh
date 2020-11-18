@@ -7,6 +7,10 @@ apt-get update -y
 DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
     sudo wget tzdata
 
+# Emulate 'mingw' Travis-CI target for the purpose of test skipping
+TRAVIS=mingw
+export TRAVIS
+
 USER=root
 export USER
 
