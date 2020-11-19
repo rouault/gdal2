@@ -29,7 +29,7 @@ fi
 
 .github/workflows/ubuntu_18.04/before_install.sh
 .github/workflows/ubuntu_18.04/install.sh
-.github/workflows/ubuntu_18.04/script.sh
+# .github/workflows/ubuntu_18.04/script.sh
 
 echo "Saving ccache..."
 rm -f "$WORK_DIR/ccache.tar.gz"
