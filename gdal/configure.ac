@@ -268,9 +268,9 @@ dnl AC_COMPILER_PIC
 	fi
 	rm -f conftest*
 
-dnl Trick so that LD_SHARED test works with sanitizer flags with clang
+dnl Trick so that LD_SHARED test works with sanitizer flags with clang, or with --coverage
 SAVED_CFLAGS=$CFLAGS
-CFLAGS=`echo "$CFLAGS " | sed "s/-fsanitize=undefined //" | sed "s/-fsanitize=address //" | sed "s/-fsanitize=unsigned-integer-overflow //"`
+CFLAGS=`echo "$CFLAGS " | sed "s/-fsanitize=undefined //" | sed "s/-fsanitize=address //" | sed "s/-fsanitize=unsigned-integer-overflow //" | sed "s/--coverage //"`
 AC_LD_SHARED
 CFLAGS=$SAVED_CFLAGS
 else
