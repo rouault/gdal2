@@ -2856,6 +2856,8 @@ void *GDALCreateReprojectionTransformerEx(
         // OGRCreateCoordinateTransformation() will report errors on its own.
         return nullptr;
 
+    poForwardTransform->SetEmitErrors(false);
+
 /* -------------------------------------------------------------------- */
 /*      Create a structure to hold the transform info, and also         */
 /*      build reverse transform.  We assume that if the forward         */
@@ -2871,6 +2873,9 @@ void *GDALCreateReprojectionTransformerEx(
     psInfo->poReverseTransform =
         OGRCreateCoordinateTransformation(poDstSRS, poSrcSRS, optionsInv);
     CPLPopErrorHandler();
+
+    if( psInfo->poReverseTransform )
+        psInfo->poReverseTransform->SetEmitErrors(false);
 
     memcpy( psInfo->sTI.abySignature,
             GDAL_GTI2_SIGNATURE,
