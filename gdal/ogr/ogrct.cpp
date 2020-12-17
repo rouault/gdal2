@@ -1135,7 +1135,7 @@ int OGRProjCT::Initialize( const OGRSpatialReference * poSourceIn,
                     options.d->dfNorthLatitudeDeg);
             }
             auto ctx = OSRGetProjTLSContext();
-#if PROJ_VERSION_MAJOR >= 8
+#if PROJ_VERSION_MAJOR >= 8 || defined(PROJ_ERR_COORD_TRANSFM)
             auto srcCRS = proj_create(ctx, pszSrcSRS);
             auto targetCRS = proj_create(ctx, pszTargetSRS);
             if( srcCRS == nullptr || targetCRS == nullptr )
@@ -2105,7 +2105,7 @@ int OGRProjCT::TransformWithErrorCodes(
             {
                 if( ++nErrorCount < 20 )
                 {
-#if PROJ_VERSION_MAJOR >= 8
+#if PROJ_VERSION_MAJOR >= 8 || defined(PROJ_ERR_COORD_TRANSFM)
                     const char *pszError = proj_context_errno_string(ctx, err);
 #else
                     const char *pszError = proj_errno_string(err);

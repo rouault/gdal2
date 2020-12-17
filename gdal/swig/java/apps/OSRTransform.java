@@ -101,11 +101,11 @@ public class OSRTransform {
 
         public static void testTransformPointWithErrorCode()
         {
-            if( osr.GetPROJVersionMajor() < 8 )
+            /*if( osr.GetPROJVersionMajor() < 8 )
             {
                 System.out.println("Skip testTransformPointWithErrorCode() due to PROJ < 8");
                 return;
-            }
+            }*/
             SpatialReference s = new SpatialReference("");
             s.SetFromUserInput("+proj=longlat +ellps=GRS80");
             SpatialReference t = new SpatialReference("");
@@ -131,11 +131,11 @@ public class OSRTransform {
 
         public static void testTransformPointsWithErrorCodes()
         {
-            if( osr.GetPROJVersionMajor() < 8 )
+            /*if( osr.GetPROJVersionMajor() < 8 )
             {
                 System.out.println("Skip testTransformPointsWithErrorCodes() due to PROJ < 8");
                 return;
-            }
+            }*/
             SpatialReference s = new SpatialReference("");
             s.SetFromUserInput("+proj=longlat +ellps=GRS80");
             SpatialReference t = new SpatialReference("");
