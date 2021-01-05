@@ -742,7 +742,9 @@ bool GDALGroup::CopyFrom( const std::shared_ptr<GDALGroup>& poDstRootGroup,
                                 eAutoScaleType != GDT_UInt16 &&
                                 eAutoScaleType != GDT_Int16 &&
                                 eAutoScaleType != GDT_UInt32 &&
-                                eAutoScaleType != GDT_Int32 )
+                                eAutoScaleType != GDT_Int32 &&
+                                eAutoScaleType != GDT_UInt64 &&
+                                eAutoScaleType != GDT_Int64 )
                             {
                                 CPLError(CE_Failure, CPLE_NotSupported,
                                          "Unsupported value for AUTOSCALE_DATA_TYPE");
@@ -792,7 +794,8 @@ bool GDALGroup::CopyFrom( const std::shared_ptr<GDALGroup>& poDstRootGroup,
                 double dfDTMin = 0;
                 double dfDTMax = 0;
 #define setDTMinMax(ctype) do \
-    { dfDTMin = std::numeric_limits<ctype>::min(); dfDTMax = std::numeric_limits<ctype>::max(); } while(0)
+    { dfDTMin = static_cast<double>(std::numeric_limits<ctype>::min()); \
+      dfDTMax = static_cast<double>(std::numeric_limits<ctype>::max()); } while(0)
 
                 switch( eAutoScaleType )
                 {
@@ -801,6 +804,8 @@ bool GDALGroup::CopyFrom( const std::shared_ptr<GDALGroup>& poDstRootGroup,
                     case GDT_Int16:  setDTMinMax(GInt16); break;
                     case GDT_UInt32: setDTMinMax(GUInt32); break;
                     case GDT_Int32:  setDTMinMax(GInt32); break;
+                    case GDT_UInt64: setDTMinMax(std::uint64_t); break;
+                    case GDT_Int64:  setDTMinMax(std::int64_t); break;
                     default:
                         CPLAssert(false);
                 }
@@ -1230,6 +1235,12 @@ bool GDALExtendedDataType::CopyValue(const void* pSrc,
                 break;
             case GDT_Int32:
                 str = CPLSPrintf("%d", *static_cast<const GInt32*>(pSrc));
+                break;
+            case GDT_UInt64:
+                str = CPLSPrintf(CPL_FRMT_GUIB, static_cast<GUIntBig>(*static_cast<const std::uint64_t*>(pSrc)));
+                break;
+            case GDT_Int64:
+                str = CPLSPrintf(CPL_FRMT_GIB, static_cast<GIntBig>(*static_cast<const std::int64_t*>(pSrc)));
                 break;
             case GDT_Float32:
                 str = CPLSPrintf("%.9g", *static_cast<const float*>(pSrc));
@@ -5178,6 +5189,24 @@ lbl_return_to_caller:
 
         case GDT_Int32:
             ReadInternal<GInt32>(count, bufferStride, bufferDataType, pDstBuffer,
+                                pTempBuffer, oTmpBufferDT, tmpBufferStrideVector,
+                                bHasMissingValue, dfMissingValue,
+                                bHasFillValue, dfFillValue,
+                                bHasValidMin, dfValidMin,
+                                bHasValidMax, dfValidMax);
+            break;
+
+        case GDT_UInt64:
+            ReadInternal<std::uint64_t>(count, bufferStride, bufferDataType, pDstBuffer,
+                                pTempBuffer, oTmpBufferDT, tmpBufferStrideVector,
+                                bHasMissingValue, dfMissingValue,
+                                bHasFillValue, dfFillValue,
+                                bHasValidMin, dfValidMin,
+                                bHasValidMax, dfValidMax);
+            break;
+
+        case GDT_Int64:
+            ReadInternal<std::int64_t>(count, bufferStride, bufferDataType, pDstBuffer,
                                 pTempBuffer, oTmpBufferDT, tmpBufferStrideVector,
                                 bHasMissingValue, dfMissingValue,
                                 bHasFillValue, dfFillValue,

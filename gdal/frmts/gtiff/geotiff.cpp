@@ -1328,6 +1328,10 @@ GTiffRasterBand::GTiffRasterBand( GTiffDataset *poDSIn, int nBandIn ):
             eDataType = GDT_CFloat32;
         else if( nSampleFormat == SAMPLEFORMAT_COMPLEXINT )
             eDataType = GDT_CInt32;
+        else if( nSampleFormat == SAMPLEFORMAT_INT )
+            eDataType = GDT_Int64;
+        else
+            eDataType = GDT_UInt64;
     }
     else if( nBitsPerSample == 128 )
     {
@@ -8443,6 +8447,16 @@ bool GTiffDataset::HasOnlyNoData( const void* pBuffer, int nWidth, int nHeight,
         return HasOnlyNoDataT(static_cast<const GInt32*>(pBuffer),
                               nWidth, nHeight, nLineStride, nComponents);
     }
+    if( m_nBitsPerSample == 64 && eDT == GDT_UInt64 )
+    {
+        return HasOnlyNoDataT(static_cast<const std::uint64_t*>(pBuffer),
+                              nWidth, nHeight, nLineStride, nComponents);
+    }
+    if( m_nBitsPerSample == 64 && eDT == GDT_Int64 )
+    {
+        return HasOnlyNoDataT(static_cast<const std::int64_t*>(pBuffer),
+                              nWidth, nHeight, nLineStride, nComponents);
+    }
     if( m_nBitsPerSample == 32 && eDT == GDT_Float32 )
     {
         return HasOnlyNoDataT(static_cast<const float*>(pBuffer),
@@ -8499,6 +8513,18 @@ inline bool GTiffDataset::IsFirstPixelEqualToNoData( const void* pBuffer )
         return GDALIsValueInRange<GInt32>(dfEffectiveNoData) &&
                *(static_cast<const GInt32*>(pBuffer)) ==
                         static_cast<GInt32>(dfEffectiveNoData);
+    }
+    if( m_nBitsPerSample == 64 && eDT == GDT_UInt64 )
+    {
+        return GDALIsValueInRange<std::uint64_t>(dfEffectiveNoData) &&
+               *(static_cast<const std::uint64_t*>(pBuffer)) ==
+                        static_cast<std::uint64_t>(dfEffectiveNoData);
+    }
+    if( m_nBitsPerSample == 64 && eDT == GDT_Int64 )
+    {
+        return GDALIsValueInRange<std::int64_t>(dfEffectiveNoData) &&
+               *(static_cast<const std::int64_t*>(pBuffer)) ==
+                        static_cast<std::int64_t>(dfEffectiveNoData);
     }
     if( m_nBitsPerSample == 32 && eDT == GDT_Float32 )
     {
@@ -15984,7 +16010,7 @@ TIFF *GTiffDataset::CreateLL( const char * pszFilename,
 
     uint16 l_nSampleFormat = 0;
     if( (eType == GDT_Byte && EQUAL(pszPixelType,"SIGNEDBYTE"))
-        || eType == GDT_Int16 || eType == GDT_Int32 )
+        || eType == GDT_Int16 || eType == GDT_Int32 || eType == GDT_Int64 )
         l_nSampleFormat = SAMPLEFORMAT_INT;
     else if( eType == GDT_CInt16 || eType == GDT_CInt32 )
         l_nSampleFormat = SAMPLEFORMAT_COMPLEXINT;

@@ -134,6 +134,12 @@ void gvBurnScanline( void *pCBData, int nY, int nXStart, int nXEnd,
         case GDT_UInt32:
             gvBurnScanlineBasic<GUInt32>( psInfo, nY, nXStart, nXEnd, dfVariant );
             break;
+        case GDT_Int64:
+            gvBurnScanlineBasic<std::int64_t>( psInfo, nY, nXStart, nXEnd, dfVariant );
+            break;
+        case GDT_UInt64:
+            gvBurnScanlineBasic<std::uint64_t>( psInfo, nY, nXStart, nXEnd, dfVariant );
+            break;
         case GDT_Float32:
             gvBurnScanlineBasic<float>( psInfo, nY, nXStart, nXEnd, dfVariant );
             break;
@@ -155,8 +161,8 @@ void gvBurnPointBasic( GDALRasterizeInfo *psInfo,
                        int nY, int nX, double dfVariant )
 
 {
-    constexpr double dfMinVariant = std::numeric_limits<T>::lowest();
-    constexpr double dfMaxVariant = std::numeric_limits<T>::max();
+    constexpr double dfMinVariant = static_cast<double>(std::numeric_limits<T>::lowest());
+    constexpr double dfMaxVariant = static_cast<double>(std::numeric_limits<T>::max());
 
     for( int iBand = 0; iBand < psInfo->nBands; iBand++ )
     {
@@ -205,6 +211,12 @@ void gvBurnPoint( void *pCBData, int nY, int nX, double dfVariant )
             break;
         case GDT_UInt32:
             gvBurnPointBasic<GUInt32>( psInfo, nY, nX, dfVariant );
+            break;
+        case GDT_Int64:
+            gvBurnPointBasic<std::int64_t>( psInfo, nY, nX, dfVariant );
+            break;
+        case GDT_UInt64:
+            gvBurnPointBasic<std::uint64_t>( psInfo, nY, nX, dfVariant );
             break;
         case GDT_Float32:
             gvBurnPointBasic<float>( psInfo, nY, nX, dfVariant );

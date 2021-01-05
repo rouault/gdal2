@@ -2851,6 +2851,16 @@ inline void GDALCopyWordsFromT( const T* const CPL_RESTRICT pSrcData,
                         static_cast<int*>(pDstData), nDstPixelStride,
                         nWordCount );
         break;
+    case GDT_UInt64:
+        GDALCopyWordsT( pSrcData, nSrcPixelStride,
+                        static_cast<std::uint64_t*>(pDstData), nDstPixelStride,
+                        nWordCount );
+        break;
+    case GDT_Int64:
+        GDALCopyWordsT( pSrcData, nSrcPixelStride,
+                        static_cast<std::int64_t*>(pDstData), nDstPixelStride,
+                        nWordCount );
+        break;
     case GDT_Float32:
         GDALCopyWordsT( pSrcData, nSrcPixelStride,
                         static_cast<float*>(pDstData), nDstPixelStride,
@@ -3031,6 +3041,8 @@ void GDALReplicateWord( const void * CPL_RESTRICT pSrcData,
         CASE_DUPLICATE_SIMPLE(GDT_Int16,  GInt16)
         CASE_DUPLICATE_SIMPLE(GDT_UInt32, GUInt32)
         CASE_DUPLICATE_SIMPLE(GDT_Int32,  GInt32)
+        CASE_DUPLICATE_SIMPLE(GDT_UInt64,  std::uint64_t)
+        CASE_DUPLICATE_SIMPLE(GDT_Int64,   std::int64_t)
         CASE_DUPLICATE_SIMPLE(GDT_Float32, float)
         CASE_DUPLICATE_SIMPLE(GDT_Float64, double)
 
@@ -3522,6 +3534,18 @@ GDALCopyWords64( const void * CPL_RESTRICT pSrcData,
     case GDT_Int32:
         GDALCopyWordsFromT<int>(
             static_cast<const int *>(pSrcData), nSrcPixelStride, false,
+            pDstData, eDstType, nDstPixelStride,
+            nWordCount );
+        break;
+    case GDT_UInt64:
+        GDALCopyWordsFromT<std::uint64_t>(
+            static_cast<const std::uint64_t *>(pSrcData), nSrcPixelStride, false,
+            pDstData, eDstType, nDstPixelStride,
+            nWordCount );
+        break;
+    case GDT_Int64:
+        GDALCopyWordsFromT<std::int64_t>(
+            static_cast<const std::int64_t *>(pSrcData), nSrcPixelStride, false,
             pDstData, eDstType, nDstPixelStride,
             nWordCount );
         break;

@@ -165,6 +165,12 @@ static void DumpValue(CPLJSonStreamingWriter& serializer,
         case GDT_UInt32:
             DumpValue<GUInt32>(serializer, bytes);
             break;
+        case GDT_Int64:
+            DumpValue<std::int64_t>(serializer, bytes);
+            break;
+        case GDT_UInt64:
+            DumpValue<std::uint64_t>(serializer, bytes);
+            break;
         case GDT_Float32:
             DumpValue<float>(serializer, bytes);
             break;
@@ -547,7 +553,7 @@ static void DumpDimensions(const std::vector<std::shared_ptr<GDALDimension>>& di
         serializer.Add(osFullname);
 
         serializer.AddObjKey("size");
-        serializer.Add(dim->GetSize());
+        serializer.Add(static_cast<std::uint64_t>(dim->GetSize()));
 
         const auto& type(dim->GetType());
         if( !type.empty() )
@@ -750,7 +756,7 @@ static void DumpArray(GDALDataset* poDS,
             }
 
             serializer.AddObjKey("valid_sample_count");
-            serializer.Add(nValidCount);
+            serializer.Add(static_cast<std::uint64_t>(nValidCount));
         }
     }
 }

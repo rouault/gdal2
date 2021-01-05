@@ -380,14 +380,16 @@ static void AddEdges( GInt32 *panThisLineId, GInt32 *panLastLineId,
         if( nThisId != -1 )
         {
             if( papoPoly[nThisId] == nullptr )
-                papoPoly[nThisId] = new RPolygon( panPolyValue[nThisId] );
+                // FIXME loss of precision for [U]Int64
+                papoPoly[nThisId] = new RPolygon( static_cast<double>(panPolyValue[nThisId]) );
 
             papoPoly[nThisId]->AddSegment( iXReal, iY, iXReal+1, iY );
         }
         if( nPreviousId != -1 )
         {
             if( papoPoly[nPreviousId] == nullptr )
-                papoPoly[nPreviousId] = new RPolygon(panPolyValue[nPreviousId]);
+                // FIXME loss of precision for [U]Int64
+                papoPoly[nPreviousId] = new RPolygon( static_cast<double>(panPolyValue[nPreviousId]) );
 
             papoPoly[nPreviousId]->AddSegment( iXReal, iY, iXReal+1, iY );
         }
@@ -398,7 +400,8 @@ static void AddEdges( GInt32 *panThisLineId, GInt32 *panLastLineId,
         if( nThisId != -1 )
         {
             if( papoPoly[nThisId] == nullptr )
-                papoPoly[nThisId] = new RPolygon(panPolyValue[nThisId]);
+                // FIXME loss of precision for [U]Int64
+                papoPoly[nThisId] = new RPolygon( static_cast<double>(panPolyValue[nThisId]) );
 
             papoPoly[nThisId]->AddSegment( iXReal+1, iY, iXReal+1, iY+1 );
         }
@@ -406,7 +409,8 @@ static void AddEdges( GInt32 *panThisLineId, GInt32 *panLastLineId,
         if( nRightId != -1 )
         {
             if( papoPoly[nRightId] == nullptr )
-                papoPoly[nRightId] = new RPolygon(panPolyValue[nRightId]);
+                // FIXME loss of precision for [U]Int64
+                papoPoly[nRightId] = new RPolygon( static_cast<double>(panPolyValue[nRightId]) );
 
             papoPoly[nRightId]->AddSegment( iXReal+1, iY, iXReal+1, iY+1 );
         }
@@ -873,7 +877,7 @@ GBool GDALFloatEquals( float A, float B )
  * can be provided to determine which pixels are eligible for processing.
  *
  * Note that currently the source pixel band values are read into a
- * signed 32bit integer buffer (Int32), so floating point or complex
+ * signed 64bit integer buffer (Int64), so floating point or complex
  * bands will be implicitly truncated before processing. If you want to use a
  * version using 32bit float buffers, see GDALFPolygonize().
   *
@@ -928,14 +932,14 @@ GDALPolygonize( GDALRasterBandH hSrcBand,
                 void * pProgressArg )
 
 {
-    return GDALPolygonizeT<GInt32, IntEqualityTest>(hSrcBand,
+    return GDALPolygonizeT<std::int64_t, IntEqualityTest>(hSrcBand,
                                                     hMaskBand,
                                                     hOutLayer,
                                                     iPixValField,
                                                     papszOptions,
                                                     pfnProgress,
                                                     pProgressArg,
-                                                    GDT_Int32);
+                                                    GDT_Int64);
 }
 
 /************************************************************************/
