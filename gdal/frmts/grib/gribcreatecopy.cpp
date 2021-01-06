@@ -767,12 +767,16 @@ float* GRIB2Section567Writer::GetFloatData()
 
     m_fMin = std::numeric_limits<float>::max();
     m_fMax = -std::numeric_limits<float>::max();
+    bool bFoundNoData = false;
+    bool bFoundData = false;
     for( GUInt32 i = 0; i < m_nDataPoints; i++ )
     {
         if( m_bHasNoData && pafData[i] == static_cast<float>(m_dfNoData) )
         {
+            bFoundNoData = true;
             continue;
         }
+        bFoundData = true;
         if( !CPLIsFinite( pafData[i] ) )
         {
             CPLError(CE_Failure, CPLE_NotSupported,
@@ -824,8 +828,9 @@ float* GRIB2Section567Writer::GetFloatData()
         m_nBits = 8;
     }
 
-    m_bUseZeroBits =( m_fMin == m_fMax ||
-        (!GDALDataTypeIsFloating(m_eDT) && dfScaledMaxDiff < 1.0) );
+    m_bUseZeroBits = !(bFoundData && bFoundNoData) &&
+        ( m_fMin == m_fMax ||
+            (!GDALDataTypeIsFloating(m_eDT) && dfScaledMaxDiff < 1.0) );
 
     return pafData;
 }
@@ -1067,7 +1072,7 @@ bool GRIB2Section567Writer::WriteComplexPacking(int nSpatialDifferencingOrder)
         return false;
     }
 
-    const double dfScaledMaxDiff = (m_fMax-m_fMin)* m_dfDecimalScale;
+    const double dfScaledMaxDiff = (m_fMax == m_fMin) ? 1 : (m_fMax-m_fMin)* m_dfDecimalScale;
     if( m_nBits == 0 )
     {
         double dfTemp = log(ceil(dfScaledMaxDiff))/log(2.0);
