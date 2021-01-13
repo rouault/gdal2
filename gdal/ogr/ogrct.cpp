@@ -1001,7 +1001,7 @@ int OGRProjCT::Initialize( const OGRSpatialReference * poSourceIn,
             CPLError(CE_Warning, CPLE_NotSupported,
                      "OGR_CT_OP_SELECTION=%s not supported", pszCTOpSelection);
     }
-#if PROJ_VERSION_MAJOR < 8
+#if PROJ_VERSION_MAJOR < 8 && !defined(PROJ_ERR_COORD_TRANSFM)
     else
     {
         if( options.d->dfAccuracy >= 0 || !options.d->bAllowBallpark )
