@@ -902,8 +902,14 @@ static const char *cvsid_aw() { return( cvsid_aw() ? NULL : cpl_cvsid ); }
 #endif
 
 #if defined(__GNUC__) && __GNUC__ >= 3 && !defined(DOXYGEN_SKIP)
+#if defined(__MINGW64__)
+/* Needed for x86_64-w64-mingw32-g++ 7.3-win32 of ubuntu 18.04 to use PRIxxx macros */
+/** Tag a function to have printf() formatting */
+#define CPL_PRINT_FUNC_FORMAT( format_idx, arg_idx )  __attribute__((__format__ (gnu_printf, format_idx, arg_idx)))
+#else
 /** Tag a function to have printf() formatting */
 #define CPL_PRINT_FUNC_FORMAT( format_idx, arg_idx )  __attribute__((__format__ (__printf__, format_idx, arg_idx)))
+#endif
 /** Tag a function to have scanf() formatting */
 #define CPL_SCAN_FUNC_FORMAT( format_idx, arg_idx )  __attribute__((__format__ (__scanf__, format_idx, arg_idx)))
 #else
