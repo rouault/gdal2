@@ -6021,6 +6021,8 @@ rm -f testdeprecated
 dnl Use -municode for mingw
 case "${host_os}" in
     mingw32*)
+        CPPFLAGS="$CPPFLAGS -D__USE_MINGW_ANSI_STDIO"
+
         AC_MSG_CHECKING([if mingw supports wmain])
         rm -f testwmain*
         echo '#include <wchar.h>' > testwmain.cpp

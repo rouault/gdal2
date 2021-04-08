@@ -42594,6 +42594,8 @@ rm -f testdeprecated
 
 case "${host_os}" in
     mingw32*)
+        CPPFLAGS="$CPPFLAGS -D__USE_MINGW_ANSI_STDIO"
+
         { $as_echo "$as_me:${as_lineno-$LINENO}: checking if mingw supports wmain" >&5
 $as_echo_n "checking if mingw supports wmain... " >&6; }
         rm -f testwmain*
