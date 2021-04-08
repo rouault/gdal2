@@ -303,14 +303,8 @@ typedef unsigned int  GUIntptr_t;
 
 #endif
 
-#if defined(__MSVCRT__) || (defined(WIN32) && defined(_MSC_VER))
-  #define CPL_FRMT_GB_WITHOUT_PREFIX     "I64"
-#elif HAVE_LONG_LONG
 /** Printf formatting suffix for GIntBig */
-  #define CPL_FRMT_GB_WITHOUT_PREFIX     "ll"
-#else
-  #define CPL_FRMT_GB_WITHOUT_PREFIX     "l"
-#endif
+#define CPL_FRMT_GB_WITHOUT_PREFIX     "ll"
 
 /** Printf formatting for GIntBig */
 #define CPL_FRMT_GIB     "%" CPL_FRMT_GB_WITHOUT_PREFIX "d"
