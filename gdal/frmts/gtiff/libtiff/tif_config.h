@@ -96,6 +96,11 @@
 #define SIZEOF_SIZE_T SIZEOF_VOIDP
 #endif
 
+#if defined(__MINGW64__)
+/* Hack so that we can use %lld with x86_64-w64-mingw32-g++ 7.3-win32 of ubuntu 18.04 */
+#define __printf__ gnu_printf
+#endif
+
 #ifdef RENAME_INTERNAL_LIBTIFF_SYMBOLS
 #include "gdal_libtiff_symbol_rename.h"
 #endif
