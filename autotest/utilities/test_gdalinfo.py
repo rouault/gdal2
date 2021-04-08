@@ -234,7 +234,7 @@ def test_gdalinfo_13():
             return 'expected_fail'
         pytest.fail(ret)
 
-    
+
 ###############################################################################
 # Test erroneous use of --config.
 
@@ -318,7 +318,7 @@ def test_gdalinfo_20():
         pytest.skip()
 
     ret = gdaltest.runexternal(test_cli_utilities.get_gdalinfo_path() + ' --formats', check_memleak=False)
-    assert 'GTiff -raster- (rw+vs): GeoTIFF' in ret
+    assert 'GTiff -raster' in ret
 
 ###############################################################################
 # Test erroneous use of --format.
@@ -358,7 +358,7 @@ def test_gdalinfo_22():
     for expected_string in expected_strings:
         assert expected_string in ret, ('did not find %s' % expected_string)
 
-    
+
 ###############################################################################
 # Test --help-general
 

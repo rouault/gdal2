@@ -63,7 +63,7 @@ def test_gdalmdimtranslate_multidim_to_mem():
 
 def test_gdalmdimtranslate_multidim_to_classic():
 
-    tmpfile = '/vsimem/out.tif'
+    tmpfile = '/vsimem/out.img'
 
     with gdaltest.error_handler():
         assert not gdal.MultiDimTranslate(tmpfile, 'data/mdim.vrt')
@@ -78,7 +78,7 @@ def test_gdalmdimtranslate_multidim_to_classic():
 
 def test_gdalmdimtranslate_multidim_1d_to_classic():
 
-    tmpfile = '/vsimem/out.tif'
+    tmpfile = '/vsimem/out.img'
 
     assert gdal.MultiDimTranslate(tmpfile, 'data/mdim.vrt',
                                   arraySpecs = ['latitude'])
