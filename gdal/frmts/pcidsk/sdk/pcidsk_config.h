@@ -33,6 +33,7 @@
 #define CPL_UNUSED
 #else
 #include "cpl_port.h"
+#define PCIDSK_FRMT_64_WITHOUT_PREFIX     "ll"
 #endif
 
 // Compatibility hack for non-C++11 compilers
@@ -78,14 +79,16 @@ namespace PCIDSK {
 #  define PCIDSK_DLL
 #endif
 
-#if defined(__MSVCRT__) || defined(_MSC_VER)
+#ifndef PCIDSK_FRMT_64_WITHOUT_PREFIX
+# if defined(__MSVCRT__) || defined(_MSC_VER)
   #define PCIDSK_FRMT_64_WITHOUT_PREFIX     "I64"
-#else
+# else
   #if defined(PCIMAJORVERSION) && BUILDABI == 64
   #define PCIDSK_FRMT_64_WITHOUT_PREFIX     "l"
   #else // BUILDABI
   #define PCIDSK_FRMT_64_WITHOUT_PREFIX     "ll"
   #endif // BUILDABI
+# endif
 #endif
 
 // #define MISSING_VSNPRINTF
