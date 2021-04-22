@@ -11157,10 +11157,10 @@ void GTiffDataset::WriteGeoTIFFInfo()
 }
 
 /************************************************************************/
-/*                         AppendMetadataItem()                         */
+/*                      GTiffAppendMetadataItem()                       */
 /************************************************************************/
 
-static void AppendMetadataItem( CPLXMLNode **ppsRoot, CPLXMLNode **ppsTail,
+void GTiffAppendMetadataItem( CPLXMLNode **ppsRoot, CPLXMLNode **ppsTail,
                                 const char *pszKey, const char *pszValue,
                                 int nBand, const char *pszRole,
                                 const char *pszDomain )
@@ -11345,7 +11345,7 @@ static void WriteMDMetadata( GDALMultiDomainMetadata *poMDMD, TIFF *hTIFF,
             }
             else
             {
-                AppendMetadataItem( ppsRoot, ppsTail,
+                GTiffAppendMetadataItem( ppsRoot, ppsTail,
                                     pszItemName, pszItemValue,
                                     nBand, nullptr, papszDomainList[iDomain] );
             }
@@ -11629,10 +11629,10 @@ bool GTiffDataset::WriteMetadata( GDALDataset *poSrcDS, TIFF *l_hTIFF,
             char szValue[128] = {};
 
             CPLsnprintf( szValue, sizeof(szValue), "%.18g", dfOffset );
-            AppendMetadataItem( &psRoot, &psTail, "OFFSET", szValue, nBand,
+            GTiffAppendMetadataItem( &psRoot, &psTail, "OFFSET", szValue, nBand,
                                 "offset", "" );
             CPLsnprintf( szValue, sizeof(szValue), "%.18g", dfScale );
-            AppendMetadataItem( &psRoot, &psTail, "SCALE", szValue, nBand,
+            GTiffAppendMetadataItem( &psRoot, &psTail, "SCALE", szValue, nBand,
                                 "scale", "" );
         }
 
@@ -11652,7 +11652,7 @@ bool GTiffDataset::WriteMetadata( GDALDataset *poSrcDS, TIFF *l_hTIFF,
             }
             if( bWriteUnit )
             {
-                AppendMetadataItem( &psRoot, &psTail, "UNITTYPE",
+                GTiffAppendMetadataItem( &psRoot, &psTail, "UNITTYPE",
                                     pszUnitType, nBand,
                                     "unittype", "" );
             }
@@ -11660,7 +11660,7 @@ bool GTiffDataset::WriteMetadata( GDALDataset *poSrcDS, TIFF *l_hTIFF,
 
         if( strlen(poBand->GetDescription()) > 0 )
         {
-            AppendMetadataItem( &psRoot, &psTail, "DESCRIPTION",
+            GTiffAppendMetadataItem( &psRoot, &psTail, "DESCRIPTION",
                                 poBand->GetDescription(), nBand,
                                 "description", "" );
         }
@@ -11669,7 +11669,7 @@ bool GTiffDataset::WriteMetadata( GDALDataset *poSrcDS, TIFF *l_hTIFF,
             !(nBand <= 3 &&  EQUAL(CSLFetchNameValueDef(
                 l_papszCreationOptions, "PHOTOMETRIC", ""), "RGB") ) )
         {
-            AppendMetadataItem( &psRoot, &psTail, "COLORINTERP",
+            GTiffAppendMetadataItem( &psRoot, &psTail, "COLORINTERP",
                                 GDALGetColorInterpretationName(
                                     poBand->GetColorInterpretation()),
                                 nBand,
@@ -11681,7 +11681,7 @@ bool GTiffDataset::WriteMetadata( GDALDataset *poSrcDS, TIFF *l_hTIFF,
         CSLFetchNameValue(l_papszCreationOptions, "@TILING_SCHEME_NAME");
     if( pszTilingSchemeName )
     {
-        AppendMetadataItem( &psRoot, &psTail,
+        GTiffAppendMetadataItem( &psRoot, &psTail,
                             "NAME", pszTilingSchemeName,
                             0, nullptr, "TILING_SCHEME" );
 
@@ -11689,7 +11689,7 @@ bool GTiffDataset::WriteMetadata( GDALDataset *poSrcDS, TIFF *l_hTIFF,
             l_papszCreationOptions, "@TILING_SCHEME_ZOOM_LEVEL");
         if( pszZoomLevel )
         {
-            AppendMetadataItem( &psRoot, &psTail,
+            GTiffAppendMetadataItem( &psRoot, &psTail,
                                 "ZOOM_LEVEL", pszZoomLevel,
                                 0, nullptr, "TILING_SCHEME" );
         }
@@ -11698,7 +11698,7 @@ bool GTiffDataset::WriteMetadata( GDALDataset *poSrcDS, TIFF *l_hTIFF,
             l_papszCreationOptions, "@TILING_SCHEME_ALIGNED_LEVELS");
         if( pszAlignedLevels )
         {
-            AppendMetadataItem( &psRoot, &psTail,
+            GTiffAppendMetadataItem( &psRoot, &psTail,
                                 "ALIGNED_LEVELS", pszAlignedLevels,
                                 0, nullptr, "TILING_SCHEME" );
         }
@@ -15344,7 +15344,7 @@ void GTiffDataset::ScanDirectories()
     }
 }
 
-static signed char GTiffGetLZMAPreset(char** papszOptions)
+signed char GTiffGetLZMAPreset(CSLConstList papszOptions)
 {
     int nLZMAPreset = -1;
     const char* pszValue = CSLFetchNameValue( papszOptions, "LZMA_PRESET" );
@@ -15362,7 +15362,7 @@ static signed char GTiffGetLZMAPreset(char** papszOptions)
     return static_cast<signed char>(nLZMAPreset);
 }
 
-static signed char GTiffGetZSTDPreset(char** papszOptions)
+signed char GTiffGetZSTDPreset(CSLConstList papszOptions)
 {
     int nZSTDLevel = -1;
     const char* pszValue = CSLFetchNameValue( papszOptions, "ZSTD_LEVEL" );
@@ -15380,7 +15380,7 @@ static signed char GTiffGetZSTDPreset(char** papszOptions)
     return static_cast<signed char>(nZSTDLevel);
 }
 
-static double GTiffGetLERCMaxZError(char** papszOptions)
+double GTiffGetLERCMaxZError(CSLConstList papszOptions)
 {
     return CPLAtof(CSLFetchNameValueDef( papszOptions, "MAX_Z_ERROR", "0.0") );
 }
@@ -15408,7 +15408,7 @@ static bool GTiffGetWebPLossless(char** papszOptions)
     return CPLFetchBool( papszOptions, "WEBP_LOSSLESS", false);
 }
 
-static signed char GTiffGetZLevel(char** papszOptions)
+signed char GTiffGetZLevel(CSLConstList papszOptions)
 {
     int nZLevel = -1;
     const char* pszValue = CSLFetchNameValue( papszOptions, "ZLEVEL" );
