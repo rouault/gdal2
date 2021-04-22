@@ -46,6 +46,15 @@ GDALRasterBandH CPL_DLL MEMCreateRasterBandEx( GDALDataset *, int, GByte *,
                                                int );
 CPL_C_END
 
+std::shared_ptr<GDALMDArray> MEMCreateMDArray(const std::string& osParentName,
+                                              const std::string& osName,
+                                              const std::vector<std::shared_ptr<GDALDimension>>& aoDimensions,
+                                              const GDALExtendedDataType& oType);
+std::shared_ptr<GDALAttribute> MEMCreateAttribute(const std::string& osParentName,
+                                                  const std::string& osName,
+                                                  const std::vector<GUInt64>& anDimensions,
+                                                  const GDALExtendedDataType& oType);
+
 /************************************************************************/
 /*                            MEMDataset                                */
 /************************************************************************/

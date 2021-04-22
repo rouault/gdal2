@@ -1771,6 +1771,26 @@ public:
 };
 
 /************************************************************************/
+/*                          MEMCreateMDArray()                          */
+/************************************************************************/
+
+std::shared_ptr<GDALMDArray> MEMCreateMDArray(const std::string& osParentName,
+                                              const std::string& osName,
+                                              const std::vector<std::shared_ptr<GDALDimension>>& aoDimensions,
+                                              const GDALExtendedDataType& oType)
+{
+    auto array = MEMMDArray::Create(osParentName,
+                                    osName,
+                                    aoDimensions,
+                                    oType);
+    GByte* pData = nullptr;
+    std::vector<GPtrDiff_t> anStrides;
+    if( !array->Init(pData, anStrides) )
+        return nullptr;
+    return array;
+}
+
+/************************************************************************/
 /*                               MEMAttribute                           */
 /************************************************************************/
 
@@ -1793,6 +1813,21 @@ public:
         return attr;
     }
 };
+
+/************************************************************************/
+/*                        MEMCreateAttribute()                          */
+/************************************************************************/
+
+std::shared_ptr<GDALAttribute> MEMCreateAttribute(const std::string& osParentName,
+                                                  const std::string& osName,
+                                                  const std::vector<GUInt64>& anDimensions,
+                                                  const GDALExtendedDataType& oType)
+{
+    auto attr = MEMAttribute::Create(osParentName, osName, anDimensions, oType);
+    if( !attr->Init() )
+        return nullptr;
+    return attr;
+}
 
 #ifdef _MSC_VER
 #pragma warning (pop)
