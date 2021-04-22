@@ -89,6 +89,7 @@
 #include "gdal_thread_pool.h"
 #include "geo_normalize.h"
 #include "geotiff.h"
+#include "geotiff_multidim.h"
 #include "geovalues.h"
 #include "gt_jpeg_copy.h"
 #include "gt_overview.h"
@@ -17214,6 +17215,16 @@ GTiffDataset::CreateCopy( const char * pszFilename, GDALDataset *poSrcDS,
                           GDALProgressFunc pfnProgress, void * pProgressData )
 
 {
+    if( poSrcDS->GetRootGroup() )
+    {
+        auto poDrv = GDALDriver::FromHandle(GDALGetDriverByName("GTiff"));
+        if( poDrv )
+        {
+            return poDrv->DefaultCreateCopy(pszFilename, poSrcDS, bStrict,
+                                     papszOptions, pfnProgress, pProgressData);
+        }
+    }
+
     if( poSrcDS->GetRasterCount() == 0 )
     {
         ReportError( pszFilename, CE_Failure, CPLE_AppDefined,
@@ -20280,6 +20291,7 @@ void GDALRegister_GTiff()
 /* -------------------------------------------------------------------- */
     poDriver->SetDescription( "GTiff" );
     poDriver->SetMetadataItem( GDAL_DCAP_RASTER, "YES" );
+    poDriver->SetMetadataItem( GDAL_DCAP_MULTIDIM_RASTER, "YES" );
     poDriver->SetMetadataItem( GDAL_DMD_LONGNAME, "GeoTIFF" );
     poDriver->SetMetadataItem( GDAL_DMD_HELPTOPIC, "drivers/raster/gtiff.html" );
     poDriver->SetMetadataItem( GDAL_DMD_MIMETYPE, "image/tiff" );
@@ -20315,6 +20327,7 @@ void GDALRegister_GTiff()
     poDriver->pfnOpen = GTiffDataset::Open;
     poDriver->pfnCreate = GTiffDataset::Create;
     poDriver->pfnCreateCopy = GTiffDataset::CreateCopy;
+    poDriver->pfnCreateMultiDimensional = osgeo::gdal::gtiff::MultiDimDataset::CreateMultiDim;
     poDriver->pfnUnloadDriver = GDALDeregister_GTiff;
     poDriver->pfnIdentify = GTiffDataset::Identify;
 
