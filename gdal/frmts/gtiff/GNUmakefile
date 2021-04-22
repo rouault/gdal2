@@ -2,7 +2,8 @@
 include ../../GDALmake.opt
 
 OBJ	=	geotiff.o gt_wkt_srs.o gt_citation.o  gt_overview.o \
-		tif_float.o tifvsi.o gt_jpeg_copy.o cogdriver.o
+		tif_float.o tifvsi.o gt_jpeg_copy.o cogdriver.o \
+		geotiff_multidim.o
 
 SUBLIBS 	=
 
@@ -37,7 +38,7 @@ ifeq ($(JPEG_SETTING),internal)
 TIFF_OPTS 	:=	$(TIFF_OPTS) -I../jpeg/libjpeg
 endif
 
-CPPFLAGS	:=	 -iquote .. $(GEOTIFF_INCLUDE) $(PROJ_INCLUDE) $(PROJ_FLAGS) $(TIFF_OPTS) $(CPPFLAGS)
+CPPFLAGS	:=	 -iquote .. -iquote ../mem $(GEOTIFF_INCLUDE) $(PROJ_INCLUDE) $(PROJ_FLAGS) $(TIFF_OPTS) $(CPPFLAGS)
 
 CXXFLAGS        :=      $(WARN_EFFCPLUSPLUS)  $(CXXFLAGS)
 # issue with $(WARN_OLD_STYLE_CAST) with x86_64-w64-mingw32-g++. See https://travis-ci.org/OSGeo/gdal/jobs/375654138
