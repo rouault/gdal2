@@ -691,11 +691,11 @@ bool GDALGroup::CopyFrom( const std::shared_ptr<GDALGroup>& poDstRootGroup,
                 return false;
         }
 
-        auto arrayNames = poSrcGroup->GetMDArrayNames();
-        for( const auto& name: arrayNames )
+        const auto CopyArray = [&](const std::shared_ptr<GDALMDArray>& srcArray,
+                                   bool& skip)
         {
-            auto srcArray = poSrcGroup->OpenMDArray(name);
-            EXIT_OR_CONTINUE_IF_NULL(srcArray);
+            skip = false;
+            const auto& name = srcArray->GetName();
 
             // Map source dimensions to target dimensions
             std::vector<std::shared_ptr<GDALDimension>> dstArrayDims;
@@ -822,6 +822,10 @@ bool GDALGroup::CopyFrom( const std::shared_ptr<GDALGroup>& poDstRootGroup,
 
             auto oIterDimName = mapSrcVariableNameToIndexedDimName.find(srcArray->GetName());
             const auto& srcArrayType = srcArray->GetDataType();
+            if( oIterDimName != mapSrcVariableNameToIndexedDimName.end() )
+            {
+                aosArrayCO.SetNameValue("IS_INDEXING_VARIABLE", "TRUE");
+            }
 
             std::shared_ptr<GDALMDArray> dstArray;
 
@@ -872,7 +876,12 @@ bool GDALGroup::CopyFrom( const std::shared_ptr<GDALGroup>& poDstRootGroup,
                                          dstArrayDims,
                                          GDALExtendedDataType::Create(eAutoScaleType),
                                          aosArrayCO.List());
-                EXIT_OR_CONTINUE_IF_NULL(dstArray);
+                if( !dstArray )
+                {
+                    if( !bStrict )
+                        skip = true;
+                    return false;
+                }
 
                 if( srcArray->GetRawNoDataValue() != nullptr )
                 {
@@ -920,7 +929,12 @@ bool GDALGroup::CopyFrom( const std::shared_ptr<GDALGroup>& poDstRootGroup,
                                           dstArrayDims,
                                           srcArrayType,
                                           aosArrayCO.List());
-                EXIT_OR_CONTINUE_IF_NULL(dstArray);
+                if( !dstArray )
+                {
+                    if( !bStrict )
+                        skip = true;
+                    return false;
+                }
 
                 if( !dstArray->CopyFrom(poSrcDS,
                                         srcArray.get(), bStrict,
@@ -942,6 +956,49 @@ bool GDALGroup::CopyFrom( const std::shared_ptr<GDALGroup>& poDstRootGroup,
                     CPLErrorStateBackuper oErrorStateBackuper;
                     oCorrespondingDimIter->second->SetIndexingVariable(dstArray);
                 }
+            }
+
+            return true;
+        };
+
+        const auto arrayNames = poSrcGroup->GetMDArrayNames();
+        std::vector<std::shared_ptr<GDALMDArray>> nonIndexingArrays;
+        // Copy first indexing variables
+        for( const auto& name: arrayNames )
+        {
+            bool skip = false;
+            auto srcArray = poSrcGroup->OpenMDArray(name);
+            if( !srcArray )
+            {
+                if( !bStrict )
+                    continue;
+                return false;
+            }
+            if( mapSrcVariableNameToIndexedDimName.find(srcArray->GetName()) !=
+                    mapSrcVariableNameToIndexedDimName.end() )
+            {
+                if( !CopyArray(srcArray, skip) )
+                {
+                    if( skip )
+                        continue;
+                    return false;
+                }
+            }
+            else
+            {
+                nonIndexingArrays.emplace_back(srcArray);
+            }
+        }
+
+        // And then regular variables
+        for( const auto& srcArray: nonIndexingArrays )
+        {
+            bool skip = false;
+            if( !CopyArray(srcArray, skip) )
+            {
+                if( skip )
+                    continue;
+                return false;
             }
         }
 
