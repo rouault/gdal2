@@ -41,6 +41,7 @@ class MultiDimDataset final: public GDALPamDataset
 
         std::shared_ptr<GDALGroup> GetRootGroup() const override;
 
+        static GDALDataset *Open( GDALOpenInfo * poOpenInfo );
         static GDALDataset* CreateMultiDim( const char * pszFilename,
                                             CSLConstList papszRootGroupOptions,
                                             CSLConstList papszOptions );

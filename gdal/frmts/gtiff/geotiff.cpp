@@ -12571,6 +12571,11 @@ GDALDataset *GTiffDataset::Open( GDALOpenInfo * poOpenInfo )
     if( !Identify(poOpenInfo) )
         return nullptr;
 
+    if( poOpenInfo->nOpenFlags & GDAL_OF_MULTIDIM_RASTER )
+    {
+        return osgeo::gdal::gtiff::MultiDimDataset::Open(poOpenInfo);
+    }
+
     bool bAllowRGBAInterface = true;
     if( STARTS_WITH_CI(pszFilename, "GTIFF_RAW:") )
     {
