@@ -12,6 +12,7 @@
 #ifndef SWIGPYTHON
 #define SWIGPYTHON
 #define SED_HACKS
+#define SED_HACKS
 #endif
 
 #define SWIG_PYTHON_THREADS

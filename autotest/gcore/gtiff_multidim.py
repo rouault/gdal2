@@ -29,6 +29,7 @@
 ###############################################################################
 
 import array
+import struct
 
 from osgeo import gdal
 from osgeo import osr
@@ -79,7 +80,54 @@ def _test_basic_2D(blockSize, arraySize, dt):
         'VARIABLE_NAME': 'myarray'}
     assert ds.GetSpatialRef() is None
     assert ds.GetGeoTransform(can_return_null=True) is None
+    ds = None
 
+    ds = gdal.OpenEx(filename, gdal.OF_MULTIDIM_RASTER)
+    rg = ds.GetRootGroup()
+    ar = rg.OpenMDArray('myarray')
+    assert ar.GetDataType() == gdal.ExtendedDataType.Create(dt)
+    assert [x.GetSize() for x in ar.GetDimensions()] == [x for x in arraySize]
+    assert ar.GetBlockSize() == [x for x in blockSize]
+    assert ar.GetSpatialRef() is None
+    assert numpy.array_equal(ar.ReadAsArray(), ref_ar)
+
+    assert numpy.array_equal(ar[2,3].ReadAsArray(), ref_ar[2,3])
+
+    count_y = 2
+    count_x = 4
+    step_y = 1
+    step_x = 1
+    start_y = min(blockSize[0] - 2, arraySize[0] - count_y * step_y)
+    start_x = min(blockSize[1] - 3, arraySize[1] - count_x * step_x)
+    assert numpy.array_equal(ar.ReadAsArray([start_y, start_x],
+                                            [count_y, count_x],
+                                            [step_y, step_x]),
+                             ref_ar[start_y:start_y+count_y*step_y:step_y,
+                                    start_x:start_x+count_x*step_x:step_x])
+
+    count_y = 2
+    count_x = 4
+    step_y = 3
+    step_x = 2
+    start_y = min(blockSize[0] - 2, arraySize[0] - count_y * step_y)
+    start_x = min(blockSize[1] - 3, arraySize[1] - count_x * step_x)
+    assert numpy.array_equal(ar.ReadAsArray([start_y, start_x],
+                                            [count_y, count_x],
+                                            [step_y, step_x]),
+                             ref_ar[start_y:start_y+count_y*step_y:step_y,
+                                    start_x:start_x+count_x*step_x:step_x])
+
+    count_y = 2
+    count_x = 4
+    step_y = -2
+    step_x = -3
+    start_y = arraySize[0] - 1
+    start_x = arraySize[1] - 1
+    assert numpy.array_equal(ar.ReadAsArray([start_y, start_x],
+                                            [count_y, count_x],
+                                            [step_y, step_x]),
+                             ref_ar[start_y:start_y+count_y*step_y:step_y,
+                                    start_x:start_x+count_x*step_x:step_x])
 
     gdal.Unlink(filename)
 
@@ -177,6 +225,23 @@ def test_gtiff_mdim_basic_3D(blockSize, arraySize):
                 'DIMENSION_2_SIZE': '%d' % arraySize[2]})
         assert ds.GetMetadata() == expected_md
 
+    ds = gdal.OpenEx(filename, gdal.OF_MULTIDIM_RASTER)
+    rg = ds.GetRootGroup()
+    ar = rg.OpenMDArray('myarray')
+    assert ar.GetDataType() == gdal.ExtendedDataType.Create(dt)
+    assert [x.GetSize() for x in ar.GetDimensions()] == [x for x in arraySize]
+    assert ar.GetBlockSize() == [x for x in blockSize]
+    assert ar.GetSpatialRef() is None
+    dims = ar.GetDimensions()
+    assert dims[0].GetName() == 'dimZ'
+    assert dims[0].GetType() == 'a'
+    assert dims[0].GetDirection() == 'b'
+    indexingVar = dims[0].GetIndexingVariable()
+    assert indexingVar is not None
+    assert indexingVar.GetDataType() == gdal.ExtendedDataType.Create(gdal.GDT_Int32)
+    assert [x for x in struct.unpack('i' * arraySize[0], indexingVar.Read())] == z_values
+    assert numpy.array_equal(ar.ReadAsArray(), ref_ar)
+
     gdal.Unlink(filename)
 
 
@@ -268,6 +333,13 @@ def test_gtiff_mdim_basic_4D(blockSize, arraySize):
                     'DIMENSION_3_SIZE': '%d' % arraySize[3]})
             assert ds.GetMetadata() == expected_md
 
+
+    ds = gdal.OpenEx(filename, gdal.OF_MULTIDIM_RASTER)
+    rg = ds.GetRootGroup()
+    ar = rg.OpenMDArray('myarray')
+    assert numpy.array_equal(ar.ReadAsArray(), ref_ar)
+    ds = None
+
     gdal.Unlink(filename)
 
 
@@ -326,6 +398,26 @@ def test_gtiff_mdim_array_attributes_scale_offset_nodata():
     assert ds.GetRasterBand(1).GetScale() == 3.25
     assert ds.GetRasterBand(1).GetUnitType() == 'my unit'
     assert ds.GetRasterBand(1).GetNoDataValue() == 23
+    ds = None
+
+    ds = gdal.OpenEx(filename, gdal.OF_MULTIDIM_RASTER)
+    rg = ds.GetRootGroup()
+    ar = rg.OpenMDArray('myarray')
+    assert ar.GetOffset() == 1.25
+    assert ar.GetScale() == 3.25
+    assert ar.GetUnit() == 'my unit'
+    assert ar.GetNoDataValueAsDouble() == 23.0
+    attrs = ar.GetAttributes()
+    attr_map = {}
+    for attr in attrs:
+        attr_map[attr.GetName()] = attr.ReadAsString()
+    assert attr_map == {
+        'att_int': '123456789',
+        'att_int_multiple': '123456789,23',
+        'att_text': 'foo',
+        'att_text_multiple': 'foo,bar',
+        'att_text_null': 'null'
+    }
 
     gdal.Unlink(filename)
 
@@ -391,12 +483,24 @@ def test_gtiff_mdim_array_compression(codec, options, compression_level):
             # Too fragile depending on the version of ZSTD or ZLIB
             assert gdal.VSIStatL(filename).size != filesize
 
+    ds = gdal.OpenEx(filename, gdal.OF_MULTIDIM_RASTER)
+    rg = ds.GetRootGroup()
+    ar = rg.OpenMDArray('myarray')
+    assert ar.GetStructuralInfo()['COMPRESSION'] == codec, ar.GetStructuralInfo()
+    if 'PREDICTOR=2' in options:
+        assert ar.GetStructuralInfo()['PREDICTOR'] == '2'
+    ds = None
+
+    gdal.Unlink(filename)
 
 @pytest.mark.parametrize("y_incr", [-0.2, 0.2])
 def test_gtiff_mdim_array_geotiff_tags(y_incr):
 
     filename = '/vsimem/mdim.tif'
     x_incr = 0.1
+
+    x_ar = [2 + 0.5 * x_incr + x_incr * i for i in range(10)]
+    y_ar = [49 + 0.5 * y_incr + y_incr * i for i in range(5)]
 
     def write():
         ds = gdal.GetDriverByName('GTiff').CreateMultiDimensional(filename)
@@ -407,12 +511,12 @@ def test_gtiff_mdim_array_geotiff_tags(y_incr):
         dimXVar = rg.CreateMDArray("dimX", [dimX], gdal.ExtendedDataType.Create(
             gdal.GDT_Float64), ['IS_INDEXING_VARIABLE=YES'])
         dimX.SetIndexingVariable(dimXVar)
-        dimXVar.Write(array.array('d', [2 + 0.5 * x_incr + x_incr * i for i in range(10)]))
+        dimXVar.Write(array.array('d', x_ar))
 
         dimYVar = rg.CreateMDArray("dimY", [dimY], gdal.ExtendedDataType.Create(
             gdal.GDT_Float64), ['IS_INDEXING_VARIABLE=YES'])
         dimY.SetIndexingVariable(dimYVar)
-        dimYVar.Write(array.array('d', [49 + 0.5 * y_incr + y_incr * i for i in range(10)]))
+        dimYVar.Write(array.array('d', y_ar))
 
         ar = rg.CreateMDArray("myarray", [dimY, dimX],
                               gdal.ExtendedDataType.Create(gdal.GDT_Byte))
@@ -428,6 +532,27 @@ def test_gtiff_mdim_array_geotiff_tags(y_incr):
     assert ds.GetSpatialRef().GetAuthorityCode(None) == '4326'
     assert ds.GetGeoTransform() == pytest.approx([2, x_incr, 0, 49, 0, y_incr])
     assert ds.GetMetadataItem('AREA_OR_POINT') == 'Point'
+    ds = None
+
+    ds = gdal.OpenEx(filename, gdal.OF_MULTIDIM_RASTER)
+    rg = ds.GetRootGroup()
+    ar = rg.OpenMDArray('myarray')
+    assert ar.GetSpatialRef().GetAuthorityCode(None) == '4326'
+    dims = ar.GetDimensions()
+
+    assert dims[0].GetName() == 'dimY'
+    assert dims[0].GetType() == 'HORIZONTAL_Y'
+    assert dims[0].GetDirection() == 'NORTH'
+    y_var = dims[0].GetIndexingVariable()
+    assert y_var is not None
+    assert [x for x in struct.unpack('d' * 5, y_var.Read())] == pytest.approx(y_ar)
+
+    assert dims[1].GetName() == 'dimX'
+    assert dims[1].GetType() == 'HORIZONTAL_X'
+    assert dims[1].GetDirection() == 'EAST'
+    x_var = dims[1].GetIndexingVariable()
+    assert x_var is not None
+    assert [x for x in struct.unpack('d' * 10, x_var.Read())] == pytest.approx(x_ar)
     ds = None
 
     gdal.Unlink(filename)

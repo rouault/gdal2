@@ -44,6 +44,7 @@
 #include "gtiff.h"
 #include "tifvsi.h"
 #include "gt_wkt_srs.h"
+#include "gt_wkt_srs_priv.h"
 
 #include "ogr_proj_p.h"
 
@@ -120,7 +121,11 @@ public:
                                                    GUInt64,
                                                    CSLConstList papszOptions) override;
 
+    std::vector<std::shared_ptr<GDALDimension>> GetDimensions(CSLConstList papszOptions = nullptr) const override;
+
     std::vector<std::string> GetMDArrayNames(CSLConstList) const override;
+    std::shared_ptr<GDALMDArray> OpenMDArray(const std::string& osName,
+                                             CSLConstList papszOptions = nullptr) const override;
 
     std::shared_ptr<GDALMDArray> CreateMDArray(
                const std::string& osName,
@@ -128,6 +133,7 @@ public:
                const GDALExtendedDataType& oDataType,
                CSLConstList papszOptions) override;
 
+    bool OpenIFD(TIFF* hTIFF);
 };
 
 /************************************************************************/
@@ -157,6 +163,8 @@ public:
 
 class Array final: public GDALMDArray
 {
+    friend class Group;
+
     Array(const Array&) = delete;
     Array(Array &&) = delete;
     Array& operator= (const Array&) = delete;
@@ -171,7 +179,7 @@ class Array final: public GDALMDArray
     // where we won't crystalize in Array::IWrite()
     std::vector<std::shared_ptr<GDALMDArray>> m_oVectorIndexingArrays{};
 
-    std::vector<TIFF*> m_ahTIFF{}; // size should be m_nIFDCount
+    mutable std::vector<TIFF*> m_ahTIFF{}; // size should be m_nIFDCount
     size_t                  m_nIFDCount = 0;
     std::vector<uint32_t> m_anBlockSize{}; // size should be the same as m_aoDims
 
@@ -194,11 +202,16 @@ class Array final: public GDALMDArray
     double      m_dfMaxZError = 0.0;
     int         m_nLercSubcodec = LERC_ADD_COMPRESSION_NONE;
 
-    bool Crystalize();
+    CPLStringList m_aosStructuralInfo{};
+
+    bool Crystalize() const;
 
     std::vector<size_t> IFDIndexToDimIdx(size_t nIFDIndex) const;
     char*               GenerateMetadata(bool mainIFD, const std::vector<size_t>& anDimIdx) const;
     void                WriteGeoTIFFTags( TIFF* hTIFF );
+    bool                ValidateIFDConsistency(TIFF* hTIFF,
+                                               size_t nIFDIndex,
+                                               const std::vector<size_t>& indices) const;
 
 protected:
     bool IRead(const GUInt64* arrayStartIdx,
@@ -236,6 +249,15 @@ public:
                const GDALExtendedDataType& oType,
                const std::vector<uint32_t>& anBlockSize,
                const std::map<std::string, std::string>& options);
+
+    static std::shared_ptr<Array> CreateFromOpen(
+               const std::shared_ptr<MultiDimSharedResources>& poShared,
+               const std::string& osParentName,
+               const std::string& osName,
+               const std::vector<std::shared_ptr<GDALDimension>>& aoDimensions,
+               const GDALExtendedDataType& oType,
+               const std::vector<uint32_t>& anBlockSize,
+               TIFF* hTIFF);
 
     const std::string& GetFilename() const override { return m_poShared->GetFilename(); }
 
@@ -291,6 +313,8 @@ public:
 
     bool SetScale(double dfScale, GDALDataType eStorageType) override
     { m_bHasScale = true; m_dfScale = dfScale; m_eScaleStorageType = eStorageType; return true; }
+
+    CSLConstList GetStructuralInfo() const override { return m_aosStructuralInfo.List(); }
 };
 
 /************************************************************************/
@@ -363,7 +387,8 @@ Array::~Array()
     Crystalize();
     for( const auto& hTIFF: m_ahTIFF )
     {
-        XTIFFClose(hTIFF);
+        if( hTIFF )
+            XTIFFClose(hTIFF);
     }
 
     if( m_pabyNoData )
@@ -377,7 +402,7 @@ Array::~Array()
 /*                            Crystalize()                              */
 /************************************************************************/
 
-bool Array::Crystalize()
+bool Array::Crystalize() const
 {
     return m_poShared->Crystalize();
 }
@@ -1027,6 +1052,133 @@ std::shared_ptr<Array> Array::Create(
 }
 
 /************************************************************************/
+/*                      Array::CreateFromOpen()                         */
+/************************************************************************/
+
+std::shared_ptr<Array> Array::CreateFromOpen(
+           const std::shared_ptr<MultiDimSharedResources>& poShared,
+           const std::string& osParentName,
+           const std::string& osName,
+           const std::vector<std::shared_ptr<GDALDimension>>& aoDimensions,
+           const GDALExtendedDataType& oType,
+           const std::vector<uint32_t>& anBlockSize,
+           TIFF* hTIFF)
+{
+    auto array(std::shared_ptr<Array>(
+        new Array(poShared, osParentName, osName, aoDimensions, oType, anBlockSize)));
+
+    array->m_ahTIFF.resize(array->m_nIFDCount);
+
+    uint16_t nCompression = COMPRESSION_NONE;
+    TIFFGetField( hTIFF, TIFFTAG_COMPRESSION, &nCompression);
+    array->m_nCompression = nCompression;
+
+    if( nCompression != COMPRESSION_NONE &&
+        !TIFFIsCODECConfigured(nCompression) )
+    {
+        CPLError(CE_Failure, CPLE_NotSupported,
+                 "Cannot open TIFF file due to missing codec." );
+        return nullptr;
+    }
+
+    switch( nCompression )
+    {
+        case COMPRESSION_LZW:
+            array->m_aosStructuralInfo.SetNameValue("COMPRESSION", "LZW");
+            break;
+
+        case COMPRESSION_DEFLATE:
+        case COMPRESSION_ADOBE_DEFLATE:
+            array->m_aosStructuralInfo.SetNameValue("COMPRESSION", "DEFLATE");
+            break;
+
+        case COMPRESSION_LZMA:
+            array->m_aosStructuralInfo.SetNameValue("COMPRESSION", "LZMA");
+            break;
+
+        case COMPRESSION_ZSTD:
+            array->m_aosStructuralInfo.SetNameValue("COMPRESSION", "ZSTD");
+            break;
+
+        case COMPRESSION_LERC:
+        {
+            array->m_aosStructuralInfo.SetNameValue("COMPRESSION", "LERC");
+
+            uint32_t nAddVersion = LERC_ADD_COMPRESSION_NONE;
+            if( TIFFGetField( hTIFF, TIFFTAG_LERC_ADD_COMPRESSION, &nAddVersion ) &&
+                nAddVersion != LERC_ADD_COMPRESSION_NONE )
+            {
+                if( nAddVersion == LERC_ADD_COMPRESSION_DEFLATE )
+                {
+                    array->m_aosStructuralInfo.SetNameValue("COMPRESSION", "LERC_DEFLATE");
+                }
+                else if( nAddVersion == LERC_ADD_COMPRESSION_ZSTD )
+                {
+                    array->m_aosStructuralInfo.SetNameValue("COMPRESSION", "LERC_ZSTD");
+                }
+            }
+
+            uint32_t nLercVersion = LERC_VERSION_2_4;
+            if( TIFFGetField( hTIFF, TIFFTAG_LERC_VERSION, &nLercVersion) )
+            {
+                if( nLercVersion == LERC_VERSION_2_4 )
+                {
+                    array->m_aosStructuralInfo.SetNameValue("LERC_VERSION", "2.4");
+                }
+                else
+                {
+                    CPLError(CE_Warning, CPLE_AppDefined,
+                             "Unknown Lerc version: %d", nLercVersion);
+                }
+            }
+            break;
+        }
+
+        default:
+            break;
+    }
+
+    if( array->m_nCompression == COMPRESSION_LZW ||
+        array->m_nCompression == COMPRESSION_ADOBE_DEFLATE ||
+        array->m_nCompression == COMPRESSION_ZSTD )
+    {
+        TIFFGetField( hTIFF, TIFFTAG_PREDICTOR, &array->m_nPredictor);
+        if( array->m_nPredictor != PREDICTOR_NONE )
+        {
+            array->m_aosStructuralInfo.SetNameValue(
+                        "PREDICTOR", CPLSPrintf("%d", array->m_nPredictor));
+        }
+    }
+
+/* -------------------------------------------------------------------- */
+/*      Check for NODATA                                                */
+/* -------------------------------------------------------------------- */
+    char *pszText = nullptr;
+    if( TIFFGetField( hTIFF, TIFFTAG_GDAL_NODATA, &pszText ) &&
+        !EQUAL(pszText, "") )
+    {
+        double dfNoDataValue = CPLAtofM( pszText );
+        if( array->m_oType.GetNumericDataType() == GDT_Float32 )
+        {
+            dfNoDataValue = GDALAdjustNoDataCloseToFloatMax(dfNoDataValue);
+        }
+        if( array->m_pabyNoData )
+        {
+            array->m_oType.FreeDynamicMemory(&array->m_pabyNoData[0]);
+            CPLFree(array->m_pabyNoData);
+        }
+        array->m_pabyNoData = static_cast<GByte*>(CPLMalloc(array->m_oType.GetSize()));
+        GDALExtendedDataType::CopyValue( &dfNoDataValue,
+                                         GDALExtendedDataType::Create(GDT_Float64),
+                                         array->m_pabyNoData,
+                                         array->m_oType );
+    }
+
+    array->SetSelf(array);
+    return array;
+}
+
+/************************************************************************/
 /*                            GetAttribute()                            */
 /************************************************************************/
 
@@ -1088,6 +1240,262 @@ std::shared_ptr<GDALAttribute> Array::CreateAttribute(
 }
 
 /************************************************************************/
+/*                          GTIFFGetDataType()                          */
+/************************************************************************/
+
+static GDALDataType GTIFFGetDataType(TIFF* hTIFF)
+{
+    uint16_t nBitsPerSample = 1;
+    TIFFGetField(hTIFF, TIFFTAG_BITSPERSAMPLE, &nBitsPerSample );
+
+    uint16_t nSampleFormat = SAMPLEFORMAT_UINT;
+    TIFFGetField( hTIFF, TIFFTAG_SAMPLEFORMAT, &nSampleFormat );
+
+    GDALDataType eDataType = GDT_Unknown;
+    if( nBitsPerSample <= 8 )
+    {
+        if( nSampleFormat == SAMPLEFORMAT_UINT )
+            eDataType = GDT_Byte;
+    }
+    else if( nBitsPerSample <= 16 )
+    {
+        if( nSampleFormat == SAMPLEFORMAT_INT )
+            eDataType = GDT_Int16;
+        else
+            eDataType = GDT_UInt16;
+    }
+    else if( nBitsPerSample == 32 )
+    {
+        if( nSampleFormat == SAMPLEFORMAT_COMPLEXINT )
+            eDataType = GDT_CInt16;
+        else if( nSampleFormat == SAMPLEFORMAT_IEEEFP )
+            eDataType = GDT_Float32;
+        else if( nSampleFormat == SAMPLEFORMAT_INT )
+            eDataType = GDT_Int32;
+        else
+            eDataType = GDT_UInt32;
+    }
+    else if( nBitsPerSample == 64 )
+    {
+        if( nSampleFormat == SAMPLEFORMAT_IEEEFP )
+            eDataType = GDT_Float64;
+        else if( nSampleFormat == SAMPLEFORMAT_COMPLEXIEEEFP )
+            eDataType = GDT_CFloat32;
+        else if( nSampleFormat == SAMPLEFORMAT_COMPLEXINT )
+            eDataType = GDT_CInt32;
+    }
+    else if( nBitsPerSample == 128 )
+    {
+        if( nSampleFormat == SAMPLEFORMAT_COMPLEXIEEEFP )
+            eDataType = GDT_CFloat64;
+    }
+
+    return eDataType;
+}
+
+/************************************************************************/
+/*                   Array::ValidateIFDConsistency()                    */
+/************************************************************************/
+
+bool Array::ValidateIFDConsistency(TIFF* hTIFF,
+                                   size_t nIFDIndex,
+                                   const std::vector<size_t>& indices) const
+{
+
+    uint16_t nSamplesPerPixel = 1;
+    TIFFGetField(hTIFF, TIFFTAG_SAMPLESPERPIXEL, &nSamplesPerPixel);
+    if( nSamplesPerPixel != 1 )
+    {
+        CPLError(CE_Failure, CPLE_NotSupported,
+                 "SamplesPerPixel != 1 not supported in multidimensional API");
+        return false;
+    }
+
+    uint16_t nBitsPerSample = 1;
+    TIFFGetField(hTIFF, TIFFTAG_BITSPERSAMPLE, &nBitsPerSample );
+    if( nBitsPerSample != 8 && nBitsPerSample != 16 && nBitsPerSample != 32 &&
+        nBitsPerSample != 64 && nBitsPerSample != 128 )
+    {
+        CPLError(CE_Failure, CPLE_NotSupported,
+                 "BitsPerSample != 8, 16, 32, 64 and 128 not supported "
+                 "in multidimensional API");
+        return false;
+    }
+
+    const auto eDataType = GTIFFGetDataType(hTIFF);
+    if( eDataType == GDT_Unknown )
+    {
+        CPLError(CE_Failure, CPLE_NotSupported,
+                 "Unsupported combination of BitsPerSample and SampleFormat");
+        return false;
+    }
+    if( eDataType != m_oType.GetNumericDataType() )
+    {
+        CPLError(CE_Failure, CPLE_AppDefined,
+                 "Data type of IFD %u not consistent with main one",
+                 static_cast<unsigned>(nIFDIndex));
+        return false;
+    }
+
+    if( !TIFFIsTiled(hTIFF) )
+    {
+        CPLError(CE_Failure, CPLE_NotSupported,
+                 "Only tiled files supported in multidimensional API");
+        return false;
+    }
+
+    const auto nDims = m_aoDims.size();
+
+    uint32_t nYSize = 0;
+    TIFFGetField( hTIFF, TIFFTAG_IMAGELENGTH, &nYSize );
+    if( nYSize != m_aoDims[nDims-2]->GetSize() )
+    {
+        CPLError(CE_Failure, CPLE_AppDefined,
+                 "Image height of IFD %u not consistent with main one",
+                 static_cast<unsigned>(nIFDIndex));
+        return false;
+    }
+
+    uint32_t nBlockYSize = 0;
+    TIFFGetField( hTIFF, TIFFTAG_TILELENGTH, &nBlockYSize );
+    if( nBlockYSize != m_anBlockSize[nDims-2] )
+    {
+        CPLError(CE_Failure, CPLE_AppDefined,
+                 "Block height of IFD %u not consistent with main one",
+                 static_cast<unsigned>(nIFDIndex));
+        return false;
+    }
+
+    uint32_t nXSize = 0;
+    TIFFGetField( hTIFF, TIFFTAG_IMAGEWIDTH, &nXSize );
+    if( nXSize != m_aoDims[nDims-1]->GetSize() )
+    {
+        CPLError(CE_Failure, CPLE_AppDefined,
+                 "Image width of IFD %u not consistent with main one",
+                 static_cast<unsigned>(nIFDIndex));
+        return false;
+    }
+
+    uint32_t nBlockXSize = 0;
+    TIFFGetField( hTIFF, TIFFTAG_TILEWIDTH, &nBlockXSize );
+    if( nBlockXSize != m_anBlockSize[nDims-1] )
+    {
+        CPLError(CE_Failure, CPLE_AppDefined,
+                 "Block width of IFD %u not consistent with main one",
+                 static_cast<unsigned>(nIFDIndex));
+        return false;
+    }
+
+    std::map<std::string, std::string> oMapDimMetadata;
+    std::string osVarName;
+
+    char* pszText = nullptr; /* not to be freed */
+    if( TIFFGetField( hTIFF, TIFFTAG_GDAL_METADATA, &pszText ) )
+    {
+        CPLXMLNode *psRoot = CPLParseXMLString( pszText );
+        CPLXMLNode *psItem = nullptr;
+
+        if( psRoot != nullptr && psRoot->eType == CXT_Element
+            && EQUAL(psRoot->pszValue,"GDALMetadata") )
+            psItem = psRoot->psChild;
+
+        for( ; psItem != nullptr; psItem = psItem->psNext )
+        {
+
+            if( psItem->eType != CXT_Element
+                || !EQUAL(psItem->pszValue,"Item") )
+                continue;
+
+            const char *pszKey = CPLGetXMLValue( psItem, "name", nullptr );
+            const char *pszValue = CPLGetXMLValue( psItem, nullptr, nullptr );
+            const char *pszDomain = CPLGetXMLValue( psItem, "domain", "" );
+            if( !EQUAL(pszDomain, "") )
+                continue;
+
+            if( pszKey == nullptr || pszValue == nullptr )
+                continue;
+
+            // Note: this un-escaping should not normally be done, as the deserialization
+            // of the tree from XML also does it, so we end up width double XML escaping,
+            // but keep it for backward compatibility.
+            char *pszUnescapedValue =
+                CPLUnescapeString( pszValue, nullptr, CPLES_XML );
+
+            if( EQUAL(pszKey, "VARIABLE_NAME") )
+            {
+                osVarName = pszUnescapedValue;
+            }
+            else
+            {
+                if( STARTS_WITH_CI(pszKey, "DIMENSION_") )
+                {
+                    oMapDimMetadata[pszKey] = pszValue;
+                }
+            }
+
+            CPLFree( pszUnescapedValue );
+        }
+
+        CPLDestroyXMLNode( psRoot );
+    }
+
+    if( osVarName != GetName() )
+    {
+        CPLError(CE_Failure, CPLE_AppDefined,
+                 "VARIABLE_NAME of IFD %u not consistent with main one",
+                 static_cast<unsigned>(nIFDIndex));
+        return false;
+    }
+
+    for( int i = 0; i < static_cast<int>(nDims) - 2; ++i )
+    {
+        std::string osKeyPrefix("DIMENSION_");
+        osKeyPrefix += std::to_string(i);
+        osKeyPrefix += '_';
+
+        const auto osDimName = oMapDimMetadata[osKeyPrefix + "NAME"];
+        if( osDimName.empty() )
+        {
+            CPLError(CE_Failure, CPLE_AppDefined, "Missing %s in IFD %u",
+                     (osKeyPrefix + "NAME").c_str(),
+                     static_cast<unsigned>(nIFDIndex));
+            return false;
+        }
+        if( osDimName != m_aoDims[i]->GetName() )
+        {
+            CPLError(CE_Failure, CPLE_AppDefined,
+                     "DIMENSION_%d_NAME of IFD %u not consistent with main one",
+                     i,
+                     static_cast<unsigned>(nIFDIndex));
+            return false;
+        }
+
+        const auto osDimIdx = oMapDimMetadata[osKeyPrefix + "IDX"];
+        if( osDimIdx.empty() )
+        {
+            CPLError(CE_Failure, CPLE_AppDefined, "Missing %s in IFD %u",
+                     (osKeyPrefix + "IDX").c_str(),
+                     static_cast<unsigned>(nIFDIndex));
+            return false;
+        }
+
+        const auto nGotDimIdx = static_cast<unsigned>(atoi(osDimIdx.c_str()));
+        if( nGotDimIdx != indices[i] )
+        {
+            CPLError(CE_Failure, CPLE_AppDefined,
+                     "DIMENSION_%d_IDX=%u in IFD %u instead of %u",
+                     i,
+                     nGotDimIdx,
+                     static_cast<unsigned>(nIFDIndex),
+                     static_cast<unsigned>(indices[i]));
+            return false;
+        }
+    }
+
+    return true;
+}
+
+/************************************************************************/
 /*                         Array::IRead()                               */
 /************************************************************************/
 
@@ -1098,14 +1506,259 @@ bool Array::IRead(const GUInt64* arrayStartIdx,
                   const GDALExtendedDataType& bufferDataType,
                   void* pDstBuffer) const
 {
-    // FIXME
-    (void)arrayStartIdx;
-    (void)count;
-    (void)arrayStep;
-    (void)bufferStride;
-    (void)bufferDataType;
-    (void)pDstBuffer;
-    return false;
+    if( !Crystalize() )
+        return false;
+
+    if( bufferDataType.GetClass() != GEDTC_NUMERIC )
+    {
+        CPLError(CE_Failure, CPLE_NotSupported,
+                 "Incompatible buffer data type.");
+        return false;
+    }
+
+    // Need to be kept in top-level scope
+    std::vector<GUInt64> arrayStartIdxMod;
+    std::vector<GInt64> arrayStepMod;
+    std::vector<GPtrDiff_t> bufferStrideMod;
+
+    const size_t nDims = m_aoDims.size();
+    bool negativeStep = false;
+    for( size_t i = 0; i < nDims; ++i )
+    {
+        if( arrayStep[i] < 0 )
+        {
+            negativeStep = true;
+            break;
+        }
+    }
+
+    const auto eBufferDT = bufferDataType.GetNumericDataType();
+    const auto nBufferDTSize = static_cast<int>(bufferDataType.GetSize());
+
+    // Make sure that arrayStep[i] are positive for sake of simplicity
+    if( negativeStep )
+    {
+        arrayStartIdxMod.resize(nDims);
+        arrayStepMod.resize(nDims);
+        bufferStrideMod.resize(nDims);
+        for( size_t i = 0; i < nDims; ++i )
+        {
+            if( arrayStep[i] < 0 )
+            {
+                arrayStartIdxMod[i] = arrayStartIdx[i] - (count[i] - 1) * (-arrayStep[i]);
+                arrayStepMod[i] = -arrayStep[i];
+                bufferStrideMod[i] = -bufferStride[i];
+                pDstBuffer = static_cast<GByte*>(pDstBuffer) +
+                    bufferStride[i] * static_cast<GPtrDiff_t>(nBufferDTSize * (count[i] - 1));
+            }
+            else
+            {
+                arrayStartIdxMod[i] = arrayStartIdx[i];
+                arrayStepMod[i] = arrayStep[i];
+                bufferStrideMod[i] = bufferStride[i];
+            }
+        }
+        arrayStartIdx = arrayStartIdxMod.data();
+        arrayStep = arrayStepMod.data();
+        bufferStride = bufferStrideMod.data();
+    }
+
+    const size_t iDimY = nDims - 2;
+    const size_t iDimX = nDims - 1;
+
+    const auto nDstXIncLarge = bufferStride[iDimX] * nBufferDTSize;
+    if( nDstXIncLarge > std::numeric_limits<int>::max() ||
+        nDstXIncLarge < std::numeric_limits<int>::min() )
+    {
+        CPLError(CE_Failure, CPLE_AppDefined, "Too large buffer stride");
+        return false;
+    }
+    const int nDstXInc = static_cast<int>(nDstXIncLarge);
+
+    std::vector<size_t> indicesOuterLoop(nDims);
+    std::vector<GByte*> dstPtrStackOuterLoop(nDims + 1);
+
+    std::vector<size_t> indicesInnerLoop(nDims - 2);
+    std::vector<GByte*> dstPtrStackInnerLoop(nDims - 2 + 1);
+    std::vector<size_t> anIFDIndex(nDims - 2 + 1);
+
+    // Reserve a buffer for 2D tile content
+    const GDALDataType eDT = m_oType.GetNumericDataType();
+    const auto nDTSize = m_oType.GetSize();
+    std::vector<GByte> abyTileData;
+    try
+    {
+        abyTileData.resize( m_anBlockSize[iDimX] * m_anBlockSize[iDimY] * nDTSize );
+    }
+    catch( const std::bad_alloc& e )
+    {
+        CPLError(CE_Failure, CPLE_OutOfMemory, "%s", e.what());
+        return false;
+    }
+    const tmsize_t nTileDataSize = static_cast<tmsize_t>(abyTileData.size());
+
+    // Number of tiles along X direction
+    const uint32_t nTileXCount = static_cast<uint32_t>(
+        (m_aoDims[iDimX]->GetSize() + m_anBlockSize[iDimX] - 1) / m_anBlockSize[iDimX]);
+
+    size_t dimIdx = 0;
+    dstPtrStackOuterLoop[0] = static_cast<GByte*>(pDstBuffer);
+lbl_next_depth:
+    if( dimIdx == nDims )
+    {
+        size_t dimIdxSubLoop = 0;
+        dstPtrStackInnerLoop[0] = dstPtrStackOuterLoop[nDims];
+        anIFDIndex[0] = 0;
+lbl_next_depth_inner_loop:
+        if( dimIdxSubLoop == iDimY )
+        {
+            // Now we have a 2D tile !
+            const size_t nIFDIndex = anIFDIndex[iDimY];
+            assert( nIFDIndex < m_ahTIFF.size() );
+            TIFF* hTIFF = m_ahTIFF[nIFDIndex];
+            if( hTIFF == nullptr )
+            {
+                hTIFF = VSI_TIFFOpenChild(m_poShared->GetTIFFHandle());
+                if( hTIFF == nullptr )
+                    return false;
+                if( TIFFSetDirectory(hTIFF, static_cast<uint16_t>(nIFDIndex)) == 0 ||
+                    !ValidateIFDConsistency(hTIFF, nIFDIndex, indicesInnerLoop) )
+                {
+                    XTIFFClose(hTIFF);
+                    return false;
+                }
+                m_ahTIFF[nIFDIndex] = hTIFF;
+            }
+
+            const uint32_t iYTile = static_cast<uint32_t>(
+                                indicesOuterLoop[iDimY] / m_anBlockSize[iDimY]);
+            const uint32_t iXTile = static_cast<uint32_t>(
+                                indicesOuterLoop[iDimX] / m_anBlockSize[iDimX]);
+
+            const uint32_t nTile = iYTile * nTileXCount + iXTile;
+            if( TIFFReadEncodedTile(hTIFF, nTile, &abyTileData[0],
+                                    nTileDataSize) != nTileDataSize )
+            {
+                return false;
+            }
+
+            const uint32_t nYOffsetInTile = static_cast<uint32_t>(
+                            indicesOuterLoop[iDimY] % m_anBlockSize[iDimY]);
+            const uint32_t nYNextTile = static_cast<uint32_t>(
+                indicesOuterLoop[iDimY] + m_anBlockSize[iDimY] - nYOffsetInTile);
+            const auto nLastYCoord = static_cast<uint32_t>(arrayStartIdx[iDimY] + (count[iDimY]-1) * arrayStep[iDimY]);
+            const auto arrayStepY = arrayStep[iDimY] ? arrayStep[iDimY] : 1;
+            const uint32_t nYIters =
+                static_cast<uint32_t>((std::min(nYNextTile, nLastYCoord+1) -
+                    indicesOuterLoop[iDimY] + arrayStepY - 1) / arrayStepY);
+            //assert( indicesOuterLoop[iDimY] + (nYIters - 1) * arrayStep[iDimY] <= nLastYCoord );
+            //assert( indicesOuterLoop[iDimY] + (nYIters - 1) * arrayStep[iDimY] < nYNextTile );
+
+            const uint32_t nXOffsetInTile = static_cast<uint32_t>(
+                            indicesOuterLoop[iDimX] % m_anBlockSize[iDimX]);
+            const uint32_t nXNextTile = static_cast<uint32_t>(
+                indicesOuterLoop[iDimX] + m_anBlockSize[iDimX] - nXOffsetInTile);
+            const auto nLastXCoord = static_cast<uint32_t>(arrayStartIdx[iDimX] + (count[iDimX]-1) * arrayStep[iDimX]);
+            const auto arrayStepX = arrayStep[iDimX] ? arrayStep[iDimX] : 1;
+            const uint32_t nXIters =
+                static_cast<uint32_t>((std::min(nXNextTile, nLastXCoord+1) -
+                    indicesOuterLoop[iDimX] + arrayStepX - 1) / arrayStepX);
+            //assert( indicesOuterLoop[iDimX] + (nXIters - 1) * arrayStep[iDimX] <= nLastXCoord );
+            //assert( indicesOuterLoop[iDimX] + (nXIters - 1) * arrayStep[iDimX] < nXNextTile );
+
+            GByte* dst_ptr_row = dstPtrStackInnerLoop[dimIdxSubLoop];
+            const GByte* src_ptr_row = abyTileData.data() +
+                (nYOffsetInTile * m_anBlockSize[iDimX] + nXOffsetInTile) * nDTSize;
+
+            for( uint32_t y = 0; y < nYIters; ++y )
+            {
+                GDALCopyWords64(src_ptr_row, eDT,
+                                static_cast<int>(nDTSize * arrayStep[iDimX]),
+                                dst_ptr_row, eBufferDT, nDstXInc,
+                                static_cast<GPtrDiff_t>(nXIters));
+
+                dst_ptr_row += bufferStride[iDimY] * nBufferDTSize;
+                src_ptr_row += arrayStep[iDimY] * m_anBlockSize[iDimX] * nDTSize;
+            }
+        }
+        else
+        {
+            // This level of loop loops over individual samples, within a
+            // block, in the non-2D indices.
+            indicesInnerLoop[dimIdxSubLoop] = indicesOuterLoop[dimIdxSubLoop];
+            anIFDIndex[dimIdxSubLoop] *=
+                static_cast<size_t>(m_aoDims[dimIdxSubLoop]->GetSize());
+            anIFDIndex[dimIdxSubLoop] += indicesOuterLoop[dimIdxSubLoop];
+            while(true)
+            {
+                dimIdxSubLoop ++;
+                anIFDIndex[dimIdxSubLoop] = anIFDIndex[dimIdxSubLoop-1];
+                dstPtrStackInnerLoop[dimIdxSubLoop] = dstPtrStackInnerLoop[dimIdxSubLoop-1];
+                goto lbl_next_depth_inner_loop;
+lbl_return_to_caller_inner_loop:
+                dimIdxSubLoop --;
+                if( arrayStep[dimIdxSubLoop] == 0 )
+                {
+                    break;
+                }
+                const auto oldBlock = indicesOuterLoop[dimIdxSubLoop] / m_anBlockSize[dimIdxSubLoop];
+                indicesInnerLoop[dimIdxSubLoop] = static_cast<size_t>(
+                    indicesInnerLoop[dimIdxSubLoop] + arrayStep[dimIdxSubLoop]);
+                if( (indicesInnerLoop[dimIdxSubLoop] /
+                        m_anBlockSize[dimIdxSubLoop]) != oldBlock ||
+                    indicesInnerLoop[dimIdxSubLoop] >
+                        arrayStartIdx[dimIdxSubLoop] + (count[dimIdxSubLoop]-1) * arrayStep[dimIdxSubLoop] )
+                {
+                    break;
+                }
+                dstPtrStackInnerLoop[dimIdxSubLoop] +=
+                    bufferStride[dimIdxSubLoop] * static_cast<GPtrDiff_t>(nBufferDTSize);
+                anIFDIndex[dimIdxSubLoop] = static_cast<size_t>(
+                    anIFDIndex[dimIdxSubLoop] + arrayStep[dimIdxSubLoop]);
+            }
+        }
+        if( dimIdxSubLoop > 0 )
+            goto lbl_return_to_caller_inner_loop;
+    }
+    else
+    {
+        // This level of loop loops over blocks
+        indicesOuterLoop[dimIdx] = static_cast<size_t>(arrayStartIdx[dimIdx]);
+        while(true)
+        {
+            dimIdx ++;
+            dstPtrStackOuterLoop[dimIdx] = dstPtrStackOuterLoop[dimIdx - 1];
+            goto lbl_next_depth;
+lbl_return_to_caller:
+            dimIdx --;
+            if( count[dimIdx] == 1 )
+                break;
+
+            size_t nIncr;
+            if( arrayStep[dimIdx] < m_anBlockSize[dimIdx] )
+            {
+                // Compute index at next block boundary
+                auto newIdx = indicesOuterLoop[dimIdx] +
+                    (m_anBlockSize[dimIdx] - (indicesOuterLoop[dimIdx] % m_anBlockSize[dimIdx]));
+                // And round up compared to arrayStartIdx, arrayStep
+                nIncr = static_cast<size_t>(
+                    (newIdx - indicesOuterLoop[dimIdx] + arrayStep[dimIdx] - 1) / arrayStep[dimIdx]);
+            }
+            else
+            {
+                nIncr = 1;
+            }
+            indicesOuterLoop[dimIdx] = static_cast<size_t>(
+                indicesOuterLoop[dimIdx] + nIncr * arrayStep[dimIdx]);
+            if( indicesOuterLoop[dimIdx] > arrayStartIdx[dimIdx] + (count[dimIdx]-1) * arrayStep[dimIdx] )
+                break;
+            dstPtrStackOuterLoop[dimIdx] += bufferStride[dimIdx] * static_cast<GPtrDiff_t>(nIncr * nBufferDTSize);
+        }
+    }
+    if( dimIdx > 0 )
+        goto lbl_return_to_caller;
+
+    return true;
 }
 
 /************************************************************************/
@@ -1368,6 +2021,20 @@ std::shared_ptr<GDALDimension> Group::CreateDimension(const std::string& osName,
 }
 
 /************************************************************************/
+/*                            GetDimensions()                           */
+/************************************************************************/
+
+std::vector<std::shared_ptr<GDALDimension>> Group::GetDimensions(CSLConstList) const
+{
+    std::vector<std::shared_ptr<GDALDimension>> oRes;
+    for( const auto& oIter: m_oMapDimensions )
+    {
+        oRes.push_back(oIter.second);
+    }
+    return oRes;
+}
+
+/************************************************************************/
 /*                           GetMDArrayNames()                          */
 /************************************************************************/
 
@@ -1377,6 +2044,500 @@ std::vector<std::string> Group::GetMDArrayNames(CSLConstList) const
     for( const auto& iter: m_oMapMDArrays )
         names.push_back(iter.first);
     return names;
+}
+
+/************************************************************************/
+/*                             OpenMDArray()                            */
+/************************************************************************/
+
+std::shared_ptr<GDALMDArray> Group::OpenMDArray(const std::string& osName,
+                                                CSLConstList) const
+{
+    auto oIter = m_oMapMDArrays.find(osName);
+    if( oIter != m_oMapMDArrays.end() )
+        return oIter->second;
+    return nullptr;
+}
+
+/************************************************************************/
+/*                         Group::OpenIFD()                             */
+/************************************************************************/
+
+bool Group::OpenIFD(TIFF* hTIFF)
+{
+    std::string osVarName( CPLGetBasename(m_poShared->GetFilename().c_str()) );
+
+    uint16_t nSamplesPerPixel = 1;
+    TIFFGetField(hTIFF, TIFFTAG_SAMPLESPERPIXEL, &nSamplesPerPixel);
+    if( nSamplesPerPixel != 1 )
+    {
+        CPLError(CE_Failure, CPLE_NotSupported,
+                 "SamplesPerPixel != 1 not supported in multidimensional API");
+        return false;
+    }
+
+    uint16_t nBitsPerSample = 1;
+    TIFFGetField(hTIFF, TIFFTAG_BITSPERSAMPLE, &nBitsPerSample );
+    if( nBitsPerSample != 8 && nBitsPerSample != 16 && nBitsPerSample != 32 &&
+        nBitsPerSample != 64 && nBitsPerSample != 128 )
+    {
+        CPLError(CE_Failure, CPLE_NotSupported,
+                 "BitsPerSample != 8, 16, 32, 64 and 128 not supported "
+                 "in multidimensional API");
+        return false;
+    }
+
+    const auto eDataType = GTIFFGetDataType(hTIFF);
+    if( eDataType == GDT_Unknown )
+    {
+        CPLError(CE_Failure, CPLE_NotSupported,
+                 "Unsupported combination of BitsPerSample and SampleFormat");
+        return false;
+    }
+
+    if( !TIFFIsTiled(hTIFF) )
+    {
+        CPLError(CE_Failure, CPLE_NotSupported,
+                 "Only tiled files supported in multidimensional API");
+        return false;
+    }
+
+    std::map<std::string, std::string> oMapDimMetadata;
+    std::map<std::string, std::string> oMapAttributesStr;
+    int nDimensions = 2;
+    bool bHasScale = false;
+    double dfScale = 1.0;
+    bool bHasOffset = false;
+    double dfOffset = 0.0;
+    std::string osUnitType;
+
+    char* pszText = nullptr; /* not to be freed */
+    if( TIFFGetField( hTIFF, TIFFTAG_GDAL_METADATA, &pszText ) )
+    {
+        CPLXMLNode *psRoot = CPLParseXMLString( pszText );
+        CPLXMLNode *psItem = nullptr;
+
+        if( psRoot != nullptr && psRoot->eType == CXT_Element
+            && EQUAL(psRoot->pszValue,"GDALMetadata") )
+            psItem = psRoot->psChild;
+
+        for( ; psItem != nullptr; psItem = psItem->psNext )
+        {
+
+            if( psItem->eType != CXT_Element
+                || !EQUAL(psItem->pszValue,"Item") )
+                continue;
+
+            const char *pszKey = CPLGetXMLValue( psItem, "name", nullptr );
+            const char *pszValue = CPLGetXMLValue( psItem, nullptr, nullptr );
+            const char *pszRole = CPLGetXMLValue( psItem, "role", "" );
+            const char *pszDomain = CPLGetXMLValue( psItem, "domain", "" );
+            if( !EQUAL(pszDomain, "") )
+                continue;
+
+            if( pszKey == nullptr || pszValue == nullptr )
+                continue;
+
+            // Note: this un-escaping should not normally be done, as the deserialization
+            // of the tree from XML also does it, so we end up width double XML escaping,
+            // but keep it for backward compatibility.
+            char *pszUnescapedValue =
+                CPLUnescapeString( pszValue, nullptr, CPLES_XML );
+
+            if( EQUAL(pszRole,"scale") )
+            {
+                bHasScale = true;
+                dfScale = CPLAtofM(pszUnescapedValue);
+            }
+            else if( EQUAL(pszRole,"offset") )
+            {
+                bHasOffset = true;
+                dfOffset = CPLAtofM(pszUnescapedValue);
+            }
+            else if( EQUAL(pszRole,"unittype") )
+            {
+                osUnitType = pszUnescapedValue;
+            }
+            else if( !EQUAL(pszRole, "") )
+            {
+                // do nothing
+            }
+            else if( EQUAL(pszKey, "VARIABLE_NAME") )
+            {
+                osVarName = pszUnescapedValue;
+            }
+            else
+            {
+                if( STARTS_WITH_CI(pszKey, "DIMENSION_") )
+                {
+                    nDimensions = std::max(nDimensions,
+                                           1 + atoi(pszKey + strlen("DIMENSION_")));
+                    oMapDimMetadata[pszKey] = pszValue;
+                }
+                else
+                {
+                    oMapAttributesStr[pszKey] = pszValue;
+                }
+            }
+
+            CPLFree( pszUnescapedValue );
+        }
+
+        CPLDestroyXMLNode( psRoot );
+    }
+
+    std::vector<std::shared_ptr<GDALDimension>> aoDimensions;
+    std::vector<uint32_t> anBlockSize;
+    std::vector<std::shared_ptr<GDALMDArray>> apoIndexingVars;
+
+    for( int i = 0; i < nDimensions - 2; ++i )
+    {
+        std::string osKeyPrefix("DIMENSION_");
+        osKeyPrefix += std::to_string(i);
+        osKeyPrefix += '_';
+
+        const auto osDimName = oMapDimMetadata[osKeyPrefix + "NAME"];
+        if( osDimName.empty() )
+        {
+            CPLError(CE_Failure, CPLE_AppDefined, "Missing %s",
+                     (osKeyPrefix + "NAME").c_str());
+            return false;
+        }
+
+        const auto osDimSize = oMapDimMetadata[osKeyPrefix + "SIZE"];
+        if( osDimSize.empty() )
+        {
+            CPLError(CE_Failure, CPLE_AppDefined, "Missing %s",
+                     (osKeyPrefix + "SIZE").c_str());
+            return false;
+        }
+
+        const GUInt64 nDimSize = static_cast<GUInt64>(
+                                            CPLAtoGIntBig(osDimSize.c_str()));
+        if( nDimSize == 0 )
+        {
+            CPLError(CE_Failure, CPLE_AppDefined, "Invalid value for %s",
+                     (osKeyPrefix + "SIZE").c_str());
+            return false;
+        }
+
+        const auto osDimIdx = oMapDimMetadata[osKeyPrefix + "IDX"];
+        if( osDimIdx.empty() )
+        {
+            CPLError(CE_Failure, CPLE_AppDefined, "Missing %s",
+                     (osKeyPrefix + "IDX").c_str());
+            return false;
+        }
+
+        if( osDimIdx != "0" )
+        {
+            CPLError(CE_Failure, CPLE_AppDefined, "Invalid value for %s",
+                     (osKeyPrefix + "IDX").c_str());
+            return false;
+        }
+
+        const auto osDimDataType = oMapDimMetadata[osKeyPrefix + "DATATYPE"];
+        const auto osDimDirection = oMapDimMetadata[osKeyPrefix + "DIRECTION"];
+        const auto osDimType = oMapDimMetadata[osKeyPrefix + "TYPE"];
+        const auto osDimValues = oMapDimMetadata[osKeyPrefix + "VALUES"];
+
+        const auto osDimBlockSize = oMapDimMetadata[osKeyPrefix + "BLOCK_SIZE"];
+        if( osDimBlockSize.empty() )
+        {
+            CPLError(CE_Failure, CPLE_AppDefined, "Missing %s",
+                     (osKeyPrefix + "BLOCK_SIZE").c_str());
+            return false;
+        }
+        const uint32_t nDimBlockSize = static_cast<uint32_t>(
+                                        CPLAtoGIntBig(osDimBlockSize.c_str()));
+
+        // Create dimension
+        auto poDim = std::make_shared<Dimension>(GetFullName(), osDimName,
+                                                 osDimType, osDimDirection,
+                                                 nDimSize);
+        aoDimensions.emplace_back(poDim);
+        anBlockSize.emplace_back(nDimBlockSize);
+
+        // Create indexing variable
+
+        if( !osDimDataType.empty() || !osDimValues.empty() )
+        {
+            if( osDimDataType.empty() )
+            {
+                CPLError(CE_Failure, CPLE_AppDefined, "Missing %s",
+                         (osKeyPrefix + "DATATYPE").c_str());
+                return false;
+            }
+
+            const auto eDimDT = GDALGetDataTypeByName( osDimDataType.c_str() );
+            if( eDimDT == GDT_Unknown )
+            {
+                CPLError(CE_Failure, CPLE_AppDefined, "Invalid value for %s",
+                         (osKeyPrefix + "DATATYPE").c_str());
+                return false;
+            }
+
+            if( osDimValues.empty() )
+            {
+                CPLError(CE_Failure, CPLE_AppDefined, "Missing %s",
+                         (osKeyPrefix + "VALUES").c_str());
+                return false;
+            }
+
+            const CPLStringList aosValues(
+                CSLTokenizeString2(osDimValues.c_str(), ",", 0));
+            if( static_cast<GUInt64>(aosValues.size()) != nDimSize )
+            {
+                CPLError(CE_Failure, CPLE_AppDefined,
+                         "Inconsistent number of values in %s w.r.t %s",
+                         (osKeyPrefix + "VALUES").c_str(),
+                         (osKeyPrefix + "SIZE").c_str());
+                return false;
+            }
+
+            auto poIndexingVariable = MEMMDArray::Create(
+                std::string(), osDimName, {poDim},
+                 GDALExtendedDataType::Create(eDimDT));
+            if( !poIndexingVariable || !poIndexingVariable->Init() )
+                return false;
+
+            std::vector<double> adfValues;
+            for( int j = 0; j < aosValues.size(); ++j )
+            {
+                adfValues.emplace_back(CPLAtof(aosValues[j]));
+            }
+            const GUInt64 arrayStartIdx = 0;
+            const size_t count = aosValues.size();
+            const GInt64 arrayStep = 1;
+            const GPtrDiff_t bufferStride = 1;
+            poIndexingVariable->Write(
+                &arrayStartIdx, &count, &arrayStep, &bufferStride,
+                GDALExtendedDataType::Create(GDT_Float64),
+                adfValues.data());
+
+            // Attach indexing variable to dimension
+            apoIndexingVars.emplace_back(poIndexingVariable);
+            poDim->SetIndexingVariable(poIndexingVariable);
+        }
+    }
+
+    double *padfScale = nullptr;
+    double *padfMatrix = nullptr;
+    uint16_t nCount = 0;
+    double dfXStart = 0;
+    double dfXSpacing = 0;
+    double dfYStart = 0;
+    double dfYSpacing = 0;
+    bool bHasGeoTransform = false;
+    if( TIFFGetField(hTIFF, TIFFTAG_GEOPIXELSCALE, &nCount, &padfScale )
+        && nCount >= 2
+        && padfScale[0] != 0.0 && padfScale[1] != 0.0 )
+    {
+        dfXSpacing = padfScale[0];
+        dfYSpacing = -padfScale[1];
+
+        nCount = 0;
+        double *padfTiePoints = nullptr;
+        if( TIFFGetField(hTIFF, TIFFTAG_GEOTIEPOINTS,
+                         &nCount, &padfTiePoints )
+            && nCount >= 6 )
+        {
+            dfXStart = padfTiePoints[3];
+            dfYStart = padfTiePoints[4];
+            bHasGeoTransform = true;
+        }
+    }
+    else
+    {
+        nCount = 0;
+        if( TIFFGetField(hTIFF, TIFFTAG_GEOTRANSMATRIX,
+                          &nCount, &padfMatrix )
+           && nCount == 16 )
+        {
+            if( padfMatrix[1] == 0.0 && padfMatrix[4] == 0.0 )
+            {
+                dfXStart = padfMatrix[3];
+                dfXSpacing = padfMatrix[0];
+                dfYStart = padfMatrix[7];
+                dfYSpacing = padfMatrix[5];
+                bHasGeoTransform = true;
+            }
+            else
+            {
+                CPLError(CE_Warning, CPLE_AppDefined,
+                         "GeotransMatrix with rotation/shearing terms non supported");
+            }
+        }
+    }
+
+    std::shared_ptr<OGRSpatialReference> poSRS;
+
+    GTIF *psGTIF = GTiffDatasetGTIFNew( hTIFF );
+    if( psGTIF )
+    {
+        GTIFDefn *psGTIFDefn = GTIFAllocDefn();
+        if( GTIFGetDefn( psGTIF, psGTIFDefn ) )
+        {
+            OGRSpatialReferenceH hSRS = GTIFGetOGISDefnAsOSR( psGTIF, psGTIFDefn );
+            if( hSRS )
+            {
+                poSRS.reset(OGRSpatialReference::FromHandle(hSRS));
+                poSRS->SetAxisMappingStrategy(OAMS_TRADITIONAL_GIS_ORDER);
+            }
+        }
+
+        if( bHasGeoTransform )
+        {
+            unsigned short nRasterType = 0;
+            if( GDALGTIFKeyGetSHORT(psGTIF, GTRasterTypeGeoKey,
+                                    &nRasterType, 0, 1 ) == 1
+                && nRasterType !=
+                   static_cast<short>(RasterPixelIsPoint) )
+            {
+                dfXStart += dfXSpacing / 2;
+                dfYStart += dfYSpacing / 2;
+            }
+        }
+
+        GTIFFreeDefn(psGTIFDefn);
+        GTIFFree( psGTIF );
+    }
+
+    std::string osTypeY;
+    std::string osDirectionY;
+    std::string osTypeX;
+    std::string osDirectionX;
+    if( poSRS && poSRS->GetAxesCount() == 2 )
+    {
+        auto mapping = poSRS->GetDataAxisToSRSAxisMapping();
+        OGRAxisOrientation eOrientation1 = OAO_Other;
+        poSRS->GetAxis(nullptr, 0,  &eOrientation1 );
+        OGRAxisOrientation eOrientation2 = OAO_Other;
+        poSRS->GetAxis(nullptr, 1,  &eOrientation2 );
+
+        if( mapping == std::vector<int>{2,1} )
+        {
+            std::swap(mapping[0], mapping[1]);
+            std::swap(eOrientation1, eOrientation2);
+        }
+
+        if( eOrientation1 == OAO_East && eOrientation2 == OAO_North &&
+            mapping == std::vector<int>{1,2} )
+        {
+            osTypeY = GDAL_DIM_TYPE_HORIZONTAL_Y;
+            osDirectionY = "NORTH";
+            osTypeX = GDAL_DIM_TYPE_HORIZONTAL_X;
+            osDirectionX = "EAST";
+        }
+    }
+
+    {
+        std::string osKeyPrefix("DIMENSION_");
+        osKeyPrefix += std::to_string(nDimensions - 2);
+        osKeyPrefix += '_';
+
+        uint32_t nYSize = 0;
+        TIFFGetField( hTIFF, TIFFTAG_IMAGELENGTH, &nYSize );
+
+        // Create dimension
+        std::string osDimName = oMapDimMetadata[osKeyPrefix + "NAME"];
+        if( osDimName.empty() )
+            osDimName = "dimY";
+        auto poDim = std::make_shared<Dimension>(GetFullName(), osDimName,
+                                                 osTypeY,
+                                                 osDirectionY,
+                                                 nYSize);
+        aoDimensions.emplace_back(poDim);
+
+        if( bHasGeoTransform )
+        {
+            auto poIndexingVariable = std::make_shared<GDALMDArrayRegularlySpaced>(
+                std::string(), poDim->GetName(), poDim, dfYStart, dfYSpacing, 0.0);
+            apoIndexingVars.emplace_back(poIndexingVariable);
+            poDim->SetIndexingVariable(poIndexingVariable);
+        }
+
+        uint32_t nBlockYSize = 0;
+        TIFFGetField( hTIFF, TIFFTAG_TILELENGTH, &nBlockYSize );
+        anBlockSize.emplace_back(nBlockYSize);
+    }
+
+    {
+        std::string osKeyPrefix("DIMENSION_");
+        osKeyPrefix += std::to_string(nDimensions - 1);
+        osKeyPrefix += '_';
+
+        uint32_t nXSize = 0;
+        TIFFGetField( hTIFF, TIFFTAG_IMAGEWIDTH, &nXSize );
+
+        // Create dimension
+        std::string osDimName = oMapDimMetadata[osKeyPrefix + "NAME"];
+        if( osDimName.empty() )
+            osDimName = "dimX";
+        auto poDim = std::make_shared<Dimension>(GetFullName(), osDimName,
+                                                 osTypeX,
+                                                 osDirectionX,
+                                                 nXSize);
+        aoDimensions.emplace_back(poDim);
+
+        if( bHasGeoTransform )
+        {
+            auto poIndexingVariable = std::make_shared<GDALMDArrayRegularlySpaced>(
+                std::string(), poDim->GetName(), poDim, dfXStart, dfXSpacing, 0.0);
+            apoIndexingVars.emplace_back(poIndexingVariable);
+            poDim->SetIndexingVariable(poIndexingVariable);
+        }
+
+        uint32_t nBlockXSize = 0;
+        TIFFGetField( hTIFF, TIFFTAG_TILEWIDTH, &nBlockXSize );
+        anBlockSize.emplace_back(nBlockXSize);
+    }
+
+    size_t nIFDCount = 1;
+    for( int i = 0; i < nDimensions - 2; ++i )
+    {
+        if( aoDimensions[i]->GetSize() >= 65536 / nIFDCount )
+        {
+            CPLError(CE_Failure, CPLE_NotSupported,
+                     "Too many IFDs");
+            return false;
+        }
+        nIFDCount *= static_cast<size_t>(aoDimensions[i]->GetSize());
+    }
+
+    auto array = Array::CreateFromOpen(m_poShared, std::string(), osVarName,
+                                       aoDimensions,
+                                       GDALExtendedDataType::Create(eDataType),
+                                       anBlockSize, hTIFF);
+    if( array )
+    {
+        m_oMapMDArrays[osVarName] = array;
+
+        for( auto& poDim: aoDimensions )
+        {
+            m_oMapDimensions[poDim->GetName()] = poDim;
+            auto poIndexingVariable = poDim->GetIndexingVariable();
+            if( poIndexingVariable )
+                m_oMapMDArrays[poIndexingVariable->GetName()] = poIndexingVariable;
+        }
+
+        for( const auto& kv: oMapAttributesStr )
+        {
+            array->m_oMapAttributes[kv.first] = std::make_shared<
+                GDALAttributeString>(array->GetName(), kv.first, kv.second);
+        }
+
+        array->m_bHasScale = bHasScale;
+        array->m_dfScale = dfScale;
+        array->m_eScaleStorageType = GDT_Float64;
+        array->m_bHasOffset = bHasOffset;
+        array->m_dfOffset = dfOffset;
+        array->m_eOffsetStorageType = GDT_Float64;
+        array->m_osUnit = osUnitType;
+        array->m_poSRS = poSRS;
+    }
+
+    return array != nullptr;
 }
 
 /************************************************************************/
@@ -1653,6 +2814,45 @@ GDALDataset* MultiDimDataset::CreateMultiDim(const char * pszFilename,
     poDS->m_poRootGroup = poRG;
     poRG->m_poShared->bWritable = true;
     poRG->m_poShared->aosCreationOptions = papszOptions;
+
+    return poDS.release();
+}
+
+/************************************************************************/
+/*                              Open()                                  */
+/************************************************************************/
+
+GDALDataset *MultiDimDataset::Open( GDALOpenInfo * poOpenInfo )
+{
+    if( !GTiffOneTimeInit() || poOpenInfo->fpL == nullptr )
+        return nullptr;
+
+    auto poDS = std::unique_ptr<MultiDimDataset>(new MultiDimDataset());
+
+    poDS->SetDescription(poOpenInfo->pszFilename);
+    auto poRG = std::make_shared<Group>(std::string(), nullptr);
+    poRG->m_poShared->osFilename = poOpenInfo->pszFilename;
+    poRG->m_poShared->fpL = poOpenInfo->fpL;
+    poOpenInfo->fpL = nullptr;
+
+    const char* pszFlag =
+        (poOpenInfo->nOpenFlags & GDAL_OF_UPDATE) != 0  ? "r+D" : "rDO";
+    poRG->m_poShared->hTIFF = VSI_TIFFOpen(
+        poOpenInfo->pszFilename, pszFlag, poRG->m_poShared->fpL);
+    if( poRG->m_poShared->hTIFF == nullptr )
+    {
+        CPLError( CE_Failure, CPLE_OpenFailed,
+                  "File `%s' is not a valid TIFF file",
+                  poOpenInfo->pszFilename );
+        return nullptr;
+    }
+
+    poDS->m_poRootGroup = poRG;
+    poRG->m_poShared->bWritable = (poOpenInfo->nOpenFlags & GDAL_OF_UPDATE) != 0;
+    poRG->m_poShared->UnsetNewFile();
+
+    if( !poRG->OpenIFD(poRG->m_poShared->hTIFF) )
+        return nullptr;
 
     return poDS.release();
 }

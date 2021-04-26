@@ -749,9 +749,11 @@ See Also
 -  `Details on BigTIFF file
    format <http://www.awaresystems.be/imaging/tiff/bigtiff.html>`__
 - :ref:`raster.cog` driver
+- :ref:`raster.gtiff_multidimensional`
 
 .. toctree::
    :maxdepth: 1
    :hidden:
 
    wld
+   gtiff_multidimensional
