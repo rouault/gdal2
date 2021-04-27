@@ -96,13 +96,16 @@ def test_gdalmdimtranslate_multidim_1d_to_classic():
 
 def test_gdalmdimtranslate_classic_to_classic():
 
-    tmpfile = '/vsimem/out.tif'
+    tmpfilesrc = '/vsimem/out.img'
+    tmpfiledst = '/vsimem/out2.img'
+    gdal.Translate(tmpfilesrc, '../gcore/data/byte.tif')
 
-    ds = gdal.MultiDimTranslate(tmpfile, '../gcore/data/byte.tif')
+    ds = gdal.MultiDimTranslate(tmpfiledst, tmpfilesrc)
     assert ds.GetRasterBand(1).Checksum() == 4672
     ds = None
 
-    gdal.Unlink(tmpfile)
+    gdal.Unlink(tmpfilesrc)
+    gdal.Unlink(tmpfiledst)
 
 ###############################################################################
 
@@ -110,11 +113,11 @@ def test_gdalmdimtranslate_classic_to_classic():
 def test_gdalmdimtranslate_classic_to_multidim():
 
     tmpfile = '/vsimem/out.vrt'
-    tmpgtifffile = '/vsimem/tmp.tif'
-    ds = gdal.Translate(tmpgtifffile, '../gcore/data/byte.tif')
+    tmpgsrcfile = '/vsimem/tmp.img'
+    ds = gdal.Translate(tmpgsrcfile, '../gcore/data/byte.tif')
     ds.SetSpatialRef(None)
     ds = None
-    assert gdal.MultiDimTranslate(tmpfile, tmpgtifffile,
+    assert gdal.MultiDimTranslate(tmpfile, tmpgsrcfile,
                                   arraySpecs = ['band=1,dstname=ar,view=[newaxis,...]'])
     f = gdal.VSIFOpenL(tmpfile, 'rb')
     got_data = gdal.VSIFReadL(1, 10000, f).decode('utf-8')
@@ -122,7 +125,7 @@ def test_gdalmdimtranslate_classic_to_multidim():
     #print(got_data)
 
     gdal.Unlink(tmpfile)
-    gdal.Unlink(tmpgtifffile)
+    gdal.Unlink(tmpgsrcfile)
 
     assert got_data == """<VRTDataset>
   <Group name="/">
@@ -145,12 +148,16 @@ def test_gdalmdimtranslate_classic_to_multidim():
       <DimensionRef ref="Y" />
       <DimensionRef ref="X" />
       <Source>
-        <SourceFilename relativetoVRT="1">tmp.tif</SourceFilename>
+        <SourceFilename relativetoVRT="1">tmp.img</SourceFilename>
         <SourceBand>1</SourceBand>
         <SourceView>[newaxis,...]</SourceView>
         <SourceSlab offset="0,0,0" count="1,20,20" step="1,1,1" />
         <DestSlab offset="0,0,0" />
       </Source>
+      <Attribute name="LAYER_TYPE">
+        <DataType>String</DataType>
+        <Value>athematic</Value>
+      </Attribute>
     </Array>
   </Group>
 </VRTDataset>
