@@ -376,7 +376,7 @@ int VSI_TIFFWrite( TIFF* tif, const void* buffer, size_t buffersize )
 }
 
 void VSI_TIFFSetCachedRanges( thandle_t th, int nRanges,
-                              void ** ppData,
+                              void * const* ppData,
                               const vsi_l_offset* panOffsets,
                               const size_t* panSizes )
 {
@@ -430,7 +430,7 @@ static void InitializeWriteBuffer(GDALTiffHandle* psGTH, const char* pszMode)
             CPLTestBool(CPLGetConfigOption("GTIFF_USE_MMAP", "NO")) )
         {
             psGTH->nDataLength = 0;
-            psGTH->pBase = 
+            psGTH->pBase =
                 VSIGetMemFileBuffer(psGTH->psShared->pszName, &psGTH->nDataLength, FALSE);
         }
         bAllocBuffer = false;
@@ -498,7 +498,7 @@ TIFF* VSI_TIFFOpenChild( TIFF* parent )
     SetActiveGTH(psGTH);
     VSIFSeekL( psGTH->psShared->fpL, 0, SEEK_SET );
 
-    const char* mode = 
+    const char* mode =
         psGTH->psShared->bReadOnly && psGTH->psShared->bLazyStrileLoading ? "rDO" :
         psGTH->psShared->bReadOnly ? "r" :
         psGTH->psShared->bLazyStrileLoading ? "r+D" : "r+";

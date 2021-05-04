@@ -45,7 +45,7 @@ toff_t VSI_TIFFSeek(TIFF* tif, toff_t off, int whence );
 int VSI_TIFFWrite( TIFF* tif, const void* buffer, size_t buffersize );
 int VSI_TIFFHasCachedRanges( thandle_t th );
 void VSI_TIFFSetCachedRanges( thandle_t th, int nRanges,
-                              void ** ppData, // memory pointed by ppData[i] must be kept alive by caller
+                              void * const* ppData, // memory pointed by ppData[i] must be kept alive by caller
                               const vsi_l_offset* panOffsets,
                               const size_t* panSizes );
 void* VSI_TIFFGetCachedRange( thandle_t th, vsi_l_offset nOffset, size_t nSize );
