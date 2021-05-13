@@ -30,6 +30,7 @@
 // on x86_64-w64-mingw32-g++ 7.3-win32 of ubuntu 18.04
 #include <cinttypes>
 
+#include "cpl_mem_cache.h"
 #include "cpl_minixml.h"
 #include "cpl_vsi.h"
 
@@ -80,6 +81,7 @@ class MultiDimSharedResources
     bool          bNewFile = true;
     TIFF*         hTIFF = nullptr;
     bool          bWritable = false;
+    bool          bHasOptimizedReadMultiRange = false;
     CPLStringList aosCreationOptions{};
     std::set<Array*> oSetArrays{};
 
@@ -89,6 +91,7 @@ public:
     ~MultiDimSharedResources();
 
     bool IsWritable() const { return bWritable; }
+    bool HasOptimizedReadMultiRange() const { return bHasOptimizedReadMultiRange; }
     void RegisterArray(Array* array) { oSetArrays.insert(array); }
     bool Crystalize();
     TIFF* GetTIFFHandle() const { return hTIFF; }
@@ -204,6 +207,11 @@ class Array final: public GDALMDArray
 
     CPLStringList m_aosStructuralInfo{};
 
+#ifdef SUPPORTS_GET_OFFSET_BYTECOUNT
+    mutable lru11::Cache<uint64_t, std::pair<vsi_l_offset, vsi_l_offset>> m_oCacheStrileToOffsetByteCount{1024};
+#endif
+    mutable std::vector<GByte> m_abyCachedRangeBuffer{};
+
     bool Crystalize() const;
 
     std::vector<size_t> IFDIndexToDimIdx(size_t nIFDIndex) const;
@@ -212,6 +220,16 @@ class Array final: public GDALMDArray
     bool                ValidateIFDConsistency(TIFF* hTIFF,
                                                size_t nIFDIndex,
                                                const std::vector<size_t>& indices) const;
+    bool                GetTileOffsetSize( uint32_t nIFDIndex,
+                                           uint32_t nBlockId,
+                                           vsi_l_offset& nOffset,
+                                           vsi_l_offset& nSize ) const;
+    void                PreloadData(const std::vector<size_t>& indicesOuterLoop,
+                                    std::vector<size_t>& indicesInnerLoop,
+                                    std::vector<size_t>& anIFDIndex,
+                                    const GUInt64* arrayStartIdx,
+                                    const size_t* count,
+                                    const GInt64* arrayStep) const;
 
 protected:
     bool IRead(const GUInt64* arrayStartIdx,
@@ -1496,6 +1514,303 @@ bool Array::ValidateIFDConsistency(TIFF* hTIFF,
 }
 
 /************************************************************************/
+/*                        GetTileOffsetSize()                           */
+/************************************************************************/
+
+bool Array::GetTileOffsetSize( uint32_t nIFDIndex,
+                               uint32_t nBlockId,
+                               vsi_l_offset& nOffset,
+                               vsi_l_offset& nSize ) const
+
+{
+    TIFF* hTIFF = m_ahTIFF[nIFDIndex];
+    CPLAssert(hTIFF);
+
+#ifdef SUPPORTS_GET_OFFSET_BYTECOUNT
+    // Optimization to avoid fetching the whole Strip/TileCounts and
+    // Strip/TileOffsets arrays.
+    std::pair<vsi_l_offset, vsi_l_offset> oPair;
+    const uint64_t key = (static_cast<uint64_t>(nIFDIndex) << 32) | nBlockId;
+    if( m_oCacheStrileToOffsetByteCount.tryGet(key, oPair) )
+    {
+        nOffset = oPair.first;
+        nSize = oPair.second;
+        return oPair.first != 0;
+    }
+
+    int nErrOccurred = 0;
+    nSize = TIFFGetStrileByteCountWithErr(hTIFF, nBlockId, &nErrOccurred);
+    if( nErrOccurred )
+        return false;
+    nOffset = TIFFGetStrileOffsetWithErr(hTIFF, nBlockId, &nErrOccurred);
+    if( nErrOccurred )
+        return false;
+
+    m_oCacheStrileToOffsetByteCount.insert(
+                key,
+                std::pair<vsi_l_offset, vsi_l_offset>(nOffset, nSize));
+    return true;
+#else
+    toff_t *panByteCounts = nullptr;
+    toff_t *panOffsets = nullptr;
+    const bool bIsTiled = CPL_TO_BOOL( TIFFIsTiled(hTIFF) );
+
+    if( ( bIsTiled
+          && TIFFGetField( hTIFF, TIFFTAG_TILEBYTECOUNTS, &panByteCounts )
+          && TIFFGetField( hTIFF, TIFFTAG_TILEOFFSETS, &panOffsets ) )
+        || ( !bIsTiled
+          && TIFFGetField( hTIFF, TIFFTAG_STRIPBYTECOUNTS, &panByteCounts )
+          && TIFFGetField( hTIFF, TIFFTAG_STRIPOFFSETS, &panOffsets ) ) )
+    {
+        if( panByteCounts == nullptr || panOffsets == nullptr )
+        {
+            return false;
+        }
+
+        const uint32_t nBlockCount =
+            bIsTiled ? TIFFNumberOfTiles(hTIFF) : TIFFNumberOfStrips(hTIFF);
+        assert( nBlockId < nBlockCount );
+
+        nOffset = panOffsets[nBlockId];
+        nSize = panByteCounts[nBlockId];
+        return true;
+    }
+
+    return false;
+#endif
+}
+
+/************************************************************************/
+/*                       Array::PreloadData()                           */
+/************************************************************************/
+
+void Array::PreloadData(const std::vector<size_t>& indicesOuterLoop,
+                        std::vector<size_t>& indicesInnerLoop,
+                        std::vector<size_t>& anIFDIndex,
+                        const GUInt64* arrayStartIdx,
+                        const size_t* count,
+                        const GInt64* arrayStep) const
+{
+    const auto nDims = GetDimensionCount();
+    const size_t iDimY = nDims - 2;
+    const size_t iDimX = nDims - 1;
+    const uint32_t nTileXCount = static_cast<uint32_t>(
+        (m_aoDims[iDimX]->GetSize() + m_anBlockSize[iDimX] - 1) / m_anBlockSize[iDimX]);
+    size_t dimIdxSubLoop = 0;
+    anIFDIndex[0] = 0;
+    std::map<vsi_l_offset, std::pair<size_t, size_t>> oMapOffsetToIFDAndSize;
+    size_t nAccBufferOffset = 0;
+    constexpr size_t MAX_SIZE_TO_CACHE = 100 * 1024 * 1024;
+
+#ifdef DEBUG_VERBOSE
+    CPLDebug("GDAL", "PreloadData()");
+#endif
+
+    // First step: build a list of (ifd_index, file_offset, size) chunks we
+    // will need (in oMapOffsetToIFDAndSize)
+
+lbl_next_depth_inner_loop:
+    if( dimIdxSubLoop == iDimY )
+    {
+        // Now we have a 2D tile !
+        const size_t nIFDIndex = anIFDIndex[iDimY];
+        assert( nIFDIndex < m_ahTIFF.size() );
+        if( m_ahTIFF[nIFDIndex] == nullptr )
+        {
+            TIFF* hTIFF = VSI_TIFFOpenChild(m_poShared->GetTIFFHandle());
+            if( hTIFF == nullptr )
+                return;
+            if( TIFFSetDirectory(hTIFF, static_cast<uint16_t>(nIFDIndex)) == 0 ||
+                !ValidateIFDConsistency(hTIFF, nIFDIndex, indicesInnerLoop) )
+            {
+                XTIFFClose(hTIFF);
+                return;
+            }
+            m_ahTIFF[nIFDIndex] = hTIFF;
+        }
+
+        const uint32_t iYTile = static_cast<uint32_t>(
+                            indicesOuterLoop[iDimY] / m_anBlockSize[iDimY]);
+        const uint32_t iXTile = static_cast<uint32_t>(
+                            indicesOuterLoop[iDimX] / m_anBlockSize[iDimX]);
+        const uint32_t nTileID = iYTile * nTileXCount + iXTile;
+        vsi_l_offset nOffset = 0;
+        vsi_l_offset nSize = 0;
+        if( !GetTileOffsetSize(static_cast<uint32_t>(nIFDIndex), nTileID,
+                               nOffset, nSize) )
+        {
+            return;
+        }
+
+#ifdef DEBUG_VERBOSE
+        CPLDebug("GDAL", "IFD %u, tile=(%u,%u), offset=" CPL_FRMT_GUIB ", size=%u",
+                 static_cast<unsigned>(nIFDIndex), iYTile, iXTile,
+                 static_cast<GUIntBig>(nOffset),
+                 static_cast<unsigned>(nSize));
+#endif
+
+        // Limit the total size to read
+        if( nSize > MAX_SIZE_TO_CACHE - nAccBufferOffset )
+        {
+            goto after_loop;
+        }
+        nAccBufferOffset += static_cast<size_t>(nSize);
+
+        if( nSize != 0 )
+        {
+            oMapOffsetToIFDAndSize[nOffset] = std::pair<size_t, size_t>(
+                                        nIFDIndex, static_cast<size_t>(nSize));
+        }
+    }
+    else
+    {
+        // This level of loop loops over individual samples, within a
+        // block, in the non-2D indices.
+        indicesInnerLoop[dimIdxSubLoop] = indicesOuterLoop[dimIdxSubLoop];
+        anIFDIndex[dimIdxSubLoop] *=
+            static_cast<size_t>(m_aoDims[dimIdxSubLoop]->GetSize());
+        anIFDIndex[dimIdxSubLoop] += indicesOuterLoop[dimIdxSubLoop];
+        while(true)
+        {
+            dimIdxSubLoop ++;
+            anIFDIndex[dimIdxSubLoop] = anIFDIndex[dimIdxSubLoop-1];
+            goto lbl_next_depth_inner_loop;
+lbl_return_to_caller_inner_loop:
+            dimIdxSubLoop --;
+            if( arrayStep[dimIdxSubLoop] == 0 )
+            {
+                break;
+            }
+            const auto oldBlock = indicesOuterLoop[dimIdxSubLoop] / m_anBlockSize[dimIdxSubLoop];
+            indicesInnerLoop[dimIdxSubLoop] = static_cast<size_t>(
+                indicesInnerLoop[dimIdxSubLoop] + arrayStep[dimIdxSubLoop]);
+            if( (indicesInnerLoop[dimIdxSubLoop] /
+                    m_anBlockSize[dimIdxSubLoop]) != oldBlock ||
+                indicesInnerLoop[dimIdxSubLoop] >
+                    arrayStartIdx[dimIdxSubLoop] + (count[dimIdxSubLoop]-1) * arrayStep[dimIdxSubLoop] )
+            {
+                break;
+            }
+            anIFDIndex[dimIdxSubLoop] = static_cast<size_t>(
+                anIFDIndex[dimIdxSubLoop] + arrayStep[dimIdxSubLoop]);
+        }
+    }
+    if( dimIdxSubLoop > 0 )
+        goto lbl_return_to_caller_inner_loop;
+after_loop:
+
+    // Clear existing cached ranges
+    for( auto& hTIFF: m_ahTIFF )
+    {
+        if( hTIFF )
+        {
+            VSI_TIFFSetCachedRanges( TIFFClientdata( hTIFF ),
+                                     0, nullptr, nullptr, nullptr );
+        }
+    }
+
+    try
+    {
+        m_abyCachedRangeBuffer.resize(nAccBufferOffset);
+    }
+    catch( const std::exception& )
+    {
+        return;
+    }
+
+    // Iterate over our map to aggregate consecutive ranges of data
+
+    // RMM stands for ReadMultiRange
+    std::vector<vsi_l_offset> anFileOffsetsForRMM;
+    std::vector<size_t> anSizesForRMM;
+    std::vector<void*> apDataForRMM;
+
+    nAccBufferOffset = 0;
+    for( const auto& kv: oMapOffsetToIFDAndSize )
+    {
+        const auto nOffset = kv.first;
+        const auto nSize = kv.second.second;
+
+        if( !anFileOffsetsForRMM.empty() &&
+            anFileOffsetsForRMM.back() + anSizesForRMM.back() == nOffset )
+        {
+            anSizesForRMM.back() += nSize;
+        }
+        else
+        {
+            anFileOffsetsForRMM.push_back(nOffset);
+            anSizesForRMM.push_back(nSize);
+            apDataForRMM.push_back( &m_abyCachedRangeBuffer[nAccBufferOffset] );
+        }
+        nAccBufferOffset += nSize;
+    }
+
+    // Read from the file
+    VSILFILE* fp = VSI_TIFFGetVSILFile(TIFFClientdata( m_poShared->GetTIFFHandle() ));
+    const int nRet =
+        VSIFReadMultiRangeL( static_cast<int>(apDataForRMM.size()),
+                             apDataForRMM.data(),
+                             anFileOffsetsForRMM.data(),
+                             anSizesForRMM.data(), fp );
+    if( nRet != 0 )
+        return;
+
+    // Dispatch the ranges among IFDs
+    struct RangesForTIFF_VSI
+    {
+        std::vector<vsi_l_offset> anFileOffsets{};
+        std::vector<size_t> anSizes{};
+        std::vector<void*> apData{};
+    };
+    std::map<size_t, RangesForTIFF_VSI> oMapIFDIndexToRanges;
+
+    nAccBufferOffset = 0;
+    for( const auto& kv: oMapOffsetToIFDAndSize )
+    {
+        const auto nOffset = kv.first;
+        const auto nIFDIndex = kv.second.first;
+        const auto nSize = kv.second.second;
+
+        auto iter = oMapIFDIndexToRanges.find(nIFDIndex);
+
+        if( iter == oMapIFDIndexToRanges.end() )
+        {
+            oMapIFDIndexToRanges[nIFDIndex].anFileOffsets.push_back(nOffset);
+            oMapIFDIndexToRanges[nIFDIndex].anSizes.push_back(nSize);
+            oMapIFDIndexToRanges[nIFDIndex].apData.push_back(
+                                &m_abyCachedRangeBuffer[nAccBufferOffset] );
+        }
+        else if( iter->second.anFileOffsets.back() +
+                        iter->second.anSizes.back() == nOffset )
+        {
+            iter->second.anSizes.back() += nSize;
+        }
+        else
+        {
+            iter->second.anFileOffsets.push_back(nOffset);
+            iter->second.anSizes.push_back(nSize);
+            iter->second.apData.push_back(
+                                &m_abyCachedRangeBuffer[nAccBufferOffset] );
+        }
+
+        nAccBufferOffset += nSize;
+    }
+
+    // Push the data to the VSI_TIFF layer
+    for( const auto& kv: oMapIFDIndexToRanges )
+    {
+        const auto nIFDIndex = kv.first;
+        TIFF* hTIFF = m_ahTIFF[nIFDIndex];
+        const auto& ranges = kv.second;
+        VSI_TIFFSetCachedRanges( TIFFClientdata( hTIFF ),
+                                 static_cast<int>(ranges.anFileOffsets.size()),
+                                 ranges.apData.data(),
+                                 ranges.anFileOffsets.data(),
+                                 ranges.anSizes.data());
+    }
+}
+
+/************************************************************************/
 /*                         Array::IRead()                               */
 /************************************************************************/
 
@@ -1606,6 +1921,12 @@ bool Array::IRead(const GUInt64* arrayStartIdx,
 lbl_next_depth:
     if( dimIdx == nDims )
     {
+        if( m_poShared->HasOptimizedReadMultiRange() )
+        {
+            PreloadData(indicesOuterLoop, indicesInnerLoop, anIFDIndex,
+                        arrayStartIdx, count, arrayStep);
+        }
+
         size_t dimIdxSubLoop = 0;
         dstPtrStackInnerLoop[0] = dstPtrStackOuterLoop[nDims];
         anIFDIndex[0] = 0;
@@ -2850,6 +3171,8 @@ GDALDataset *MultiDimDataset::Open( GDALOpenInfo * poOpenInfo )
     poDS->m_poRootGroup = poRG;
     poRG->m_poShared->bWritable = (poOpenInfo->nOpenFlags & GDAL_OF_UPDATE) != 0;
     poRG->m_poShared->UnsetNewFile();
+    poRG->m_poShared->bHasOptimizedReadMultiRange = CPL_TO_BOOL(
+        VSIHasOptimizedReadMultiRange(poOpenInfo->pszFilename));
 
     if( !poRG->OpenIFD(poRG->m_poShared->hTIFF) )
         return nullptr;

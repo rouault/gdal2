@@ -29,6 +29,7 @@
 ###############################################################################
 
 import array
+import os
 import struct
 
 from osgeo import gdal
@@ -36,6 +37,8 @@ from osgeo import osr
 
 import gdaltest
 import pytest
+
+import webserver
 
 # All tests will be skipped if numpy is unavailable
 numpy = pytest.importorskip('numpy')
@@ -157,6 +160,30 @@ def test_gtiff_mdim_basic_2D_datatype(datatype):
     _test_basic_2D((16, 32), (16, 32), datatype)
 
 
+def _create_3D_array(filename, dt, z_values, blockSize, arraySize):
+
+    ds = gdal.GetDriverByName('GTiff').CreateMultiDimensional(filename)
+    rg = ds.GetRootGroup()
+    dimZ = rg.CreateDimension("dimZ", 'a', 'b', arraySize[0])
+    dimY = rg.CreateDimension("dimY", None, None, arraySize[1])
+    dimX = rg.CreateDimension("dimX", None, None, arraySize[2])
+
+    dimZVar = rg.CreateMDArray("dimZ", [dimZ], gdal.ExtendedDataType.Create(
+        gdal.GDT_Int32), ['IS_INDEXING_VARIABLE=YES'])
+    dimZ.SetIndexingVariable(dimZVar)
+    dimZVar.Write(array.array('f', z_values))
+
+    ar = rg.CreateMDArray("myarray", [dimZ, dimY, dimX],
+                          gdal.ExtendedDataType.Create(dt),
+                          ['BLOCKSIZE=%d,%d,%d' % (blockSize[0], blockSize[1], blockSize[2])])
+    numpy_ar = numpy.reshape(numpy.arange(0, dimZ.GetSize() * dimY.GetSize() * dimX.GetSize(), dtype=numpy.uint16),
+                             (dimZ.GetSize(), dimY.GetSize(), dimX.GetSize()))
+    if dt == gdal.GDT_Byte:
+        numpy_ar = numpy.clip(numpy_ar, 0, 255)
+    assert ar.Write(numpy_ar) == gdal.CE_None
+    return numpy_ar
+
+
 @pytest.mark.parametrize("blockSize,arraySize", [[(1, 16, 32), (1, 32, 64)],
                                                  [(1, 16, 32), (2, 32, 64)],
                                                  [(2, 16, 32), (2, 32, 64)],
@@ -167,30 +194,7 @@ def test_gtiff_mdim_basic_3D(blockSize, arraySize):
     filename = '/vsimem/mdim.tif'
     dt = gdal.GDT_UInt16
     z_values = [i + 1 for i in range(arraySize[0])]
-
-    def write():
-        ds = gdal.GetDriverByName('GTiff').CreateMultiDimensional(filename)
-        rg = ds.GetRootGroup()
-        dimZ = rg.CreateDimension("dimZ", 'a', 'b', arraySize[0])
-        dimY = rg.CreateDimension("dimY", None, None, arraySize[1])
-        dimX = rg.CreateDimension("dimX", None, None, arraySize[2])
-
-        dimZVar = rg.CreateMDArray("dimZ", [dimZ], gdal.ExtendedDataType.Create(
-            gdal.GDT_Int32), ['IS_INDEXING_VARIABLE=YES'])
-        dimZ.SetIndexingVariable(dimZVar)
-        dimZVar.Write(array.array('f', z_values))
-
-        ar = rg.CreateMDArray("myarray", [dimZ, dimY, dimX],
-                              gdal.ExtendedDataType.Create(dt),
-                              ['BLOCKSIZE=%d,%d,%d' % (blockSize[0], blockSize[1], blockSize[2])])
-        numpy_ar = numpy.reshape(numpy.arange(0, dimZ.GetSize() * dimY.GetSize() * dimX.GetSize(), dtype=numpy.uint16),
-                                 (dimZ.GetSize(), dimY.GetSize(), dimX.GetSize()))
-        if dt == gdal.GDT_Byte:
-            numpy_ar = numpy.clip(numpy_ar, 0, 255)
-        assert ar.Write(numpy_ar) == gdal.CE_None
-        return numpy_ar
-
-    ref_ar = write()
+    ref_ar = _create_3D_array(filename, dt, z_values, blockSize, arraySize)
 
     # Iterate over IFDs
     for idx in range(arraySize[0]):
@@ -556,3 +560,94 @@ def test_gtiff_mdim_array_geotiff_tags(y_incr):
     ds = None
 
     gdal.Unlink(filename)
+
+
+def test_gtiff_mdim_read_from_vsicurl():
+
+    if not gdaltest.built_against_curl():
+        pytest.skip()
+
+    gdal.VSICurlClearCache()
+
+    filename = '/vsimem/mdim.tif'
+    blockSize = (2, 256, 256)
+    arraySize = (4, 1024, 2048)
+    dt = gdal.GDT_UInt16
+    z_values = [i + 1 for i in range(arraySize[0])]
+    ref_ar = _create_3D_array(filename, dt, z_values, blockSize, arraySize)
+
+    f = gdal.VSIFOpenL(filename, "rb")
+    assert f
+    gdal.VSIFSeekL(f, 0, os.SEEK_END)
+    filesize = gdal.VSIFTellL(f)
+    gdal.VSIFCloseL(f)
+
+    webserver_process = None
+    webserver_port = 0
+
+    (webserver_process, webserver_port) = webserver.launch(handler=webserver.DispatcherHttpHandler)
+    if webserver_port == 0:
+        pytest.skip()
+
+    def method(request):
+        # import sys
+        # sys.stderr.write('%s\n' % str(request.headers))
+
+        if request.headers['Range'].startswith('bytes='):
+            rng = request.headers['Range'][len('bytes='):]
+            assert len(rng.split('-')) == 2
+            start = int(rng.split('-')[0])
+            end = int(rng.split('-')[1])
+
+            request.protocol_version = 'HTTP/1.1'
+            request.send_response(206)
+            request.send_header('Content-type', 'application/octet-stream')
+            request.send_header('Content-Range', 'bytes %d-%d/%d' % (start, end, filesize))
+            request.send_header('Content-Length', end - start + 1)
+            request.send_header('Connection', 'close')
+            request.end_headers()
+
+            f = gdal.VSIFOpenL(filename, "rb")
+            gdal.VSIFSeekL(f, start, os.SEEK_SET)
+            data = gdal.VSIFReadL(1, end - start + 1, f)
+            gdal.VSIFCloseL(f)
+
+            request.wfile.write(data)
+
+    try:
+        handler = webserver.SequentialHandler()
+        handler.add('HEAD', '/mdim.tif', 200, {'Content-Length': '%d' % filesize})
+        handler.add('GET', '/mdim.tif', custom_method=method)
+        with webserver.install_http_handler(handler):
+            ds = gdal.OpenEx("/vsicurl/http://localhost:%d/mdim.tif" % webserver_port, gdal.OF_MULTIDIM_RASTER)
+            assert ds
+        rg = ds.GetRootGroup()
+        ar = rg.OpenMDArray('myarray')
+
+        # Test that reading a single block (split between 2 IFDs here)
+        # only requires a single request
+        handler = webserver.SequentialHandler()
+        handler.add('GET', '/mdim.tif', custom_method=method)
+        with webserver.install_http_handler(handler):
+            assert numpy.array_equal(ar[2:4,256:512,256:512].ReadAsArray(), ref_ar[2:4,256:512,256:512])
+
+        handler = webserver.SequentialHandler()
+        with webserver.install_http_handler(handler):
+            assert numpy.array_equal(ar[2,257,257].ReadAsArray(), ref_ar[2,257,257])
+
+        handler = webserver.SequentialHandler()
+        # import functools
+        # import operator
+        # num_blocks = functools.reduce(operator.mul, [(arraySize[i] + blockSize[i] -1) // blockSize[i] for i in range(len(blockSize))], 1)
+        # Due to /vsicurl/ preloading strategy, we do less network requests
+        # than the 64 that would result from the number of blocks
+        for i in range(13):
+            handler.add('GET', '/mdim.tif', custom_method=method)
+        with webserver.install_http_handler(handler):
+            assert numpy.array_equal(ar.ReadAsArray(), ref_ar)
+
+    finally:
+        webserver.server_stop(webserver_process, webserver_port)
+
+        gdal.VSICurlClearCache()
+        gdal.Unlink(filename)
