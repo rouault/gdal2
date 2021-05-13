@@ -2699,11 +2699,16 @@ bool Group::OpenIFD(TIFF* hTIFF)
         GTIFDefn *psGTIFDefn = GTIFAllocDefn();
         if( GTIFGetDefn( psGTIF, psGTIFDefn ) )
         {
-            OGRSpatialReferenceH hSRS = GTIFGetOGISDefnAsOSR( psGTIF, psGTIFDefn );
-            if( hSRS )
+            unsigned short nModelType = 0;
+            if( GDALGTIFKeyGetSHORT(psGTIF, GTModelTypeGeoKey,
+                                    &nModelType, 0, 1 ) == 1 )
             {
-                poSRS.reset(OGRSpatialReference::FromHandle(hSRS));
-                poSRS->SetAxisMappingStrategy(OAMS_TRADITIONAL_GIS_ORDER);
+                OGRSpatialReferenceH hSRS = GTIFGetOGISDefnAsOSR( psGTIF, psGTIFDefn );
+                if( hSRS )
+                {
+                    poSRS.reset(OGRSpatialReference::FromHandle(hSRS));
+                    poSRS->SetAxisMappingStrategy(OAMS_TRADITIONAL_GIS_ORDER);
+                }
             }
         }
 
