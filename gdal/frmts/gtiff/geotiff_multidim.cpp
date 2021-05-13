@@ -136,6 +136,18 @@ public:
                const GDALExtendedDataType& oDataType,
                CSLConstList papszOptions) override;
 
+    std::shared_ptr<GDALAttribute> CreateAttribute(
+        const std::string& osName,
+        const std::vector<GUInt64>& /* anDimensions */,
+        const GDALExtendedDataType& /* oDataType */,
+        CSLConstList /* papszOptions */) override {
+        CPLDebug("GTiff",
+                 "CreateAttribute() at Group level ignored: "
+                 "%s attribute not serialized",
+                 osName.c_str());
+        return nullptr;
+    }
+
     bool OpenIFD(TIFF* hTIFF);
 };
 
