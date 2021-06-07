@@ -2925,7 +2925,7 @@ GDALDataset * JP2OpenJPEGDataset::CreateCopy( const char * pszFilename,
 
     if ( EQUAL( poSrcDS->GetDriverName(), "GEORASTER" ) )
     {
-        const char* pszGEOR_compress = poSrcDS->GetMetadataItem("COMPRESSION", 
+        const char* pszGEOR_compress = poSrcDS->GetMetadataItem("COMPRESSION",
                                                 "IMAGE_STRUCTURE");
 
         if( pszGEOR_compress == nullptr )
@@ -2941,7 +2941,8 @@ GDALDataset * JP2OpenJPEGDataset::CreateCopy( const char * pszFilename,
             "BLOCKXSIZE", "BLOCKYSIZE", "QUALITY", "REVERSIBLE",
             "RESOLUTIONS", "PROGRESSION", "SOP", "EPH",
             "YCBCR420", "YCC", "NBITS", "1BIT_ALPHA", "PRECINCTS",
-            "TILEPARTS", "CODEBLOCK_WIDTH", "CODEBLOCK_HEIGHT", "PLT", nullptr };
+            "TILEPARTS", "CODEBLOCK_WIDTH", "CODEBLOCK_HEIGHT", "PLT", "TLM",
+            nullptr };
 
         for( int i = 0; apszIgnoredOptions[i]; i ++)
         {
@@ -3005,7 +3006,7 @@ GDALDataset * JP2OpenJPEGDataset::CreateCopy( const char * pszFilename,
             {
                 VSIFWriteL( pBuffer, 1, nSize, fp );
                 nCount += nSize;
-                pfnProgress( (float) nCount / (float) nBlobSize, 
+                pfnProgress( (float) nCount / (float) nBlobSize,
                                  nullptr, pProgressData );
             }
 
@@ -3303,21 +3304,37 @@ GDALDataset * JP2OpenJPEGDataset::CreateCopy( const char * pszFilename,
         return nullptr;
     }
 
-#if IS_OPENJPEG_OR_LATER(2,3,2)
+#if IS_OPENJPEG_OR_LATER(2,4,0)
+
+    if( getenv("OPJ_NUM_THREADS") == nullptr )
+    {
+        JP2OpenJPEGDataset oTmpDS;
+        opj_codec_set_threads(pCodec, oTmpDS.GetNumThreads());
+    }
+
+    CPLStringList aosOptions;
     if( CPLTestBool(CSLFetchNameValueDef(papszOptions, "PLT", "FALSE")) )
     {
-        const char* const apszOptions[] = { "PLT=YES", nullptr };
-        if( !opj_encoder_set_extra_options(pCodec, apszOptions) )
-        {
-            CPLError(CE_Failure, CPLE_AppDefined,
-                    "opj_encoder_set_extra_options() failed");
-            opj_image_destroy(psImage);
-            opj_destroy_codec(pCodec);
-            CPLFree(pasBandParams);
-            pasBandParams = nullptr;
-            delete poGMLJP2Box;
-            return nullptr;
-        }
+        aosOptions.AddString("PLT=YES");
+    }
+
+#if IS_OPENJPEG_OR_LATER(2,5,0)
+    if( CPLTestBool(CSLFetchNameValueDef(papszOptions, "TLM", "FALSE")) )
+    {
+        aosOptions.AddString("TLM=YES");
+    }
+#endif
+
+    if( !opj_encoder_set_extra_options(pCodec, aosOptions.List()) )
+    {
+        CPLError(CE_Failure, CPLE_AppDefined,
+                "opj_encoder_set_extra_options() failed");
+        opj_image_destroy(psImage);
+        opj_destroy_codec(pCodec);
+        CPLFree(pasBandParams);
+        pasBandParams = nullptr;
+        delete poGMLJP2Box;
+        return nullptr;
     }
 #endif
 
@@ -4181,8 +4198,11 @@ void GDALRegister_JP2OpenJPEG()
 #if OPJ_VERSION_MAJOR > 2 || OPJ_VERSION_MINOR >= 3
 "   <Option name='CODEBLOCK_STYLE' type='string' description='Comma-separated combination of BYPASS, RESET, TERMALL, VSC, PREDICTABLE, SEGSYM or value between 0 and 63'/>"
 #endif
-#if IS_OPENJPEG_OR_LATER(2,3,2)
+#if IS_OPENJPEG_OR_LATER(2,4,0)
 "   <Option name='PLT' type='boolean' description='True to insert PLT marker segments' default='false'/>"
+#endif
+#if IS_OPENJPEG_OR_LATER(2,5,0)
+"   <Option name='TLM' type='boolean' description='True to insert TLM marker segments' default='false'/>"
 #endif
 "</CreationOptionList>"  );
 

@@ -3130,7 +3130,7 @@ def test_jp2openjpeg_generate_PLT():
     if gdaltest.jp2openjpeg_drv is None:
         pytest.skip()
 
-    # Only try the rest with openjpeg > 2.3.1 that supports it
+    # Only try the rest with openjpeg >= 2.4.0 that supports it
     if gdaltest.jp2openjpeg_drv.GetMetadataItem('DMD_CREATIONOPTIONLIST').find('PLT') < 0:
         pytest.skip()
 
@@ -3147,6 +3147,35 @@ def test_jp2openjpeg_generate_PLT():
     # Check presence of a PLT marker
     ret = gdal.GetJPEG2000StructureAsString(filename, ['ALL=YES'])
     assert '<Marker name="PLT"' in ret
+
+    gdaltest.jp2openjpeg_drv.Delete(filename)
+
+###############################################################################
+# Test generation of TLM marker segments
+
+
+def test_jp2openjpeg_generate_TLM():
+
+    if gdaltest.jp2openjpeg_drv is None:
+        pytest.skip()
+
+    # Only try the rest with openjpeg >= 2.5.0 that supports it
+    if gdaltest.jp2openjpeg_drv.GetMetadataItem('DMD_CREATIONOPTIONLIST').find('TLM') < 0:
+        pytest.skip()
+
+    filename = '/vsimem/temp.jp2'
+    gdaltest.jp2openjpeg_drv.CreateCopy(filename, gdal.Open('data/byte.tif'),
+                                        options=['TLM=YES',
+                                                 'REVERSIBLE=YES',
+                                                 'QUALITY=100'])
+
+    ds = gdal.Open(filename)
+    assert ds.GetRasterBand(1).Checksum() == 4672
+    ds = None
+
+    # Check presence of a TLM marker
+    ret = gdal.GetJPEG2000StructureAsString(filename, ['ALL=YES'])
+    assert '<Marker name="TLM"' in ret
 
     gdaltest.jp2openjpeg_drv.Delete(filename)
 
