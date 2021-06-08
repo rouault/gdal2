@@ -2486,7 +2486,8 @@ GDALDataset * JP2OpenJPEGDataset::CreateCopy( const char * pszFilename,
 
     // By default do not generate tile sizes larger than the dataset
     // dimensions
-    if( !CPLFetchBool(papszOptions, "BLOCKSIZE_STRICT", false) )
+    if( !CPLFetchBool(papszOptions, "BLOCKSIZE_STRICT", false) &&
+        !CPLFetchBool(papszOptions, "@BLOCKSIZE_STRICT", false) )
     {
         if (nXSize < nBlockXSize)
         {
