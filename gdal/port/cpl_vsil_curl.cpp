@@ -185,6 +185,7 @@ static CPLString VSICurlGetURLFromFilename(const char* pszFilename,
                                            int* pnMaxRetry,
                                            double* pdfRetryDelay,
                                            bool* pbUseHead,
+                                           bool* pbUseRedirectURLIfNoQueryStringParams,
                                            bool* pbListDir,
                                            bool* pbEmptyDir,
                                            char*** ppapszHTTPOptions)
@@ -226,10 +227,16 @@ static CPLString VSICurlGetURLFromFilename(const char* pszFilename,
                     if( pdfRetryDelay )
                         *pdfRetryDelay = CPLAtof(pszValue);
                 }
-                    else if( EQUAL(pszKey, "use_head") )
+                else if( EQUAL(pszKey, "use_head") )
                 {
                     if( pbUseHead )
                         *pbUseHead = CPLTestBool(pszValue);
+                }
+                else if( EQUAL(pszKey, "use_redirect_url_if_no_query_string_params") )
+                {
+                    /* Undocumented. Used by PLScenes driver */
+                    if( pbUseRedirectURLIfNoQueryStringParams )
+                        *pbUseRedirectURLIfNoQueryStringParams = CPLTestBool(pszValue);
                 }
                 else if( EQUAL(pszKey, "list_dir") )
                 {
@@ -239,8 +246,8 @@ static CPLString VSICurlGetURLFromFilename(const char* pszFilename,
                 else if( EQUAL(pszKey, "empty_dir") )
                 {
                     /* Undocumented. Used by PLScenes driver */
-                    /* This more or less emulates the behaviour of
-                        * GDAL_DISABLE_READDIR_ON_OPEN=EMPTY_DIR */
+                    /* This more or less emulates the behavior of
+                     * GDAL_DISABLE_READDIR_ON_OPEN=EMPTY_DIR */
                     if( pbEmptyDir )
                         *pbEmptyDir = CPLTestBool(pszValue);
                 }
@@ -320,6 +327,7 @@ VSICurlHandle::VSICurlHandle( VSICurlFilesystemHandler* poFSIn,
                                                        &m_nMaxRetry,
                                                        &m_dfRetryDelay,
                                                        &m_bUseHead,
+                                                       &m_bUseRedirectURLIfNoQueryStringParams,
                                                        nullptr, nullptr,
                                                        &m_papszHTTPOptions));
     }
@@ -866,6 +874,13 @@ retry:
         {
             CPLDebug("VSICURL", "Effective URL: %s", osEffectiveURL.c_str());
 
+            if( m_bUseRedirectURLIfNoQueryStringParams &&
+                osEffectiveURL.find('?') == std::string::npos )
+            {
+                oFileProp.osRedirectURL = osEffectiveURL;
+                poFS->SetCachedFileProp(m_pszURL, oFileProp);
+            }
+
             // Is this is a redirect to a S3 URL?
             if( VSICurlIsS3LikeSignedURL(osEffectiveURL) &&
                 !VSICurlIsS3LikeSignedURL(osURL) )
@@ -1177,6 +1192,12 @@ CPLString VSICurlHandle::GetRedirectURLIfValid(bool& bHasExpired)
             bHasExpired = true;
         }
     }
+    else if( !oFileProp.osRedirectURL.empty() )
+    {
+        osURL = oFileProp.osRedirectURL;
+        bHasExpired = false;
+    }
+
     return osURL;
 }
 
@@ -2863,7 +2884,7 @@ VSIVirtualHandle* VSICurlFilesystemHandler::Open( const char *pszFilename,
     bool bEmptyDir = false;
     CPLString osURL(
         VSICurlGetURLFromFilename(pszFilename, nullptr, nullptr, nullptr,
-                                  &bListDir, &bEmptyDir, nullptr));
+                                  nullptr, &bListDir, &bEmptyDir, nullptr));
 
     const char* pszOptionVal =
         CPLGetConfigOption( "GDAL_DISABLE_READDIR_ON_OPEN", "NO" );
@@ -3118,7 +3139,7 @@ char** VSICurlFilesystemHandler::ParseHTMLFileList( const char* pszFilename,
     *pbGotFileList = false;
 
     CPLString osURL(VSICurlGetURLFromFilename(pszFilename, nullptr, nullptr, nullptr,
-                                              nullptr, nullptr, nullptr));
+                                              nullptr, nullptr, nullptr, nullptr));
     const char* pszDir = nullptr;
     if( STARTS_WITH_CI(osURL, "http://") )
         pszDir = strchr(osURL.c_str() + strlen("http://"), '/');
@@ -3471,7 +3492,7 @@ static bool VSICurlParseFullFTPLine( char* pszLine,
 CPLString
 VSICurlFilesystemHandler::GetURLFromFilename( const CPLString& osFilename )
 {
-    return VSICurlGetURLFromFilename(osFilename, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr);
+    return VSICurlGetURLFromFilename(osFilename, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr);
 }
 
 /************************************************************************/
@@ -3502,7 +3523,7 @@ char** VSICurlFilesystemHandler::GetFileList(const char *pszDirname,
     bool bListDir = true;
     bool bEmptyDir = false;
     CPLString osURL(
-        VSICurlGetURLFromFilename(pszDirname, nullptr, nullptr, nullptr,
+        VSICurlGetURLFromFilename(pszDirname, nullptr, nullptr, nullptr, nullptr,
                                   &bListDir, &bEmptyDir, nullptr));
     if( bEmptyDir )
     {
@@ -3795,7 +3816,7 @@ int VSICurlFilesystemHandler::Stat( const char *pszFilename,
     bool bListDir = true;
     bool bEmptyDir = false;
     CPLString osURL(
-        VSICurlGetURLFromFilename(pszFilename, nullptr, nullptr, nullptr,
+        VSICurlGetURLFromFilename(pszFilename, nullptr, nullptr, nullptr, nullptr,
                                   &bListDir, &bEmptyDir, nullptr));
 
     const char* pszOptionVal =
